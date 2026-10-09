@@ -1,3 +1,4 @@
+import QRCode from 'qrcode';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, reorderCategories, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, exportAdminAnalyticsCSV, exportAdminAnalyticsXLSX, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
@@ -1971,7 +1972,7 @@ export default function AdminDashboard({
     }
   };
 
-  const handlePrintQR = (overrideNum, targetPrefix = null) => {
+  const handlePrintQR = async (overrideNum, targetPrefix = null) => {
     const activeTableNum = overrideNum || tableNumber || '1';
     const prefix = targetPrefix || settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table';
     const isCinema = prefix === 'cinema_seat' || prefix === 'cinema';
@@ -1989,7 +1990,20 @@ export default function AdminDashboard({
     const targetUrl = isCinema
       ? `${liveOrigin}/${activeSlug}?cinema=${encodeURIComponent(activeTableNum)}&tkn=${qrSig}`
       : `${liveOrigin}/${activeSlug}?${paramName}=${activeTableNum}&tkn=${qrSig}`;
-    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
+    
+    // Generate native high-resolution black QR code locally (zero CORS, zero lag)
+    let qrImgUrl = '';
+    try {
+      qrImgUrl = await QRCode.toDataURL(targetUrl, {
+        width: 900,
+        margin: 1,
+        errorCorrectionLevel: 'H',
+        color: { dark: '#000000', light: '#FFFFFF' }
+      });
+    } catch (e) {
+      qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(targetUrl)}`;
+    }
+
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu');
 
@@ -2029,13 +2043,23 @@ export default function AdminDashboard({
             .standee-card {
               width: 380px;
               background: #FFFFFF;
-              border-radius: 24px;
-              border: 3px solid #D4AF37;
+              border-radius: 28px;
+              border: 3.5px solid #D4AF37;
               box-shadow: 0 20px 40px rgba(10,35,21,0.15);
-              padding: 32px 24px;
+              padding: 32px 24px 24px 24px;
               text-align: center;
               box-sizing: border-box;
               position: relative;
+            }
+            .inner-frame {
+              position: absolute;
+              top: 7px;
+              left: 7px;
+              right: 7px;
+              bottom: 7px;
+              border: 1.5px solid #E5C07B;
+              border-radius: 22px;
+              pointer-events: none;
             }
             .table-badge {
               display: inline-block;
@@ -2043,31 +2067,43 @@ export default function AdminDashboard({
               color: #DFBA67;
               font-size: 0.85rem;
               font-weight: 800;
-              padding: 6px 18px;
+              padding: 6px 20px;
               border-radius: 20px;
               letter-spacing: 1px;
-              margin-bottom: 16px;
+              margin-bottom: 14px;
+              border: 1.5px solid #D4AF37;
             }
             .logo-title {
               font-family: 'Playfair Display', serif;
-              font-size: 1.6rem;
+              font-size: 1.65rem;
               font-weight: 900;
               color: #0A2315;
-              margin: 0 0 6px 0;
+              margin: 0 0 4px 0;
+            }
+            .gold-divider {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              margin: 4px 0 8px 0;
+              color: #D4AF37;
+              font-size: 0.75rem;
             }
             .subtitle {
               font-size: 0.78rem;
               font-weight: 700;
-              color: #16A34A;
-              margin-bottom: 20px;
+              color: #15803D;
+              margin-bottom: 18px;
             }
             .qr-box {
               background: #FFFFFF;
               padding: 16px;
-              border-radius: 18px;
-              border: 1px solid #E2E8F0;
+              border-radius: 20px;
+              border: 1.5px solid #E2E8F0;
               display: inline-block;
-              margin-bottom: 20px;
+              margin-bottom: 16px;
+              box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+              position: relative;
             }
             .qr-box img {
               width: 220px;
@@ -2079,48 +2115,80 @@ export default function AdminDashboard({
               font-weight: 800;
               color: #0A2315;
               letter-spacing: 0.5px;
-              margin-bottom: 4px;
+              margin-bottom: 3px;
             }
             .instruction-hi {
-              font-size: 0.85rem;
+              font-size: 0.82rem;
               font-weight: 600;
               color: #64748B;
-              margin-bottom: 16px;
+              margin-bottom: 12px;
+            }
+            .steps-bar {
+              background: #FAF8F5;
+              border: 1px solid #EAE5DF;
+              border-radius: 12px;
+              padding: 6px 10px;
+              font-size: 0.72rem;
+              font-weight: 800;
+              color: #334155;
+              margin-bottom: 8px;
+            }
+            .reassurance {
+              font-size: 0.70rem;
+              font-weight: 800;
+              color: #059669;
+              margin-bottom: 14px;
             }
             .footer-info {
-              font-size: 0.72rem;
-              color: #94A3B8;
               border-top: 1px solid #F1F5F9;
               padding-top: 12px;
+              font-size: 0.72rem;
+              color: #94A3B8;
+              line-height: 1.4;
             }
             @media print {
-              body { padding: 0; background: none; }
-              .standee-card { box-shadow: none; border-color: #000; }
+              body {
+                background: none;
+                padding: 0;
+              }
+              .standee-card {
+                box-shadow: none;
+                border: 3.5px solid #D4AF37;
+              }
             }
           </style>
         </head>
         <body>
           <div class="standee-card">
-            <div class="table-badge">${badgeText}</div>
+            <div class="inner-frame"></div>
+            <div class="table-badge">✦ ${badgeText.toUpperCase()} ✦</div>
             <h1 class="logo-title">${currentName}</h1>
+            <div class="gold-divider">── ◆ ──</div>
             <div class="subtitle">${currentTagline}</div>
             <div class="qr-box">
               <img src="${qrImgUrl}" alt="${spaceConfig.singular} ${activeTableNum} QR Code" />
             </div>
-            <div class="instruction-en">${isCinema ? '📱 SCAN FOR IN-SEAT FOOD ORDERING' : '📱 SCAN FOR DIGITAL MENU & ORDER'}</div>
-            <div class="instruction-hi">${isCinema ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'स्कैन करें और डिजिटल मेन्यू देखें'}</div>
+            <div class="instruction-en">📱 POINT CAMERA AT QR TO ORDER</div>
+            <div class="instruction-hi">कैमरे से स्कैन करें और खाना ऑर्डर करें</div>
+            <div class="steps-bar">① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food</div>
+            <div class="reassurance">✓ No App Required • Fast & Direct Contactless Dining</div>
             <div class="footer-info">
-              ${settingsForm.address || ''}${settingsForm.phone ? ' • Phone: ' + settingsForm.phone : ''}
+              ${settingsForm.address || ''}${settingsForm.phone ? '<br>Phone: ' + settingsForm.phone : ''}
               ${!settingsForm.watermark_removal_enabled ? '<div style="margin-top: 4px; font-size: 0.65rem; color: #15803D; font-weight: 800;">⚡ Powered by TouchQR</div>' : ''}
             </div>
           </div>
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
         </body>
       </html>
     `);
     printWindow.document.close();
   };
 
-  const handlePrintAllQRs = (targetPrefix = null, cinemaSeatsList = null) => {
+  const handlePrintAllQRs = async (targetPrefix = null, cinemaSeatsList = null) => {
     const prefix = targetPrefix || settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table';
     const isCinema = prefix === 'cinema_seat' || prefix === 'cinema';
 
@@ -2131,139 +2199,87 @@ export default function AdminDashboard({
     const secretKey = settingsForm.qr_secret || restaurantInfo?.qr_secret || `${restaurantInfo?.id || 1}_${activeSlug}_tq`;
 
     if (isCinema) {
-      const activeSeats = Array.isArray(cinemaSeatsList) ? cinemaSeatsList.filter(s => s.active !== false) : [];
+      let activeSeats = Array.isArray(cinemaSeatsList) ? cinemaSeatsList.filter(s => s.active !== false) : [];
       if (activeSeats.length === 0) {
-        alert('No configured active cinema seats found to print! Please configure cinema seats first.');
+        alert('No cinema seats found to print. Please configure seats first in Setup.');
         return;
       }
 
       const printWindow = window.open('', '_blank', 'width=950,height=900');
       if (!printWindow) {
-        alert('Please allow popups for this site to print all Cinema Seats QR Standees.');
+        alert('Please allow popups to print Cinema Seat QR standees.');
         return;
       }
 
-      let cardsHtml = '';
-      for (const seat of activeSeats) {
+      const qrDataUrls = await Promise.all(activeSeats.map(async (seat) => {
         const sNum = seat.screen_number || '1';
         const rLabel = seat.row_label || 'A';
         const stNum = seat.seat_number || '1';
         const seatCode = `S${sNum}-${rLabel}-${stNum}`;
         const qrSig = generateQrToken(activeSlug, 'cinema_seat', seatCode, secretKey);
         const targetUrl = `${liveOrigin}/${activeSlug}?cinema=${encodeURIComponent(seatCode)}&tkn=${qrSig}`;
-        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
+        try {
+          return await QRCode.toDataURL(targetUrl, { width: 700, margin: 1, errorCorrectionLevel: 'H', color: { dark: '#000000', light: '#FFFFFF' } });
+        } catch (e) {
+          return `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(targetUrl)}`;
+        }
+      }));
+
+      let cardsHtml = '';
+      activeSeats.forEach((seat, idx) => {
+        const sNum = seat.screen_number || '1';
+        const rLabel = seat.row_label || 'A';
+        const stNum = seat.seat_number || '1';
+        const seatCode = `S${sNum}-${rLabel}-${stNum}`;
+        const qrImgUrl = qrDataUrls[idx];
 
         cardsHtml += `
           <div class="standee-card">
-            <div class="table-badge">🎬 SCREEN ${sNum} • ROW ${rLabel} • SEAT ${stNum}</div>
+            <div class="inner-frame"></div>
+            <div class="table-badge">✦ SCREEN ${sNum} • ROW ${rLabel} • SEAT ${stNum} ✦</div>
             <h2 class="logo-title">${currentName}</h2>
+            <div class="gold-divider">── ◆ ──</div>
             <div class="subtitle">${currentTagline}</div>
             <div class="qr-box">
               <img src="${qrImgUrl}" alt="Cinema Seat ${seatCode} QR Code" />
             </div>
-            <div class="instruction-en">📱 SCAN FOR IN-SEAT FOOD ORDERING</div>
+            <div class="instruction-en">📱 POINT CAMERA AT QR TO ORDER</div>
             <div class="instruction-hi">स्कैन करें और सीट पर खाना मंगाएं</div>
+            <div class="steps-bar">① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food</div>
             <div class="footer-info">
               ${settingsForm.address || ''}${settingsForm.phone ? ' • Phone: ' + settingsForm.phone : ''}
               ${!settingsForm.watermark_removal_enabled ? '<div style="margin-top: 4px; font-size: 0.65rem; color: #15803D; font-weight: 800;">⚡ Powered by TouchQR</div>' : ''}
             </div>
           </div>
         `;
-      }
+      });
 
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
-            <title>All Cinema Seats QR Standees - ${currentName}</title>
+            <title>Cinema Seats QR Standees - ${currentName}</title>
             <style>
               @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
-              body {
-                margin: 0;
-                padding: 30px;
-                background-color: #FFFFFF;
-                font-family: 'Plus Jakarta Sans', sans-serif;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 24px;
-                justify-content: center;
-              }
-              .standee-card {
-                width: 320px;
-                padding: 28px 20px;
-                border: 3px double #C5A059;
-                border-radius: 20px;
-                background: linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%);
-                text-align: center;
-                box-shadow: 0 6px 20px rgba(10, 35, 21, 0.08);
-                page-break-inside: avoid;
-                margin-bottom: 20px;
-              }
-              .table-badge {
-                display: inline-block;
-                background: #0A2315;
-                color: #DFBA67;
-                padding: 5px 18px;
-                border-radius: 9999px;
-                font-size: 0.85rem;
-                font-weight: 800;
-                border: 1px solid #DFBA67;
-                letter-spacing: 0.5px;
-                margin-bottom: 12px;
-              }
-              .logo-title {
-                font-family: 'Playfair Display', serif;
-                font-size: 1.35rem;
-                font-weight: 900;
-                color: #0A2315;
-                margin: 0 0 4px 0;
-              }
-              .subtitle {
-                font-size: 0.76rem;
-                font-weight: 700;
-                color: #15803D;
-                margin-bottom: 16px;
-              }
-              .qr-box {
-                background: #FFFFFF;
-                padding: 14px;
-                border-radius: 16px;
-                border: 1px solid #E5E7EB;
-                display: inline-block;
-                margin-bottom: 14px;
-              }
-              .qr-box img {
-                width: 170px;
-                height: 170px;
-                display: block;
-              }
-              .instruction-en {
-                font-size: 0.85rem;
-                font-weight: 800;
-                color: #0A2315;
-                margin-bottom: 2px;
-              }
-              .instruction-hi {
-                font-size: 0.78rem;
-                color: #64748B;
-                font-weight: 600;
-                margin-bottom: 10px;
-              }
-              .footer-info {
-                font-size: 0.68rem;
-                color: #64748B;
-                border-top: 1px solid #E2E8F0;
-                padding-top: 8px;
-                margin-top: 4px;
-              }
-              @media print {
-                body { padding: 0; background: none; }
-                .standee-card { box-shadow: none; margin-bottom: 0; }
-              }
+              body { margin: 0; padding: 30px; background-color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+              .standee-card { width: 320px; padding: 26px 18px 20px 18px; border: 3px solid #D4AF37; border-radius: 22px; background: #FFFFFF; text-align: center; box-shadow: 0 6px 20px rgba(10,35,21,0.08); page-break-inside: avoid; margin-bottom: 20px; position: relative; }
+              .inner-frame { position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px; border: 1.5px solid #E5C07B; border-radius: 16px; pointer-events: none; }
+              .table-badge { display: inline-block; background: #0A2315; color: #DFBA67; padding: 5px 16px; border-radius: 20px; font-size: 0.80rem; font-weight: 800; border: 1px solid #D4AF37; margin-bottom: 10px; }
+              .logo-title { font-family: 'Playfair Display', serif; font-size: 1.25rem; font-weight: 900; color: #0A2315; margin: 0 0 4px 0; }
+              .gold-divider { color: #D4AF37; font-size: 0.70rem; margin: 2px 0 6px 0; }
+              .subtitle { font-size: 0.72rem; font-weight: 800; color: #15803D; margin-bottom: 12px; }
+              .qr-box { background: #FFFFFF; padding: 12px; border-radius: 16px; border: 1px solid #E2E8F0; display: inline-block; margin-bottom: 12px; }
+              .qr-box img { width: 170px; height: 170px; display: block; }
+              .instruction-en { font-size: 0.82rem; font-weight: 800; color: #0A2315; margin-bottom: 2px; }
+              .instruction-hi { font-size: 0.74rem; font-weight: 600; color: #64748B; margin-bottom: 8px; }
+              .steps-bar { background: #FAF8F5; border: 1px solid #EAE5DF; border-radius: 10px; padding: 4px 8px; font-size: 0.65rem; font-weight: 800; color: #334155; margin-bottom: 8px; }
+              .footer-info { font-size: 0.68rem; color: #94A3B8; border-top: 1px solid #F1F5F9; padding-top: 8px; }
+              @media print { body { padding: 0; background: none; } .standee-card { box-shadow: none; } }
             </style>
           </head>
           <body>
             ${cardsHtml}
+            <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
           </body>
         </html>
       `);
@@ -2286,28 +2302,42 @@ export default function AdminDashboard({
       return;
     }
 
-    let cardsHtml = '';
-    for (let tNum = 1; tNum <= totalCount; tNum++) {
+    const tableNumbers = [];
+    for (let t = 1; t <= totalCount; t++) tableNumbers.push(t);
+
+    const qrDataUrls = await Promise.all(tableNumbers.map(async (tNum) => {
       const qrSig = generateQrToken(activeSlug, paramName, tNum, secretKey);
       const targetUrl = `${liveOrigin}/${activeSlug}?${paramName}=${tNum}&tkn=${qrSig}`;
-      const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(targetUrl)}`;
+      try {
+        return await QRCode.toDataURL(targetUrl, { width: 700, margin: 1, errorCorrectionLevel: 'H', color: { dark: '#000000', light: '#FFFFFF' } });
+      } catch (e) {
+        return `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(targetUrl)}`;
+      }
+    }));
+
+    let cardsHtml = '';
+    tableNumbers.forEach((tNum, idx) => {
+      const qrImgUrl = qrDataUrls[idx];
       cardsHtml += `
         <div class="standee-card">
-          <div class="table-badge">${spaceConfig.badge} ${tNum}</div>
+          <div class="inner-frame"></div>
+          <div class="table-badge">✦ ${spaceConfig.badge} ${tNum} ✦</div>
           <h2 class="logo-title">${currentName}</h2>
+          <div class="gold-divider">── ◆ ──</div>
           <div class="subtitle">${currentTagline}</div>
           <div class="qr-box">
             <img src="${qrImgUrl}" alt="${spaceConfig.singular} ${tNum} QR Code" />
           </div>
-          <div class="instruction-en">📱 SCAN FOR DIGITAL MENU & ORDER</div>
-          <div class="instruction-hi">स्कैन करें और डिजिटल मेन्यू देखें</div>
+          <div class="instruction-en">📱 POINT CAMERA AT QR TO ORDER</div>
+          <div class="instruction-hi">कैमरे से स्कैन करें और खाना ऑर्डर करें</div>
+          <div class="steps-bar">① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food</div>
           <div class="footer-info">
             ${settingsForm.address || ''}${settingsForm.phone ? ' • Phone: ' + settingsForm.phone : ''}
             ${!settingsForm.watermark_removal_enabled ? '<div style="margin-top: 4px; font-size: 0.65rem; color: #15803D; font-weight: 800;">⚡ Powered by TouchQR</div>' : ''}
           </div>
         </div>
       `;
-    }
+    });
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -2316,83 +2346,25 @@ export default function AdminDashboard({
           <title>All ${spaceConfig.plural} QR Standees - ${currentName}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
-            body {
-              margin: 0;
-              padding: 30px;
-              background-color: #FFFFFF;
-              font-family: 'Plus Jakarta Sans', sans-serif;
-              display: flex;
-              flex-wrap: wrap;
-              gap: 24px;
-              justify-content: center;
-            }
-            .standee-card {
-              width: 320px;
-              padding: 28px 20px;
-              border: 3px double #C5A059;
-              border-radius: 20px;
-              background: linear-gradient(180deg, #FFFFFF 0%, #FAF8F5 100%);
-              text-align: center;
-              box-shadow: 0 6px 20px rgba(10, 35, 21, 0.08);
-              page-break-inside: avoid;
-              margin-bottom: 20px;
-            }
-            .table-badge {
-              display: inline-block;
-              background: #0A2315;
-              color: #DFBA67;
-              padding: 5px 18px;
-              border-radius: 9999px;
-              font-size: 0.95rem;
-              font-weight: 800;
-              border: 1.5px solid #C5A059;
-              letter-spacing: 1px;
-              margin-bottom: 12px;
-            }
-            .logo-title {
-              font-family: 'Playfair Display', serif;
-              font-size: 1.25rem;
-              font-weight: 900;
-              color: #0A2315;
-              margin: 0 0 4px 0;
-            }
-            .subtitle {
-              font-size: 0.75rem;
-              font-weight: 800;
-              color: #15803D;
-              margin-bottom: 14px;
-            }
-            .qr-box {
-              background: #FFFFFF;
-              padding: 12px;
-              border-radius: 14px;
-              border: 1px solid #E5E7EB;
-              display: inline-block;
-              margin-bottom: 12px;
-            }
-            .qr-box img {
-              width: 180px;
-              height: 180px;
-              display: block;
-            }
+            body { margin: 0; padding: 30px; background-color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+            .standee-card { width: 320px; padding: 26px 18px 20px 18px; border: 3px solid #D4AF37; border-radius: 22px; background: #FFFFFF; text-align: center; box-shadow: 0 6px 20px rgba(10,35,21,0.08); page-break-inside: avoid; margin-bottom: 20px; position: relative; }
+            .inner-frame { position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px; border: 1.5px solid #E5C07B; border-radius: 16px; pointer-events: none; }
+            .table-badge { display: inline-block; background: #0A2315; color: #DFBA67; padding: 5px 16px; border-radius: 20px; font-size: 0.80rem; font-weight: 800; border: 1px solid #D4AF37; margin-bottom: 10px; }
+            .logo-title { font-family: 'Playfair Display', serif; font-size: 1.25rem; font-weight: 900; color: #0A2315; margin: 0 0 4px 0; }
+            .gold-divider { color: #D4AF37; font-size: 0.70rem; margin: 2px 0 6px 0; }
+            .subtitle { font-size: 0.72rem; font-weight: 800; color: #15803D; margin-bottom: 12px; }
+            .qr-box { background: #FFFFFF; padding: 12px; border-radius: 16px; border: 1px solid #E2E8F0; display: inline-block; margin-bottom: 12px; }
+            .qr-box img { width: 170px; height: 170px; display: block; }
             .instruction-en { font-size: 0.82rem; font-weight: 800; color: #0A2315; margin-bottom: 2px; }
-            .instruction-hi { font-size: 0.78rem; font-weight: 700; color: #666157; margin-bottom: 12px; }
-            .footer-info { font-size: 0.7rem; font-weight: 700; color: #B88E3E; border-top: 1px dashed rgba(197, 160, 89, 0.4); padding-top: 10px; }
-            @media print {
-              body { padding: 0; background: none; }
-              .standee-card { box-shadow: none; page-break-inside: avoid; }
-            }
+            .instruction-hi { font-size: 0.74rem; font-weight: 600; color: #64748B; margin-bottom: 8px; }
+            .steps-bar { background: #FAF8F5; border: 1px solid #EAE5DF; border-radius: 10px; padding: 4px 8px; font-size: 0.65rem; font-weight: 800; color: #334155; margin-bottom: 8px; }
+            .footer-info { font-size: 0.68rem; color: #94A3B8; border-top: 1px solid #F1F5F9; padding-top: 8px; }
+            @media print { body { padding: 0; background: none; } .standee-card { box-shadow: none; } }
           </style>
         </head>
         <body>
           ${cardsHtml}
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-              }, 600);
-            };
-          </script>
+          <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
         </body>
       </html>
     `);

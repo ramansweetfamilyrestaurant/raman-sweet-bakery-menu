@@ -68,7 +68,7 @@ export default function QrGeneratorView({
   const [showTestModal, setShowTestModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
-  const [qrColor, setQrColor] = useState('#064E3B');
+  const [qrColor, setQrColor] = useState('#000000');
   const [includeLogo, setIncludeLogo] = useState(true);
   const [cornerStyle, setCornerStyle] = useState('rounded');
   const [downloadFormat, setDownloadFormat] = useState('PNG');
@@ -383,7 +383,7 @@ export default function QrGeneratorView({
         margin: 1,
         errorCorrectionLevel: 'H',
         color: {
-          dark: (activeStandee?.theme === 'slate') ? '#0F172A' : (qrColor || '#064E3B'),
+          dark: (activeStandee?.theme === 'slate') ? '#0F172A' : (qrColor || '#000000'),
           light: '#FFFFFF'
         }
       }).then(url => {
@@ -401,7 +401,7 @@ export default function QrGeneratorView({
         margin: 1,
         errorCorrectionLevel: 'H',
         color: {
-          dark: qrColor || '#064E3B',
+          dark: qrColor || '#000000',
           light: '#FFFFFF'
         }
       }).then(url => {
@@ -464,7 +464,7 @@ export default function QrGeneratorView({
         margin: 2,
         errorCorrectionLevel: 'H',
         color: {
-          dark: (activeTab === 'standees' && activeStandee?.theme === 'slate') ? '#0F172A' : (qrColor || '#064E3B'),
+          dark: (activeTab === 'standees' && activeStandee?.theme === 'slate') ? '#0F172A' : (qrColor || '#000000'),
           light: '#FFFFFF'
         }
       });
@@ -505,8 +505,8 @@ export default function QrGeneratorView({
             : `${activeGenSpaceConfig.badge} ${genIdentifier}`)
       : (activeStandee?.spaceLabel || `${activeStandee?.spaceType || 'TABLE'} ${identifierLabel}`);
 
-    const instEn = isCinemaMode ? '📱 SCAN FOR IN-SEAT FOOD ORDERING' : '📱 SCAN FOR DIGITAL MENU & ORDER';
-    const instHi = isCinemaMode ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'स्कैन करें और डिजिटल मेन्यू देखें';
+    const isDarkTheme = (!isGenerator && activeStandee?.theme === 'slate');
+    const effectiveQrColor = isDarkTheme ? '#0F172A' : (qrColor || '#000000');
     const showWatermark = !settingsForm?.watermark_removal_enabled;
 
     try {
@@ -523,265 +523,386 @@ export default function QrGeneratorView({
         margin: 1,
         errorCorrectionLevel: 'H',
         color: {
-          dark: (!isGenerator && activeStandee?.theme === 'slate') ? '#0F172A' : (qrColor || '#064E3B'),
+          dark: effectiveQrColor,
           light: '#FFFFFF'
         }
       });
 
-      // 2. Base canvas setup with golden ratio proportions (800px base width)
-      const width = 800;
-      const margin = 16;
-      const topPadding = 48;
-      const bottomPadding = 40;
-
-      // 3. Pre-calculate restaurant name wrapping
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
-      tempCtx.font = 'bold 38px "Playfair Display", Georgia, serif';
-
-      const words = currentName.split(' ');
-      let line = '';
-      const lines = [];
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = tempCtx.measureText(testLine);
-        if (metrics.width > 640 && n > 0) {
-          lines.push(line.trim());
-          line = words[n] + ' ';
-        } else {
-          line = testLine;
-        }
-      }
-      lines.push(line.trim());
-
-      // 4. Pre-calculate vertical layout positions
-      let curY = margin + topPadding;
-
-      const badgeY = curY;
-      const badgeH = 48;
-      curY += badgeH + 20;
-
-      const nameY = curY;
-      const nameLineH = 46;
-      curY += (lines.length * nameLineH) + 6;
-
-      const tagY = curY;
-      const tagH = 26;
-      curY += tagH + 24;
-
-      const qrBoxY = curY;
-      const qrImgSize = 400;
-      const qrBoxPadding = 24;
-      const qrBoxSize = qrImgSize + qrBoxPadding * 2;
-      curY += qrBoxSize + 24;
-
-      const instEnY = curY;
-      const instEnH = 30;
-      curY += instEnH + 6;
-
-      const instHiY = curY;
-      const instHiH = 26;
-      curY += instHiH + 16;
-
-      let msgY = null;
-      if (standeeMsg) {
-        msgY = curY;
-        curY += 30;
-      }
-
-      const divY = curY + 6;
-      curY += 2 + 24;
-
-      let addressY = null;
-      if (currentAddress) {
-        addressY = curY;
-        curY += 28;
-      }
-
-      let phoneY = null;
-      if (currentPhone) {
-        phoneY = curY;
-        curY += 28;
-      }
-
-      let watermarkY = null;
-      if (showWatermark) {
-        watermarkY = curY;
-        curY += 26;
-      }
-
-      // 5. Total Height
-      const totalHeight = Math.ceil(curY + bottomPadding + margin);
+      // 2. Standard 2:3 physical acrylic standee print ratio (4" x 6" / A6 standard 300 DPI)
+      // Base canvas size: 1200 x 1800 px (exact 2:3 ratio)
+      const baseWidth = 1200;
+      const baseHeight = 1800;
 
       const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = totalHeight;
+      canvas.width = baseWidth;
+      canvas.height = baseHeight;
       const ctx = canvas.getContext('2d');
 
-      // 6. Fill Background
-      const isDarkTheme = !isGenerator && activeStandee?.theme === 'slate';
+      // Fill canvas background
       ctx.fillStyle = isDarkTheme ? '#0F172A' : '#FFFFFF';
-      ctx.fillRect(0, 0, width, totalHeight);
+      ctx.fillRect(0, 0, baseWidth, baseHeight);
 
-      // 7. Draw Royal Gold Outer Border
-      const cardW = width - margin * 2;
-      const cardH = totalHeight - margin * 2;
-      const radius = 36;
+      // Subtle textured gradient for luxury paper feel
+      if (!isDarkTheme) {
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, baseHeight);
+        bgGrad.addColorStop(0, '#FFFFFF');
+        bgGrad.addColorStop(0.5, '#FDFCFA');
+        bgGrad.addColorStop(1, '#F8F6F0');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, baseWidth, baseHeight);
+      }
 
+      // 3. Double Royal Gold Foil Border
+      const margin = 44;
+      const cardW = baseWidth - margin * 2;
+      const cardH = baseHeight - margin * 2;
+      const outerRadius = 42;
+
+      // Outer Gold Frame
       ctx.save();
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(margin, margin, cardW, cardH, radius);
+        ctx.roundRect(margin, margin, cardW, cardH, outerRadius);
       } else {
         ctx.rect(margin, margin, cardW, cardH);
       }
       ctx.strokeStyle = isDarkTheme ? '#334155' : '#D4AF37';
       ctx.lineWidth = 6;
       ctx.stroke();
-      ctx.restore();
 
-      // 8. Draw Top Badge
-      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
-      const textMetrics = ctx.measureText(badgeText.toUpperCase());
-      const badgeW = Math.max(textMetrics.width + 52, 240);
-      const badgeX = (width - badgeW) / 2;
-
+      // Inner Gold Hairline Frame
+      const innerMargin = margin + 14;
+      const innerW = baseWidth - innerMargin * 2;
+      const innerH = baseHeight - innerMargin * 2;
+      const innerRadius = 32;
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 24);
+        ctx.roundRect(innerMargin, innerMargin, innerW, innerH, innerRadius);
+      } else {
+        ctx.rect(innerMargin, innerMargin, innerW, innerH);
+      }
+      ctx.strokeStyle = isDarkTheme ? '#475569' : '#E5C07B';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Four Ornate Gold Corner Diamonds
+      const cornerInset = innerMargin + 18;
+      const drawDiamond = (cx, cy, s) => {
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - s);
+        ctx.lineTo(cx + s, cy);
+        ctx.lineTo(cx, cy + s);
+        ctx.lineTo(cx - s, cy);
+        ctx.closePath();
+        ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#D4AF37';
+        ctx.fill();
+      };
+      drawDiamond(cornerInset, cornerInset, 8);
+      drawDiamond(baseWidth - cornerInset, cornerInset, 8);
+      drawDiamond(cornerInset, baseHeight - cornerInset, 8);
+      drawDiamond(baseWidth - cornerInset, baseHeight - cornerInset, 8);
+      ctx.restore();
+
+      // 4. Header Badge (Table / Space Pill)
+      const badgeY = 110;
+      const badgeH = 58;
+      ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
+      const badgeTextUpper = `✦ ${badgeText.toUpperCase()} ✦`;
+      const badgeMetrics = ctx.measureText(badgeTextUpper);
+      const badgeW = Math.max(badgeMetrics.width + 64, 300);
+      const badgeX = (baseWidth - badgeW) / 2;
+
+      ctx.save();
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 29);
       } else {
         ctx.rect(badgeX, badgeY, badgeW, badgeH);
       }
       ctx.fillStyle = isDarkTheme ? '#1E293B' : '#0A2315';
       ctx.fill();
+      ctx.strokeStyle = isDarkTheme ? '#475569' : '#D4AF37';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
 
       ctx.fillStyle = isDarkTheme ? '#F8FAFC' : '#DFBA67';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(badgeText.toUpperCase(), width / 2, badgeY + badgeH / 2);
+      ctx.fillText(badgeTextUpper, baseWidth / 2, badgeY + badgeH / 2);
+      ctx.restore();
 
-      // 9. Draw Restaurant Name
+      // 5. Restaurant Name (Playfair Luxury Serif)
       ctx.fillStyle = isDarkTheme ? '#FFFFFF' : '#0A2315';
-      ctx.font = 'bold 38px "Playfair Display", Georgia, serif';
+      ctx.font = 'bold 48px "Playfair Display", Georgia, serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
-      let tempNameY = nameY + 34;
-      for (let i = 0; i < lines.length; i++) {
-        ctx.fillText(lines[i], width / 2, tempNameY);
-        tempNameY += nameLineH;
+      // Text wrapping for name
+      const nameWords = currentName.split(' ');
+      let nameLine = '';
+      const nameLines = [];
+      for (let n = 0; n < nameWords.length; n++) {
+        const testLine = nameLine + nameWords[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > 920 && n > 0) {
+          nameLines.push(nameLine.trim());
+          nameLine = nameWords[n] + ' ';
+        } else {
+          nameLine = testLine;
+        }
+      }
+      nameLines.push(nameLine.trim());
+
+      let currentTextY = 225;
+      for (let i = 0; i < nameLines.length; i++) {
+        ctx.fillText(nameLines[i], baseWidth / 2, currentTextY);
+        currentTextY += 56;
       }
 
-      // 10. Draw Tagline
-      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#16A34A';
-      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(currentTagline, width / 2, tagY + 20);
+      // Decorative divider
+      ctx.save();
+      const divLineY = currentTextY - 8;
+      ctx.strokeStyle = isDarkTheme ? '#475569' : '#D4AF37';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(baseWidth / 2 - 120, divLineY);
+      ctx.lineTo(baseWidth / 2 - 20, divLineY);
+      ctx.moveTo(baseWidth / 2 + 20, divLineY);
+      ctx.lineTo(baseWidth / 2 + 120, divLineY);
+      ctx.stroke();
+      drawDiamond(baseWidth / 2, divLineY, 6);
+      ctx.restore();
 
-      // 11. Draw QR Box & Embedded Native QR Image
-      const qrBoxX = (width - qrBoxSize) / 2;
+      // Tagline
+      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#15803D';
+      ctx.font = 'bold 23px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(currentTagline, baseWidth / 2, currentTextY + 24);
+
+      // 6. QR Plaque & Native QR Code
+      const qrBoxSize = 580;
+      const qrBoxX = (baseWidth - qrBoxSize) / 2;
+      const qrBoxY = currentTextY + 60;
+
+      // QR Plaque White Card with soft border
+      ctx.save();
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 28);
+        ctx.roundRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 32);
       } else {
         ctx.rect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
       }
       ctx.fillStyle = '#FFFFFF';
+      ctx.shadowColor = 'rgba(0,0,0,0.08)';
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 10;
       ctx.fill();
-      ctx.strokeStyle = isDarkTheme ? '#334155' : '#E2E8F0';
+      ctx.restore();
+
+      ctx.save();
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 32);
+      } else {
+        ctx.rect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
+      }
+      ctx.strokeStyle = isDarkTheme ? '#475569' : '#E2E8F0';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.restore();
+
+      // Top mini pill: "[ 📷 SCAN TO ORDER ]"
+      const scanTagText = isCinemaMode ? '📷 SCAN FOR IN-SEAT FOOD' : '📷 SCAN TO ORDER & PAY';
+      ctx.save();
+      ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+      const scanTagW = ctx.measureText(scanTagText).width + 36;
+      const scanTagH = 34;
+      const scanTagX = (baseWidth - scanTagW) / 2;
+      const scanTagY = qrBoxY - 17;
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(scanTagX, scanTagY, scanTagW, scanTagH, 17);
+      } else {
+        ctx.rect(scanTagX, scanTagY, scanTagW, scanTagH);
+      }
+      ctx.fillStyle = isDarkTheme ? '#1E293B' : '#0A2315';
+      ctx.fill();
+      ctx.strokeStyle = isDarkTheme ? '#475569' : '#D4AF37';
       ctx.lineWidth = 2;
       ctx.stroke();
+      ctx.fillStyle = isDarkTheme ? '#F8FAFC' : '#DFBA67';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(scanTagText, baseWidth / 2, scanTagY + scanTagH / 2);
+      ctx.restore();
+
+      // Draw QR Image
+      const qrImgSize = 480;
+      const qrImgPad = (qrBoxSize - qrImgSize) / 2;
+      const qrImgX = qrBoxX + qrImgPad;
+      const qrImgY = qrBoxY + qrImgPad;
 
       const qrImgEl = new Image();
       qrImgEl.src = nativeQrDataUrl;
-
       await new Promise((resolve) => {
         qrImgEl.onload = () => {
-          ctx.drawImage(qrImgEl, qrBoxX + qrBoxPadding, qrBoxY + qrBoxPadding, qrImgSize, qrImgSize);
+          ctx.drawImage(qrImgEl, qrImgX, qrImgY, qrImgSize, qrImgSize);
           resolve();
         };
         qrImgEl.onerror = resolve;
         setTimeout(resolve, 1500);
       });
 
-      // 12. Primary Instruction (English)
-      ctx.fillStyle = isDarkTheme ? '#F1F5F9' : '#0A2315';
-      ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(instEn, width / 2, instEnY + 24);
+      // Gold Camera Target Focus Corner Brackets ⌜ ⌝ ⌞ ⌟
+      ctx.save();
+      ctx.strokeStyle = '#D4AF37';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      const bLen = 28;
+      const bPad = 12;
 
-      // 13. Secondary Instruction (Hindi)
-      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#64748B';
-      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(instHi, width / 2, instHiY + 20);
-
-      // 14. Custom Standee Message (if present)
-      if (msgY !== null && standeeMsg) {
-        ctx.fillStyle = isDarkTheme ? '#CBD5E1' : '#475569';
-        ctx.font = 'italic 19px "Plus Jakarta Sans", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillText(`"${standeeMsg}"`, width / 2, msgY + 18);
-      }
-
-      // 15. Horizontal Divider
+      // Top-Left
       ctx.beginPath();
-      ctx.moveTo(80, divY);
-      ctx.lineTo(width - 80, divY);
-      ctx.strokeStyle = isDarkTheme ? '#334155' : '#F1F5F9';
-      ctx.lineWidth = 2;
+      ctx.moveTo(qrImgX - bPad, qrImgY - bPad + bLen);
+      ctx.lineTo(qrImgX - bPad, qrImgY - bPad);
+      ctx.lineTo(qrImgX - bPad + bLen, qrImgY - bPad);
       ctx.stroke();
 
-      // 16. Footer Address & Phone
-      ctx.fillStyle = '#94A3B8';
-      ctx.font = '19px "Plus Jakarta Sans", sans-serif';
+      // Top-Right
+      ctx.beginPath();
+      ctx.moveTo(qrImgX + qrImgSize + bPad - bLen, qrImgY - bPad);
+      ctx.lineTo(qrImgX + qrImgSize + bPad, qrImgY - bPad);
+      ctx.lineTo(qrImgX + qrImgSize + bPad, qrImgY - bPad + bLen);
+      ctx.stroke();
+
+      // Bottom-Left
+      ctx.beginPath();
+      ctx.moveTo(qrImgX - bPad, qrImgY + qrImgSize + bPad - bLen);
+      ctx.lineTo(qrImgX - bPad, qrImgY + qrImgSize + bPad);
+      ctx.lineTo(qrImgX - bPad + bLen, qrImgY + qrImgSize + bPad);
+      ctx.stroke();
+
+      // Bottom-Right
+      ctx.beginPath();
+      ctx.moveTo(qrImgX + qrImgSize + bPad - bLen, qrImgY + qrImgSize + bPad);
+      ctx.lineTo(qrImgX + qrImgSize + bPad, qrImgY + qrImgSize + bPad);
+      ctx.lineTo(qrImgX + qrImgSize + bPad, qrImgY + qrImgSize + bPad - bLen);
+      ctx.stroke();
+      ctx.restore();
+
+      // 7. Visual 3-Step Scan Guide (① Open Camera • ② Scan QR • ③ Order Food)
+      let postQrY = qrBoxY + qrBoxSize + 44;
+
+      ctx.fillStyle = isDarkTheme ? '#F1F5F9' : '#0A2315';
+      ctx.font = 'bold 32px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
-      if (addressY !== null) {
-        ctx.fillText(currentAddress, width / 2, addressY + 16);
+      ctx.fillText(isCinemaMode ? '📱 POINT CAMERA AT QR TO ORDER' : '📱 POINT CAMERA AT QR TO ORDER & PAY', baseWidth / 2, postQrY);
+
+      postQrY += 34;
+      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#64748B';
+      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(isCinemaMode ? 'कैमरा से स्कैन करें और सीट पर खाना मंगाएं' : 'कैमरे से स्कैन करें और खाना ऑर्डर करें', baseWidth / 2, postQrY);
+
+      // 3-Step Badge Pill Bar
+      postQrY += 46;
+      const stepBarW = 860;
+      const stepBarH = 50;
+      const stepBarX = (baseWidth - stepBarW) / 2;
+      ctx.save();
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(stepBarX, postQrY - 36, stepBarW, stepBarH, 25);
+      } else {
+        ctx.rect(stepBarX, postQrY - 36, stepBarW, stepBarH);
       }
-      if (phoneY !== null) {
-        ctx.font = 'bold 19px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText(`Phone: ${currentPhone}`, width / 2, phoneY + 16);
+      ctx.fillStyle = isDarkTheme ? 'rgba(255,255,255,0.06)' : '#FAF8F5';
+      ctx.fill();
+      ctx.strokeStyle = isDarkTheme ? '#334155' : '#EAE5DF';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = isDarkTheme ? '#E2E8F0' : '#1E293B';
+      ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const stepText = '① Open Camera    ➔    ② Scan QR Code    ➔    ③ Browse & Order';
+      ctx.fillText(stepText, baseWidth / 2, postQrY - 11);
+      ctx.restore();
+
+      // Instant / No app note
+      postQrY += 48;
+      ctx.fillStyle = '#059669';
+      ctx.font = 'bold 19px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('✓ 100% Free • No App Download Required • Fast & Direct', baseWidth / 2, postQrY);
+
+      // Custom message (if any)
+      if (standeeMsg) {
+        postQrY += 40;
+        ctx.fillStyle = isDarkTheme ? '#CBD5E1' : '#475569';
+        ctx.font = 'italic 20px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(`"${standeeMsg}"`, baseWidth / 2, postQrY);
       }
 
-      // 17. Watermark
-      if (watermarkY !== null) {
+      // 8. Footer Section
+      const footerDividerY = baseHeight - 160;
+      ctx.save();
+      ctx.strokeStyle = isDarkTheme ? '#334155' : '#E2E8F0';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(120, footerDividerY);
+      ctx.lineTo(baseWidth - 120, footerDividerY);
+      ctx.stroke();
+      ctx.restore();
+
+      let footerTextY = footerDividerY + 36;
+      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#64748B';
+      ctx.font = '20px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+
+      if (currentAddress) {
+        ctx.fillText(currentAddress, baseWidth / 2, footerTextY);
+        footerTextY += 28;
+      }
+      if (currentPhone) {
+        ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(`Phone: ${currentPhone}`, baseWidth / 2, footerTextY);
+        footerTextY += 28;
+      }
+
+      if (showWatermark) {
         ctx.fillStyle = '#15803D';
-        ctx.font = 'bold 17px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText('⚡ Powered by TouchQR', width / 2, watermarkY + 16);
+        ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText('⚡ Powered by TouchQR Contactless Dining', baseWidth / 2, footerTextY);
       }
 
-      // 18. Output Scaling to standard physical print sizes (300 DPI)
+      // 9. Output Scaling (1K = 1200x1800, 2K = 1600x2400, 4K = 2400x3600)
       const resolutionMap = {
-        '1024': 1200, // 1200 x 1750 px (4x6" / A6)
-        '2048': 1800, // 1800 x 2620 px (5x7" / A5 HD)
-        '4096': 2400  // 2400 x 3500 px (8x12" / A4 Studio)
+        '1024': 1200, // 1200 x 1800 px (4x6" standard)
+        '2048': 1600, // 1600 x 2400 px (5x7" / A5 HD)
+        '4096': 2400  // 2400 x 3600 px (8x12" / A4 Studio 300 DPI)
       };
-      const targetWidth = resolutionMap[downloadResolution] || 1800;
+      const targetWidth = resolutionMap[downloadResolution] || 1600;
+      const targetHeight = Math.round(targetWidth * 1.5); // exact 2:3 ratio
+
       let finalCanvas = canvas;
-      if (targetWidth !== width) {
-        const scale = targetWidth / width;
+      if (targetWidth !== baseWidth) {
         const exportCanvas = document.createElement('canvas');
         exportCanvas.width = targetWidth;
-        exportCanvas.height = Math.round(totalHeight * scale);
+        exportCanvas.height = targetHeight;
         const exportCtx = exportCanvas.getContext('2d');
         exportCtx.imageSmoothingEnabled = true;
         exportCtx.imageSmoothingQuality = 'high';
-        exportCtx.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+        exportCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
         finalCanvas = exportCanvas;
       }
 
       // Trigger Download
       const link = document.createElement('a');
-      link.download = `${activeSlug}_${identifierLabel}_standee_${targetWidth}w.${format.toLowerCase()}`;
+      link.download = `${activeSlug}_${identifierLabel}_standee_${targetWidth}x${targetHeight}.${format.toLowerCase()}`;
       link.href = finalCanvas.toDataURL(format.toLowerCase() === 'jpg' || format.toLowerCase() === 'jpeg' ? 'image/jpeg' : 'image/png');
       link.click();
-      showToast(`✓ Standee Card downloaded (${targetWidth}x${finalCanvas.height}px PNG)`);
+      showToast(`✓ Standee Card downloaded (${targetWidth}x${targetHeight}px PNG - Standard 4x6" Ratio)`);
     } catch (e) {
       console.error('Error rendering standee PNG:', e);
       const a = document.createElement('a');
@@ -1604,18 +1725,14 @@ export default function QrGeneratorView({
                 {/* The Acrylic Standee Card itself */}
                 <div style={{
                   width: '100%',
-                  maxWidth: '320px',
+                  maxWidth: '325px',
                   background: activeStandee.theme === 'slate' ? '#0F172A' : '#FFFFFF',
-                  borderRadius: '22px',
-                  border: activeStandee.theme === 'gold' 
-                    ? '3px solid #D97706' 
-                    : activeStandee.theme === 'slate' 
-                      ? '2px solid #334155' 
-                      : '3px solid #D4AF37',
+                  borderRadius: '24px',
+                  border: activeStandee.theme === 'slate' ? '2px solid #334155' : '3px solid #D4AF37',
                   boxShadow: activeStandee.theme === 'slate'
-                    ? '0 18px 36px rgba(15, 23, 42, 0.35), 0 2px 6px rgba(0,0,0,0.1)'
-                    : '0 18px 36px rgba(10, 35, 21, 0.12), 0 2px 6px rgba(0,0,0,0.04)',
-                  padding: '22px 16px 16px 16px',
+                    ? '0 20px 40px rgba(15, 23, 42, 0.45)'
+                    : '0 20px 40px rgba(10, 35, 21, 0.14)',
+                  padding: '24px 18px 18px 18px',
                   textAlign: 'center',
                   boxSizing: 'border-box',
                   display: 'flex',
@@ -1624,81 +1741,123 @@ export default function QrGeneratorView({
                   position: 'relative',
                   zIndex: 2
                 }}>
-                  
-                  {/* Subtle Acrylic Glare Reflection at Top Right Corner */}
+                  {/* Inner Gold Hairline Frame */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '6px',
+                    left: '6px',
+                    right: '6px',
+                    bottom: '6px',
+                    borderRadius: '18px',
+                    border: activeStandee.theme === 'slate' ? '1px solid #475569' : '1.5px solid #E5C07B',
+                    pointerEvents: 'none'
+                  }} />
+
+                  {/* Acrylic Glare Reflection at Top Right Corner */}
                   <div style={{
                     position: 'absolute',
                     top: 0,
                     right: 0,
                     width: '110px',
                     height: '110px',
-                    background: 'radial-gradient(circle at top right, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 70%)',
-                    borderRadius: '0 22px 0 0',
+                    background: 'radial-gradient(circle at top right, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 70%)',
+                    borderRadius: '0 24px 0 0',
                     pointerEvents: 'none'
                   }} />
 
                   {/* Top Space Badge */}
                   <div style={{
                     display: 'inline-block',
-                    background: activeStandee.theme === 'slate' 
-                      ? '#1E293B' 
-                      : '#0A2315',
-                    color: activeStandee.theme === 'slate' 
-                      ? '#F8FAFC' 
-                      : '#DFBA67',
+                    background: activeStandee.theme === 'slate' ? '#1E293B' : '#0A2315',
+                    color: activeStandee.theme === 'slate' ? '#F8FAFC' : '#DFBA67',
                     fontSize: '0.74rem',
                     fontWeight: 900,
-                    padding: '5px 16px',
-                    borderRadius: '18px',
-                    letterSpacing: '0.8px',
+                    padding: '5px 18px',
+                    borderRadius: '20px',
+                    letterSpacing: '1px',
                     marginBottom: '10px',
                     textTransform: 'uppercase',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                    border: activeStandee.theme === 'slate' ? '1px solid #475569' : '1.5px solid #D4AF37',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
                   }}>
-                    {activeStandee.spaceType === 'counter'
-                      ? '🏪 BILLING COUNTER'
+                    ✦ {activeStandee.spaceType === 'counter'
+                      ? 'BILLING COUNTER'
                       : activeStandee.spaceType === 'cinema_seat'
-                        ? `🎬 ${activeStandee.spaceLabel || `CINEMA SEAT ${activeStandee.identifier}`}`
-                        : `${activeStandee.spaceLabel?.toUpperCase() || `TABLE ${activeStandee.identifier}`}`}
+                        ? (activeStandee.spaceLabel || `CINEMA SEAT ${activeStandee.identifier}`)
+                        : (activeStandee.spaceLabel?.toUpperCase() || `TABLE ${activeStandee.identifier}`)} ✦
                   </div>
 
                   {/* Restaurant Name (Playfair Luxury Serif) */}
                   <h3 style={{
                     fontFamily: "'Playfair Display', serif, Georgia",
-                    fontSize: '1.20rem',
+                    fontSize: '1.24rem',
                     fontWeight: 900,
                     color: activeStandee.theme === 'slate' ? '#FFFFFF' : '#0A2315',
-                    margin: '0 0 3px 0',
+                    margin: '0 0 4px 0',
                     lineHeight: 1.25
                   }}>
                     {settingsForm?.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
                   </h3>
 
+                  {/* Decorative Gold Divider */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: '2px 0 6px 0' }}>
+                    <div style={{ width: '32px', height: '1px', background: activeStandee.theme === 'slate' ? '#475569' : '#D4AF37' }} />
+                    <span style={{ fontSize: '0.64rem', color: activeStandee.theme === 'slate' ? '#94A3B8' : '#D4AF37' }}>◆</span>
+                    <div style={{ width: '32px', height: '1px', background: activeStandee.theme === 'slate' ? '#475569' : '#D4AF37' }} />
+                  </div>
+
                   {/* Tagline / Subtitle */}
                   <div style={{
                     fontSize: '0.72rem',
                     fontWeight: 700,
-                    color: activeStandee.theme === 'slate' ? '#94A3B8' : '#16A34A',
-                    marginBottom: '12px'
+                    color: activeStandee.theme === 'slate' ? '#94A3B8' : '#15803D',
+                    marginBottom: '14px'
                   }}>
                     {settingsForm?.tagline || (activeStandee.spaceType === 'cinema_seat' ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu')}
                   </div>
 
-                  {/* High Quality QR Container */}
+                  {/* High Quality QR Container with Pill & Corner Target Marks */}
                   <div style={{
                     background: '#FFFFFF',
-                    padding: '12px',
-                    borderRadius: '16px',
-                    border: '1px solid #E2E8F0',
+                    padding: '14px',
+                    borderRadius: '18px',
+                    border: activeStandee.theme === 'slate' ? '1px solid #475569' : '1.5px solid #E2E8F0',
+                    position: 'relative',
                     display: 'inline-block',
                     marginBottom: '12px',
-                    boxShadow: '0 3px 10px rgba(0, 0, 0, 0.05)'
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)'
                   }}>
-                    <img
-                      src={activeStandeeQrImgUrl}
-                      alt={`${activeStandee.name} QR Code`}
-                      style={{ width: '160px', height: '160px', display: 'block' }}
-                    />
+                    {/* Top mini pill tag */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '-11px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: activeStandee.theme === 'slate' ? '#1E293B' : '#0A2315',
+                      color: activeStandee.theme === 'slate' ? '#F8FAFC' : '#DFBA67',
+                      fontSize: '0.62rem',
+                      fontWeight: 900,
+                      padding: '2px 10px',
+                      borderRadius: '10px',
+                      border: activeStandee.theme === 'slate' ? '1px solid #475569' : '1px solid #D4AF37',
+                      whiteSpace: 'nowrap',
+                      letterSpacing: '0.4px'
+                    }}>
+                      {activeStandee.spaceType === 'cinema_seat' ? '📷 SCAN FOR FOOD' : '📷 SCAN TO ORDER'}
+                    </div>
+
+                    <div style={{ position: 'relative', width: '160px', height: '160px' }}>
+                      <img
+                        src={activeStandeeQrImgUrl}
+                        alt={`${activeStandee.name} QR Code`}
+                        style={{ width: '160px', height: '160px', display: 'block' }}
+                      />
+                      {/* 4 Gold Focus Target Brackets */}
+                      <span style={{ position: 'absolute', top: '-4px', left: '-4px', width: '12px', height: '12px', borderTop: '2.5px solid #D4AF37', borderLeft: '2.5px solid #D4AF37' }} />
+                      <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '12px', height: '12px', borderTop: '2.5px solid #D4AF37', borderRight: '2.5px solid #D4AF37' }} />
+                      <span style={{ position: 'absolute', bottom: '-4px', left: '-4px', width: '12px', height: '12px', borderBottom: '2.5px solid #D4AF37', borderLeft: '2.5px solid #D4AF37' }} />
+                      <span style={{ position: 'absolute', bottom: '-4px', right: '-4px', width: '12px', height: '12px', borderBottom: '2.5px solid #D4AF37', borderRight: '2.5px solid #D4AF37' }} />
+                    </div>
                   </div>
 
                   {/* Primary Scan Instruction */}
@@ -1707,28 +1866,62 @@ export default function QrGeneratorView({
                     fontWeight: 900,
                     color: activeStandee.theme === 'slate' ? '#F1F5F9' : '#0A2315',
                     letterSpacing: '0.4px',
-                    marginBottom: '3px'
+                    marginBottom: '2px'
                   }}>
-                    {activeStandee.spaceType === 'cinema_seat' ? '📱 SCAN FOR IN-SEAT FOOD ORDERING' : '📱 SCAN FOR DIGITAL MENU & ORDER'}
+                    {activeStandee.spaceType === 'cinema_seat' ? '📱 POINT CAMERA AT QR TO ORDER' : '📱 POINT CAMERA AT QR TO ORDER & PAY'}
                   </div>
 
                   {/* Secondary Scan Instruction (Hindi) */}
                   <div style={{
-                    fontSize: '0.72rem',
+                    fontSize: '0.70rem',
                     fontWeight: 700,
                     color: activeStandee.theme === 'slate' ? '#94A3B8' : '#64748B',
-                    marginBottom: activeStandee.message ? '8px' : '12px'
+                    marginBottom: '8px'
                   }}>
-                    {activeStandee.spaceType === 'cinema_seat' ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'स्कैन करें और डिजिटल मेन्यू देखें'}
+                    {activeStandee.spaceType === 'cinema_seat' ? 'कैमरा से स्कैन करें और सीट पर खाना मंगाएं' : 'कैमरे से स्कैन करें और खाना ऑर्डर करें'}
+                  </div>
+
+                  {/* 3-Step Visual Instruction Bar */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '4px 8px',
+                    borderRadius: '12px',
+                    background: activeStandee.theme === 'slate' ? 'rgba(255,255,255,0.06)' : '#FAF8F5',
+                    border: activeStandee.theme === 'slate' ? '1px solid #334155' : '1px solid #EAE5DF',
+                    fontSize: '0.62rem',
+                    fontWeight: 800,
+                    color: activeStandee.theme === 'slate' ? '#E2E8F0' : '#334155',
+                    marginBottom: '6px',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}>
+                    <span>① Camera</span>
+                    <span style={{ color: '#D4AF37' }}>➔</span>
+                    <span>② Scan QR</span>
+                    <span style={{ color: '#D4AF37' }}>➔</span>
+                    <span>③ Order Food</span>
+                  </div>
+
+                  {/* Reassurance Note */}
+                  <div style={{
+                    fontSize: '0.62rem',
+                    color: '#059669',
+                    fontWeight: 800,
+                    marginBottom: activeStandee.message ? '8px' : '10px'
+                  }}>
+                    ✓ 100% Free • No App Required • Fast & Direct
                   </div>
 
                   {/* Custom Message / Greeting Note */}
                   {activeStandee.message && (
                     <div style={{
-                      fontSize: '0.72rem',
+                      fontSize: '0.70rem',
                       fontStyle: 'italic',
                       color: activeStandee.theme === 'slate' ? '#CBD5E1' : '#475569',
-                      marginBottom: '12px',
+                      marginBottom: '10px',
                       padding: '4px 10px',
                       background: activeStandee.theme === 'slate' ? 'rgba(255,255,255,0.05)' : '#FAF8F5',
                       borderRadius: '8px',
@@ -1742,9 +1935,9 @@ export default function QrGeneratorView({
                   <div style={{
                     width: '100%',
                     borderTop: activeStandee.theme === 'slate' ? '1px solid #334155' : '1px solid #F1F5F9',
-                    paddingTop: '10px',
-                    fontSize: '0.68rem',
-                    color: activeStandee.theme === 'slate' ? '#94A3B8' : '#94A3B8',
+                    paddingTop: '8px',
+                    fontSize: '0.66rem',
+                    color: '#94A3B8',
                     lineHeight: 1.4
                   }}>
                     {settingsForm?.address || restaurantInfo?.address ? (
@@ -1754,8 +1947,8 @@ export default function QrGeneratorView({
                       <div style={{ fontWeight: 600 }}>Phone: {settingsForm?.phone || restaurantInfo?.phone}</div>
                     ) : null}
                     {!settingsForm?.watermark_removal_enabled && (
-                      <div style={{ marginTop: '4px', fontSize: '0.64rem', color: '#15803D', fontWeight: 800 }}>
-                        ⚡ Powered by TouchQR
+                      <div style={{ marginTop: '3px', fontSize: '0.62rem', color: '#15803D', fontWeight: 800 }}>
+                        ⚡ Powered by TouchQR Contactless Dining
                       </div>
                     )}
                   </div>
@@ -1807,6 +2000,43 @@ export default function QrGeneratorView({
                 flexDirection: 'column',
                 gap: '10px'
               }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    QR Code Style
+                  </span>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {[
+                      { id: '#000000', label: 'Pitch Black', badge: 'Black', color: '#000000' },
+                      { id: '#0F172A', label: 'Luxury Slate', badge: 'Slate', color: '#0F172A' },
+                      { id: '#92400E', label: 'Royal Gold', badge: 'Gold', color: '#92400E' },
+                      { id: '#064E3B', label: 'Deep Emerald', badge: 'Green', color: '#064E3B' }
+                    ].map(preset => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setQrColor(preset.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          border: qrColor === preset.id ? '2px solid #0A2315' : '1px solid #CBD5E1',
+                          background: qrColor === preset.id ? '#F1F5F9' : '#FFFFFF',
+                          color: '#0F172A',
+                          cursor: 'pointer'
+                        }}
+                        title={preset.label}
+                      >
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: preset.color, display: 'inline-block' }} />
+                        <span>{preset.badge}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Print & Export Quality
@@ -2406,107 +2636,205 @@ export default function QrGeneratorView({
             {/* PHYSICAL STANDEE CARD (Exact Reference Match) */}
             <div style={{
               width: '100%',
-              maxWidth: '350px',
+              maxWidth: '330px',
               background: '#FFFFFF',
-              borderRadius: '22px',
+              borderRadius: '24px',
               border: '3px solid #D4AF37',
-              boxShadow: '0 16px 36px rgba(10, 35, 21, 0.10)',
-              padding: '24px 20px 18px 20px',
+              boxShadow: '0 20px 40px rgba(10, 35, 21, 0.14)',
+              padding: '24px 18px 18px 18px',
               textAlign: 'center',
               boxSizing: 'border-box',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              position: 'relative'
+              position: 'relative',
+              zIndex: 2
             }}>
+              {/* Inner Gold Hairline Frame */}
+              <div style={{
+                position: 'absolute',
+                top: '6px',
+                left: '6px',
+                right: '6px',
+                bottom: '6px',
+                borderRadius: '18px',
+                border: '1.5px solid #E5C07B',
+                pointerEvents: 'none'
+              }} />
+
               {/* Top Space Badge */}
               <div style={{
                 display: 'inline-block',
                 background: '#0A2315',
                 color: '#DFBA67',
-                fontSize: '0.76rem',
+                fontSize: '0.74rem',
                 fontWeight: 900,
-                padding: '5px 16px',
-                borderRadius: '18px',
-                letterSpacing: '0.8px',
+                padding: '5px 18px',
+                borderRadius: '20px',
+                letterSpacing: '1px',
                 marginBottom: '10px',
-                textTransform: 'uppercase'
+                textTransform: 'uppercase',
+                border: '1.5px solid #D4AF37',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
               }}>
-                {genSpaceType === 'counter'
-                  ? '🏪 BILLING COUNTER'
+                ✦ {genSpaceType === 'counter'
+                  ? 'BILLING COUNTER'
                   : isCinema
                     ? (String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)
-                        ? `🎬 SCREEN ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[1]} • ROW ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[2].toUpperCase()} • SEAT ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[3]}`
-                        : `🎬 CINEMA SEAT ${genIdentifier}`)
-                    : `${activeGenSpaceConfig.badge} ${genIdentifier}`}
+                        ? `SCREEN ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[1]} • ROW ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[2].toUpperCase()} • SEAT ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[3]}`
+                        : `CINEMA SEAT ${genIdentifier}`)
+                    : `${activeGenSpaceConfig.badge} ${genIdentifier}`} ✦
               </div>
 
               {/* Restaurant Name */}
               <h3 style={{
                 fontFamily: "'Playfair Display', serif, Georgia",
-                fontSize: '1.25rem',
+                fontSize: '1.24rem',
                 fontWeight: 900,
                 color: '#0A2315',
-                margin: '0 0 3px 0',
+                margin: '0 0 4px 0',
                 lineHeight: 1.25
               }}>
                 {settingsForm?.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
               </h3>
 
+              {/* Decorative Gold Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: '2px 0 6px 0' }}>
+                <div style={{ width: '32px', height: '1px', background: '#D4AF37' }} />
+                <span style={{ fontSize: '0.64rem', color: '#D4AF37' }}>◆</span>
+                <div style={{ width: '32px', height: '1px', background: '#D4AF37' }} />
+              </div>
+
               {/* Tagline / Subtitle */}
               <div style={{
-                fontSize: '0.74rem',
+                fontSize: '0.72rem',
                 fontWeight: 700,
-                color: '#16A34A',
-                marginBottom: '12px'
+                color: '#15803D',
+                marginBottom: '14px'
               }}>
                 {settingsForm?.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu')}
               </div>
 
-              {/* QR Code Container */}
+              {/* QR Code Shield with [SCAN TO ORDER] Pill & Focus Brackets */}
               <div style={{
                 background: '#FFFFFF',
-                padding: '12px',
-                borderRadius: '16px',
-                border: '1px solid #E2E8F0',
+                padding: '14px',
+                borderRadius: '18px',
+                border: '1.5px solid #E2E8F0',
+                position: 'relative',
                 display: 'inline-block',
                 marginBottom: '12px',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)'
               }}>
-                <img
-                  src={generatorQrImgUrl}
-                  alt={`${activeGenSpaceConfig.singular} ${genIdentifier} QR Code`}
-                  style={{ width: '170px', height: '170px', display: 'block' }}
-                />
+                <div style={{
+                  position: 'absolute',
+                  top: '-11px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: '#0A2315',
+                  color: '#DFBA67',
+                  fontSize: '0.62rem',
+                  fontWeight: 900,
+                  padding: '2px 10px',
+                  borderRadius: '10px',
+                  border: '1px solid #D4AF37',
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '0.4px'
+                }}>
+                  {isCinema ? '📷 SCAN FOR FOOD' : '📷 SCAN TO ORDER'}
+                </div>
+
+                <div style={{ position: 'relative', width: '160px', height: '160px' }}>
+                  <img
+                    src={generatorQrImgUrl}
+                    alt={`${activeGenSpaceConfig.singular} ${genIdentifier} QR Code`}
+                    style={{ width: '160px', height: '160px', display: 'block' }}
+                  />
+                  {/* 4 Gold Focus Target Brackets */}
+                  <span style={{ position: 'absolute', top: '-4px', left: '-4px', width: '12px', height: '12px', borderTop: '2.5px solid #D4AF37', borderLeft: '2.5px solid #D4AF37' }} />
+                  <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '12px', height: '12px', borderTop: '2.5px solid #D4AF37', borderRight: '2.5px solid #D4AF37' }} />
+                  <span style={{ position: 'absolute', bottom: '-4px', left: '-4px', width: '12px', height: '12px', borderBottom: '2.5px solid #D4AF37', borderLeft: '2.5px solid #D4AF37' }} />
+                  <span style={{ position: 'absolute', bottom: '-4px', right: '-4px', width: '12px', height: '12px', borderBottom: '2.5px solid #D4AF37', borderRight: '2.5px solid #D4AF37' }} />
+                </div>
               </div>
 
               {/* Primary Scan Instruction */}
               <div style={{
-                fontSize: '0.84rem',
+                fontSize: '0.82rem',
                 fontWeight: 900,
                 color: '#0A2315',
                 letterSpacing: '0.4px',
-                marginBottom: '3px'
+                marginBottom: '2px'
               }}>
-                {isCinema ? '📱 SCAN FOR IN-SEAT FOOD ORDERING' : '📱 SCAN FOR DIGITAL MENU & ORDER'}
+                {isCinema ? '📱 POINT CAMERA AT QR TO ORDER' : '📱 POINT CAMERA AT QR TO ORDER & PAY'}
               </div>
 
               {/* Secondary Scan Instruction (Hindi) */}
               <div style={{
-                fontSize: '0.74rem',
+                fontSize: '0.70rem',
                 fontWeight: 700,
                 color: '#64748B',
-                marginBottom: '12px'
+                marginBottom: '8px'
               }}>
-                {isCinema ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'स्कैन करें और डिजिटल मेन्यू देखें'}
+                {isCinema ? 'कैमरा से स्कैन करें और सीट पर खाना मंगाएं' : 'कैमरे से स्कैन करें और खाना ऑर्डर करें'}
               </div>
+
+              {/* 3-Step Visual Instruction Bar */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '4px 8px',
+                borderRadius: '12px',
+                background: '#FAF8F5',
+                border: '1px solid #EAE5DF',
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                color: '#334155',
+                marginBottom: '6px',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}>
+                <span>① Camera</span>
+                <span style={{ color: '#D4AF37' }}>➔</span>
+                <span>② Scan QR</span>
+                <span style={{ color: '#D4AF37' }}>➔</span>
+                <span>③ Order Food</span>
+              </div>
+
+              {/* Reassurance Note */}
+              <div style={{
+                fontSize: '0.62rem',
+                color: '#059669',
+                fontWeight: 800,
+                marginBottom: genDescription ? '8px' : '10px'
+              }}>
+                ✓ 100% Free • No App Required • Fast & Direct
+              </div>
+
+              {/* Custom Message */}
+              {genDescription && (
+                <div style={{
+                  fontSize: '0.70rem',
+                  fontStyle: 'italic',
+                  color: '#475569',
+                  marginBottom: '10px',
+                  padding: '4px 10px',
+                  background: '#FAF8F5',
+                  borderRadius: '8px',
+                  border: '1px solid #EAE5DF'
+                }}>
+                  "{genDescription}"
+                </div>
+              )}
 
               {/* Footer Divider & Live Contact Info */}
               <div style={{
                 width: '100%',
                 borderTop: '1px solid #F1F5F9',
-                paddingTop: '10px',
-                fontSize: '0.68rem',
+                paddingTop: '8px',
+                fontSize: '0.66rem',
                 color: '#94A3B8',
                 lineHeight: 1.4
               }}>
@@ -2517,8 +2845,8 @@ export default function QrGeneratorView({
                   <div style={{ fontWeight: 600 }}>Phone: {settingsForm?.phone || restaurantInfo?.phone}</div>
                 ) : null}
                 {!settingsForm?.watermark_removal_enabled && (
-                  <div style={{ marginTop: '4px', fontSize: '0.64rem', color: '#15803D', fontWeight: 800 }}>
-                    ⚡ Powered by TouchQR
+                  <div style={{ marginTop: '3px', fontSize: '0.62rem', color: '#15803D', fontWeight: 800 }}>
+                    ⚡ Powered by TouchQR Contactless Dining
                   </div>
                 )}
               </div>
