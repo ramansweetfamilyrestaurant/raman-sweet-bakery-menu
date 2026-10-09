@@ -469,6 +469,7 @@ export default function QrGeneratorView({
     const currentPhone = settingsForm?.phone || restaurantInfo?.phone || '';
     const isCinemaMode = isGenerator ? isCinema : (spaceType === 'cinema_seat');
     const standeeMsg = isGenerator ? genDescription : (currentStandee?.message || '');
+    const showWatermark = !settingsForm?.watermark_removal_enabled;
 
     // Accurate badge text
     let badgeText = '';
@@ -478,7 +479,7 @@ export default function QrGeneratorView({
       const match = String(identifierLabel).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i);
       badgeText = match ? `SCREEN ${match[1]} • ROW ${match[2].toUpperCase()} • SEAT ${match[3]}` : `CINEMA SEAT ${identifierLabel}`;
     } else {
-      const rawType = spaceType.toUpperCase();
+      const rawType = String(spaceType).toUpperCase();
       const typeWord = rawType === 'CABIN' ? 'CABIN' : rawType === 'VIP' ? 'VIP LOUNGE' : rawType === 'ROOM' ? 'ROOM' : 'TABLE';
       badgeText = `${typeWord} NO. ${identifierLabel}`;
     }
@@ -493,6 +494,7 @@ export default function QrGeneratorView({
         color: { dark: '#000000', light: '#FFFFFF' }
       });
     } catch (e) {
+      console.warn('QRCode generation fallback:', e);
       qrDataUrl = isGenerator ? generatorQrImgUrl : activeStandeeQrImgUrl;
     }
 
@@ -519,15 +521,15 @@ export default function QrGeneratorView({
               box-sizing: border-box;
             }
             .standee-card {
-              width: 360px;
-              background: #FFFFFF;
-              border-radius: 26px;
+              width: 320px;
+              padding: 30px 22px 24px 22px;
               border: 3.5px solid #D4AF37;
-              box-shadow: 0 16px 36px rgba(10,35,21,0.12);
-              padding: 28px 22px 20px 22px;
+              border-radius: 26px;
+              background: #FFFFFF;
               text-align: center;
-              box-sizing: border-box;
+              box-shadow: 0 10px 30px rgba(10,35,21,0.08);
               position: relative;
+              box-sizing: border-box;
             }
             .inner-frame {
               position: absolute;
@@ -543,34 +545,35 @@ export default function QrGeneratorView({
               display: inline-block;
               background: #0A2315;
               color: #DFBA67;
+              padding: 6px 18px;
+              border-radius: 22px;
               font-size: 0.82rem;
               font-weight: 800;
-              padding: 5px 18px;
-              border-radius: 20px;
-              letter-spacing: 1px;
-              margin-bottom: 12px;
+              letter-spacing: 0.5px;
               border: 1.5px solid #D4AF37;
+              box-shadow: 0 3px 10px rgba(10,35,21,0.15);
+              margin-bottom: 12px;
             }
             .logo-title {
-              font-family: 'Playfair Display', serif;
-              font-size: 1.55rem;
+              font-family: 'Playfair Display', Georgia, serif;
+              font-size: 1.25rem;
               font-weight: 900;
               color: #0A2315;
-              margin: 0 0 3px 0;
-              line-height: 1.25;
+              letter-spacing: -0.3px;
+              line-height: 1.2;
+              margin: 0 0 4px 0;
             }
             .gold-divider {
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 8px;
-              margin: 3px 0 6px 0;
               color: #D4AF37;
-              font-size: 0.70rem;
+              font-size: 0.72rem;
+              letter-spacing: 3px;
+              margin: 4px 0 6px 0;
             }
             .subtitle {
-              font-size: 0.76rem;
+              font-size: 0.72rem;
               font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.8px;
               color: #15803D;
               margin-bottom: 14px;
             }
@@ -689,15 +692,19 @@ export default function QrGeneratorView({
       </html>
     `;
 
-    // Seamless, popup-blocker-free hidden iframe printing
+    // Off-screen, zero-block, high-reliability print iframe
+    const existingFrame = document.getElementById('touchqr-print-frame');
+    if (existingFrame) existingFrame.remove();
+
     const iframe = document.createElement('iframe');
+    iframe.id = 'touchqr-print-frame';
     iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '-9999px';
+    iframe.style.width = '800px';
+    iframe.style.height = '1000px';
     iframe.style.border = '0';
-    iframe.style.visibility = 'hidden';
+    iframe.style.zIndex = '-9999';
     document.body.appendChild(iframe);
 
     const doc = iframe.contentWindow.document;
@@ -707,20 +714,30 @@ export default function QrGeneratorView({
 
     showToast(`Opening Print Dialog for ${badgeText}...`);
 
-    setTimeout(() => {
+    const triggerPrint = () => {
       try {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
       } catch (err) {
-        console.error('Print iframe error:', err);
+        console.error('Print iframe error, attempting popup fallback:', err);
+        const win = window.open('', '_blank');
+        if (win) {
+          win.document.open();
+          win.document.write(htmlContent);
+          win.document.close();
+          win.focus();
+          setTimeout(() => win.print(), 350);
+        }
       } finally {
         setTimeout(() => {
           if (iframe.parentNode) {
             iframe.parentNode.removeChild(iframe);
           }
-        }, 5000);
+        }, 10000);
       }
-    }, 400);
+    };
+
+    setTimeout(triggerPrint, 350);
   };
 
   const handleDownloadPureQr = async () => {
