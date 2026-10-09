@@ -8,6 +8,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
   const [submitting, setSubmitting] = useState(false);
 
   const isCinema = Boolean(tableNum && (tableNum.includes('Screen') || tableNum.includes('Seat') || tableNum.includes('🎬')));
+  const isHotel = Boolean(tableNum && (tableNum.includes('Room') || tableNum.includes('🏨')));
 
   // Cinema is a pure seat-ordering flow with NO customer staff-call modal
   if (isCinema) {
