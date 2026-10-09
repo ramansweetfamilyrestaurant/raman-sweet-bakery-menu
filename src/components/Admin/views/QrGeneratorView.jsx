@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   QrCode, 
   Printer, 
@@ -71,6 +71,12 @@ export default function QrGeneratorView({
   const [cornerStyle, setCornerStyle] = useState('rounded');
   const [downloadFormat, setDownloadFormat] = useState('PNG');
   const [downloadResolution, setDownloadResolution] = useState('2048');
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = useCallback((msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
 
   // Generator form state
   const [genSpaceName, setGenSpaceName] = useState('Main Hall');
@@ -184,10 +190,10 @@ export default function QrGeneratorView({
   const secretKey = settingsForm?.qr_secret || `${settingsForm?.id || 1}_${activeSlug}_tq`;
   
   // Helper to generate full target URL with secure signature
-  const buildQrUrl = (spaceTypeParam, identifier) => {
+  const buildQrUrl = useCallback((spaceTypeParam, identifier) => {
     const sig = generateQrToken(activeSlug, spaceTypeParam, identifier, secretKey);
     return `${liveOrigin}/${activeSlug}?${spaceTypeParam}=${encodeURIComponent(identifier)}&tkn=${sig}`;
-  };
+  }, [activeSlug, secretKey, liveOrigin]);
 
   const currentTargetUrl = buildQrUrl(isCinema ? 'cinema' : spaceConfig.param, activeTableNum);
   const currentQrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentTargetUrl)}`;
@@ -219,12 +225,12 @@ export default function QrGeneratorView({
   // 5. Standee Inventory Management (Dynamic synchronization with physical spaces)
   const defaultStandeesList = useMemo(() => {
     const list = [];
-    const tablesCount = Number(settingsForm?.total_tables) || 0;
+    const tablesCount = Number(settingsForm?.total_tables) || Number(totalTablesCount) || 10;
     const cabinsCount = Number(settingsForm?.total_cabins) || 0;
     const roomsCount = Number(settingsForm?.total_rooms) || 0;
     const vipCount = Number(settingsForm?.total_vip) || 0;
 
-    for (let i = 1; i <= Math.min(tablesCount, 40); i++) {
+    for (let i = 1; i <= Math.min(tablesCount, 60); i++) {
       list.push({
         id: `standee-table-${i}`,
         name: `Table ${i} Standee`,
@@ -235,11 +241,11 @@ export default function QrGeneratorView({
         status: 'active',
         theme: 'emerald',
         message: 'Scan to browse menu & order',
-        lastUpdated: '24 May 2026, 10:30 AM'
+        lastUpdated: 'Ready'
       });
     }
 
-    for (let i = 1; i <= Math.min(cabinsCount, 10); i++) {
+    for (let i = 1; i <= Math.min(cabinsCount, 20); i++) {
       list.push({
         id: `standee-cabin-${i}`,
         name: `Cabin ${i} Standee`,
@@ -250,11 +256,11 @@ export default function QrGeneratorView({
         status: 'active',
         theme: 'gold',
         message: 'Private dining menu & ordering',
-        lastUpdated: '24 May 2026, 10:15 AM'
+        lastUpdated: 'Ready'
       });
     }
 
-    for (let i = 1; i <= Math.min(roomsCount, 10); i++) {
+    for (let i = 1; i <= Math.min(roomsCount, 30); i++) {
       list.push({
         id: `standee-room-${i}`,
         name: `Room ${i} Tent Card`,
@@ -265,11 +271,11 @@ export default function QrGeneratorView({
         status: 'active',
         theme: 'minimal',
         message: 'Scan for 24/7 in-room dining',
-        lastUpdated: '24 May 2026, 09:45 AM'
+        lastUpdated: 'Ready'
       });
     }
 
-    for (let i = 1; i <= Math.min(vipCount, 5); i++) {
+    for (let i = 1; i <= Math.min(vipCount, 15); i++) {
       list.push({
         id: `standee-vip-${i}`,
         name: `VIP Lounge ${i} Standee`,
@@ -280,7 +286,7 @@ export default function QrGeneratorView({
         status: 'active',
         theme: 'gold',
         message: 'Exclusive VIP Menu & Fast Service',
-        lastUpdated: '24 May 2026, 09:30 AM'
+        lastUpdated: 'Ready'
       });
     }
 
@@ -295,7 +301,7 @@ export default function QrGeneratorView({
       status: 'active',
       theme: 'emerald',
       message: 'Scan to view full menu & daily specials',
-      lastUpdated: '24 May 2026, 09:00 AM'
+      lastUpdated: 'Ready'
     });
 
     return list;
@@ -304,6 +310,7 @@ export default function QrGeneratorView({
     settingsForm?.total_cabins,
     settingsForm?.total_rooms,
     settingsForm?.total_vip,
+    totalTablesCount,
     isDirectOrderingAvailable
   ]);
 
@@ -344,9 +351,29 @@ export default function QrGeneratorView({
       status: 'active',
       theme: 'emerald',
       message: 'Scan with your phone to view menu & order',
-      lastUpdated: 'Today'
+      lastUpdated: 'Ready'
     };
   }, [selectedStandeeId, standees, spaceConfig, currentPrefix, isDirectOrderingAvailable]);
+
+  // Dedicated dynamic Target URL & cryptographic QR for the currently active Standee in preview
+  const activeStandeeTargetUrl = useMemo(() => {
+    if (!activeStandee) return currentTargetUrl;
+    let param = 'table';
+    if (activeStandee.spaceType === 'cinema_seat' || activeStandee.spaceType === 'cinema') param = 'cinema';
+    else if (activeStandee.spaceType === 'cabin') param = 'cabin';
+    else if (activeStandee.spaceType === 'room') param = 'room';
+    else if (activeStandee.spaceType === 'vip') param = 'vip';
+    else if (activeStandee.spaceType === 'counter') param = 'table';
+    else {
+      const matched = availableSpaceTypes.find(s => s.id === activeStandee.spaceType);
+      param = matched?.param || 'table';
+    }
+    return buildQrUrl(param, activeStandee.identifier || '1');
+  }, [activeStandee, buildQrUrl, availableSpaceTypes, currentTargetUrl]);
+
+  const activeStandeeQrImgUrl = useMemo(() => {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(activeStandeeTargetUrl)}`;
+  }, [activeStandeeTargetUrl]);
 
   // Filtered Standees
   const filteredStandees = useMemo(() => {
@@ -378,16 +405,17 @@ export default function QrGeneratorView({
   };
 
   const handleCopyLink = () => {
-    const target = activeTab === 'space-generator' ? generatorTargetUrl : currentTargetUrl;
+    const target = activeTab === 'space-generator' ? generatorTargetUrl : activeStandeeTargetUrl;
     navigator.clipboard.writeText(target);
     setCopied(true);
+    showToast('Link copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadQr = async (format = 'PNG') => {
     const isGenerator = activeTab === 'space-generator';
     const identifierLabel = isGenerator ? genIdentifier : (activeStandee?.identifier || '1');
-    const qrImg = isGenerator ? generatorQrImgUrl : currentQrImgUrl;
+    const qrImg = isGenerator ? generatorQrImgUrl : activeStandeeQrImgUrl;
     const currentName = settingsForm?.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant';
     const currentTagline = settingsForm?.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu');
     const currentAddress = settingsForm?.address || restaurantInfo?.address || '';
@@ -624,11 +652,27 @@ export default function QrGeneratorView({
         ctx.fillText('⚡ Powered by TouchQR', width / 2, watermarkY + 16);
       }
 
+      // Resolution scaling for high-definition print export
+      const targetWidth = Number(downloadResolution) || 2048;
+      let finalCanvas = canvas;
+      if (targetWidth !== width) {
+        const scale = targetWidth / width;
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = targetWidth;
+        exportCanvas.height = Math.round(totalHeight * scale);
+        const exportCtx = exportCanvas.getContext('2d');
+        exportCtx.imageSmoothingEnabled = true;
+        exportCtx.imageSmoothingQuality = 'high';
+        exportCtx.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+        finalCanvas = exportCanvas;
+      }
+
       // Trigger Download
       const link = document.createElement('a');
       link.download = `${activeSlug}_${identifierLabel}_standee.${format.toLowerCase()}`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = finalCanvas.toDataURL(format.toLowerCase() === 'jpg' || format.toLowerCase() === 'jpeg' ? 'image/jpeg' : 'image/png');
       link.click();
+      showToast(`Standee downloaded for ${identifierLabel} (${targetWidth}px ${format})`);
     } catch (e) {
       console.error('Error rendering standee PNG:', e);
       const a = document.createElement('a');
@@ -636,6 +680,7 @@ export default function QrGeneratorView({
       a.download = `${activeSlug}_${identifierLabel}_qr.${format.toLowerCase()}`;
       a.target = '_blank';
       a.click();
+      showToast(`QR Code downloaded for ${identifierLabel}`);
     }
   };
 
@@ -649,9 +694,14 @@ export default function QrGeneratorView({
   };
 
   const handleDeleteStandee = (standeeId) => {
-    if (window.confirm('Are you sure you want to remove this standee?')) {
-      setStandees(prev => prev.filter(s => s.id !== standeeId));
-    }
+    setStandees(prev => {
+      const target = prev.find(s => s.id === standeeId);
+      const next = prev.filter(s => s.id !== standeeId);
+      if (target) {
+        showToast(`Standee "${target.name}" removed successfully`);
+      }
+      return next;
+    });
   };
 
   const handleSaveModalStandee = (formData) => {
@@ -691,7 +741,7 @@ export default function QrGeneratorView({
       setStandees(updated);
       setSelectedStandeeId(updated[existingIndex].id);
       setActiveTab('standees');
-      alert(`✓ Standee updated for ${activeGenSpaceConfig.singular} ${genIdentifier} in Standee Management!`);
+      showToast(`✓ Standee updated for ${activeGenSpaceConfig.singular} ${genIdentifier}!`);
     } else {
       const newStandee = {
         id: `standee-gen-${Date.now()}`,
@@ -708,7 +758,7 @@ export default function QrGeneratorView({
       setStandees(prev => [newStandee, ...prev]);
       setSelectedStandeeId(newStandee.id);
       setActiveTab('standees');
-      alert(`✓ Standee created for ${activeGenSpaceConfig.singular} ${genIdentifier} and added to Standee Management!`);
+      showToast(`✓ Standee created for ${activeGenSpaceConfig.singular} ${genIdentifier}!`);
     }
   };
 
@@ -724,6 +774,29 @@ export default function QrGeneratorView({
       paddingBottom: '100px',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 99999,
+          background: '#064E3B',
+          color: '#FFFFFF',
+          padding: '12px 20px',
+          borderRadius: '12px',
+          boxShadow: '0 8px 24px rgba(6, 78, 59, 0.35)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '0.86rem',
+          fontWeight: 700,
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <CheckCircle size={18} color="#34D399" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* Responsive Styles */}
       <style>{`
         .touchqr-two-col-grid {
@@ -1254,7 +1327,11 @@ export default function QrGeneratorView({
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    onPrintQR(st.identifier, st.spaceType);
+                                    if (onPrintQR) {
+                                      onPrintQR(st.identifier, st.spaceType);
+                                    } else {
+                                      window.print();
+                                    }
                                   }}
                                   style={{ padding: '3px 8px', borderRadius: '6px', border: 'none', background: '#064E3B', color: '#FFF', fontSize: '0.70rem', fontWeight: 800, cursor: 'pointer' }}
                                 >
@@ -1312,7 +1389,11 @@ export default function QrGeneratorView({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onPrintQR(st.identifier, st.spaceType);
+                            if (onPrintQR) {
+                              onPrintQR(st.identifier, st.spaceType);
+                            } else {
+                              window.print();
+                            }
                           }}
                           style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#064E3B', color: '#FFF', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer' }}
                         >
@@ -1395,7 +1476,7 @@ export default function QrGeneratorView({
                     marginBottom: '10px'
                   }}>
                     <img
-                      src={currentQrImgUrl}
+                      src={activeStandeeQrImgUrl}
                       alt="Standee QR"
                       style={{ width: '150px', height: '150px', display: 'block' }}
                     />
@@ -1411,7 +1492,58 @@ export default function QrGeneratorView({
                 </div>
 
                 {/* Actions below Preview */}
-                <div style={{ width: '100%', display: 'flex', gap: '8px' }}>
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadQr('PNG')}
+                      style={{
+                        flex: 1,
+                        height: '38px',
+                        padding: '0 10px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: '#064E3B',
+                        color: '#FFFFFF',
+                        fontSize: '0.76rem',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
+                      }}
+                    >
+                      <Download size={14} />
+                      <span>Download PNG</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => (onPrintQR ? onPrintQR(activeStandee.identifier, activeStandee.spaceType) : window.print())}
+                      style={{
+                        flex: 1,
+                        height: '38px',
+                        padding: '0 10px',
+                        borderRadius: '10px',
+                        border: '1px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        color: '#0F172A',
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Printer size={14} />
+                      <span>Print Standee</span>
+                    </button>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -1419,15 +1551,15 @@ export default function QrGeneratorView({
                       setShowCreateModal(true);
                     }}
                     style={{
-                      flex: 1,
-                      height: '38px',
+                      width: '100%',
+                      height: '34px',
                       padding: '0 10px',
-                      borderRadius: '10px',
-                      border: '1px solid #CBD5E1',
-                      background: '#FFFFFF',
-                      color: '#0F172A',
-                      fontSize: '0.76rem',
-                      fontWeight: 800,
+                      borderRadius: '8px',
+                      border: '1px solid #E2E8F0',
+                      background: '#F8FAFC',
+                      color: '#475569',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1435,33 +1567,8 @@ export default function QrGeneratorView({
                       gap: '4px'
                     }}
                   >
-                    <Palette size={14} />
-                    <span>Customize</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => onPrintQR(activeStandee.identifier, activeStandee.spaceType)}
-                    style={{
-                      flex: 1,
-                      height: '38px',
-                      padding: '0 10px',
-                      borderRadius: '10px',
-                      border: 'none',
-                      background: '#064E3B',
-                      color: '#FFFFFF',
-                      fontSize: '0.76rem',
-                      fontWeight: 900,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
-                    }}
-                  >
-                    <Printer size={14} />
-                    <span>Print Standee</span>
+                    <Palette size={13} />
+                    <span>Customize Standee</span>
                   </button>
                 </div>
               </div>
@@ -1493,7 +1600,7 @@ export default function QrGeneratorView({
                 </div>
 
                 <div
-                  onClick={() => onPrintAllQRs(currentPrefix, isCinema ? cinemaSeats : null)}
+                  onClick={() => (onPrintAllQRs ? onPrintAllQRs(currentPrefix, isCinema ? cinemaSeats : null) : window.print())}
                   style={{ padding: '8px 10px', borderRadius: '8px', background: '#FAF8F5', border: '1px solid #EAE5DF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}
                 >
                   <Printer size={15} color="#064E3B" />
@@ -2028,6 +2135,35 @@ export default function QrGeneratorView({
                 Download & Print
               </span>
 
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>Resolution:</span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {[
+                    { id: '1024', label: '1K' },
+                    { id: '2048', label: '2K HD' },
+                    { id: '4096', label: '4K Print' }
+                  ].map(res => (
+                    <button
+                      key={res.id}
+                      type="button"
+                      onClick={() => setDownloadResolution(res.id)}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        border: downloadResolution === res.id ? '1.5px solid #064E3B' : '1px solid #CBD5E1',
+                        background: downloadResolution === res.id ? '#ECFDF5' : '#FFFFFF',
+                        color: downloadResolution === res.id ? '#064E3B' : '#64748B',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {res.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
                 type="button"
                 onClick={() => handleDownloadQr('PNG')}
@@ -2049,12 +2185,12 @@ export default function QrGeneratorView({
                 }}
               >
                 <Download size={15} />
-                <span>Download QR Code (PNG)</span>
+                <span>Download QR Code ({downloadResolution === '4096' ? '4K Print' : downloadResolution === '1024' ? '1K PNG' : '2K HD'})</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => onPrintQR(genIdentifier, genSpaceType)}
+                onClick={() => (onPrintQR ? onPrintQR(genIdentifier, genSpaceType) : window.print())}
                 style={{
                   width: '100%',
                   height: '40px',
@@ -2330,11 +2466,11 @@ export default function QrGeneratorView({
             </div>
 
             <div style={{ background: '#FAF8F5', padding: '14px', borderRadius: '16px', border: '1px solid #EAE5DF' }}>
-              <img src={activeTab === 'space-generator' ? generatorQrImgUrl : currentQrImgUrl} alt="Test QR" style={{ width: '180px', height: '180px', display: 'block' }} />
+              <img src={activeTab === 'space-generator' ? generatorQrImgUrl : activeStandeeQrImgUrl} alt="Test QR" style={{ width: '180px', height: '180px', display: 'block' }} />
             </div>
 
             <div style={{ fontSize: '0.74rem', color: '#64748B', wordBreak: 'break-all', padding: '8px 12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              {activeTab === 'space-generator' ? generatorTargetUrl : currentTargetUrl}
+              {activeTab === 'space-generator' ? generatorTargetUrl : activeStandeeTargetUrl}
             </div>
 
             <div style={{ display: 'flex', gap: '8px', width: '100%', marginTop: '6px' }}>
@@ -2346,7 +2482,7 @@ export default function QrGeneratorView({
                 {copied ? '✓ Copied URL' : 'Copy Test URL'}
               </button>
               <a
-                href={activeTab === 'space-generator' ? generatorTargetUrl : currentTargetUrl}
+                href={activeTab === 'space-generator' ? generatorTargetUrl : activeStandeeTargetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ flex: 1, height: '38px', borderRadius: '10px', background: '#064E3B', color: '#FFF', fontWeight: 800, fontSize: '0.78rem', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
