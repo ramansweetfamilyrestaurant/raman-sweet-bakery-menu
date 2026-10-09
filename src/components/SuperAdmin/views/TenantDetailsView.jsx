@@ -94,7 +94,7 @@ export default function TenantDetailsView({
   const sub = t360Data?.subscription || {
     plan_tier: resto.plan_tier || 'pro',
     plan_name: `${(resto.plan_tier || 'pro').toUpperCase()} Plan`,
-    plan_price: resto.plan_price || 999,
+    plan_price: (resto.plan_price !== undefined && resto.plan_price !== null) ? Number(resto.plan_price) : 999,
     status: resto.subscription_status || (resto.active !== false ? 'active' : 'expired'),
     subscription_type: resto.subscription_type || 'PAID',
     auto_renew: resto.auto_renew !== 0 && resto.auto_renew !== false,
@@ -135,7 +135,7 @@ export default function TenantDetailsView({
     notes: "Internal shop operational profile active and healthy."
   };
 
-  const isLifetime = sub.is_complimentary || sub.subscription_type === 'ADMIN_GRANTED' || (sub.access_until && new Date(sub.access_until).getFullYear() > 2030);
+  const isLifetime = sub.is_complimentary || sub.subscription_type === 'ADMIN_GRANTED' || resto.subscription_type === 'ADMIN_GRANTED' || resto.mandate_status === 'admin_granted' || Number(sub.plan_price) === 0 || (sub.access_until && new Date(sub.access_until).getFullYear() > 2030);
   const publicMenuUrl = `${window.location.origin}/${tenant.subdomain || tenant.slug}`;
 
   // Filtered transactions

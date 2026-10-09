@@ -146,7 +146,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
               {/* Scheduled Plan Change Block */}
               {r.scheduled_plan_key && (
                 <div style={{ background: 'var(--sa-info-bg)', border: '1px solid var(--sa-info-border)', borderRadius: 'var(--sa-radius-sm)', padding: '8px', fontSize: '0.75rem', margin: '8px 0' }}>
-                  <div style={{ color: '#1E40AF', fontWeight: 800 }}>CURRENT: {(r.plan_tier || 'pro').toUpperCase()} (₹{r.plan_price || 999}/mo)</div>
+                  <div style={{ color: '#1E40AF', fontWeight: 800 }}>CURRENT: {(r.plan_tier || 'pro').toUpperCase()} ({(isLifetime || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`})</div>
                   <div style={{ textAlign: 'center', color: '#2563EB', margin: '2px 0' }}><ArrowDown size={12} /></div>
                   <div style={{ color: '#1E40AF', fontWeight: 800 }}>SCHEDULED: {r.scheduled_plan_key.toUpperCase()}</div>
                   <div style={{ fontSize: '0.7rem', color: '#3B82F6', marginTop: '2px' }}>

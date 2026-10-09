@@ -2096,7 +2096,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                                 {(r.plan_tier || 'pro').toUpperCase()}
                               </span>
                               <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
-                                {isVip ? '₹0/mo (Free)' : `₹${r.plan_price || 999}/mo`}
+                                {(isVip || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
                               </span>
                               {r.scheduled_plan_key && (
                                 <span style={{ background: '#EFF6FF', color: '#1E40AF', padding: '1px 5px', borderRadius: '4px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-block', marginTop: '2px' }}>
