@@ -495,15 +495,29 @@ export default function QrGeneratorView({
     const isCinemaMode = isGenerator ? isCinema : (activeStandee?.spaceType === 'cinema_seat');
     const standeeMsg = isGenerator ? genDescription : activeStandee?.message;
 
-    let badgeText = isGenerator
-      ? (genSpaceType === 'counter'
-          ? 'BILLING COUNTER'
-          : isCinema
-            ? (String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)
-                ? `SCREEN ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[1]} • ROW ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[2].toUpperCase()} • SEAT ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[3]}`
-                : `CINEMA SEAT ${genIdentifier}`)
-            : `${activeGenSpaceConfig.badge} ${genIdentifier}`)
-      : (activeStandee?.spaceLabel || `${activeStandee?.spaceType || 'TABLE'} ${identifierLabel}`);
+    // Smart, accurate badge text (e.g. TABLE NO. 15, BILLING COUNTER, CABIN NO. 2)
+    let badgeText = '';
+    if (isGenerator) {
+      if (genSpaceType === 'counter') {
+        badgeText = 'BILLING COUNTER';
+      } else if (isCinema) {
+        const match = String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i);
+        badgeText = match ? `SCREEN ${match[1]} • ROW ${match[2].toUpperCase()} • SEAT ${match[3]}` : `CINEMA SEAT ${genIdentifier}`;
+      } else {
+        const typeWord = (activeGenSpaceConfig?.singular || 'Table').toUpperCase();
+        badgeText = `${typeWord} NO. ${genIdentifier}`;
+      }
+    } else {
+      if (activeStandee?.spaceType === 'counter') {
+        badgeText = 'BILLING COUNTER';
+      } else if (activeStandee?.spaceType === 'cinema_seat') {
+        badgeText = activeStandee?.spaceLabel || `CINEMA SEAT ${activeStandee?.identifier || '1'}`;
+      } else {
+        const rawType = (activeStandee?.spaceType || 'table').toUpperCase();
+        const typeWord = rawType === 'CABIN' ? 'CABIN' : rawType === 'VIP' ? 'VIP LOUNGE' : rawType === 'ROOM' ? 'ROOM' : 'TABLE';
+        badgeText = `${typeWord} NO. ${activeStandee?.identifier || identifierLabel}`;
+      }
+    }
 
     const isDarkTheme = (!isGenerator && activeStandee?.theme === 'slate');
     const effectiveQrColor = isDarkTheme ? '#0F172A' : (qrColor || '#000000');
@@ -546,17 +560,17 @@ export default function QrGeneratorView({
       if (!isDarkTheme) {
         const bgGrad = ctx.createLinearGradient(0, 0, 0, baseHeight);
         bgGrad.addColorStop(0, '#FFFFFF');
-        bgGrad.addColorStop(0.5, '#FDFCFA');
-        bgGrad.addColorStop(1, '#F8F6F0');
+        bgGrad.addColorStop(0.4, '#FDFBF7');
+        bgGrad.addColorStop(1, '#F8F5EE');
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, baseWidth, baseHeight);
       }
 
       // 3. Double Royal Gold Foil Border
-      const margin = 44;
+      const margin = 36;
       const cardW = baseWidth - margin * 2;
       const cardH = baseHeight - margin * 2;
-      const outerRadius = 42;
+      const outerRadius = 38;
 
       // Outer Gold Frame
       ctx.save();
@@ -574,7 +588,7 @@ export default function QrGeneratorView({
       const innerMargin = margin + 14;
       const innerW = baseWidth - innerMargin * 2;
       const innerH = baseHeight - innerMargin * 2;
-      const innerRadius = 32;
+      const innerRadius = 26;
       ctx.beginPath();
       if (ctx.roundRect) {
         ctx.roundRect(innerMargin, innerMargin, innerW, innerH, innerRadius);
@@ -603,19 +617,22 @@ export default function QrGeneratorView({
       drawDiamond(baseWidth - cornerInset, baseHeight - cornerInset, 8);
       ctx.restore();
 
-      // 4. Header Badge (Table / Space Pill)
-      const badgeY = 110;
-      const badgeH = 58;
-      ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
+      // =========================================================================
+      // SECTION 1: HEADER & RESTAURANT BRANDING (Y: 80 to 380)
+      // =========================================================================
+      // Top Table / Space Badge
+      const badgeY = 82;
+      const badgeH = 56;
+      ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
       const badgeTextUpper = `✦ ${badgeText.toUpperCase()} ✦`;
       const badgeMetrics = ctx.measureText(badgeTextUpper);
-      const badgeW = Math.max(badgeMetrics.width + 64, 300);
+      const badgeW = Math.max(badgeMetrics.width + 72, 320);
       const badgeX = (baseWidth - badgeW) / 2;
 
       ctx.save();
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 29);
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 28);
       } else {
         ctx.rect(badgeX, badgeY, badgeW, badgeH);
       }
@@ -631,9 +648,9 @@ export default function QrGeneratorView({
       ctx.fillText(badgeTextUpper, baseWidth / 2, badgeY + badgeH / 2);
       ctx.restore();
 
-      // 5. Restaurant Name (Playfair Luxury Serif)
+      // Restaurant Name (Playfair Luxury Serif)
       ctx.fillStyle = isDarkTheme ? '#FFFFFF' : '#0A2315';
-      ctx.font = 'bold 48px "Playfair Display", Georgia, serif';
+      ctx.font = 'bold 50px "Playfair Display", Georgia, serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
@@ -644,7 +661,7 @@ export default function QrGeneratorView({
       for (let n = 0; n < nameWords.length; n++) {
         const testLine = nameLine + nameWords[n] + ' ';
         const metrics = ctx.measureText(testLine);
-        if (metrics.width > 920 && n > 0) {
+        if (metrics.width > 900 && n > 0) {
           nameLines.push(nameLine.trim());
           nameLine = nameWords[n] + ' ';
         } else {
@@ -653,46 +670,49 @@ export default function QrGeneratorView({
       }
       nameLines.push(nameLine.trim());
 
-      let currentTextY = 225;
+      let currentTextY = 195;
       for (let i = 0; i < nameLines.length; i++) {
         ctx.fillText(nameLines[i], baseWidth / 2, currentTextY);
-        currentTextY += 56;
+        currentTextY += 58;
       }
 
-      // Decorative divider
+      // Decorative Gold Divider with Center Diamond
       ctx.save();
-      const divLineY = currentTextY - 8;
+      const divLineY = currentTextY - 6;
       ctx.strokeStyle = isDarkTheme ? '#475569' : '#D4AF37';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(baseWidth / 2 - 120, divLineY);
-      ctx.lineTo(baseWidth / 2 - 20, divLineY);
-      ctx.moveTo(baseWidth / 2 + 20, divLineY);
-      ctx.lineTo(baseWidth / 2 + 120, divLineY);
+      ctx.moveTo(baseWidth / 2 - 140, divLineY);
+      ctx.lineTo(baseWidth / 2 - 22, divLineY);
+      ctx.moveTo(baseWidth / 2 + 22, divLineY);
+      ctx.lineTo(baseWidth / 2 + 140, divLineY);
       ctx.stroke();
-      drawDiamond(baseWidth / 2, divLineY, 6);
+      drawDiamond(baseWidth / 2, divLineY, 7);
       ctx.restore();
 
       // Tagline
       ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#15803D';
-      ctx.font = 'bold 23px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(currentTagline, baseWidth / 2, currentTextY + 24);
+      ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(currentTagline, baseWidth / 2, currentTextY + 28);
 
-      // 6. QR Plaque & Native QR Code
-      const qrBoxSize = 580;
-      const qrBoxX = (baseWidth - qrBoxSize) / 2;
-      const qrBoxY = currentTextY + 60;
+      // =========================================================================
+      // SECTION 2: HERO QR PLAQUE (Y: 395 to 1120)
+      // =========================================================================
+      const qrPlaqueW = 680;
+      const qrPlaqueH = 710;
+      const qrPlaqueX = (baseWidth - qrPlaqueW) / 2;
+      const qrPlaqueY = 395;
 
-      // QR Plaque White Card with soft border
+      // QR Plaque White Card with soft border and shadow
       ctx.save();
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 32);
+        ctx.roundRect(qrPlaqueX, qrPlaqueY, qrPlaqueW, qrPlaqueH, 32);
       } else {
-        ctx.rect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
+        ctx.rect(qrPlaqueX, qrPlaqueY, qrPlaqueW, qrPlaqueH);
       }
       ctx.fillStyle = '#FFFFFF';
-      ctx.shadowColor = 'rgba(0,0,0,0.08)';
+      ctx.shadowColor = 'rgba(0,0,0,0.09)';
       ctx.shadowBlur = 24;
       ctx.shadowOffsetY = 10;
       ctx.fill();
@@ -701,28 +721,28 @@ export default function QrGeneratorView({
       ctx.save();
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 32);
+        ctx.roundRect(qrPlaqueX, qrPlaqueY, qrPlaqueW, qrPlaqueH, 32);
       } else {
-        ctx.rect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
+        ctx.rect(qrPlaqueX, qrPlaqueY, qrPlaqueW, qrPlaqueH);
       }
       ctx.strokeStyle = isDarkTheme ? '#475569' : '#E2E8F0';
       ctx.lineWidth = 2.5;
       ctx.stroke();
       ctx.restore();
 
-      // Top mini pill: "[ 📷 SCAN TO ORDER ]"
-      const scanTagText = isCinemaMode ? '📷 SCAN FOR IN-SEAT FOOD' : '📷 SCAN TO ORDER & PAY';
+      // "SCAN TO ORDER" Banner INSIDE Plaque at top
+      const scanBannerText = isCinemaMode ? '📷 SCAN FOR IN-SEAT FOOD' : '📷 SCAN TO ORDER & PAY';
       ctx.save();
-      ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
-      const scanTagW = ctx.measureText(scanTagText).width + 36;
-      const scanTagH = 34;
-      const scanTagX = (baseWidth - scanTagW) / 2;
-      const scanTagY = qrBoxY - 17;
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+      const scanBannerW = ctx.measureText(scanBannerText).width + 48;
+      const scanBannerH = 42;
+      const scanBannerX = (baseWidth - scanBannerW) / 2;
+      const scanBannerY = qrPlaqueY + 24;
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(scanTagX, scanTagY, scanTagW, scanTagH, 17);
+        ctx.roundRect(scanBannerX, scanBannerY, scanBannerW, scanBannerH, 21);
       } else {
-        ctx.rect(scanTagX, scanTagY, scanTagW, scanTagH);
+        ctx.rect(scanBannerX, scanBannerY, scanBannerW, scanBannerH);
       }
       ctx.fillStyle = isDarkTheme ? '#1E293B' : '#0A2315';
       ctx.fill();
@@ -732,14 +752,13 @@ export default function QrGeneratorView({
       ctx.fillStyle = isDarkTheme ? '#F8FAFC' : '#DFBA67';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(scanTagText, baseWidth / 2, scanTagY + scanTagH / 2);
+      ctx.fillText(scanBannerText, baseWidth / 2, scanBannerY + scanBannerH / 2);
       ctx.restore();
 
-      // Draw QR Image
-      const qrImgSize = 480;
-      const qrImgPad = (qrBoxSize - qrImgSize) / 2;
-      const qrImgX = qrBoxX + qrImgPad;
-      const qrImgY = qrBoxY + qrImgPad;
+      // Large 530x530 Crisp QR Code Image
+      const qrImgSize = 530;
+      const qrImgX = (baseWidth - qrImgSize) / 2;
+      const qrImgY = scanBannerY + scanBannerH + 20;
 
       const qrImgEl = new Image();
       qrImgEl.src = nativeQrDataUrl;
@@ -755,9 +774,9 @@ export default function QrGeneratorView({
       // Gold Camera Target Focus Corner Brackets ⌜ ⌝ ⌞ ⌟
       ctx.save();
       ctx.strokeStyle = '#D4AF37';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 4.5;
       ctx.lineCap = 'round';
-      const bLen = 28;
+      const bLen = 32;
       const bPad = 12;
 
       // Top-Left
@@ -789,31 +808,47 @@ export default function QrGeneratorView({
       ctx.stroke();
       ctx.restore();
 
-      // 7. Visual 3-Step Scan Guide (① Open Camera • ② Scan QR • ③ Order Food)
-      let postQrY = qrBoxY + qrBoxSize + 44;
+      // Subtle Scan instruction at bottom of plaque
+      ctx.fillStyle = '#64748B';
+      ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Point your phone camera here • No app required', baseWidth / 2, qrPlaqueY + qrPlaqueH - 26);
 
+      // =========================================================================
+      // SECTION 3: CALL TO ACTION & HINDI INSTRUCTIONS (Y: 1145 to 1250)
+      // =========================================================================
+      let curSectionY = 1160;
       ctx.fillStyle = isDarkTheme ? '#F1F5F9' : '#0A2315';
-      ctx.font = 'bold 32px "Plus Jakarta Sans", sans-serif';
+      ctx.font = 'bold 34px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
-      ctx.fillText(isCinemaMode ? '📱 POINT CAMERA AT QR TO ORDER' : '📱 POINT CAMERA AT QR TO ORDER & PAY', baseWidth / 2, postQrY);
+      ctx.fillText(isCinemaMode ? '📱 POINT CAMERA AT QR TO ORDER' : '📱 POINT CAMERA AT QR TO ORDER & PAY', baseWidth / 2, curSectionY);
 
-      postQrY += 34;
-      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#64748B';
-      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(isCinemaMode ? 'कैमरा से स्कैन करें और सीट पर खाना मंगाएं' : 'कैमरे से स्कैन करें और खाना ऑर्डर करें', baseWidth / 2, postQrY);
+      curSectionY += 36;
+      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#475569';
+      ctx.font = 'bold 23px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(isCinemaMode ? 'कैमरा से स्कैन करें और सीट पर खाना मंगाएं' : 'कैमरे से स्कैन करें और स्वादिष्ट खाना ऑर्डर करें', baseWidth / 2, curSectionY);
 
-      // 3-Step Badge Pill Bar
-      postQrY += 46;
-      const stepBarW = 860;
-      const stepBarH = 50;
-      const stepBarX = (baseWidth - stepBarW) / 2;
+      curSectionY += 32;
+      ctx.fillStyle = '#059669';
+      ctx.font = 'bold 19px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Instant Digital Menu • Table Ordering • Cashless Payments', baseWidth / 2, curSectionY);
+
+      // =========================================================================
+      // SECTION 4: 3-STEP VISUAL INFOGRAPHIC CARDS (Y: 1280 to 1380)
+      // =========================================================================
+      const stepBoxW = 960;
+      const stepBoxH = 88;
+      const stepBoxX = (baseWidth - stepBoxW) / 2;
+      const stepBoxY = 1275;
+
       ctx.save();
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(stepBarX, postQrY - 36, stepBarW, stepBarH, 25);
+        ctx.roundRect(stepBoxX, stepBoxY, stepBoxW, stepBoxH, 20);
       } else {
-        ctx.rect(stepBarX, postQrY - 36, stepBarW, stepBarH);
+        ctx.rect(stepBoxX, stepBoxY, stepBoxW, stepBoxH);
       }
       ctx.fillStyle = isDarkTheme ? 'rgba(255,255,255,0.06)' : '#FAF8F5';
       ctx.fill();
@@ -821,62 +856,127 @@ export default function QrGeneratorView({
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      ctx.fillStyle = isDarkTheme ? '#E2E8F0' : '#1E293B';
-      ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+      // 3 Step columns
+      // Step 1
+      const col1X = stepBoxX + 160;
+      ctx.fillStyle = '#0A2315';
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const stepText = '① Open Camera    ➔    ② Scan QR Code    ➔    ③ Browse & Order';
-      ctx.fillText(stepText, baseWidth / 2, postQrY - 11);
+      ctx.fillText('① OPEN CAMERA', col1X, stepBoxY + 36);
+      ctx.fillStyle = '#64748B';
+      ctx.font = '15px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Open phone camera app', col1X, stepBoxY + 62);
+
+      // Arrow 1
+      ctx.fillStyle = '#D4AF37';
+      ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('➔', stepBoxX + 325, stepBoxY + 48);
+
+      // Step 2
+      const col2X = stepBoxX + 480;
+      ctx.fillStyle = '#0A2315';
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('② SCAN QR CODE', col2X, stepBoxY + 36);
+      ctx.fillStyle = '#64748B';
+      ctx.font = '15px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Point at code on table', col2X, stepBoxY + 62);
+
+      // Arrow 2
+      ctx.fillStyle = '#D4AF37';
+      ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('➔', stepBoxX + 635, stepBoxY + 48);
+
+      // Step 3
+      const col3X = stepBoxX + 800;
+      ctx.fillStyle = '#0A2315';
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('③ BROWSE & ORDER', col3X, stepBoxY + 36);
+      ctx.fillStyle = '#64748B';
+      ctx.font = '15px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Select food & enjoy', col3X, stepBoxY + 62);
       ctx.restore();
 
-      // Instant / No app note
-      postQrY += 48;
-      ctx.fillStyle = '#059669';
-      ctx.font = 'bold 19px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText('✓ 100% Free • No App Download Required • Fast & Direct', baseWidth / 2, postQrY);
+      // =========================================================================
+      // SECTION 5: HOSPITALITY GREETING CARD (Y: 1390 to 1495)
+      // =========================================================================
+      const greetBoxW = 960;
+      const greetBoxH = 82;
+      const greetBoxX = (baseWidth - greetBoxW) / 2;
+      const greetBoxY = 1385;
 
-      // Custom message (if any)
-      if (standeeMsg) {
-        postQrY += 40;
-        ctx.fillStyle = isDarkTheme ? '#CBD5E1' : '#475569';
-        ctx.font = 'italic 20px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText(`"${standeeMsg}"`, baseWidth / 2, postQrY);
-      }
-
-      // 8. Footer Section
-      const footerDividerY = baseHeight - 160;
       ctx.save();
-      ctx.strokeStyle = isDarkTheme ? '#334155' : '#E2E8F0';
-      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(120, footerDividerY);
-      ctx.lineTo(baseWidth - 120, footerDividerY);
+      if (ctx.roundRect) {
+        ctx.roundRect(greetBoxX, greetBoxY, greetBoxW, greetBoxH, 16);
+      } else {
+        ctx.rect(greetBoxX, greetBoxY, greetBoxW, greetBoxH);
+      }
+      ctx.fillStyle = isDarkTheme ? 'rgba(255,255,255,0.04)' : '#FFFFFF';
+      ctx.fill();
+      ctx.strokeStyle = isDarkTheme ? '#334155' : '#EAE5DF';
+      ctx.lineWidth = 1.2;
       ctx.stroke();
+
+      const msgToDisplay = standeeMsg || 'Welcome to our restaurant! Please scan the QR code to explore our delicious menu and place your order.';
+      ctx.fillStyle = isDarkTheme ? '#CBD5E1' : '#334155';
+      ctx.font = 'italic 20px "Playfair Display", Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`"${msgToDisplay}"`, baseWidth / 2, greetBoxY + 34);
+
+      ctx.fillStyle = '#059669';
+      ctx.font = 'bold 16px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('✓ 100% Free • No App Download Required • Safe & Contactless', baseWidth / 2, greetBoxY + 60);
       ctx.restore();
 
-      let footerTextY = footerDividerY + 36;
-      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#64748B';
-      ctx.font = '20px "Plus Jakarta Sans", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
+      // =========================================================================
+      // SECTION 6: FOOTER CONTACT & DETAILS (Y: 1515 to 1730)
+      // =========================================================================
+      const footerDividerY = 1510;
+      ctx.save();
+      ctx.strokeStyle = isDarkTheme ? '#334155' : '#D4AF37';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(140, footerDividerY);
+      ctx.lineTo(baseWidth / 2 - 20, footerDividerY);
+      ctx.moveTo(baseWidth / 2 + 20, footerDividerY);
+      ctx.lineTo(baseWidth - 140, footerDividerY);
+      ctx.stroke();
+      drawDiamond(baseWidth / 2, footerDividerY, 6);
+      ctx.restore();
 
+      let footerTextY = 1555;
       if (currentAddress) {
-        ctx.fillText(currentAddress, baseWidth / 2, footerTextY);
-        footerTextY += 28;
+        ctx.fillStyle = isDarkTheme ? '#CBD5E1' : '#334155';
+        ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`📍 ${currentAddress}`, baseWidth / 2, footerTextY);
+        footerTextY += 40;
       }
+
       if (currentPhone) {
-        ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText(`Phone: ${currentPhone}`, baseWidth / 2, footerTextY);
-        footerTextY += 28;
+        ctx.fillStyle = isDarkTheme ? '#F8FAFC' : '#0A2315';
+        ctx.font = 'bold 23px "Plus Jakarta Sans", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`📞 Phone / WhatsApp: ${currentPhone}`, baseWidth / 2, footerTextY);
+        footerTextY += 38;
       }
+
+      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#64748B';
+      ctx.font = '17px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Fresh Food Prepared Daily • Dine-In & Takeaway Available', baseWidth / 2, footerTextY);
+      footerTextY += 34;
 
       if (showWatermark) {
         ctx.fillStyle = '#15803D';
         ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText('⚡ Powered by TouchQR Contactless Dining', baseWidth / 2, footerTextY);
+        ctx.textAlign = 'center';
+        ctx.fillText('⚡ TouchQR • Smart Contactless Dining Experience', baseWidth / 2, footerTextY);
       }
 
-      // 9. Output Scaling (1K = 1200x1800, 2K = 1600x2400, 4K = 2400x3600)
+      // =========================================================================
+      // SECTION 7: SCALING & EXPORT TO STANDARD PRINT SIZES
+      // =========================================================================
       const resolutionMap = {
         '1024': 1200, // 1200 x 1800 px (4x6" standard)
         '2048': 1600, // 1600 x 2400 px (5x7" / A5 HD)
@@ -1784,7 +1884,7 @@ export default function QrGeneratorView({
                       ? 'BILLING COUNTER'
                       : activeStandee.spaceType === 'cinema_seat'
                         ? (activeStandee.spaceLabel || `CINEMA SEAT ${activeStandee.identifier}`)
-                        : (activeStandee.spaceLabel?.toUpperCase() || `TABLE ${activeStandee.identifier}`)} ✦
+                        : `${((activeStandee.spaceType || 'table').toUpperCase() === 'CABIN' ? 'CABIN' : (activeStandee.spaceType || 'table').toUpperCase() === 'VIP' ? 'VIP LOUNGE' : (activeStandee.spaceType || 'table').toUpperCase() === 'ROOM' ? 'ROOM' : 'TABLE')} NO. ${activeStandee.identifier || '1'}`} ✦
                   </div>
 
                   {/* Restaurant Name (Playfair Luxury Serif) */}
@@ -2683,7 +2783,7 @@ export default function QrGeneratorView({
                     ? (String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)
                         ? `SCREEN ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[1]} • ROW ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[2].toUpperCase()} • SEAT ${String(genIdentifier).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i)[3]}`
                         : `CINEMA SEAT ${genIdentifier}`)
-                    : `${activeGenSpaceConfig.badge} ${genIdentifier}`} ✦
+                    : `${(activeGenSpaceConfig?.singular || 'Table').toUpperCase()} NO. ${genIdentifier}`} ✦
               </div>
 
               {/* Restaurant Name */}
