@@ -1972,6 +1972,39 @@ export default function AdminDashboard({
     }
   };
 
+  // Popup-blocker-free hidden iframe print engine
+  const printViaHiddenIframe = (htmlContent, title) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.error('Print iframe error:', err);
+      } finally {
+        setTimeout(() => {
+          if (iframe.parentNode) {
+            iframe.parentNode.removeChild(iframe);
+          }
+        }, 5000);
+      }
+    }, 400);
+  };
+
   const handlePrintQR = async (overrideNum, targetPrefix = null) => {
     const activeTableNum = overrideNum || tableNumber || '1';
     const prefix = targetPrefix || settingsForm.table_prefix || restaurantInfo?.table_prefix || 'table';
@@ -2007,31 +2040,32 @@ export default function AdminDashboard({
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu');
 
-    let badgeText = `${spaceConfig.badge} ${activeTableNum}`;
-    if (isCinema) {
+    let badgeText = '';
+    if (prefix === 'counter') {
+      badgeText = 'BILLING COUNTER';
+    } else if (isCinema) {
       const match = String(activeTableNum).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i);
-      if (match) {
-        badgeText = `🎬 SCREEN ${match[1]} • ROW ${match[2].toUpperCase()} • SEAT ${match[3]}`;
-      } else {
-        badgeText = `🎬 CINEMA SEAT ${activeTableNum}`;
-      }
+      badgeText = match ? `SCREEN ${match[1]} • ROW ${match[2].toUpperCase()} • SEAT ${match[3]}` : `CINEMA SEAT ${activeTableNum}`;
+    } else {
+      const rawType = prefix.toUpperCase();
+      const typeWord = rawType === 'CABIN' ? 'CABIN' : rawType === 'VIP' ? 'VIP LOUNGE' : rawType === 'ROOM' ? 'ROOM' : 'TABLE';
+      badgeText = `${typeWord} NO. ${activeTableNum}`;
     }
 
-    const printWindow = window.open('', '_blank', 'width=800,height=900');
-    if (!printWindow) {
-      alert('Please allow popups for this site to print the QR Standee.');
-      return;
-    }
-    printWindow.document.write(`
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${currentName} - ${spaceConfig.singular} ${activeTableNum} QR Standee</title>
+          <title>${currentName} - ${badgeText} QR Standee</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+            @page {
+              size: auto;
+              margin: 8mm;
+            }
             body {
               margin: 0;
-              padding: 40px 20px;
+              padding: 24px;
               background-color: #F8FAFC;
               font-family: 'Plus Jakarta Sans', sans-serif;
               display: flex;
@@ -2041,12 +2075,12 @@ export default function AdminDashboard({
               box-sizing: border-box;
             }
             .standee-card {
-              width: 380px;
+              width: 360px;
               background: #FFFFFF;
-              border-radius: 28px;
+              border-radius: 26px;
               border: 3.5px solid #D4AF37;
-              box-shadow: 0 20px 40px rgba(10,35,21,0.15);
-              padding: 32px 24px 24px 24px;
+              box-shadow: 0 16px 36px rgba(10,35,21,0.12);
+              padding: 28px 22px 20px 22px;
               text-align: center;
               box-sizing: border-box;
               position: relative;
@@ -2058,102 +2092,119 @@ export default function AdminDashboard({
               right: 7px;
               bottom: 7px;
               border: 1.5px solid #E5C07B;
-              border-radius: 22px;
+              border-radius: 20px;
               pointer-events: none;
             }
             .table-badge {
               display: inline-block;
               background: #0A2315;
               color: #DFBA67;
-              font-size: 0.85rem;
+              font-size: 0.82rem;
               font-weight: 800;
-              padding: 6px 20px;
+              padding: 5px 18px;
               border-radius: 20px;
               letter-spacing: 1px;
-              margin-bottom: 14px;
+              margin-bottom: 12px;
               border: 1.5px solid #D4AF37;
             }
             .logo-title {
               font-family: 'Playfair Display', serif;
-              font-size: 1.65rem;
+              font-size: 1.55rem;
               font-weight: 900;
               color: #0A2315;
-              margin: 0 0 4px 0;
+              margin: 0 0 3px 0;
+              line-height: 1.25;
             }
             .gold-divider {
               display: flex;
               align-items: center;
               justify-content: center;
               gap: 8px;
-              margin: 4px 0 8px 0;
+              margin: 3px 0 6px 0;
               color: #D4AF37;
-              font-size: 0.75rem;
+              font-size: 0.70rem;
             }
             .subtitle {
-              font-size: 0.78rem;
+              font-size: 0.76rem;
               font-weight: 700;
               color: #15803D;
-              margin-bottom: 18px;
+              margin-bottom: 14px;
             }
             .qr-box {
               background: #FFFFFF;
-              padding: 16px;
-              border-radius: 20px;
+              padding: 14px;
+              border-radius: 18px;
               border: 1.5px solid #E2E8F0;
               display: inline-block;
-              margin-bottom: 16px;
+              margin-bottom: 12px;
               box-shadow: 0 4px 14px rgba(0,0,0,0.06);
               position: relative;
             }
+            .scan-pill {
+              position: absolute;
+              top: -11px;
+              left: 50%;
+              transform: translateX(-50%);
+              background: #0A2315;
+              color: #DFBA67;
+              font-size: 0.62rem;
+              font-weight: 900;
+              padding: 2px 10px;
+              border-radius: 10px;
+              border: 1px solid #D4AF37;
+              white-space: nowrap;
+            }
             .qr-box img {
-              width: 220px;
-              height: 220px;
+              width: 190px;
+              height: 190px;
               display: block;
             }
             .instruction-en {
-              font-size: 0.95rem;
+              font-size: 0.88rem;
               font-weight: 800;
               color: #0A2315;
-              letter-spacing: 0.5px;
-              margin-bottom: 3px;
+              letter-spacing: 0.4px;
+              margin-bottom: 2px;
             }
             .instruction-hi {
-              font-size: 0.82rem;
+              font-size: 0.76rem;
               font-weight: 600;
               color: #64748B;
-              margin-bottom: 12px;
+              margin-bottom: 8px;
             }
             .steps-bar {
               background: #FAF8F5;
               border: 1px solid #EAE5DF;
-              border-radius: 12px;
-              padding: 6px 10px;
-              font-size: 0.72rem;
+              border-radius: 10px;
+              padding: 5px 8px;
+              font-size: 0.66rem;
               font-weight: 800;
               color: #334155;
-              margin-bottom: 8px;
+              margin-bottom: 6px;
             }
             .reassurance {
-              font-size: 0.70rem;
+              font-size: 0.65rem;
               font-weight: 800;
               color: #059669;
-              margin-bottom: 14px;
+              margin-bottom: 8px;
             }
             .footer-info {
               border-top: 1px solid #F1F5F9;
-              padding-top: 12px;
-              font-size: 0.72rem;
+              padding-top: 10px;
+              font-size: 0.68rem;
               color: #94A3B8;
               line-height: 1.4;
             }
             @media print {
               body {
-                background: none;
-                padding: 0;
+                background: none !important;
+                padding: 0 !important;
               }
               .standee-card {
-                box-shadow: none;
-                border: 3.5px solid #D4AF37;
+                box-shadow: none !important;
+                border: 3.5px solid #D4AF37 !important;
+                margin: 0 auto !important;
+                page-break-inside: avoid;
               }
             }
           </style>
@@ -2161,31 +2212,29 @@ export default function AdminDashboard({
         <body>
           <div class="standee-card">
             <div class="inner-frame"></div>
-            <div class="table-badge">✦ ${badgeText.toUpperCase()} ✦</div>
+            <div class="table-badge">✦ ${badgeText} ✦</div>
             <h1 class="logo-title">${currentName}</h1>
             <div class="gold-divider">── ◆ ──</div>
             <div class="subtitle">${currentTagline}</div>
             <div class="qr-box">
-              <img src="${qrImgUrl}" alt="${spaceConfig.singular} ${activeTableNum} QR Code" />
+              <div class="scan-pill">${isCinema ? '📷 SCAN FOR FOOD' : '📷 SCAN TO ORDER'}</div>
+              <img src="${qrImgUrl}" alt="${badgeText} QR Code" />
             </div>
             <div class="instruction-en">📱 POINT CAMERA AT QR TO ORDER</div>
             <div class="instruction-hi">कैमरे से स्कैन करें और खाना ऑर्डर करें</div>
             <div class="steps-bar">① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food</div>
             <div class="reassurance">✓ No App Required • Fast & Direct Contactless Dining</div>
             <div class="footer-info">
-              ${settingsForm.address || ''}${settingsForm.phone ? '<br>Phone: ' + settingsForm.phone : ''}
-              ${!settingsForm.watermark_removal_enabled ? '<div style="margin-top: 4px; font-size: 0.65rem; color: #15803D; font-weight: 800;">⚡ Powered by TouchQR</div>' : ''}
+              ${settingsForm.address || restaurantInfo?.address ? `<div>📍 ${settingsForm.address || restaurantInfo?.address}</div>` : ''}
+              ${settingsForm.phone || restaurantInfo?.phone ? `<div style="font-weight: 700; color: #0A2315;">📞 Phone: ${settingsForm.phone || restaurantInfo?.phone}</div>` : ''}
+              ${!settingsForm.watermark_removal_enabled ? '<div style="margin-top: 3px; font-size: 0.62rem; color: #15803D; font-weight: 800;">⚡ Powered by TouchQR</div>' : ''}
             </div>
           </div>
-          <script>
-            window.onload = function() {
-              window.print();
-            }
-          </script>
         </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
+
+    printViaHiddenIframe(htmlContent, badgeText);
   };
 
   const handlePrintAllQRs = async (targetPrefix = null, cinemaSeatsList = null) => {
@@ -2202,12 +2251,6 @@ export default function AdminDashboard({
       let activeSeats = Array.isArray(cinemaSeatsList) ? cinemaSeatsList.filter(s => s.active !== false) : [];
       if (activeSeats.length === 0) {
         alert('No cinema seats found to print. Please configure seats first in Setup.');
-        return;
-      }
-
-      const printWindow = window.open('', '_blank', 'width=950,height=900');
-      if (!printWindow) {
-        alert('Please allow popups to print Cinema Seat QR standees.');
         return;
       }
 
@@ -2254,14 +2297,14 @@ export default function AdminDashboard({
         `;
       });
 
-      printWindow.document.write(`
+      const htmlContent = `
         <!DOCTYPE html>
         <html>
           <head>
             <title>Cinema Seats QR Standees - ${currentName}</title>
             <style>
               @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
-              body { margin: 0; padding: 30px; background-color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+              body { margin: 0; padding: 24px; background-color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
               .standee-card { width: 320px; padding: 26px 18px 20px 18px; border: 3px solid #D4AF37; border-radius: 22px; background: #FFFFFF; text-align: center; box-shadow: 0 6px 20px rgba(10,35,21,0.08); page-break-inside: avoid; margin-bottom: 20px; position: relative; }
               .inner-frame { position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px; border: 1.5px solid #E5C07B; border-radius: 16px; pointer-events: none; }
               .table-badge { display: inline-block; background: #0A2315; color: #DFBA67; padding: 5px 16px; border-radius: 20px; font-size: 0.80rem; font-weight: 800; border: 1px solid #D4AF37; margin-bottom: 10px; }
@@ -2274,16 +2317,16 @@ export default function AdminDashboard({
               .instruction-hi { font-size: 0.74rem; font-weight: 600; color: #64748B; margin-bottom: 8px; }
               .steps-bar { background: #FAF8F5; border: 1px solid #EAE5DF; border-radius: 10px; padding: 4px 8px; font-size: 0.65rem; font-weight: 800; color: #334155; margin-bottom: 8px; }
               .footer-info { font-size: 0.68rem; color: #94A3B8; border-top: 1px solid #F1F5F9; padding-top: 8px; }
-              @media print { body { padding: 0; background: none; } .standee-card { box-shadow: none; } }
+              @media print { body { padding: 0; background: none; } .standee-card { box-shadow: none; page-break-inside: avoid; } }
             </style>
           </head>
           <body>
             ${cardsHtml}
-            <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
           </body>
         </html>
-      `);
-      printWindow.document.close();
+      `;
+
+      printViaHiddenIframe(htmlContent, 'Cinema Standees');
       return;
     }
 
@@ -2293,12 +2336,6 @@ export default function AdminDashboard({
     const totalCount = Number(settingsForm[field]) || 0;
     if (totalCount === 0) {
       alert(`No ${spaceConfig.plural.toLowerCase()} added yet! Click "+ Add ${spaceConfig.singular}" to create QR standees.`);
-      return;
-    }
-
-    const printWindow = window.open('', '_blank', 'width=950,height=900');
-    if (!printWindow) {
-      alert(`Please allow popups for this site to print all ${spaceConfig.plural} QR Standees.`);
       return;
     }
 
@@ -2339,14 +2376,14 @@ export default function AdminDashboard({
       `;
     });
 
-    printWindow.document.write(`
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
           <title>All ${spaceConfig.plural} QR Standees - ${currentName}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
-            body { margin: 0; padding: 30px; background-color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+            body { margin: 0; padding: 24px; background-color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
             .standee-card { width: 320px; padding: 26px 18px 20px 18px; border: 3px solid #D4AF37; border-radius: 22px; background: #FFFFFF; text-align: center; box-shadow: 0 6px 20px rgba(10,35,21,0.08); page-break-inside: avoid; margin-bottom: 20px; position: relative; }
             .inner-frame { position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px; border: 1.5px solid #E5C07B; border-radius: 16px; pointer-events: none; }
             .table-badge { display: inline-block; background: #0A2315; color: #DFBA67; padding: 5px 16px; border-radius: 20px; font-size: 0.80rem; font-weight: 800; border: 1px solid #D4AF37; margin-bottom: 10px; }
@@ -2359,16 +2396,16 @@ export default function AdminDashboard({
             .instruction-hi { font-size: 0.74rem; font-weight: 600; color: #64748B; margin-bottom: 8px; }
             .steps-bar { background: #FAF8F5; border: 1px solid #EAE5DF; border-radius: 10px; padding: 4px 8px; font-size: 0.65rem; font-weight: 800; color: #334155; margin-bottom: 8px; }
             .footer-info { font-size: 0.68rem; color: #94A3B8; border-top: 1px solid #F1F5F9; padding-top: 8px; }
-            @media print { body { padding: 0; background: none; } .standee-card { box-shadow: none; } }
+            @media print { body { padding: 0; background: none; } .standee-card { box-shadow: none; page-break-inside: avoid; } }
           </style>
         </head>
         <body>
           ${cardsHtml}
-          <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
         </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
+
+    printViaHiddenIframe(htmlContent, 'All Standees');
   };
 
   const handleSaveDish = async (dishData) => {

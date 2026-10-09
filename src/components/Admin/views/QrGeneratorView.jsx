@@ -452,6 +452,277 @@ export default function QrGeneratorView({
   };
 
   // Download ONLY the crisp original QR Code (Square PNG for table stickers, menu inserts, acrylic stands)
+  // Bulletproof, zero-block print engine using hidden iframe
+  const handlePrintStandee = async (targetStandee = null) => {
+    const isGenerator = activeTab === 'space-generator';
+    const currentStandee = targetStandee || (isGenerator ? null : activeStandee);
+    const identifierLabel = isGenerator ? genIdentifier : (currentStandee?.identifier || '1');
+    const spaceType = isGenerator ? genSpaceType : (currentStandee?.spaceType || 'table');
+    const targetUrl = isGenerator ? generatorTargetUrl : buildQrUrl(
+      (spaceType === 'cinema_seat' || spaceType === 'cinema') ? 'cinema' : (spaceType === 'cabin' ? 'cabin' : spaceType === 'room' ? 'room' : spaceType === 'vip' ? 'vip' : 'table'),
+      identifierLabel
+    );
+
+    const currentName = settingsForm?.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant';
+    const currentTagline = settingsForm?.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu');
+    const currentAddress = settingsForm?.address || restaurantInfo?.address || '';
+    const currentPhone = settingsForm?.phone || restaurantInfo?.phone || '';
+    const isCinemaMode = isGenerator ? isCinema : (spaceType === 'cinema_seat');
+    const standeeMsg = isGenerator ? genDescription : (currentStandee?.message || '');
+
+    // Accurate badge text
+    let badgeText = '';
+    if (spaceType === 'counter') {
+      badgeText = 'BILLING COUNTER';
+    } else if (isCinemaMode) {
+      const match = String(identifierLabel).match(/^S(\d+)-([A-Za-z]+)-(\d+)$/i);
+      badgeText = match ? `SCREEN ${match[1]} • ROW ${match[2].toUpperCase()} • SEAT ${match[3]}` : `CINEMA SEAT ${identifierLabel}`;
+    } else {
+      const rawType = spaceType.toUpperCase();
+      const typeWord = rawType === 'CABIN' ? 'CABIN' : rawType === 'VIP' ? 'VIP LOUNGE' : rawType === 'ROOM' ? 'ROOM' : 'TABLE';
+      badgeText = `${typeWord} NO. ${identifierLabel}`;
+    }
+
+    // High resolution pitch-black QR code
+    let qrDataUrl = '';
+    try {
+      qrDataUrl = await QRCode.toDataURL(targetUrl, {
+        width: 900,
+        margin: 1,
+        errorCorrectionLevel: 'H',
+        color: { dark: '#000000', light: '#FFFFFF' }
+      });
+    } catch (e) {
+      qrDataUrl = isGenerator ? generatorQrImgUrl : activeStandeeQrImgUrl;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${currentName} - ${badgeText} QR Standee</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+            @page {
+              size: auto;
+              margin: 8mm;
+            }
+            body {
+              margin: 0;
+              padding: 24px;
+              background-color: #F8FAFC;
+              font-family: 'Plus Jakarta Sans', sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              box-sizing: border-box;
+            }
+            .standee-card {
+              width: 360px;
+              background: #FFFFFF;
+              border-radius: 26px;
+              border: 3.5px solid #D4AF37;
+              box-shadow: 0 16px 36px rgba(10,35,21,0.12);
+              padding: 28px 22px 20px 22px;
+              text-align: center;
+              box-sizing: border-box;
+              position: relative;
+            }
+            .inner-frame {
+              position: absolute;
+              top: 7px;
+              left: 7px;
+              right: 7px;
+              bottom: 7px;
+              border: 1.5px solid #E5C07B;
+              border-radius: 20px;
+              pointer-events: none;
+            }
+            .table-badge {
+              display: inline-block;
+              background: #0A2315;
+              color: #DFBA67;
+              font-size: 0.82rem;
+              font-weight: 800;
+              padding: 5px 18px;
+              border-radius: 20px;
+              letter-spacing: 1px;
+              margin-bottom: 12px;
+              border: 1.5px solid #D4AF37;
+            }
+            .logo-title {
+              font-family: 'Playfair Display', serif;
+              font-size: 1.55rem;
+              font-weight: 900;
+              color: #0A2315;
+              margin: 0 0 3px 0;
+              line-height: 1.25;
+            }
+            .gold-divider {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              margin: 3px 0 6px 0;
+              color: #D4AF37;
+              font-size: 0.70rem;
+            }
+            .subtitle {
+              font-size: 0.76rem;
+              font-weight: 700;
+              color: #15803D;
+              margin-bottom: 14px;
+            }
+            .qr-box {
+              background: #FFFFFF;
+              padding: 14px;
+              border-radius: 18px;
+              border: 1.5px solid #E2E8F0;
+              display: inline-block;
+              margin-bottom: 12px;
+              box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+              position: relative;
+            }
+            .scan-pill {
+              position: absolute;
+              top: -11px;
+              left: 50%;
+              transform: translateX(-50%);
+              background: #0A2315;
+              color: #DFBA67;
+              font-size: 0.62rem;
+              font-weight: 900;
+              padding: 2px 10px;
+              border-radius: 10px;
+              border: 1px solid #D4AF37;
+              white-space: nowrap;
+            }
+            .qr-box img {
+              width: 190px;
+              height: 190px;
+              display: block;
+            }
+            .instruction-en {
+              font-size: 0.88rem;
+              font-weight: 800;
+              color: #0A2315;
+              letter-spacing: 0.4px;
+              margin-bottom: 2px;
+            }
+            .instruction-hi {
+              font-size: 0.76rem;
+              font-weight: 600;
+              color: #64748B;
+              margin-bottom: 8px;
+            }
+            .steps-bar {
+              background: #FAF8F5;
+              border: 1px solid #EAE5DF;
+              border-radius: 10px;
+              padding: 5px 8px;
+              font-size: 0.66rem;
+              font-weight: 800;
+              color: #334155;
+              margin-bottom: 6px;
+            }
+            .reassurance {
+              font-size: 0.65rem;
+              font-weight: 800;
+              color: #059669;
+              margin-bottom: 8px;
+            }
+            .greet-msg {
+              font-size: 0.70rem;
+              font-style: italic;
+              color: #475569;
+              margin-bottom: 8px;
+              padding: 3px 8px;
+              background: #FAF8F5;
+              border-radius: 8px;
+              border: 1px solid #EAE5DF;
+            }
+            .footer-info {
+              border-top: 1px solid #F1F5F9;
+              padding-top: 10px;
+              font-size: 0.68rem;
+              color: #94A3B8;
+              line-height: 1.4;
+            }
+            @media print {
+              body {
+                background: none !important;
+                padding: 0 !important;
+              }
+              .standee-card {
+                box-shadow: none !important;
+                border: 3.5px solid #D4AF37 !important;
+                margin: 0 auto !important;
+                page-break-inside: avoid;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="standee-card">
+            <div class="inner-frame"></div>
+            <div class="table-badge">✦ ${badgeText} ✦</div>
+            <h1 class="logo-title">${currentName}</h1>
+            <div class="gold-divider">── ◆ ──</div>
+            <div class="subtitle">${currentTagline}</div>
+            <div class="qr-box">
+              <div class="scan-pill">${isCinemaMode ? '📷 SCAN FOR FOOD' : '📷 SCAN TO ORDER'}</div>
+              <img src="${qrDataUrl}" alt="${badgeText} QR Code" />
+            </div>
+            <div class="instruction-en">📱 POINT CAMERA AT QR TO ORDER</div>
+            <div class="instruction-hi">कैमरे से स्कैन करें और खाना ऑर्डर करें</div>
+            <div class="steps-bar">① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food</div>
+            <div class="reassurance">✓ 100% Free • No App Required • Fast & Direct</div>
+            ${standeeMsg ? `<div class="greet-msg">"${standeeMsg}"</div>` : ''}
+            <div class="footer-info">
+              ${currentAddress ? `<div>📍 ${currentAddress}</div>` : ''}
+              ${currentPhone ? `<div style="font-weight: 700; color: #0A2315;">📞 Phone: ${currentPhone}</div>` : ''}
+              ${showWatermark ? `<div style="margin-top: 3px; font-size: 0.62rem; color: #15803D; font-weight: 800;">⚡ Powered by TouchQR</div>` : ''}
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Seamless, popup-blocker-free hidden iframe printing
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    showToast(`Opening Print Dialog for ${badgeText}...`);
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.error('Print iframe error:', err);
+      } finally {
+        setTimeout(() => {
+          if (iframe.parentNode) {
+            iframe.parentNode.removeChild(iframe);
+          }
+        }, 5000);
+      }
+    }, 400);
+  };
+
   const handleDownloadPureQr = async () => {
     const isGenerator = activeTab === 'space-generator';
     const identifierLabel = isGenerator ? genIdentifier : (activeStandee?.identifier || '1');
@@ -1657,11 +1928,7 @@ export default function QrGeneratorView({
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (onPrintQR) {
-                                      onPrintQR(st.identifier, st.spaceType);
-                                    } else {
-                                      window.print();
-                                    }
+                                    handlePrintStandee(st);
                                   }}
                                   style={{ padding: '3px 8px', borderRadius: '6px', border: 'none', background: '#064E3B', color: '#FFF', fontSize: '0.70rem', fontWeight: 800, cursor: 'pointer' }}
                                 >
@@ -1719,11 +1986,7 @@ export default function QrGeneratorView({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (onPrintQR) {
-                              onPrintQR(st.identifier, st.spaceType);
-                            } else {
-                              window.print();
-                            }
+                            handlePrintStandee(st);
                           }}
                           style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#064E3B', color: '#FFF', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer' }}
                         >
@@ -2220,7 +2483,7 @@ export default function QrGeneratorView({
                 <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                   <button
                     type="button"
-                    onClick={() => (onPrintQR ? onPrintQR(activeStandee.identifier, activeStandee.spaceType) : window.print())}
+                    onClick={() => handlePrintStandee(activeStandee)}
                     style={{
                       flex: 1,
                       height: '38px',
@@ -3049,7 +3312,7 @@ export default function QrGeneratorView({
 
               <button
                 type="button"
-                onClick={() => (onPrintQR ? onPrintQR(genIdentifier, genSpaceType) : window.print())}
+                onClick={() => handlePrintStandee({ spaceType: genSpaceType, identifier: genIdentifier, spaceLabel: genSpaceName, message: genDescription })}
                 style={{
                   width: '100%',
                   height: '40px',
