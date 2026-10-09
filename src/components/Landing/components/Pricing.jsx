@@ -8,36 +8,48 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
     setShowMoreMap(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const formatCurrency = (val) => {
+    const num = Number(val);
+    if (isNaN(num)) return val;
+    return num.toLocaleString('en-IN');
+  };
+
   // Default fallback plans if publicPlans API array is empty
   const defaultPlans = [
     {
       key: 'basic',
       name: 'Basic Starter Plan',
-      price: '499',
-      original_price: '999',
+      price: 499,
+      original_price: 999,
+      discountTag: '50% OFF',
       badge: '⚡ BASIC',
-      description: 'Ideal for small cafes and sweet shops starting digital menu QR codes.',
+      description: 'Ideal for small cafes, sweet shops & bakeries starting digital QR menus.',
       features: [
-        'Digital QR Menu & Custom Themes',
+        'Digital QR Menu & Luxury Themes',
         'Unlimited Dishes & Categories',
-        'Admin Dashboard & QR Generator',
+        'Admin Dashboard & QR Standee Generator',
+        '⭐ Smart Google Reviews Collector',
         'Up to 3 Combo Deals',
-        'Client-side Analytics'
+        'Multi-Language (English + Hindi)',
+        'Client Analytics & Daily Insights'
       ],
       popular: false
     },
     {
       key: 'pro',
       name: 'Pro Luxury Plan',
-      price: '999',
-      original_price: '1999',
+      price: 999,
+      original_price: 1999,
+      discountTag: '50% OFF',
       badge: '👑 PRO CHOICE',
-      description: 'Best for growing restaurants looking to boost Google reviews and WhatsApp orders.',
+      description: 'Best for growing dine-in restaurants looking to boost orders and 5-star reviews.',
       features: [
         'Everything in Basic Plan',
         '⭐ Smart AI Google Reviews Booster',
-        'WhatsApp Order Confirmations',
+        '📱 WhatsApp Order Confirmations',
         'Up to 10 Combo Deals',
+        '🧾 GST Invoice & Tax Management',
+        '🖨️ Bluetooth Thermal Printing KOT',
         'Priority 24/7 Phone & WhatsApp Support'
       ],
       popular: true
@@ -45,47 +57,111 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
     {
       key: 'enterprise',
       name: 'Enterprise VIP Plan',
-      price: '1999',
-      original_price: '3999',
+      price: 1999,
+      original_price: 3999,
+      discountTag: '50% OFF',
       badge: '🚀 ENTERPRISE',
       description: 'Complete restaurant management with live KOT kitchen siren, floor map & thermal printing.',
       features: [
         'Everything in Pro Plan',
         '⚡ Direct Table QR Ordering System',
         '📋 Live Kitchen Siren & KOT Tickets',
-        '🖨️ Thermal Printer KOT & Bills (USB/Bluetooth)',
-        '🗺️ Hall Floor Table Map & Occupancy Grid',
-        'Unlimited Thali & Combo Deals'
+        '📺 Live KDS Kitchen Display Screen',
+        '🖨️ Dual Thermal Printers (Kitchen + Counter)',
+        '🗺️ Hall Floor Table Map & Live Occupancy',
+        'Unlimited Combos & Thali Deals',
+        'Dedicated VIP 24/7 Account Manager'
       ],
       popular: false
     }
   ];
 
-  const plansToRender = publicPlans.length > 0 ? publicPlans.map(p => {
+  const plansToRender = (publicPlans && publicPlans.length > 0) ? publicPlans.map(p => {
     const priceNum = Number(p.price) || 0;
-    const origNum = p.original_price ? Number(p.original_price) : (priceNum > 0 ? priceNum * 2 - 1 : 0);
+    const origNum = p.original_price ? Number(p.original_price) : (priceNum > 0 ? Math.round(priceNum * 2) - 1 : 0);
     const discountPct = (origNum > priceNum && origNum > 0) ? Math.round(((origNum - priceNum) / origNum) * 100) : 0;
+    
+    // Build comprehensive, high-value feature list reflecting actual database capabilities
+    const featuresList = [];
+
+    // Core catalog & QR features
+    featuresList.push('Digital QR Menu & Luxury Themes');
+    featuresList.push(
+      p.max_dishes && Number(p.max_dishes) < 1000 
+        ? `Up to ${p.max_dishes} Dishes Catalog` 
+        : 'Unlimited Dishes & Categories'
+    );
+    featuresList.push('Admin Dashboard & QR Standee Generator');
+
+    // Reviews & AI
+    if (p.ai_review_enabled || p.google_reviews_enabled) {
+      featuresList.push('⭐ Smart AI Google Reviews Booster');
+    }
+
+    // Direct Table Ordering & Kitchen Siren
+    if (p.direct_ordering_enabled) {
+      featuresList.push('⚡ Direct Table QR KOT Ordering');
+      featuresList.push('📋 Live Kitchen Siren & KOT Tickets');
+    }
+
+    // KDS
+    if (p.kds_enabled) {
+      featuresList.push('📺 Live KDS Kitchen Display Screen');
+    }
+
+    // Printers
+    if (p.dual_printer_enabled) {
+      featuresList.push('🖨️ Dual Thermal Printers (Kitchen + Counter)');
+    } else if (p.bluetooth_kot_enabled) {
+      featuresList.push('🖨️ Thermal Printing (USB/Bluetooth KOT)');
+    }
+
+    // WhatsApp
+    if (p.whatsapp_enabled) {
+      featuresList.push('📱 WhatsApp Order Confirmations');
+    }
+
+    // Floor Map
+    if (p.direct_ordering_enabled) {
+      featuresList.push('🗺️ Dining Hall Table Floor Map');
+    }
+
+    // GST
+    if (p.gst_invoice_enabled) {
+      featuresList.push('🧾 GST Invoice & Tax Management');
+    }
+
+    // Multi-Language
+    if (p.multi_language_enabled) {
+      featuresList.push('🌐 Multi-Language (English + Hindi)');
+    }
+
+    // Combos
+    featuresList.push(
+      p.max_combos && Number(p.max_combos) > 100 
+        ? 'Unlimited Thali & Combo Deals' 
+        : `Up to ${p.max_combos || 10} Combo Deals`
+    );
+
+    // Support
+    featuresList.push(
+      p.key === 'enterprise' 
+        ? 'Dedicated VIP 24/7 Account Manager' 
+        : 'Priority Phone & WhatsApp Support'
+    );
+
+    const isPopular = p.popular === true || p.popular === 1 || p.popular === '1' || p.key === 'pro';
+
     return {
       key: p.key,
       name: p.name,
-      price: p.price,
+      price: priceNum,
       original_price: origNum > priceNum ? origNum : null,
       discountTag: discountPct > 0 ? `${discountPct}% OFF` : null,
-      badge: p.badge || (p.key === 'pro' ? '👑 RECOMMENDED' : '⚡ SAAS PLAN'),
+      badge: p.badge || (isPopular ? '👑 PRO CHOICE' : (p.key === 'enterprise' ? '🚀 ENTERPRISE' : '⚡ BASIC')),
       description: p.description || 'Full-featured digital menu & ordering system for your restaurant.',
-      features: [
-        'Digital QR Menu & Themes',
-        'Admin Dashboard & QR Generator',
-        '⭐ Smart AI Google Reviews',
-        ...(p.direct_ordering_enabled ? [
-          '⚡ Direct Table QR KOT Ordering',
-          '📋 Live Kitchen Siren System',
-          '🖨️ Thermal Printing (USB/Bluetooth)',
-          '🗺️ Dining Hall Table Floor Map'
-        ] : []),
-        `Up to ${p.max_combos > 100 ? 'Unlimited' : (p.max_combos || 10)} Combo Deals`
-      ],
-      popular: p.key === 'pro'
+      features: featuresList,
+      popular: isPopular
     };
   }) : defaultPlans;
 
@@ -106,16 +182,18 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
         <div className="km-pricing-grid">
           {plansToRender.map((plan, index) => {
             const isExpanded = !!showMoreMap[plan.key];
-            const visibleFeatures = isExpanded ? plan.features : plan.features.slice(0, 4);
-            const hasMore = plan.features.length > 4;
+            const visibleFeatures = isExpanded ? plan.features : plan.features.slice(0, 5);
+            const hasMore = plan.features.length > 5;
 
             return (
               <div 
-                key={index} 
+                key={plan.key || `plan-${index}`} 
                 className={`km-price-card ${plan.popular ? 'featured' : ''}`}
               >
-                {plan.popular && (
-                  <div className="km-price-badge">MOST POPULAR CHOICE</div>
+                {plan.badge && (
+                  <div className="km-price-badge">
+                    {plan.badge}
+                  </div>
                 )}
 
                 <div>
@@ -126,7 +204,7 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
                     {plan.original_price && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                         <span style={{ fontSize: '0.9rem', color: 'var(--km-muted)', textDecoration: 'line-through' }}>
-                          ₹{plan.original_price}
+                          ₹{formatCurrency(plan.original_price)}
                         </span>
                         {plan.discountTag && (
                           <span style={{ background: '#EF4444', color: '#FFF', fontSize: '0.68rem', fontWeight: 900, padding: '2px 6px', borderRadius: '4px' }}>
@@ -136,7 +214,7 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
                       </div>
                     )}
 
-                    <span className="km-plan-price">₹{plan.price}</span>
+                    <span className="km-plan-price">₹{formatCurrency(plan.price)}</span>
                     <span className="km-plan-period">/month</span>
                   </div>
 
@@ -158,14 +236,14 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
                         fontWeight: 800, cursor: 'pointer', padding: '4px 0 16px 0', display: 'block'
                       }}
                     >
-                      {isExpanded ? 'Hide Extra Features ↑' : `+ ${plan.features.length - 4} More Features ↓`}
+                      {isExpanded ? 'Hide Extra Features ↑' : `+ ${plan.features.length - 5} More Features ↓`}
                     </button>
                   )}
                 </div>
 
                 <button 
                   className={plan.popular ? 'km-btn-primary km-btn-gold' : 'km-btn-primary'}
-                  onClick={() => onSelectPlan(plan.key)}
+                  onClick={() => onSelectPlan?.(plan.key)}
                   style={{ width: '100%' }}
                 >
                   Start {trialDays}-Day Free Trial <ArrowRight size={16} />
