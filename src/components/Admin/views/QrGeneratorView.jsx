@@ -38,6 +38,7 @@ import {
 import { generateQrToken } from '../../../utils/qrSecurity';
 import { getAvailableSpaceTypesForBusiness } from '../../../utils/businessTaxonomy';
 import { fetchCinemaScreens, fetchCinemaSeats } from '../../../api/client';
+import QRCode from 'qrcode';
 
 export default function QrGeneratorView({
   tableNumber,
@@ -221,8 +222,6 @@ export default function QrGeneratorView({
     return buildQrUrl(param, genIdentifier || '1');
   }, [genSpaceType, activeGenSpaceConfig, genIdentifier, activeSlug, secretKey, liveOrigin]);
 
-  const generatorQrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatorTargetUrl)}`;
-
   // 5. Standee Inventory Management (Dynamic synchronization with physical spaces)
   const defaultStandeesList = useMemo(() => {
     const list = [];
@@ -372,9 +371,48 @@ export default function QrGeneratorView({
     return buildQrUrl(param, activeStandee.identifier || '1');
   }, [activeStandee, buildQrUrl, availableSpaceTypes, currentTargetUrl]);
 
-  const activeStandeeQrImgUrl = useMemo(() => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(activeStandeeTargetUrl)}`;
-  }, [activeStandeeTargetUrl]);
+  // Native, ultra-sharp local QR generation via qrcode engine (0 network lag, 0 blur, 0 CORS)
+  const [activeStandeeDataUrl, setActiveStandeeDataUrl] = useState('');
+  const [generatorDataUrl, setGeneratorDataUrl] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    if (activeStandeeTargetUrl) {
+      QRCode.toDataURL(activeStandeeTargetUrl, {
+        width: 1000,
+        margin: 1,
+        errorCorrectionLevel: 'H',
+        color: {
+          dark: (activeStandee?.theme === 'slate') ? '#0F172A' : (qrColor || '#064E3B'),
+          light: '#FFFFFF'
+        }
+      }).then(url => {
+        if (!cancelled) setActiveStandeeDataUrl(url);
+      }).catch(() => {});
+    }
+    return () => { cancelled = true; };
+  }, [activeStandeeTargetUrl, qrColor, activeStandee?.theme]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (generatorTargetUrl) {
+      QRCode.toDataURL(generatorTargetUrl, {
+        width: 1000,
+        margin: 1,
+        errorCorrectionLevel: 'H',
+        color: {
+          dark: qrColor || '#064E3B',
+          light: '#FFFFFF'
+        }
+      }).then(url => {
+        if (!cancelled) setGeneratorDataUrl(url);
+      }).catch(() => {});
+    }
+    return () => { cancelled = true; };
+  }, [generatorTargetUrl, qrColor]);
+
+  const activeStandeeQrImgUrl = activeStandeeDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(activeStandeeTargetUrl)}`;
+  const generatorQrImgUrl = generatorDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(generatorTargetUrl)}`;
 
   // Filtered Standees
   const filteredStandees = useMemo(() => {
@@ -413,15 +451,49 @@ export default function QrGeneratorView({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Download ONLY the crisp original QR Code (Square PNG for table stickers, menu inserts, acrylic stands)
+  const handleDownloadPureQr = async () => {
+    const isGenerator = activeTab === 'space-generator';
+    const identifierLabel = isGenerator ? genIdentifier : (activeStandee?.identifier || '1');
+    const targetUrl = isGenerator ? generatorTargetUrl : activeStandeeTargetUrl;
+    const targetSize = Number(downloadResolution) || 2048;
+
+    try {
+      const pureDataUrl = await QRCode.toDataURL(targetUrl, {
+        width: targetSize,
+        margin: 2,
+        errorCorrectionLevel: 'H',
+        color: {
+          dark: (activeTab === 'standees' && activeStandee?.theme === 'slate') ? '#0F172A' : (qrColor || '#064E3B'),
+          light: '#FFFFFF'
+        }
+      });
+
+      const link = document.createElement('a');
+      link.download = `${activeSlug}_${identifierLabel}_original_qr_${targetSize}x${targetSize}.png`;
+      link.href = pureDataUrl;
+      link.click();
+      showToast(`✓ Original QR Code (${targetSize}x${targetSize}px) downloaded!`);
+    } catch (e) {
+      console.error('Error generating pure QR:', e);
+      const a = document.createElement('a');
+      a.href = isGenerator ? generatorQrImgUrl : activeStandeeQrImgUrl;
+      a.download = `${activeSlug}_${identifierLabel}_qr.png`;
+      a.click();
+      showToast('QR Code downloaded!');
+    }
+  };
+
   const handleDownloadQr = async (format = 'PNG') => {
     const isGenerator = activeTab === 'space-generator';
     const identifierLabel = isGenerator ? genIdentifier : (activeStandee?.identifier || '1');
-    const qrImg = isGenerator ? generatorQrImgUrl : activeStandeeQrImgUrl;
+    const targetUrl = isGenerator ? generatorTargetUrl : activeStandeeTargetUrl;
     const currentName = settingsForm?.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant';
     const currentTagline = settingsForm?.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu');
     const currentAddress = settingsForm?.address || restaurantInfo?.address || '';
     const currentPhone = settingsForm?.phone || restaurantInfo?.phone || '';
     const isCinemaMode = isGenerator ? isCinema : (activeStandee?.spaceType === 'cinema_seat');
+    const standeeMsg = isGenerator ? genDescription : activeStandee?.message;
 
     let badgeText = isGenerator
       ? (genSpaceType === 'counter'
@@ -438,16 +510,34 @@ export default function QrGeneratorView({
     const showWatermark = !settingsForm?.watermark_removal_enabled;
 
     try {
-      // 2x Retina Scale corresponding to 350px width Live Preview Card
-      const width = 700;
-      const margin = 12; // Outer margin to edge of canvas
-      const topPadding = 48; // Padding inside gold border to top badge
-      const bottomPadding = 40; // Padding inside gold border from footer to bottom border
+      // 0. Ensure custom fonts are loaded so canvas doesn't default to Arial/Times New Roman
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
 
-      // 1. Pre-calculate restaurant name wrapping
+      // 1. Generate ultra-crisp 1200x1200 native QR code locally (Level H error correction)
+      const nativeQrDataUrl = await QRCode.toDataURL(targetUrl, {
+        width: 1200,
+        margin: 1,
+        errorCorrectionLevel: 'H',
+        color: {
+          dark: (!isGenerator && activeStandee?.theme === 'slate') ? '#0F172A' : (qrColor || '#064E3B'),
+          light: '#FFFFFF'
+        }
+      });
+
+      // 2. Base canvas setup with golden ratio proportions (800px base width)
+      const width = 800;
+      const margin = 16;
+      const topPadding = 48;
+      const bottomPadding = 40;
+
+      // 3. Pre-calculate restaurant name wrapping
       const tempCanvas = document.createElement('canvas');
       const tempCtx = tempCanvas.getContext('2d');
-      tempCtx.font = 'bold 36px "Playfair Display", Georgia, serif';
+      tempCtx.font = 'bold 38px "Playfair Display", Georgia, serif';
 
       const words = currentName.split(' ');
       let line = '';
@@ -455,7 +545,7 @@ export default function QrGeneratorView({
       for (let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
         const metrics = tempCtx.measureText(testLine);
-        if (metrics.width > 560 && n > 0) {
+        if (metrics.width > 640 && n > 0) {
           lines.push(line.trim());
           line = words[n] + ' ';
         } else {
@@ -464,57 +554,63 @@ export default function QrGeneratorView({
       }
       lines.push(line.trim());
 
-      // 2. Pre-calculate exact vertical positions
+      // 4. Pre-calculate vertical layout positions
       let curY = margin + topPadding;
 
       const badgeY = curY;
-      const badgeH = 46;
+      const badgeH = 48;
       curY += badgeH + 20;
 
       const nameY = curY;
-      const nameLineH = 44;
+      const nameLineH = 46;
       curY += (lines.length * nameLineH) + 6;
 
       const tagY = curY;
-      const tagH = 24;
+      const tagH = 26;
       curY += tagH + 24;
 
       const qrBoxY = curY;
-      const qrImgSize = 340;
+      const qrImgSize = 400;
       const qrBoxPadding = 24;
       const qrBoxSize = qrImgSize + qrBoxPadding * 2;
       curY += qrBoxSize + 24;
 
       const instEnY = curY;
-      const instEnH = 28;
+      const instEnH = 30;
       curY += instEnH + 6;
 
       const instHiY = curY;
-      const instHiH = 24;
-      curY += instHiH + 24;
+      const instHiH = 26;
+      curY += instHiH + 16;
 
-      const divY = curY;
-      curY += 2 + 20;
+      let msgY = null;
+      if (standeeMsg) {
+        msgY = curY;
+        curY += 30;
+      }
+
+      const divY = curY + 6;
+      curY += 2 + 24;
 
       let addressY = null;
       if (currentAddress) {
         addressY = curY;
-        curY += 26;
+        curY += 28;
       }
 
       let phoneY = null;
       if (currentPhone) {
         phoneY = curY;
-        curY += 26;
+        curY += 28;
       }
 
       let watermarkY = null;
       if (showWatermark) {
         watermarkY = curY;
-        curY += 24;
+        curY += 26;
       }
 
-      // 3. Exact Total Height (zero wasted bottom space)
+      // 5. Total Height
       const totalHeight = Math.ceil(curY + bottomPadding + margin);
 
       const canvas = document.createElement('canvas');
@@ -522,11 +618,12 @@ export default function QrGeneratorView({
       canvas.height = totalHeight;
       const ctx = canvas.getContext('2d');
 
-      // 4. Fill Background
-      ctx.fillStyle = '#FFFFFF';
+      // 6. Fill Background
+      const isDarkTheme = !isGenerator && activeStandee?.theme === 'slate';
+      ctx.fillStyle = isDarkTheme ? '#0F172A' : '#FFFFFF';
       ctx.fillRect(0, 0, width, totalHeight);
 
-      // 5. Draw Gold Outer Border perfectly surrounding card
+      // 7. Draw Royal Gold Outer Border
       const cardW = width - margin * 2;
       const cardH = totalHeight - margin * 2;
       const radius = 36;
@@ -538,51 +635,51 @@ export default function QrGeneratorView({
       } else {
         ctx.rect(margin, margin, cardW, cardH);
       }
-      ctx.strokeStyle = '#D4AF37';
+      ctx.strokeStyle = isDarkTheme ? '#334155' : '#D4AF37';
       ctx.lineWidth = 6;
       ctx.stroke();
       ctx.restore();
 
-      // 6. Draw Top Badge
+      // 8. Draw Top Badge
       ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
       const textMetrics = ctx.measureText(badgeText.toUpperCase());
-      const badgeW = Math.max(textMetrics.width + 48, 220);
+      const badgeW = Math.max(textMetrics.width + 52, 240);
       const badgeX = (width - badgeW) / 2;
 
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 23);
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 24);
       } else {
         ctx.rect(badgeX, badgeY, badgeW, badgeH);
       }
-      ctx.fillStyle = '#0A2315';
+      ctx.fillStyle = isDarkTheme ? '#1E293B' : '#0A2315';
       ctx.fill();
 
-      ctx.fillStyle = '#DFBA67';
+      ctx.fillStyle = isDarkTheme ? '#F8FAFC' : '#DFBA67';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(badgeText.toUpperCase(), width / 2, badgeY + badgeH / 2);
 
-      // 7. Draw Restaurant Name
-      ctx.fillStyle = '#0A2315';
-      ctx.font = 'bold 36px "Playfair Display", Georgia, serif';
+      // 9. Draw Restaurant Name
+      ctx.fillStyle = isDarkTheme ? '#FFFFFF' : '#0A2315';
+      ctx.font = 'bold 38px "Playfair Display", Georgia, serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
-      let tempNameY = nameY + 32;
+      let tempNameY = nameY + 34;
       for (let i = 0; i < lines.length; i++) {
         ctx.fillText(lines[i], width / 2, tempNameY);
         tempNameY += nameLineH;
       }
 
-      // 8. Draw Tagline
-      ctx.fillStyle = '#16A34A';
-      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+      // 10. Draw Tagline
+      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#16A34A';
+      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
-      ctx.fillText(currentTagline, width / 2, tagY + 18);
+      ctx.fillText(currentTagline, width / 2, tagY + 20);
 
-      // 9. Draw QR Box & QR Image
+      // 11. Draw QR Box & Embedded Native QR Image
       const qrBoxX = (width - qrBoxSize) / 2;
       ctx.beginPath();
       if (ctx.roundRect) {
@@ -590,51 +687,57 @@ export default function QrGeneratorView({
       } else {
         ctx.rect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
       }
-      ctx.strokeStyle = '#E2E8F0';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.strokeStyle = isDarkTheme ? '#334155' : '#E2E8F0';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = qrImg;
+      const qrImgEl = new Image();
+      qrImgEl.src = nativeQrDataUrl;
 
       await new Promise((resolve) => {
-        img.onload = () => {
-          ctx.drawImage(img, qrBoxX + qrBoxPadding, qrBoxY + qrBoxPadding, qrImgSize, qrImgSize);
+        qrImgEl.onload = () => {
+          ctx.drawImage(qrImgEl, qrBoxX + qrBoxPadding, qrBoxY + qrBoxPadding, qrImgSize, qrImgSize);
           resolve();
         };
-        img.onerror = () => {
-          ctx.fillStyle = '#F8FAFC';
-          ctx.fillRect(qrBoxX + qrBoxPadding, qrBoxY + qrBoxPadding, qrImgSize, qrImgSize);
-          resolve();
-        };
-        setTimeout(resolve, 3000);
+        qrImgEl.onerror = resolve;
+        setTimeout(resolve, 1500);
       });
 
-      // 10. Primary Instruction (English)
-      ctx.fillStyle = '#0A2315';
+      // 12. Primary Instruction (English)
+      ctx.fillStyle = isDarkTheme ? '#F1F5F9' : '#0A2315';
       ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
-      ctx.fillText(instEn, width / 2, instEnY + 22);
+      ctx.fillText(instEn, width / 2, instEnY + 24);
 
-      // 11. Secondary Instruction (Hindi)
-      ctx.fillStyle = '#64748B';
+      // 13. Secondary Instruction (Hindi)
+      ctx.fillStyle = isDarkTheme ? '#94A3B8' : '#64748B';
       ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
-      ctx.fillText(instHi, width / 2, instHiY + 18);
+      ctx.fillText(instHi, width / 2, instHiY + 20);
 
-      // 12. Horizontal Divider
+      // 14. Custom Standee Message (if present)
+      if (msgY !== null && standeeMsg) {
+        ctx.fillStyle = isDarkTheme ? '#CBD5E1' : '#475569';
+        ctx.font = 'italic 19px "Plus Jakarta Sans", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(`"${standeeMsg}"`, width / 2, msgY + 18);
+      }
+
+      // 15. Horizontal Divider
       ctx.beginPath();
-      ctx.moveTo(60, divY);
-      ctx.lineTo(width - 60, divY);
-      ctx.strokeStyle = '#F1F5F9';
+      ctx.moveTo(80, divY);
+      ctx.lineTo(width - 80, divY);
+      ctx.strokeStyle = isDarkTheme ? '#334155' : '#F1F5F9';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // 13. Footer Address & Phone
-      ctx.fillStyle = '#64748B';
+      // 16. Footer Address & Phone
+      ctx.fillStyle = '#94A3B8';
       ctx.font = '19px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
@@ -646,15 +749,20 @@ export default function QrGeneratorView({
         ctx.fillText(`Phone: ${currentPhone}`, width / 2, phoneY + 16);
       }
 
-      // 14. Watermark
+      // 17. Watermark
       if (watermarkY !== null) {
         ctx.fillStyle = '#15803D';
         ctx.font = 'bold 17px "Plus Jakarta Sans", sans-serif';
         ctx.fillText('⚡ Powered by TouchQR', width / 2, watermarkY + 16);
       }
 
-      // Resolution scaling for high-definition print export
-      const targetWidth = Number(downloadResolution) || 2048;
+      // 18. Output Scaling to standard physical print sizes (300 DPI)
+      const resolutionMap = {
+        '1024': 1200, // 1200 x 1750 px (4x6" / A6)
+        '2048': 1800, // 1800 x 2620 px (5x7" / A5 HD)
+        '4096': 2400  // 2400 x 3500 px (8x12" / A4 Studio)
+      };
+      const targetWidth = resolutionMap[downloadResolution] || 1800;
       let finalCanvas = canvas;
       if (targetWidth !== width) {
         const scale = targetWidth / width;
@@ -670,15 +778,15 @@ export default function QrGeneratorView({
 
       // Trigger Download
       const link = document.createElement('a');
-      link.download = `${activeSlug}_${identifierLabel}_standee.${format.toLowerCase()}`;
+      link.download = `${activeSlug}_${identifierLabel}_standee_${targetWidth}w.${format.toLowerCase()}`;
       link.href = finalCanvas.toDataURL(format.toLowerCase() === 'jpg' || format.toLowerCase() === 'jpeg' ? 'image/jpeg' : 'image/png');
       link.click();
-      showToast(`Standee downloaded for ${identifierLabel} (${targetWidth}px ${format})`);
+      showToast(`✓ Standee Card downloaded (${targetWidth}x${finalCanvas.height}px PNG)`);
     } catch (e) {
       console.error('Error rendering standee PNG:', e);
       const a = document.createElement('a');
-      a.href = qrImg;
-      a.download = `${activeSlug}_${identifierLabel}_qr.${format.toLowerCase()}`;
+      a.href = isGenerator ? generatorQrImgUrl : activeStandeeQrImgUrl;
+      a.download = `${activeSlug}_${identifierLabel}_qr.png`;
       a.target = '_blank';
       a.click();
       showToast(`QR Code downloaded for ${identifierLabel}`);
@@ -1730,29 +1838,54 @@ export default function QrGeneratorView({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleDownloadQr('PNG')}
-                  style={{
-                    width: '100%',
-                    height: '42px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: '#064E3B',
-                    color: '#FFFFFF',
-                    fontSize: '0.80rem',
-                    fontWeight: 900,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
-                  }}
-                >
-                  <Download size={15} />
-                  <span>Download Standee PNG ({downloadResolution === '4096' ? '4K Ultra' : downloadResolution === '1024' ? '1K Standard' : '2K HD'})</span>
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadQr('PNG')}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: '#064E3B',
+                      color: '#FFFFFF',
+                      fontSize: '0.80rem',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
+                    }}
+                  >
+                    <Download size={15} />
+                    <span>Download Standee Poster ({downloadResolution === '4096' ? '2400x3500px' : downloadResolution === '1024' ? '1200x1750px' : '1800x2620px'} PNG)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadPureQr}
+                    style={{
+                      width: '100%',
+                      height: '38px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #064E3B',
+                      background: '#F0FDF4',
+                      color: '#064E3B',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <QrCode size={15} />
+                    <span>Download Original QR Code Only ({downloadResolution}x{downloadResolution}px PNG)</span>
+                  </button>
+                </div>
 
                 <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                   <button
@@ -2437,29 +2570,54 @@ export default function QrGeneratorView({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleDownloadQr('PNG')}
-                style={{
-                  width: '100%',
-                  height: '40px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: '#064E3B',
-                  color: '#FFFFFF',
-                  fontSize: '0.80rem',
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
-                }}
-              >
-                <Download size={15} />
-                <span>Download QR Code ({downloadResolution === '4096' ? '4K Print' : downloadResolution === '1024' ? '1K PNG' : '2K HD'})</span>
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQr('PNG')}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#064E3B',
+                    color: '#FFFFFF',
+                    fontSize: '0.80rem',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
+                  }}
+                >
+                  <Download size={15} />
+                  <span>Download Standee Poster ({downloadResolution === '4096' ? '2400x3500px' : downloadResolution === '1024' ? '1200x1750px' : '1800x2620px'} PNG)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadPureQr}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #064E3B',
+                    background: '#F0FDF4',
+                    color: '#064E3B',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <QrCode size={15} />
+                  <span>Download Original QR Code Only ({downloadResolution}x{downloadResolution}px PNG)</span>
+                </button>
+              </div>
 
               <button
                 type="button"
