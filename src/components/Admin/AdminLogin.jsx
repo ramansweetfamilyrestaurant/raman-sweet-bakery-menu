@@ -53,7 +53,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
           })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+        if (!res.ok) throw new Error(data.message || data.error || 'Failed to reset password');
 
         setSuccessMsg(data.message || 'Password reset successfully!');
         setMode('login');

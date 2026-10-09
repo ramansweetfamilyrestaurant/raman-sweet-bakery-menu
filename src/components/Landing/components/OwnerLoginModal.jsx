@@ -20,6 +20,19 @@ export default function OwnerLoginModal({
   onSubmitLogin,
   onSubmitResetPassword
 }) {
+  const [supportPhone, setSupportPhone] = React.useState('919876543210');
+
+  React.useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.support_whatsapp) {
+          setSupportPhone(data.support_whatsapp);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   if (!show) return null;
 
   const handleSubmit = (e) => {
@@ -161,7 +174,46 @@ export default function OwnerLoginModal({
             />
           </div>
 
-          {mode === 'login' ? (
+          {mode === 'forgot' ? (
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1.5px solid rgba(16, 185, 129, 0.4)',
+              borderRadius: '16px',
+              padding: '18px 16px',
+              textAlign: 'center',
+              marginBottom: '20px'
+            }}>
+              <div style={{ fontWeight: 800, color: '#34D399', fontSize: '0.94rem', marginBottom: '8px' }}>
+                🔒 Account Recovery Support
+              </div>
+              <p style={{ fontSize: '0.80rem', color: '#94A3B8', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+                For account protection and security, password recovery is verified directly via Super Admin support on WhatsApp. Click below to request credential assistance for your business.
+              </p>
+              <a
+                href={`https://wa.me/${(supportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello Super Admin, I am requesting password recovery assistance for my TouchQR business: ' + (usernameInput || ''))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: '#059669',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  fontSize: '0.86rem',
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 14px rgba(5, 150, 105, 0.35)',
+                  boxSizing: 'border-box'
+                }}
+              >
+                💬 Contact Support on WhatsApp
+              </a>
+            </div>
+          ) : (
             <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#D4AF37', letterSpacing: '0.5px' }}>
@@ -188,46 +240,40 @@ export default function OwnerLoginModal({
                 }}
               />
             </div>
-          ) : (
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 900, color: '#D4AF37', marginBottom: '6px', letterSpacing: '0.5px' }}>
-                NEW DESIRED PASSWORD *
-              </label>
-              <input
-                type="password"
-                required
-                value={newPasswordInput}
-                onChange={e => setNewPasswordInput(e.target.value)}
-                placeholder="Enter new password (min 4 chars)"
-                style={{
-                  width: '100%', padding: '12px 14px', borderRadius: '10px',
-                  border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(0,0,0,0.4)',
-                  color: '#FFFFFF', fontSize: '0.92rem', outline: 'none', boxSizing: 'border-box'
-                }}
-              />
-            </div>
           )}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
-              background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
-              color: '#0A0A0A', fontSize: '0.95rem', fontWeight: 900, cursor: loading ? 'wait' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              boxShadow: '0 4px 18px rgba(212, 175, 55, 0.35)', transition: 'all 0.2s ease'
-            }}
-          >
-            {loading ? (
-              <span>Signing in...</span>
-            ) : mode === 'login' ? (
-              <span>Sign In</span>
-            ) : (
-              <span>Update Password Now</span>
-            )}
-          </button>
+          {/* Action Button */}
+          {mode === 'login' ? (
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+                background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+                color: '#0A0A0A', fontSize: '0.95rem', fontWeight: 900, cursor: loading ? 'wait' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                boxShadow: '0 4px 18px rgba(212, 175, 55, 0.35)', transition: 'all 0.2s ease'
+              }}
+            >
+              {loading ? (
+                <span>Signing in...</span>
+              ) : (
+                <span>Sign In</span>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setErrMessage(''); setSuccessMessage(''); }}
+              style={{
+                width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid rgba(212, 175, 55, 0.3)',
+                background: 'rgba(0,0,0,0.3)', color: '#FFD700', fontSize: '0.88rem', fontWeight: 800,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+              }}
+            >
+              ← Back to Business Sign In
+            </button>
+          )}
         </form>
 
         {/* Registration Link */}

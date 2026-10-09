@@ -1612,7 +1612,7 @@ export default function App() {
         })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+      if (!res.ok) throw new Error(data.message || data.error || 'Failed to reset password');
 
       setLandingSuccessMessage(data.message || 'Password reset successfully!');
       setLandingLoginMode('login');
