@@ -22,6 +22,7 @@ import {
   Lock,
   RefreshCw,
   FileText,
+  CheckCircle,
   CheckCircle2,
   Tag,
   Palette,
