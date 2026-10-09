@@ -571,6 +571,12 @@ router.get('/menu-bundle', async (req, res) => {
       theme_color: resto.theme_color || 'gold',
       allowed_themes: saasP.allowed_themes || (planTierKey === 'basic' ? 'gold' : planTierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL'),
       kds_pin_configured: Boolean(resto.kds_pin_hash),
+      latitude: resto.latitude !== undefined && resto.latitude !== null ? Number(resto.latitude) : null,
+      longitude: resto.longitude !== undefined && resto.longitude !== null ? Number(resto.longitude) : null,
+      max_distance_meters: Number(resto.max_distance_meters) || 100,
+      table_verification_mode: resto.table_verification_mode || 'GPS_WITH_STAFF_FALLBACK',
+      staff_verification_timeout_seconds: Number(resto.staff_verification_timeout_seconds) || 120,
+      location_initialized: Boolean(resto.location_initialized === true || resto.location_initialized === 1 || resto.location_initialized === 'true'),
       active: true
     };
 
@@ -1139,7 +1145,13 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
     // Step 8: Authoritative Server-Side Geofence Validation (AFTER QR Verification)
     const restoLat = Number(resto.latitude);
     const restoLng = Number(resto.longitude);
+    const isLocInitialized = Boolean(
+      resto.location_initialized === true || 
+      resto.location_initialized === 1 || 
+      resto.location_initialized === 'true'
+    );
     const hasRestaurantLocation = Boolean(
+      isLocInitialized &&
       resto.latitude != null && resto.longitude != null &&
       !isNaN(restoLat) && !isNaN(restoLng) &&
       restoLat !== 0 && restoLng !== 0

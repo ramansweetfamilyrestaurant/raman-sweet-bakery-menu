@@ -15,7 +15,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
     const q = searchQuery.toLowerCase().trim();
 
     return (
-      r.name.toLowerCase().includes(q) ||
+      (r.name && r.name.toLowerCase().includes(q)) ||
       (r.slug && r.slug.toLowerCase().includes(q)) ||
       (r.owner_username && r.owner_username.toLowerCase().includes(q)) ||
       (r.owner_name && r.owner_name.toLowerCase().includes(q)) ||
@@ -110,7 +110,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontWeight: 900, fontSize: '0.85rem', flexShrink: 0
                         }}>
-                          {r.name.charAt(0).toUpperCase()}
+                          {(r.name || 'S').charAt(0).toUpperCase()}
                         </div>
                         <div style={{ minWidth: 0, overflow: 'hidden' }}>
                           <strong style={{ fontSize: '0.88rem', display: 'block', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</strong>

@@ -466,7 +466,6 @@ async function createTables() {
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS gateway_payment_id VARCHAR(255);`,
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_type VARCHAR(50);`,
       `ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP;`,
-      `ALTER TABLE payments ALTER COLUMN order_id DROP NOT NULL;`,
       `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS discount_type VARCHAR(50) DEFAULT 'PERCENTAGE';`,
       `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS discount_value DECIMAL(10, 2) DEFAULT 0;`,
       `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS applicable_plans VARCHAR(255) DEFAULT 'all';`,
@@ -1539,24 +1538,30 @@ async function query(text, params = []) {
     return res.rows;
   } else if (sqliteDb) {
     let sql = text;
-    // Convert $1, $2 parameter placeholders to SQLite ?
-    sql = sql.replace(/\$(\d+)/g, () => '?');
-    sql = sql.replace(/::text/g, '');
+    // Strip PostgreSQL typecasts (e.g. ::text, ::boolean, ::int, ::bigint)
+    sql = sql.replace(/::[a-zA-Z_]+/g, '');
 
-    // Convert booleans to 1 or 0 for SQLite (better-sqlite3 only accepts numbers/strings)
+    // Convert booleans to 1 or 0 for SQLite
     const sanitizedParams = params.map(p => (typeof p === 'boolean' ? (p ? 1 : 0) : p));
 
-    if (sql.trim().toUpperCase().startsWith('SELECT')) {
+    // Convert numbered $1, $2 placeholders to SQLite ? while mapping exact positional values
+    const reorderedParams = [];
+    sql = sql.replace(/\$(\d+)/g, (_, num) => {
+      const idx = parseInt(num, 10) - 1;
+      reorderedParams.push(sanitizedParams[idx]);
+      return '?';
+    });
+
+    const upperSql = sql.trim().toUpperCase();
+    const isQueryReturning = upperSql.includes('RETURNING');
+    const isSelectOrWith = upperSql.startsWith('SELECT') || upperSql.startsWith('WITH') || upperSql.startsWith('PRAGMA');
+
+    if (isSelectOrWith || isQueryReturning) {
       const stmt = sqliteDb.prepare(sql);
-      return stmt.all(sanitizedParams);
-    } else if (sql.trim().toUpperCase().startsWith('INSERT') && sql.toUpperCase().includes('RETURNING')) {
-      const sqlNoReturning = sql.replace(/RETURNING\s+\w+/gi, '');
-      const stmtNoRet = sqliteDb.prepare(sqlNoReturning);
-      const res = stmtNoRet.run(sanitizedParams);
-      return [{ id: res.lastInsertRowid }];
+      return stmt.all(reorderedParams);
     } else {
       const stmt = sqliteDb.prepare(sql);
-      return stmt.run(sanitizedParams);
+      return stmt.run(reorderedParams);
     }
   } else {
     throw new Error('Database connection not initialized');
@@ -2006,6 +2011,14 @@ function getDbType() {
 }
 
 async function pingDb() {
+  if (!isDbInitialized || (!pgPool && !sqliteDb)) {
+    try {
+      await initDb();
+    } catch (initErr) {
+      return { connected: false, latency_ms: 0, error: initErr.message };
+    }
+  }
+
   if (dbType === 'postgres' && pgPool) {
     try {
       const start = Date.now();

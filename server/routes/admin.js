@@ -1728,6 +1728,19 @@ const handleUpdateSettings = async (req, res) => {
   }
 };
 
+router.get(['/settings', '/info'], authenticateToken, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) return res.status(401).json({ error: 'Restaurant identity is missing' });
+    const rows = await query('SELECT * FROM restaurants WHERE id = $1', [targetId]);
+    if (!rows || rows.length === 0) return res.status(404).json({ error: 'Restaurant not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Fetch settings error:', err);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
 router.put('/settings', authenticateToken, requireActiveSubscription, handleUpdateSettings);
 router.post('/settings', authenticateToken, requireActiveSubscription, handleUpdateSettings);
 router.post('/info', authenticateToken, requireActiveSubscription, handleUpdateSettings);

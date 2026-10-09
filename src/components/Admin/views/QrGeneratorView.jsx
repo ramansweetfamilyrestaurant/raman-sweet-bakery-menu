@@ -352,9 +352,9 @@ export default function QrGeneratorView({
   const filteredStandees = useMemo(() => {
     return standees.filter(st => {
       const matchesSearch = !searchQuery || 
-        st.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        st.spaceLabel.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        st.identifier.toLowerCase().includes(searchQuery.toLowerCase());
+        String(st.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+        String(st.spaceLabel || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(st.identifier || '').toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesStatus = statusFilter === 'all' || st.status === statusFilter;
       const matchesSpace = spaceFilter === 'all' || st.spaceType === spaceFilter;

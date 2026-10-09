@@ -822,12 +822,12 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
           business_type = COALESCE($21, business_type)
       WHERE id = $22
     `, [
-      name,
-      tagline || '',
-      logo !== undefined ? logo : '',
-      phone || '',
-      address || '',
-      fssai_lic_no || '',
+      name || currentResto.name,
+      tagline !== undefined ? tagline : (currentResto.tagline || ''),
+      (logo !== undefined && logo !== null && logo !== '') ? logo : (currentResto.logo || ''),
+      phone !== undefined ? phone : (currentResto.phone || ''),
+      address !== undefined ? address : (currentResto.address || ''),
+      fssai_lic_no !== undefined ? fssai_lic_no : (currentResto.fssai_lic_no || ''),
       plan_tier || 'pro',
       plan_price ? parseFloat(plan_price) : 999,
       plan_expires_at || null,
