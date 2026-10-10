@@ -7,10 +7,12 @@ class NotificationSoundService {
     this.isReady = false;
     this.presenceInterval = null;
     this.waiterInterval = null;
+    this.activeSirenGain = null;
+    this.activeSirenOscillators = [];
     this.listeners = new Set();
 
     if (typeof window !== 'undefined') {
-      window.testNotificationSound = (type = 'presence') => this.testNotificationSound(type);
+      window.testNotificationSound = (type = 'siren') => this.testNotificationSound(type);
     }
   }
 
@@ -60,7 +62,7 @@ class NotificationSoundService {
   }
 
   /**
-   * Unlock Web Audio Context on user gesture
+   * Unlock Web Audio Context on user gesture (with iOS Safari dummy buffer playback)
    */
   unlockNotificationSound() {
     if (typeof window === 'undefined') return Promise.resolve(false);
@@ -72,18 +74,30 @@ class NotificationSoundService {
         return Promise.resolve(false);
       }
 
+      const primeAudio = () => {
+        try {
+          // Play 1 sample of silent buffer to guarantee iOS Safari doesn't immediately re-suspend
+          const buffer = ctx.createBuffer(1, 1, 22050);
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ctx.destination);
+          source.start(0);
+        } catch (e) {}
+        this._notifyListeners();
+        return true;
+      };
+
       if (ctx.state === 'suspended') {
         return ctx.resume().then(() => {
           console.log('[SOUND_DEBUG] unlock_success', ctx.state);
-          this._notifyListeners();
-          return true;
+          return primeAudio();
         }).catch(err => {
           console.warn('[SOUND_DEBUG] unlock_failed', err?.message || err);
           return false;
         });
       } else if (ctx.state === 'running') {
         console.log('[SOUND_DEBUG] unlock_success (already running)');
-        this._notifyListeners();
+        primeAudio();
         return Promise.resolve(true);
       }
       return Promise.resolve(false);
@@ -105,6 +119,105 @@ class NotificationSoundService {
       }
     }
     return ctx;
+  }
+
+  /**
+   * 🚨 Play Super Loud Zomato/Swiggy Style 8-Cycle Emergency Order Siren Ringtone
+   * Instant cancellable via stopKitchenSiren()
+   */
+  async playKitchenSiren() {
+    const ctx = await this._ensureContextRunning();
+    if (!ctx) return;
+
+    this.stopKitchenSiren();
+
+    try {
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(1.0, ctx.currentTime);
+      masterGain.connect(ctx.destination);
+      this.activeSirenGain = masterGain;
+
+      const pulses = [
+        { freq1: 1050, freq2: 1650, start: 0.0 },
+        { freq1: 1350, freq2: 1850, start: 0.30 },
+        { freq1: 1050, freq2: 1650, start: 0.60 },
+        { freq1: 1450, freq2: 2050, start: 0.90 },
+        { freq1: 1250, freq2: 1750, start: 1.20 },
+        { freq1: 1550, freq2: 2150, start: 1.50 },
+        { freq1: 1350, freq2: 1850, start: 1.80 },
+        { freq1: 1650, freq2: 2250, start: 2.10 }
+      ];
+
+      pulses.forEach(p => {
+        const t = ctx.currentTime + p.start;
+
+        // Piercing Siren Tone 1 (Sawtooth)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(p.freq1, t);
+        osc1.frequency.linearRampToValueAtTime(p.freq2, t + 0.14);
+        gain1.gain.setValueAtTime(1.0, t);
+        gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        osc1.connect(gain1);
+        gain1.connect(masterGain);
+        osc1.start(t);
+        osc1.stop(t + 0.28);
+        this.activeSirenOscillators.push(osc1);
+
+        // High Alarm Resonance Tone 2 (Square)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(p.freq2, t + 0.10);
+        osc2.frequency.linearRampToValueAtTime(p.freq1, t + 0.24);
+        gain2.gain.setValueAtTime(0.9, t + 0.10);
+        gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        osc2.connect(gain2);
+        gain2.connect(masterGain);
+        osc2.start(t + 0.10);
+        osc2.stop(t + 0.28);
+        this.activeSirenOscillators.push(osc2);
+      });
+
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate([400, 200, 400, 200, 600]);
+        } catch (e) {}
+      }
+
+      // Cleanup finished oscillator references after pulse duration (~2.45s)
+      setTimeout(() => {
+        if (this.activeSirenGain === masterGain) {
+          this.activeSirenGain = null;
+          this.activeSirenOscillators = [];
+        }
+      }, 2500);
+    } catch (e) {
+      console.warn('[SOUND_DEBUG] kitchen_siren_error', e?.message || e);
+    }
+  }
+
+  /**
+   * Instantly stops any active kitchen siren sound and cuts off oscillator output
+   */
+  stopKitchenSiren() {
+    const ctx = this.audioCtx;
+    if (this.activeSirenGain && ctx) {
+      try {
+        this.activeSirenGain.gain.cancelScheduledValues(ctx.currentTime);
+        this.activeSirenGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        this.activeSirenGain.disconnect();
+      } catch (e) {}
+      this.activeSirenGain = null;
+    }
+
+    if (this.activeSirenOscillators.length > 0) {
+      this.activeSirenOscillators.forEach(osc => {
+        try { osc.stop(); } catch (e) {}
+      });
+      this.activeSirenOscillators = [];
+    }
   }
 
   /**
@@ -254,21 +367,57 @@ class NotificationSoundService {
   }
 
   /**
+   * 👨‍🍳 Play short, pleasant 2-Tone KDS Kitchen Ticket Arrival Chime
+   * (A5 880Hz -> E6 1320Hz, 0.35s)
+   */
+  async playKdsChime() {
+    const ctx = await this._ensureContextRunning();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.20);
+      gain.gain.setValueAtTime(0.6, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } catch (e) {
+      console.warn('[SOUND_DEBUG] kds_chime_error', e?.message || e);
+    }
+  }
+
+  /**
    * Development & verification manual test helper
    */
-  testNotificationSound(type = 'presence') {
+  testNotificationSound(type = 'siren') {
     console.log('[SOUND_DEBUG] test_sound_started', { type });
     if (type === 'waiter') {
       return this.playWaiterAlert();
     }
-    return this.playPresenceAlert();
+    if (type === 'presence') {
+      return this.playPresenceAlert();
+    }
+    if (type === 'kds') {
+      return this.playKdsChime();
+    }
+    return this.playKitchenSiren();
   }
 }
 
 export const soundManager = new NotificationSoundService();
 export const unlockNotificationSound = () => soundManager.unlockNotificationSound();
+export const playKitchenSiren = () => soundManager.playKitchenSiren();
+export const stopKitchenSiren = () => soundManager.stopKitchenSiren();
 export const playPresenceAlert = () => soundManager.playPresenceAlert();
+export const stopPresenceAlert = () => soundManager.stopPresenceAlert();
 export const playWaiterAlert = () => soundManager.playWaiterAlert();
+export const stopWaiterAlert = () => soundManager.stopWaiterAlert();
+export const playKdsChime = () => soundManager.playKdsChime();
 export const isNotificationSoundReady = () => soundManager.isNotificationSoundReady();
 export const subscribeAudioState = (cb) => soundManager.subscribeAudioState(cb);
 export const testNotificationSound = (type) => soundManager.testNotificationSound(type);

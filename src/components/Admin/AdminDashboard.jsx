@@ -5,7 +5,7 @@ import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
 import { getSpaceConfig } from '../../utils/businessTaxonomy';
 import { resolveTenantCapabilities } from '../../utils/planCapabilities';
-import { soundManager, unlockNotificationSound, playPresenceAlert, playWaiterAlert, subscribeAudioState } from '../../utils/soundManager';
+import { soundManager, unlockNotificationSound, playKitchenSiren, stopKitchenSiren, playPresenceAlert, playWaiterAlert, subscribeAudioState } from '../../utils/soundManager';
 import { getCurrencySymbol, formatPriceNumber } from '../../utils/currencyHelper';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
@@ -248,7 +248,7 @@ export default function AdminDashboard({
   };
 
   const pendingLoopRef = useRef(null);
-  const activeAudioCtxRef = useRef(null);
+
   const pendingUpdatesRef = useRef(new Map());
 
   const stopPendingAlarm = () => {
@@ -256,73 +256,26 @@ export default function AdminDashboard({
       clearInterval(pendingLoopRef.current);
       pendingLoopRef.current = null;
     }
-    if (activeAudioCtxRef.current) {
-      try {
-        activeAudioCtxRef.current.close();
-      } catch (e) {}
-      activeAudioCtxRef.current = null;
-    }
+    stopKitchenSiren();
   };
 
   const playKitchenChime = () => {
+    if (settingsForm && settingsForm.order_alarm_enabled === false) {
+      return;
+    }
     try {
-      stopPendingAlarm();
-      const ctx = soundManager.getAudioContext();
-      if (!ctx) return;
-      if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
-      }
-
-      // 🚨 Super Loud Zomato/Swiggy Style 8-Cycle Emergency Order Siren Ringtone 🚨
-      const pulses = [
-        { freq1: 1050, freq2: 1650, start: 0.0 },
-        { freq1: 1350, freq2: 1850, start: 0.30 },
-        { freq1: 1050, freq2: 1650, start: 0.60 },
-        { freq1: 1450, freq2: 2050, start: 0.90 },
-        { freq1: 1250, freq2: 1750, start: 1.20 },
-        { freq1: 1550, freq2: 2150, start: 1.50 },
-        { freq1: 1350, freq2: 1850, start: 1.80 },
-        { freq1: 1650, freq2: 2250, start: 2.10 }
-      ];
-
-      pulses.forEach(p => {
-        const t = ctx.currentTime + p.start;
-
-        // Piercing Siren Tone 1 (Sawtooth)
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.type = 'sawtooth';
-        osc1.frequency.setValueAtTime(p.freq1, t);
-        osc1.frequency.linearRampToValueAtTime(p.freq2, t + 0.14);
-        gain1.gain.setValueAtTime(1.0, t);
-        gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
-        osc1.connect(gain1);
-        gain1.connect(ctx.destination);
-        osc1.start(t);
-        osc1.stop(t + 0.28);
-
-        // High Alarm Resonance Tone 2 (Square)
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'square';
-        osc2.frequency.setValueAtTime(p.freq2, t + 0.10);
-        osc2.frequency.linearRampToValueAtTime(p.freq1, t + 0.24);
-        gain2.gain.setValueAtTime(0.9, t + 0.10);
-        gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.start(t + 0.10);
-        osc2.stop(t + 0.28);
-      });
-      if ('vibrate' in navigator) {
-        navigator.vibrate([400, 200, 400, 200, 600]);
-      }
+      playKitchenSiren();
     } catch (e) {
       console.warn('Loud Kitchen Alarm error:', e);
     }
   };
 
   useEffect(() => {
+    if (settingsForm && settingsForm.order_alarm_enabled === false) {
+      stopPendingAlarm();
+      return;
+    }
+
     const hasPendingOrders = Array.isArray(orders) && orders.some(o => {
       const st = String(o.status || '').toLowerCase();
       return st === 'pending' || st === 'placed' || st === 'new';
@@ -333,7 +286,7 @@ export default function AdminDashboard({
         playKitchenChime();
         pendingLoopRef.current = setInterval(() => {
           playKitchenChime();
-        }, 2500);
+        }, 2600);
       }
     } else {
       stopPendingAlarm();
@@ -341,7 +294,7 @@ export default function AdminDashboard({
     return () => {
       stopPendingAlarm();
     };
-  }, [orders]);
+  }, [orders, settingsForm?.order_alarm_enabled]);
 
   const triggerPresenceVerificationNotification = (tableLabel, requestId) => {
     try {
@@ -472,8 +425,10 @@ export default function AdminDashboard({
       // Total active live orders (pending + kitchen + accepted)
       const activeOrderCount = safeData.filter(o => ['pending', 'kitchen', 'accepted', 'preparing'].includes(o.status)).length;
       if (activeOrderCount > prevPendingCount) {
-        playKitchenChime();
         triggerBackgroundNotification(activeOrderCount);
+        if (!pendingLoopRef.current) {
+          playKitchenChime();
+        }
       }
       setPrevPendingCount(activeOrderCount);
 

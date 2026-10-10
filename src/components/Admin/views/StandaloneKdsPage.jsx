@@ -17,6 +17,7 @@ import {
   CheckSquare,
   Square
 } from 'lucide-react';
+import { playKitchenSiren, unlockNotificationSound } from '../../../utils/soundManager';
 
 export default function StandaloneKdsPage({ slug = '' }) {
   const [orders, setOrders] = useState([]);
@@ -75,52 +76,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
   const playSiren = () => {
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') ctx.resume();
-
-      const pulses = [
-        { freq1: 1050, freq2: 1650, start: 0.0 },
-        { freq1: 1350, freq2: 1850, start: 0.30 },
-        { freq1: 1050, freq2: 1650, start: 0.60 },
-        { freq1: 1450, freq2: 2050, start: 0.90 },
-        { freq1: 1250, freq2: 1750, start: 1.20 },
-        { freq1: 1550, freq2: 2150, start: 1.50 },
-        { freq1: 1350, freq2: 1850, start: 1.80 },
-        { freq1: 1650, freq2: 2250, start: 2.10 }
-      ];
-
-      pulses.forEach(p => {
-        const t = ctx.currentTime + p.start;
-
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.type = 'sawtooth';
-        osc1.frequency.setValueAtTime(p.freq1, t);
-        osc1.frequency.linearRampToValueAtTime(p.freq2, t + 0.14);
-        gain1.gain.setValueAtTime(1.0, t);
-        gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
-        osc1.connect(gain1);
-        gain1.connect(ctx.destination);
-        osc1.start(t);
-        osc1.stop(t + 0.28);
-
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'square';
-        osc2.frequency.setValueAtTime(p.freq2, t + 0.10);
-        osc2.frequency.linearRampToValueAtTime(p.freq1, t + 0.24);
-        gain2.gain.setValueAtTime(0.9, t + 0.10);
-        gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.start(t + 0.10);
-        osc2.stop(t + 0.28);
-      });
-      if ('vibrate' in navigator) {
-        navigator.vibrate([400, 200, 400, 200, 600]);
-      }
+      playKitchenSiren();
     } catch (e) {
       console.warn('Standalone KDS Siren error:', e);
     }
@@ -136,22 +92,19 @@ export default function StandaloneKdsPage({ slug = '' }) {
         } else {
           playSiren();
         }
-      }, 2400);
+      }, 2600);
     } catch (e) {
       console.warn('8-second Siren error:', e);
     }
   };
 
   const unlockAudio = () => {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        const ctx = new AudioCtx();
-        if (ctx.state === 'suspended') ctx.resume();
-      }
+    unlockNotificationSound().then(() => {
       playSiren();
-    } catch (e) {}
-    setAudioUnlocked(true);
+      setAudioUnlocked(true);
+    }).catch(() => {
+      setAudioUnlocked(true);
+    });
   };
 
   const fetchOrders = async () => {

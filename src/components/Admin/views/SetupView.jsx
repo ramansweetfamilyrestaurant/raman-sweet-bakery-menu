@@ -33,6 +33,7 @@ import {
 import { CUSTOMER_MENU_THEMES, THEME_LIST, resolveTheme } from '../../../constants/themes';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
 import BillingView from './BillingView';
+import { playKitchenSiren, unlockNotificationSound } from '../../../utils/soundManager';
 
 // Configure Leaflet Default Marker Icon
 try {
@@ -1079,15 +1080,10 @@ export default function SetupView({
 
   const testAlarmSound = () => {
     try {
-      const audio = new Audio('/assets/emergency_alarm.mp3');
-      audio.play().catch(() => {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
-        osc.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.5);
+      unlockNotificationSound().then(() => {
+        playKitchenSiren();
+      }).catch(() => {
+        playKitchenSiren();
       });
       alert('🔊 Playing Test Siren Ringtone!');
     } catch (e) {

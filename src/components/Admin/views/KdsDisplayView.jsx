@@ -24,6 +24,7 @@ import {
   Square,
   AlertCircle
 } from 'lucide-react';
+import { playKdsChime } from '../../../utils/soundManager';
 
 export default function KdsDisplayView({
   orders = [],
@@ -68,22 +69,7 @@ export default function KdsDisplayView({
   useEffect(() => {
     if (activeKitchenOrders.length > prevActiveCountRef.current && soundEnabled && prevActiveCountRef.current !== 0) {
       try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          if (ctx.state === 'suspended') ctx.resume();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
-          osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.2); // E6
-          gain.gain.setValueAtTime(0.6, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.35);
-        }
+        playKdsChime();
       } catch (e) {
         console.warn('KDS chime notice:', e);
       }
