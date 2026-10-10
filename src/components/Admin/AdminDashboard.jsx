@@ -248,7 +248,7 @@ export default function AdminDashboard({
   };
 
   const pendingLoopRef = useRef(null);
-
+  const orderAlarmEnabledRef = useRef(true);
   const pendingUpdatesRef = useRef(new Map());
 
   const stopPendingAlarm = () => {
@@ -260,7 +260,7 @@ export default function AdminDashboard({
   };
 
   const playKitchenChime = () => {
-    if (settingsForm && settingsForm.order_alarm_enabled === false) {
+    if (!orderAlarmEnabledRef.current) {
       return;
     }
     try {
@@ -271,17 +271,12 @@ export default function AdminDashboard({
   };
 
   useEffect(() => {
-    if (settingsForm && settingsForm.order_alarm_enabled === false) {
-      stopPendingAlarm();
-      return;
-    }
-
     const hasPendingOrders = Array.isArray(orders) && orders.some(o => {
       const st = String(o.status || '').toLowerCase();
       return st === 'pending' || st === 'placed' || st === 'new';
     });
 
-    if (hasPendingOrders) {
+    if (hasPendingOrders && orderAlarmEnabledRef.current) {
       if (!pendingLoopRef.current) {
         playKitchenChime();
         pendingLoopRef.current = setInterval(() => {
@@ -294,7 +289,7 @@ export default function AdminDashboard({
     return () => {
       stopPendingAlarm();
     };
-  }, [orders, settingsForm?.order_alarm_enabled]);
+  }, [orders]);
 
   const triggerPresenceVerificationNotification = (tableLabel, requestId) => {
     try {
@@ -1494,6 +1489,14 @@ export default function AdminDashboard({
       filters_visibility: defaultVis
     };
   });
+
+  useEffect(() => {
+    const isAlarmOn = settingsForm?.order_alarm_enabled !== false;
+    orderAlarmEnabledRef.current = isAlarmOn;
+    if (!isAlarmOn) {
+      stopPendingAlarm();
+    }
+  }, [settingsForm?.order_alarm_enabled]);
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
   const toastTimeoutRef = useRef(null);
 
