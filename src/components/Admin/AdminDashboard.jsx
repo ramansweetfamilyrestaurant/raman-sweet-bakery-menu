@@ -5,7 +5,7 @@ import { getPlanDetails } from '../../config/plans';
 import { generateQrToken } from '../../utils/qrSecurity';
 import { getSpaceConfig } from '../../utils/businessTaxonomy';
 import { resolveTenantCapabilities } from '../../utils/planCapabilities';
-import { soundManager, unlockNotificationSound, playKitchenSiren, stopKitchenSiren, playPresenceAlert, playWaiterAlert, subscribeAudioState } from '../../utils/soundManager';
+import { soundManager, unlockNotificationSound, playKitchenSiren, stopKitchenSiren, playPresenceAlert, playWaiterAlert, subscribeAudioState, isNotificationSoundReady } from '../../utils/soundManager';
 import { getCurrencySymbol, formatPriceNumber } from '../../utils/currencyHelper';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
@@ -144,8 +144,17 @@ export default function AdminDashboard({
     return diffDays;
   };
 
-  const [isAudioReady, setIsAudioReady] = useState(false);
-  const [audioBannerDismissed, setAudioBannerDismissed] = useState(false);
+  const [isAudioReady, setIsAudioReady] = useState(() => {
+    return typeof window !== 'undefined' ? isNotificationSoundReady() : false;
+  });
+  const [audioBannerDismissed, setAudioBannerDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem('touchqr_admin_audio_banner_dismissed') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   const [hasSoundSetupCompleted, setHasSoundSetupCompleted] = useState(() => {
     if (typeof window === 'undefined') return false;
     try {
@@ -177,7 +186,10 @@ export default function AdminDashboard({
       setIsAudioReady(ready);
     });
 
-    // 🔊 3. Unlock notification audio on first user gesture
+    // 🔊 3. Attempt silent audio unlock on mount (succeeds if browser has autoplay permission)
+    unlockNotificationSound().catch(() => {});
+
+    // 🔊 4. Unlock notification audio on first user gesture
     const handleUserGestureUnlock = () => {
       unlockNotificationSound().then((success) => {
         if (success) {
@@ -207,6 +219,7 @@ export default function AdminDashboard({
         setHasSoundSetupCompleted(true);
         try {
           localStorage.setItem('touchqr_admin_sound_setup_v1', 'enabled');
+          localStorage.setItem('touchqr_admin_audio_banner_dismissed', 'true');
         } catch (e) {}
         setToastMessage('🔊 Alert Sounds Unlocked & Active!');
         setTimeout(() => setToastMessage(''), 3000);
@@ -218,6 +231,13 @@ export default function AdminDashboard({
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
+  };
+
+  const handleDismissAudioBanner = () => {
+    setAudioBannerDismissed(true);
+    try {
+      localStorage.setItem('touchqr_admin_audio_banner_dismissed', 'true');
+    } catch (e) {}
   };
 
   const requestAudioPermission = () => {
@@ -2668,7 +2688,7 @@ export default function AdminDashboard({
               🔔 Enable
             </button>
             <button
-              onClick={() => setAudioBannerDismissed(true)}
+              onClick={handleDismissAudioBanner}
               style={{
                 background: 'none',
                 border: 'none',
@@ -2682,54 +2702,6 @@ export default function AdminDashboard({
               ✕
             </button>
           </div>
-        </div>
-      )}
-
-      {/* 🔔 2. Compact Post-Refresh Status Strip (Non-blocking below header) */}
-      {!isAudioReady && hasSoundSetupCompleted && !audioBannerDismissed && (
-        <div style={{
-          background: '#FFFBEB',
-          borderBottom: '1px solid #FDE68A',
-          padding: '6px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '10px',
-          fontSize: '0.78rem',
-          color: '#92400E',
-          fontWeight: 600,
-          boxSizing: 'border-box'
-        }}>
-          <span>🔔 Order sound off</span>
-          <button
-            onClick={handleEnableSound}
-            style={{
-              background: '#D97706',
-              border: 'none',
-              color: '#FFFFFF',
-              padding: '3px 10px',
-              borderRadius: '8px',
-              fontWeight: 800,
-              fontSize: '0.72rem',
-              cursor: 'pointer'
-            }}
-          >
-            Enable Sound
-          </button>
-          <button
-            onClick={() => setAudioBannerDismissed(true)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#B45309',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              padding: '0 2px'
-            }}
-            title="Dismiss"
-          >
-            ✕
-          </button>
         </div>
       )}
 
