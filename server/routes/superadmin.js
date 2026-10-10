@@ -136,8 +136,9 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
 
       const result = restaurants.map(r => {
         const sub = subMap[r.id];
+        const { qr_secret, ...safeR } = r;
         return {
-          ...r,
+          ...safeR,
           dish_count: countMap[r.id] || 0,
           owner_username: adminMap[r.id] || 'N/A',
           subscription_status: sub?.status || (r.trial_ends_at ? 'trialing' : 'active'),
@@ -178,8 +179,9 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
 
     const result = restaurants.map(r => {
       const sub = subMap[r.id];
+      const { qr_secret, ...safeR } = r;
       return {
-        ...r,
+        ...safeR,
         dish_count: countMap[r.id] || 0,
         owner_username: adminMap[r.id] || 'N/A',
         subscription_status: sub?.status || (r.trial_ends_at ? 'trialing' : 'active'),
@@ -741,11 +743,12 @@ router.post('/restaurants/:id/impersonate', authenticateToken, requireSuperAdmin
 
     await logAudit(resto.id, 'superadmin', 'IMPERSONATION_STARTED', `Super Admin '${req.user.username}' started impersonating tenant '${resto.name}'`);
 
+    const { qr_secret, ...safeResto } = resto;
     res.json({
       success: true,
       token,
       username: ownerAdmin.username,
-      restaurant: resto,
+      restaurant: safeResto,
       is_impersonated: true
     });
   } catch (err) {

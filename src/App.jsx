@@ -796,11 +796,15 @@ export default function App() {
         }
         // Multi-device table sync ONLY if table QR code was scanned
         if (effectiveTableNum && !sessionExpired) {
-          const tableData = await fetchActiveTableOrder(currentSlug, effectiveTableNum);
-          if (tableData) {
-            setActiveOrderTrack(tableData);
-          } else {
-            setActiveOrderTrack(null);
+          const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
+          const targetSpaceType = currentSpaceType || initialSpaceInfo.type || 'table';
+          if (effectiveQrToken) {
+            const tableData = await fetchActiveTableOrder(currentSlug, effectiveTableNum, effectiveQrToken, targetSpaceType);
+            if (tableData) {
+              setActiveOrderTrack(tableData);
+            } else {
+              setActiveOrderTrack(null);
+            }
           }
         }
       } catch (err) {
@@ -2963,7 +2967,9 @@ export default function App() {
       {/* 🛎️ Service Request Modal & Toast */}
       {showServiceModal && !(info?.business_type === 'cinema_theatre' || info?.service_model === 'cinema' || info?.service_model === 'seat_service' || currentSpaceType === 'cinema_seat' || currentSpaceType === 'cinema' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat') && (
         <ServiceRequestModal
-          tableNum={getDynamicSpaceLabel() || (effectiveTableNum ? `Table ${effectiveTableNum}` : 'Table 1')}
+          tableNum={effectiveTableNum || currentTableNum || '1'}
+          spaceType={currentSpaceType || initialSpaceInfo.type || 'table'}
+          tableToken={currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim()}
           slug={getSlugFromUrl() || (info && info.slug)}
           onClose={() => setShowServiceModal(false)}
           onSuccess={(msg) => {

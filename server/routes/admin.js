@@ -13,6 +13,12 @@ import { adminLoginRateLimiter } from '../middleware/rateLimiters.js';
 import { clearRestoResolveCache, clearMenuBundleCache } from './api.js';
 import { normalizeVerificationMode } from '../utils/presenceVerification.js';
 import {
+  generateHmacQrToken,
+  generateRestaurantQrSecret,
+  normalizeSpaceType,
+  normalizeSpaceNumber
+} from '../utils/qrSecurity.js';
+import {
   BUSINESS_TYPES,
   FOOD_TYPES,
   SERVICE_MODELS,
@@ -264,13 +270,14 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
       JWT_SECRET,
       { expiresIn: '30d' }
     );
+    const { qr_secret, ...safeLoginResto } = (resto || {});
     res.json({
       token,
       username: admin.username,
       restaurant_id: admin.restaurant_id,
       slug,
       role: admin.role || 'restaurant_admin',
-      restaurant: resto
+      restaurant: safeLoginResto
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -297,7 +304,7 @@ router.get('/me', authenticateToken, async (req, res) => {
     const saasPlan = planRows[0] || {};
     const allowedThemes = saasPlan.allowed_themes || (tierKey === 'basic' ? 'gold' : tierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL');
 
-    const { kds_pin_hash, ...safeRestoObj } = (restos[0] || {});
+    const { kds_pin_hash, qr_secret, ...safeRestoObj } = (restos[0] || {});
     const resto = restos[0] ? {
       ...safeRestoObj,
       kds_pin_configured: Boolean(kds_pin_hash),
@@ -1734,7 +1741,8 @@ router.get(['/settings', '/info'], authenticateToken, async (req, res) => {
     if (!targetId) return res.status(401).json({ error: 'Restaurant identity is missing' });
     const rows = await query('SELECT * FROM restaurants WHERE id = $1', [targetId]);
     if (!rows || rows.length === 0) return res.status(404).json({ error: 'Restaurant not found' });
-    res.json(rows[0]);
+    const { qr_secret, kds_pin_hash, ...safeSettings } = (rows[0] || {});
+    res.json(safeSettings);
   } catch (err) {
     console.error('Fetch settings error:', err);
     res.status(500).json({ error: 'Failed to fetch settings' });
@@ -1744,6 +1752,94 @@ router.get(['/settings', '/info'], authenticateToken, async (req, res) => {
 router.put('/settings', authenticateToken, requireActiveSubscription, handleUpdateSettings);
 router.post('/settings', authenticateToken, requireActiveSubscription, handleUpdateSettings);
 router.post('/info', authenticateToken, requireActiveSubscription, handleUpdateSettings);
+
+// ======================================================================
+// 🔐 AUTHORITATIVE SERVER-SIDE QR CODE TOKEN GENERATION & SIGNING
+// ======================================================================
+
+// POST /api/admin/qr/generate - Authoritative HMAC-SHA256 token generation
+router.post('/qr/generate', authenticateToken, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) return res.status(401).json({ error: 'Restaurant identity missing from authentication context' });
+
+    // Ensure authorized admin cannot sign tokens for another tenant
+    if (req.body.restaurant_id && Number(req.body.restaurant_id) !== Number(targetId) && req.user?.role !== 'superadmin') {
+      return res.status(403).json({ error: 'Unauthorized to generate QR tokens for another restaurant' });
+    }
+
+    const restos = await query('SELECT id, slug, qr_secret, custom_domain FROM restaurants WHERE id = $1', [targetId]);
+    if (!restos || restos.length === 0) return res.status(404).json({ error: 'Restaurant not found' });
+    const resto = restos[0];
+
+    // Auto-initialize cryptographically secure random secret if empty
+    if (!resto.qr_secret || String(resto.qr_secret).trim() === '') {
+      resto.qr_secret = generateRestaurantQrSecret();
+      await query('UPDATE restaurants SET qr_secret = $1 WHERE id = $2', [resto.qr_secret, resto.id]);
+    }
+
+    const generateSingle = (rawType, rawNum) => {
+      const canonicalType = normalizeSpaceType(rawType || 'table');
+      const canonicalNum = normalizeSpaceNumber(rawNum || '1');
+      if (!canonicalNum) {
+        return { error: 'Invalid space identifier' };
+      }
+      const token = generateHmacQrToken(resto.slug, canonicalType, canonicalNum, resto.qr_secret);
+      const urlParam = canonicalType === 'cinema_seat' ? 'cinema' : (canonicalType === 'cabin' ? 'cabin' : canonicalType === 'room' ? 'room' : canonicalType === 'vip' ? 'vip' : 'table');
+      const relativeUrl = `/${resto.slug}?${urlParam}=${encodeURIComponent(canonicalNum)}&tkn=${token}`;
+      return {
+        canonical_space_type: canonicalType,
+        canonical_space_number: canonicalNum,
+        param_name: urlParam,
+        token,
+        relative_url: relativeUrl
+      };
+    };
+
+    const { space_type, space_number, spaces } = req.body;
+
+    if (Array.isArray(spaces) && spaces.length > 0) {
+      const results = spaces.map(sp => {
+        const item = generateSingle(sp.space_type || sp.spaceType, sp.space_number || sp.spaceNumber || sp.identifier);
+        return {
+          ...item,
+          original_space_type: sp.space_type || sp.spaceType,
+          original_space_number: sp.space_number || sp.spaceNumber || sp.identifier
+        };
+      });
+      return res.json({ success: true, count: results.length, items: results });
+    }
+
+    const singleResult = generateSingle(space_type, space_number);
+    if (singleResult.error) {
+      return res.status(400).json({ error: singleResult.error });
+    }
+    return res.json({ success: true, ...singleResult });
+  } catch (err) {
+    console.error('QR generation error:', err);
+    res.status(500).json({ error: 'Failed to generate secure QR signature' });
+  }
+});
+
+// POST /api/admin/qr/rotate-secret - Rotate signing secret with admin authorization
+router.post('/qr/rotate-secret', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) return res.status(401).json({ error: 'Restaurant identity missing' });
+
+    const newSecret = generateRestaurantQrSecret();
+    await query('UPDATE restaurants SET qr_secret = $1 WHERE id = $2', [newSecret, targetId]);
+    clearRestoResolveCache();
+
+    res.json({
+      success: true,
+      message: 'QR signing secret rotated successfully. Previously printed physical QR codes will need reprinting once the grace period expires.'
+    });
+  } catch (err) {
+    console.error('Rotate QR secret error:', err);
+    res.status(500).json({ error: 'Failed to rotate QR secret' });
+  }
+});
 
 // ======================================================================
 // 🎬 STEP 3.32: CINEMA & THEATRE SEAT QR SUPPORT API ENDPOINTS

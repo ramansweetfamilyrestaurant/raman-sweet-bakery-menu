@@ -594,8 +594,11 @@ export async function trackOrderStatus(id, slug = '') {
   return handleResponse(res, 'Failed to track order');
 }
 
-export async function fetchActiveTableOrder(slug, tableNumber) {
-  const res = await fetch(`${API_BASE}/orders/active-table?slug=${encodeURIComponent(slug)}&table_number=${encodeURIComponent(tableNumber)}`);
+export async function fetchActiveTableOrder(slug, tableNumber, token = '', spaceType = 'table') {
+  let url = `${API_BASE}/orders/active-table?slug=${encodeURIComponent(slug)}&table_number=${encodeURIComponent(tableNumber)}`;
+  if (token) url += `&tkn=${encodeURIComponent(token)}`;
+  if (spaceType) url += `&space_type=${encodeURIComponent(spaceType)}`;
+  const res = await fetch(url);
   return handleResponse(res, 'Failed to fetch active table order');
 }
 
@@ -1010,3 +1013,27 @@ export async function deleteAdminOffer(id, token) {
   });
   return handleResponse(res, 'Failed to delete offer');
 }
+
+export async function generateQrTokensApi(token, payload) {
+  const res = await fetch(`${API_BASE}/admin/qr/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse(res, 'Failed to generate secure QR token');
+}
+
+export async function rotateQrSecretApi(token) {
+  const res = await fetch(`${API_BASE}/admin/qr/rotate-secret`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return handleResponse(res, 'Failed to rotate QR secret');
+}
+

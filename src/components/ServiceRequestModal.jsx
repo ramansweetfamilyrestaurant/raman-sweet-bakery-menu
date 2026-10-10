@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Bell, Droplets, Receipt, Sparkles, UserCheck, X } from 'lucide-react';
 import { createServiceRequest } from '../api/client';
 
-export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess }) {
+export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess, spaceType = 'table', tableToken = '' }) {
   const [selectedType, setSelectedType] = useState('water');
   const [customNote, setCustomNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -30,6 +30,8 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
       const res = await createServiceRequest({
         slug: slug || '',
         table_number: tableNum || '1',
+        space_type: spaceType,
+        table_token: tableToken,
         request_type: reqLabel,
         note: customNote
       });

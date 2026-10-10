@@ -1327,6 +1327,21 @@ async function seedData() {
       }
     } catch {}
 
+    // Auto-initialize cryptographically secure random qr_secret for existing restaurants
+    try {
+      const restosWithoutSecret = await query("SELECT id FROM restaurants WHERE qr_secret IS NULL OR qr_secret = ''");
+      if (restosWithoutSecret && restosWithoutSecret.length > 0) {
+        const cryptoMod = await import('crypto');
+        for (const r of restosWithoutSecret) {
+          const newSecret = cryptoMod.randomBytes(32).toString('hex');
+          await query('UPDATE restaurants SET qr_secret = $1 WHERE id = $2', [newSecret, r.id]);
+        }
+        console.log(`🔐 Auto-initialized qr_secret for ${restosWithoutSecret.length} restaurant(s)`);
+      }
+    } catch (secErr) {
+      console.warn('Auto-init qr_secret notice:', secErr.message);
+    }
+
     const planCheck = await query('SELECT COUNT(*) as count FROM saas_plans');
     const pCount = parseInt(planCheck[0]?.count || 0, 10);
     if (pCount === 0) {

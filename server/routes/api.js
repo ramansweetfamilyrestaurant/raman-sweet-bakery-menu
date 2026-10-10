@@ -17,7 +17,7 @@ import {
 import { JWT_SECRET } from '../config/jwt.js';
 import { exchangeAuthCode } from '../services/authCodeService.js';
 import { checkExpiredSubscriptions } from '../subscriptionCron.js';
-import { verifyQrToken, normalizeSpaceType, normalizeSpaceNumber } from '../utils/qrSecurity.js';
+import { verifyQrToken, normalizeSpaceType, normalizeSpaceNumber, validateSpaceCapacity, generateRestaurantQrSecret } from '../utils/qrSecurity.js';
 import { 
   resolveEffectiveVerificationPolicy, 
   generatePresenceToken, 
@@ -219,6 +219,19 @@ export function clearRestoResolveCache() {
   restoResolveCache.clear();
 }
 
+async function ensureRestoSecret(resto) {
+  if (resto && (!resto.qr_secret || String(resto.qr_secret).trim() === '')) {
+    const newSecret = generateRestaurantQrSecret();
+    try {
+      await query('UPDATE restaurants SET qr_secret = $1 WHERE id = $2', [newSecret, resto.id]);
+      resto.qr_secret = newSecret;
+    } catch (e) {
+      console.warn('Failed to persist auto-initialized qr_secret:', e.message);
+    }
+  }
+  return resto;
+}
+
 async function resolveRestaurant(req, slug) {
   // 1. Authenticated Admin Requests: If Authorization header with valid JWT is present, JWT restaurant_id is 100% authoritative!
   if (req && req.headers && req.headers.authorization) {
@@ -229,7 +242,7 @@ async function resolveRestaurant(req, slug) {
         const decoded = jwt.verify(token, JWT_SECRET);
         if (decoded && decoded.restaurant_id) {
           const restos = await query('SELECT * FROM restaurants WHERE id = $1', [decoded.restaurant_id]);
-          if (restos && restos.length > 0) return restos[0];
+          if (restos && restos.length > 0) return await ensureRestoSecret(restos[0]);
         }
       }
     } catch (e) {}
@@ -241,19 +254,21 @@ async function resolveRestaurant(req, slug) {
     if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'].includes(cleanSlug)) {
       const cached = restoResolveCache.get(cleanSlug);
       if (cached && (Date.now() - cached.timestamp < RESOLVE_CACHE_TTL_MS)) {
-        return cached.data;
+        return await ensureRestoSecret(cached.data);
       }
       const restos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
       if (restos && restos.length > 0) {
-        restoResolveCache.set(cleanSlug, { data: restos[0], timestamp: Date.now() });
-        return restos[0];
+        const securedResto = await ensureRestoSecret(restos[0]);
+        restoResolveCache.set(cleanSlug, { data: securedResto, timestamp: Date.now() });
+        return securedResto;
       }
       if (cleanSlug.endsWith('-menu')) {
         const altSlug = cleanSlug.replace(/-menu$/, '');
         const altRestos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [altSlug]);
         if (altRestos && altRestos.length > 0) {
-          restoResolveCache.set(cleanSlug, { data: altRestos[0], timestamp: Date.now() });
-          return altRestos[0];
+          const securedResto = await ensureRestoSecret(altRestos[0]);
+          restoResolveCache.set(cleanSlug, { data: securedResto, timestamp: Date.now() });
+          return securedResto;
         }
       }
       return null;
@@ -998,6 +1013,7 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
     const {
       slug,
       table_number,
+      table,
       space_type,
       table_token,
       tkn,
@@ -1050,7 +1066,7 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
     }
 
     // Step 5: Resolve Exact Space Type and Number
-    const rawTable = String(table_number || '').trim();
+    const rawTable = String(table_number || table || '').trim();
     if (!rawTable) {
       return res.status(400).json({ error: 'invalid_table_number', message: 'Table or space number is required' });
     }
@@ -1063,54 +1079,13 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
       cleanTable = cMatch ? `Screen ${cMatch[1]} - Row ${cMatch[2].toUpperCase()} - Seat ${cMatch[3]}` : rawTable;
     }
 
-    // Step 6: Validate Space Capacity
-    let maxAllowed = 0;
-    if (resolvedSpaceType === 'cinema_seat') {
-      const cMatch = String(resolvedSpaceNum).match(/^S?(\d+)-([A-Za-z]+)-(\d+)$/i);
-      if (!cMatch) {
-        return res.status(400).json({
-          error: 'invalid_table_number',
-          message: `Cinema seat "${resolvedSpaceNum}" format is invalid. Expected format e.g. Screen 1, Row A, Seat 12.`
-        });
-      }
-      try {
-        const dbScreenNum = parseInt(cMatch[1], 10);
-        const dbRowLabel = cMatch[2].toUpperCase();
-        const dbSeatNum = parseInt(cMatch[3], 10);
-        const seatCheck = await query(`
-          SELECT s.id, s.active, sc.active as screen_active
-          FROM restaurant_cinema_seats s
-          JOIN restaurant_cinema_screens sc ON s.screen_id = sc.id
-          WHERE s.restaurant_id = $1 AND sc.screen_number = $2 AND UPPER(s.row_label) = $3 AND s.seat_number = $4
-        `, [resto.id, dbScreenNum, dbRowLabel, dbSeatNum]);
-
-        if (seatCheck && seatCheck.length > 0) {
-          if (!seatCheck[0].active || !seatCheck[0].screen_active) {
-            return res.status(400).json({
-              error: 'invalid_table_number',
-              message: `Cinema seat Screen ${dbScreenNum} Row ${dbRowLabel} Seat ${dbSeatNum} is currently inactive.`
-            });
-          }
-        }
-      } catch (dbErr) {}
-    } else if (resolvedSpaceType === 'cabin') {
-      maxAllowed = Number(resto.total_cabins) || Number(resto.total_tables) || 0;
-    } else if (resolvedSpaceType === 'room') {
-      maxAllowed = Number(resto.total_rooms) || Number(resto.total_tables) || 0;
-    } else if (resolvedSpaceType === 'vip') {
-      maxAllowed = Number(resto.total_vip) || Number(resto.total_tables) || 0;
-    } else {
-      maxAllowed = Number(resto.total_tables) || 0;
-    }
-
-    if (resolvedSpaceType !== 'cinema_seat') {
-      const parsedSpaceNum = parseInt(resolvedSpaceNum, 10);
-      if (maxAllowed > 0 && parsedSpaceNum > maxAllowed) {
-        return res.status(400).json({
-          error: 'invalid_table_number',
-          message: `${resolvedSpaceType} #${resolvedSpaceNum} is not registered for this restaurant.`
-        });
-      }
+    // Step 6: Validate Space Capacity & Cinema Seat Registration
+    const capResult = await validateSpaceCapacity(resto, resolvedSpaceType, resolvedSpaceNum);
+    if (!capResult.valid) {
+      return res.status(400).json({
+        error: capResult.error || 'invalid_table_number',
+        message: capResult.message
+      });
     }
 
     // Step 7: REQUIRE & Verify QR Token Server-Side
@@ -1123,20 +1098,23 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
       });
     }
 
-    const secret = resto.qr_secret || (`${resto.id}_${resto.slug}_tq`);
     const qrResult = verifyQrToken(
       resto.slug,
       resolvedSpaceType,
       resolvedSpaceNum,
-      secret,
-      receivedQrToken
+      resto.qr_secret,
+      receivedQrToken,
+      { restaurantId: resto.id, requireHmac: true }
     );
 
     if (!qrResult || !qrResult.valid) {
+      const isLegacy = qrResult?.reason === 'legacy_token_deprecated';
       return res.status(403).json({
-        error: 'invalid_qr',
+        error: isLegacy ? 'legacy_qr_deprecated' : 'invalid_qr',
         reason: qrResult?.reason || 'invalid_token',
-        message: 'QR token verification failed. Please scan the official QR code at your seat.'
+        message: isLegacy
+          ? 'This table QR standee uses a legacy format and must be reprinted with a secure QR code.'
+          : 'QR token verification failed. Please scan the official QR code at your seat.'
       });
     }
 
@@ -1334,23 +1312,12 @@ router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (
     const resolvedSpaceNum = normalizeSpaceNumber(rawTable);
     const cleanTable = rawTable;
 
-    // 5. Validate Space Capacity
-    let maxAllowed = 0;
-    if (resolvedSpaceType === 'cabin') {
-      maxAllowed = Number(resto.total_cabins) || Number(resto.total_tables) || 0;
-    } else if (resolvedSpaceType === 'room') {
-      maxAllowed = Number(resto.total_rooms) || Number(resto.total_tables) || 0;
-    } else if (resolvedSpaceType === 'vip') {
-      maxAllowed = Number(resto.total_vip) || Number(resto.total_tables) || 0;
-    } else {
-      maxAllowed = Number(resto.total_tables) || 0;
-    }
-
-    const parsedSpaceNum = parseInt(resolvedSpaceNum, 10);
-    if (maxAllowed > 0 && parsedSpaceNum > maxAllowed) {
+    // 5. Validate Space Capacity & Cinema Seat Registration
+    const capResult = await validateSpaceCapacity(resto, resolvedSpaceType, resolvedSpaceNum);
+    if (!capResult.valid) {
       return res.status(400).json({
-        error: 'invalid_table_number',
-        message: `${resolvedSpaceType} #${resolvedSpaceNum} is not registered for this restaurant.`
+        error: capResult.error || 'invalid_table_number',
+        message: capResult.message
       });
     }
 
@@ -1364,20 +1331,23 @@ router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (
       });
     }
 
-    const secret = resto.qr_secret || (`${resto.id}_${resto.slug}_tq`);
     const qrResult = verifyQrToken(
       resto.slug,
       resolvedSpaceType,
       resolvedSpaceNum,
-      secret,
-      receivedQrToken
+      resto.qr_secret,
+      receivedQrToken,
+      { restaurantId: resto.id, requireHmac: true }
     );
 
     if (!qrResult || !qrResult.valid) {
+      const isLegacy = qrResult?.reason === 'legacy_token_deprecated';
       return res.status(403).json({
-        error: 'invalid_qr',
+        error: isLegacy ? 'legacy_qr_deprecated' : 'invalid_qr',
         reason: qrResult?.reason || 'invalid_token',
-        message: 'QR token verification failed. Please scan the official QR code at your seat.'
+        message: isLegacy
+          ? 'This table QR standee uses a legacy format and must be reprinted with a secure QR code.'
+          : 'QR token verification failed. Please scan the official QR code at your seat.'
       });
     }
 
@@ -1547,54 +1517,13 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       cleanTable = cMatch ? `Screen ${cMatch[1]} - Row ${cMatch[2].toUpperCase()} - Seat ${cMatch[3]}` : rawTable;
     }
 
-    // Step 6: Validate Space Capacity against Restaurant Configuration
-    let maxAllowed = 0;
-    if (resolvedSpaceType === 'cinema_seat') {
-      const cMatch = String(resolvedSpaceNum).match(/^S?(\d+)-([A-Za-z]+)-(\d+)$/i);
-      if (!cMatch) {
-        return res.status(400).json({
-          error: 'invalid_table_number',
-          message: `Cinema seat "${resolvedSpaceNum}" format is invalid. Expected format e.g. Screen 1, Row A, Seat 12.`
-        });
-      }
-      try {
-        const dbScreenNum = parseInt(cMatch[1], 10);
-        const dbRowLabel = cMatch[2].toUpperCase();
-        const dbSeatNum = parseInt(cMatch[3], 10);
-        const seatCheck = await query(`
-          SELECT s.id, s.active, sc.active as screen_active
-          FROM restaurant_cinema_seats s
-          JOIN restaurant_cinema_screens sc ON s.screen_id = sc.id
-          WHERE s.restaurant_id = $1 AND sc.screen_number = $2 AND UPPER(s.row_label) = $3 AND s.seat_number = $4
-        `, [targetId, dbScreenNum, dbRowLabel, dbSeatNum]);
-
-        if (seatCheck && seatCheck.length > 0) {
-          if (!seatCheck[0].active || !seatCheck[0].screen_active) {
-            return res.status(400).json({
-              error: 'invalid_table_number',
-              message: `Cinema seat Screen ${dbScreenNum} Row ${dbRowLabel} Seat ${dbSeatNum} is currently inactive.`
-            });
-          }
-        }
-      } catch (dbErr) {}
-    } else if (resolvedSpaceType === 'cabin') {
-      maxAllowed = Number(resto.total_cabins) || Number(resto.total_tables) || 0;
-    } else if (resolvedSpaceType === 'room') {
-      maxAllowed = Number(resto.total_rooms) || Number(resto.total_tables) || 0;
-    } else if (resolvedSpaceType === 'vip') {
-      maxAllowed = Number(resto.total_vip) || Number(resto.total_tables) || 0;
-    } else {
-      maxAllowed = Number(resto.total_tables) || 0;
-    }
-
-    if (resolvedSpaceType !== 'cinema_seat') {
-      const spaceNum = parseInt(resolvedSpaceNum, 10);
-      if (maxAllowed > 0 && spaceNum > maxAllowed) {
-        return res.status(400).json({
-          error: 'invalid_table_number',
-          message: `${resolvedSpaceType} #${resolvedSpaceNum} is not registered. Please scan the official QR code at your seat.`
-        });
-      }
+    // Step 6: Validate Space Capacity & Cinema Seat Registration
+    const capResult = await validateSpaceCapacity(resto, resolvedSpaceType, resolvedSpaceNum);
+    if (!capResult.valid) {
+      return res.status(400).json({
+        error: capResult.error || 'invalid_table_number',
+        message: capResult.message
+      });
     }
 
     // Step 7: REQUIRE & Authoritatively Verify QR Token Server-Side
@@ -1607,20 +1536,23 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       });
     }
 
-    const secret = resto.qr_secret || (`${resto.id}_${resto.slug}_tq`);
     const qrResult = verifyQrToken(
       resto.slug,
       resolvedSpaceType,
       resolvedSpaceNum,
-      secret,
-      receivedQrToken
+      resto.qr_secret,
+      receivedQrToken,
+      { restaurantId: resto.id, requireHmac: true }
     );
 
-    if (!qrResult.valid) {
+    if (!qrResult || !qrResult.valid) {
+      const isLegacy = qrResult?.reason === 'legacy_token_deprecated';
       return res.status(403).json({
-        error: 'invalid_qr',
-        reason: qrResult.reason,
-        message: 'This QR code is invalid, unverified, or belongs to another dining table. Please rescan.'
+        error: isLegacy ? 'legacy_qr_deprecated' : 'invalid_qr',
+        reason: qrResult?.reason || 'invalid_token',
+        message: isLegacy
+          ? 'This table QR standee uses a legacy format and must be reprinted with a secure QR code.'
+          : 'This QR code is invalid, unverified, or belongs to another dining table. Please rescan.'
       });
     }
 
@@ -2207,13 +2139,83 @@ router.get('/orders/track/:id', async (req, res) => {
 // GET Active Table Order Sync (Consolidates active session items & round history)
 router.get('/orders/active-table', async (req, res) => {
   try {
-    const { slug, table_number } = req.query;
+    const { slug, table_number, space_type, tkn, token, table_token } = req.query;
     if (!table_number) return res.json(null);
     const resto = await resolveRestaurant(req, slug);
     if (!resto) return res.status(404).json({ error: 'Restaurant not found' });
     const targetId = resto.id;
 
     const rawTable = String(table_number).trim();
+    const resolvedSpaceType = normalizeSpaceType(space_type || 'table');
+    const resolvedSpaceNum = normalizeSpaceNumber(rawTable);
+
+    // 1. Authorize Request: Admin/Staff JWT OR Customer Valid Modern HMAC QR Token
+    let isAuthorized = false;
+
+    if (req.headers && req.headers.authorization) {
+      try {
+        const authHeader = req.headers.authorization;
+        const authToken = authHeader.split(' ')[1];
+        if (authToken && authToken !== 'undefined' && authToken !== 'null') {
+          const decoded = jwt.verify(authToken, JWT_SECRET);
+          if (decoded && (decoded.role === 'superadmin' || decoded.restaurant_id === targetId)) {
+            isAuthorized = true;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!isAuthorized) {
+      const receivedQrToken = String(tkn || token || table_token || '').trim();
+      if (!receivedQrToken) {
+        return res.status(403).json({
+          error: 'unauthorized_table_access',
+          reason: 'missing_token',
+          message: 'A valid Table QR scan token is required to view active table session.'
+        });
+      }
+
+      if (!resolvedSpaceNum) {
+        return res.status(400).json({
+          error: 'invalid_table_number',
+          message: 'Valid table number is required'
+        });
+      }
+
+      // Space capacity check
+      const capCheck = await validateSpaceCapacity(resto, resolvedSpaceType, resolvedSpaceNum);
+      if (!capCheck || !capCheck.valid) {
+        return res.status(403).json({
+          error: 'invalid_space',
+          reason: capCheck?.error || 'unconfigured_space',
+          message: capCheck?.message || 'Specified dining space is unconfigured or inactive.'
+        });
+      }
+
+      // Strict modern HMAC verification
+      const qrResult = verifyQrToken(
+        resto.slug,
+        resolvedSpaceType,
+        resolvedSpaceNum,
+        resto.qr_secret,
+        receivedQrToken,
+        { restaurantId: resto.id, requireHmac: true }
+      );
+
+      if (!qrResult || !qrResult.valid) {
+        const isLegacy = qrResult?.reason === 'legacy_token_deprecated';
+        return res.status(403).json({
+          error: isLegacy ? 'legacy_qr_deprecated' : 'unauthorized_table_access',
+          reason: qrResult?.reason || 'invalid_token',
+          message: isLegacy
+            ? 'This table QR standee uses a legacy format and must be reprinted with a secure QR code.'
+            : 'Invalid or expired QR token for this table.'
+        });
+      }
+
+      isAuthorized = true;
+    }
+
     let queryTable = rawTable;
     let queryAlt = rawTable;
     const cMatch = rawTable.match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
@@ -2326,31 +2328,81 @@ router.get('/orders/active-table', async (req, res) => {
 // POST Create Waiter Call / Service Request
 router.post('/service-requests', serviceRequestRateLimiter, async (req, res) => {
   try {
-    const { slug, table_number, request_type, note } = req.body;
+    const { slug, table_number, space_type, table_token, tkn, token, request_type, note } = req.body;
     const resto = await resolveRestaurant(req, slug);
     if (!resto) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    const cleanTable = String(table_number || '').trim();
+    const rawTable = String(table_number || '').trim();
     const cleanType = String(request_type || '').trim();
     const cleanNote = String(note || '').trim().substring(0, 255);
 
-    if (!cleanTable || !cleanType || cleanTable.length > 20 || cleanType.length > 50) {
+    if (!rawTable || !cleanType || rawTable.length > 50 || cleanType.length > 50) {
       return res.status(400).json({ error: 'Table number and request type are required and must be valid' });
+    }
+
+    const resolvedSpaceType = normalizeSpaceType(space_type || 'table');
+    const resolvedSpaceNum = normalizeSpaceNumber(rawTable);
+
+    if (!resolvedSpaceNum) {
+      return res.status(400).json({
+        error: 'invalid_table_number',
+        message: 'A valid space identifier is required.'
+      });
+    }
+
+    // 1. Authoritative capacity / DB validation
+    const capacityResult = await validateSpaceCapacity(resto, resolvedSpaceType, resolvedSpaceNum);
+    if (!capacityResult || !capacityResult.valid) {
+      return res.status(403).json({
+        error: 'invalid_space',
+        reason: capacityResult?.error || 'unconfigured_space',
+        message: capacityResult?.message || 'The specified dining space is not registered or active.'
+      });
+    }
+
+    // 2. Cryptographic QR Verification (Require modern HMAC, reject legacy)
+    const receivedQrToken = String(table_token || tkn || token || req.query.tkn || '').trim();
+    if (!receivedQrToken) {
+      return res.status(403).json({
+        error: 'invalid_qr',
+        reason: 'missing_token',
+        message: 'A valid Table QR scan token is required to request staff.'
+      });
+    }
+
+    const qrResult = verifyQrToken(
+      resto.slug,
+      resolvedSpaceType,
+      resolvedSpaceNum,
+      resto.qr_secret,
+      receivedQrToken,
+      { restaurantId: resto.id, requireHmac: true }
+    );
+
+    if (!qrResult || !qrResult.valid) {
+      const isLegacy = qrResult?.reason === 'legacy_token_deprecated';
+      return res.status(403).json({
+        error: isLegacy ? 'legacy_qr_deprecated' : 'invalid_qr',
+        reason: qrResult?.reason || 'invalid_token',
+        message: isLegacy
+          ? 'This table QR standee uses a legacy format and must be reprinted with a secure QR code.'
+          : 'QR token verification failed. Please scan the official QR code at your table.'
+      });
     }
 
     const result = await query(`
       INSERT INTO service_requests (restaurant_id, table_number, request_type, note, status)
       VALUES ($1, $2, $3, $4, 'pending') RETURNING id
-    `, [resto.id, cleanTable, cleanType, cleanNote]);
+    `, [resto.id, resolvedSpaceNum, cleanType, cleanNote]);
 
     const requestId = result[0]?.id || result.lastInsertRowid;
 
     res.json({
       success: true,
       request_id: requestId,
-      message: `🛎️ Staff notified for Table ${cleanTable}! A waiter will attend shortly.`
+      message: `🛎️ Staff notified for Table ${resolvedSpaceNum}! A waiter will attend shortly.`
     });
   } catch (err) {
     console.error('Create service request error:', err);
@@ -2773,8 +2825,8 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
 
       const restoRes = await txQuery(`
         INSERT INTO restaurants (
-          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, total_tables, mandate_status, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25) RETURNING id
+          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, total_tables, mandate_status, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email, qr_secret
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26) RETURNING id
       `, [
         name.trim(),
         cleanSlug,
@@ -2800,7 +2852,8 @@ router.post('/register', registrationRateLimiter, async (req, res) => {
         false,
         false,
         (owner_name || '').trim(),
-        cleanOwnerEmail
+        cleanOwnerEmail,
+        generateRestaurantQrSecret()
       ]);
 
       const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;

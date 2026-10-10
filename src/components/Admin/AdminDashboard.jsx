@@ -1,8 +1,8 @@
 import QRCode from 'qrcode';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, reorderCategories, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, exportAdminAnalyticsCSV, exportAdminAnalyticsXLSX, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings } from '../../api/client';
+import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, reorderCategories, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, exportAdminAnalyticsCSV, exportAdminAnalyticsXLSX, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings, generateQrTokensApi } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
-import { generateQrToken } from '../../utils/qrSecurity';
+import { normalizeSpaceType, normalizeSpaceNumber } from '../../utils/qrSecurity';
 import { getSpaceConfig } from '../../utils/businessTaxonomy';
 import { resolveTenantCapabilities } from '../../utils/planCapabilities';
 import { soundManager, unlockNotificationSound, playKitchenSiren, stopKitchenSiren, playPresenceAlert, playWaiterAlert, subscribeAudioState, isNotificationSoundReady } from '../../utils/soundManager';
@@ -2010,11 +2010,23 @@ export default function AdminDashboard({
     const paramName = isCinema ? 'cinema' : (prefix === 'cabin' ? 'cabin' : prefix === 'room' ? 'room' : prefix === 'vip' ? 'vip' : 'table');
     const liveOrigin = window.location.origin;
     const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
-    const secretKey = settingsForm.qr_secret || restaurantInfo?.qr_secret || `${restaurantInfo?.id || 1}_${activeSlug}_tq`;
-    const qrSig = generateQrToken(activeSlug, isCinema ? 'cinema_seat' : paramName, activeTableNum, secretKey);
-    const targetUrl = isCinema
-      ? `${liveOrigin}/${activeSlug}?cinema=${encodeURIComponent(activeTableNum)}&tkn=${qrSig}`
-      : `${liveOrigin}/${activeSlug}?${paramName}=${activeTableNum}&tkn=${qrSig}`;
+
+    let targetUrl = '';
+    try {
+      const res = await generateQrTokensApi(token, {
+        space_type: isCinema ? 'cinema_seat' : paramName,
+        space_number: activeTableNum
+      });
+      if (res?.token) {
+        targetUrl = `${liveOrigin}${res.relative_url}`;
+      }
+    } catch (e) {
+      console.warn('Server QR token generation notice:', e.message);
+    }
+    if (!targetUrl) {
+      alert('Unable to generate secure signed QR code. Please check server connection.');
+      return;
+    }
     
     // Generate native high-resolution black QR code locally (zero CORS, zero lag)
     let qrImgUrl = '';
@@ -2026,7 +2038,8 @@ export default function AdminDashboard({
         color: { dark: '#000000', light: '#FFFFFF' }
       });
     } catch (e) {
-      qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(targetUrl)}`;
+      alert('Failed to generate local QR image. Please try again.');
+      return;
     }
 
     const currentName = settingsForm.name || 'Digital Menu';
@@ -2237,7 +2250,6 @@ export default function AdminDashboard({
     const currentName = settingsForm.name || 'Digital Menu';
     const currentTagline = settingsForm.tagline || (isCinema ? 'In-Seat Food Ordering' : 'Scan QR Code for Digital Menu');
     const activeSlug = settingsForm.slug || restaurantInfo?.slug || '';
-    const secretKey = settingsForm.qr_secret || restaurantInfo?.qr_secret || `${restaurantInfo?.id || 1}_${activeSlug}_tq`;
 
     if (isCinema) {
       let activeSeats = Array.isArray(cinemaSeatsList) ? cinemaSeatsList.filter(s => s.active !== false) : [];
@@ -2246,19 +2258,52 @@ export default function AdminDashboard({
         return;
       }
 
-      const qrDataUrls = await Promise.all(activeSeats.map(async (seat) => {
+      let tokenLookup = {};
+      try {
+        const batchSpaces = activeSeats.map(seat => {
+          const sNum = seat.screen_number || '1';
+          const rLabel = seat.row_label || 'A';
+          const stNum = seat.seat_number || '1';
+          return { space_type: 'cinema_seat', space_number: `S${sNum}-${rLabel}-${stNum}` };
+        });
+        const batchRes = await generateQrTokensApi(token, { spaces: batchSpaces });
+        if (batchRes?.items) {
+          batchRes.items.forEach(item => {
+            if (item.canonical_space_number && item.token) {
+              tokenLookup[item.canonical_space_number] = item.token;
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Batch cinema QR generation notice:', e.message);
+      }
+
+      const missingSeats = activeSeats.filter(seat => {
         const sNum = seat.screen_number || '1';
         const rLabel = seat.row_label || 'A';
         const stNum = seat.seat_number || '1';
-        const seatCode = `S${sNum}-${rLabel}-${stNum}`;
-        const qrSig = generateQrToken(activeSlug, 'cinema_seat', seatCode, secretKey);
-        const targetUrl = `${liveOrigin}/${activeSlug}?cinema=${encodeURIComponent(seatCode)}&tkn=${qrSig}`;
-        try {
+        return !tokenLookup[`S${sNum}-${rLabel}-${stNum}`];
+      });
+      if (missingSeats.length > 0) {
+        alert(`Cannot print: secure server signatures are missing for ${missingSeats.length} cinema seat(s). Please retry.`);
+        return;
+      }
+
+      let qrDataUrls;
+      try {
+        qrDataUrls = await Promise.all(activeSeats.map(async (seat) => {
+          const sNum = seat.screen_number || '1';
+          const rLabel = seat.row_label || 'A';
+          const stNum = seat.seat_number || '1';
+          const seatCode = `S${sNum}-${rLabel}-${stNum}`;
+          const qrSig = tokenLookup[seatCode];
+          const targetUrl = `${liveOrigin}/${activeSlug}?cinema=${encodeURIComponent(seatCode)}&tkn=${encodeURIComponent(qrSig)}`;
           return await QRCode.toDataURL(targetUrl, { width: 700, margin: 1, errorCorrectionLevel: 'H', color: { dark: '#000000', light: '#FFFFFF' } });
-        } catch (e) {
-          return `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(targetUrl)}`;
-        }
-      }));
+        }));
+      } catch (err) {
+        alert('Failed to generate local QR images for cinema seats: ' + err.message);
+        return;
+      }
 
       let cardsHtml = '';
       activeSeats.forEach((seat, idx) => {
@@ -2334,15 +2379,38 @@ export default function AdminDashboard({
     const tableNumbers = [];
     for (let t = 1; t <= totalCount; t++) tableNumbers.push(t);
 
-    const qrDataUrls = await Promise.all(tableNumbers.map(async (tNum) => {
-      const qrSig = generateQrToken(activeSlug, paramName, tNum, secretKey);
-      const targetUrl = `${liveOrigin}/${activeSlug}?${paramName}=${tNum}&tkn=${qrSig}`;
-      try {
-        return await QRCode.toDataURL(targetUrl, { width: 700, margin: 1, errorCorrectionLevel: 'H', color: { dark: '#000000', light: '#FFFFFF' } });
-      } catch (e) {
-        return `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(targetUrl)}`;
+    let tokenLookup = {};
+    try {
+      const batchSpaces = tableNumbers.map(tNum => ({ space_type: paramName, space_number: String(tNum) }));
+      const batchRes = await generateQrTokensApi(token, { spaces: batchSpaces });
+      if (batchRes?.items) {
+        batchRes.items.forEach(item => {
+          if (item.canonical_space_number && item.token) {
+            tokenLookup[String(item.canonical_space_number)] = item.token;
+          }
+        });
       }
-    }));
+    } catch (e) {
+      console.warn('Batch QR generation notice:', e.message);
+    }
+
+    const missingTables = tableNumbers.filter(tNum => !tokenLookup[String(tNum)]);
+    if (missingTables.length > 0) {
+      alert(`Cannot print: secure server signatures are missing for ${missingTables.length} ${spaceConfig.plural.toLowerCase()}. Please retry.`);
+      return;
+    }
+
+    let qrDataUrls;
+    try {
+      qrDataUrls = await Promise.all(tableNumbers.map(async (tNum) => {
+        const qrSig = tokenLookup[String(tNum)];
+        const targetUrl = `${liveOrigin}/${activeSlug}?${paramName}=${tNum}&tkn=${encodeURIComponent(qrSig)}`;
+        return await QRCode.toDataURL(targetUrl, { width: 700, margin: 1, errorCorrectionLevel: 'H', color: { dark: '#000000', light: '#FFFFFF' } });
+      }));
+    } catch (err) {
+      alert('Failed to generate local QR images: ' + err.message);
+      return;
+    }
 
     let cardsHtml = '';
     tableNumbers.forEach((tNum, idx) => {
