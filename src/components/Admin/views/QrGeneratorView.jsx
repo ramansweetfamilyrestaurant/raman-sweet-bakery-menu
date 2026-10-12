@@ -574,7 +574,7 @@ export default function QrGeneratorView({
   const theme = STANDEE_THEMES[selectedTheme] || STANDEE_THEMES.emerald;
 
   return (
-    <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '16px 20px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="standee-workspace-wrapper">
       {/* Hidden Canvas for High-Resolution PNG Render */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
@@ -717,24 +717,13 @@ export default function QrGeneratorView({
         </div>
       )}
 
-      {/* MASTER-DETAIL 2-COLUMN GRID */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(320px, 1.35fr) minmax(340px, 1fr)',
-        gap: '24px',
-        alignItems: 'start'
-      }}>
+      {/* MASTER-DETAIL RESPONSIVE GRID */}
+      <div className="standee-workspace-grid">
         
         {/* ================================================================= */}
         {/* LEFT PANEL: CONFIGURED SPACES & INVENTORY MANAGEMENT              */}
         {/* ================================================================= */}
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          padding: '18px 20px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-        }}>
+        <div className="standee-inventory-panel">
           {/* Inventory Count & Search Bar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -832,14 +821,7 @@ export default function QrGeneratorView({
 
             {/* Bulk Selection Toolbar */}
             {filteredSpaces.length > 0 && (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px 12px',
-                background: '#F1F5F9',
-                borderRadius: '8px'
-              }}>
+              <div className="standee-bulk-toolbar">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: '#334155' }}>
                   <input
                     type="checkbox"
@@ -866,7 +848,8 @@ export default function QrGeneratorView({
                       color: '#DFBA67',
                       fontSize: '0.78rem',
                       fontWeight: 800,
-                      cursor: printingBulk ? 'wait' : 'pointer'
+                      cursor: printingBulk ? 'wait' : 'pointer',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     <Printer size={14} />
@@ -883,7 +866,7 @@ export default function QrGeneratorView({
           </div>
 
           {/* SPACES LIST */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '680px', overflowY: 'auto', paddingRight: '4px' }}>
+          <div className="standee-spaces-list">
             {configuredSpaces.length === 0 ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748B' }}>
                 <AlertTriangle size={36} color="#D97706" style={{ margin: '0 auto 12px auto' }} />
@@ -941,7 +924,7 @@ export default function QrGeneratorView({
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
                       {/* Checkbox for bulk selection */}
                       <input
                         type="checkbox"
@@ -950,14 +933,14 @@ export default function QrGeneratorView({
                           e.stopPropagation();
                           handleToggleSpaceSelection(sp.key);
                         }}
-                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
                       />
 
-                      <span style={{ fontSize: '1.2rem' }}>{sp.icon}</span>
+                      <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{sp.icon}</span>
 
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F172A' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {sp.label}
                           </span>
                           {isCurrentlyPreviewed && (
@@ -967,19 +950,21 @@ export default function QrGeneratorView({
                               background: '#0A2315',
                               color: '#DFBA67',
                               padding: '1px 6px',
-                              borderRadius: '4px'
+                              borderRadius: '4px',
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0
                             }}>
                               PREVIEWING
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                        <div style={{ fontSize: '0.74rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {sp.categoryLabel}
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                       {/* Security / Token Status Badge */}
                       {hasValidToken ? (
                         <span style={{
@@ -992,7 +977,8 @@ export default function QrGeneratorView({
                           background: '#ECFDF5',
                           padding: '3px 8px',
                           borderRadius: '6px',
-                          border: '1px solid #A7F3D0'
+                          border: '1px solid #A7F3D0',
+                          whiteSpace: 'nowrap'
                         }}>
                           <ShieldCheck size={12} />
                           <span>HMAC Secured</span>
@@ -1008,7 +994,8 @@ export default function QrGeneratorView({
                           background: '#FFFBEB',
                           padding: '3px 8px',
                           borderRadius: '6px',
-                          border: '1px solid #FDE68A'
+                          border: '1px solid #FDE68A',
+                          whiteSpace: 'nowrap'
                         }}>
                           <RefreshCw size={12} className="animate-spin" />
                           <span>Signing...</span>
@@ -1024,7 +1011,8 @@ export default function QrGeneratorView({
                           background: '#FEF2F2',
                           padding: '3px 8px',
                           borderRadius: '6px',
-                          border: '1px solid #FECACA'
+                          border: '1px solid #FECACA',
+                          whiteSpace: 'nowrap'
                         }}>
                           <AlertTriangle size={12} />
                           <span>Missing Token</span>
@@ -1043,18 +1031,7 @@ export default function QrGeneratorView({
         {/* ================================================================= */}
         {/* RIGHT PANEL: LIVE STANDEE PREVIEW & EXPORT ACTIONS               */}
         {/* ================================================================= */}
-        <div style={{
-          position: 'sticky',
-          top: '20px',
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          padding: '20px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px'
-        }}>
+        <div className="standee-preview-panel">
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
             <div>
@@ -1101,20 +1078,26 @@ export default function QrGeneratorView({
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            position: 'relative'
+            position: 'relative',
+            width: '100%',
+            boxSizing: 'border-box'
           }}>
             {/* The Acrylic Card Frame */}
-            <div style={{
-              width: '280px',
-              padding: '20px 14px 16px 14px',
-              border: `${STANDEE_FRAMES[selectedFrame]?.borderWidth || '3.5px'} solid ${theme.cardBorder}`,
-              borderRadius: STANDEE_FRAMES[selectedFrame]?.borderRadius || '24px',
-              backgroundColor: theme.cardBg,
-              textAlign: 'center',
-              boxShadow: '0 12px 30px rgba(0,0,0,0.1)',
-              position: 'relative',
-              boxSizing: 'border-box'
-            }}>
+            <div
+              className="standee-preview-card-frame"
+              style={{
+                maxWidth: '280px',
+                width: '100%',
+                padding: '20px 14px 16px 14px',
+                border: `${STANDEE_FRAMES[selectedFrame]?.borderWidth || '3.5px'} solid ${theme.cardBorder}`,
+                borderRadius: STANDEE_FRAMES[selectedFrame]?.borderRadius || '24px',
+                backgroundColor: theme.cardBg,
+                textAlign: 'center',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.1)',
+                position: 'relative',
+                boxSizing: 'border-box'
+              }}
+            >
               {/* Acrylic Top-Right Glare */}
               {STANDEE_FRAMES[selectedFrame]?.hasGlare && (
                 <div style={{
@@ -1287,6 +1270,7 @@ export default function QrGeneratorView({
             {/* Stand Base Shadow */}
             <div style={{
               width: '220px',
+              maxWidth: '80%',
               height: '10px',
               background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0) 70%)',
               borderRadius: '50%',
@@ -1295,27 +1279,28 @@ export default function QrGeneratorView({
           </div>
 
           {/* APPEARANCE CUSTOMIZER */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
             {/* Theme Selector */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="standee-control-row">
               <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>
                 Theme Palette
               </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div className="standee-control-buttons">
                 {Object.values(STANDEE_THEMES).map(t => (
                   <button
                     key={t.id}
                     type="button"
                     onClick={() => setSelectedTheme(t.id)}
                     style={{
-                      padding: '3px 8px',
+                      padding: '4px 8px',
                       borderRadius: '6px',
                       fontSize: '0.68rem',
                       fontWeight: 700,
                       border: selectedTheme === t.id ? '2px solid #0A2315' : '1px solid #CBD5E1',
                       background: selectedTheme === t.id ? '#F1F5F9' : '#FFFFFF',
                       color: '#0F172A',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     {t.name}
@@ -1325,25 +1310,26 @@ export default function QrGeneratorView({
             </div>
 
             {/* Frame Style */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="standee-control-row">
               <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>
                 Stand Style
               </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div className="standee-control-buttons">
                 {Object.values(STANDEE_FRAMES).map(f => (
                   <button
                     key={f.id}
                     type="button"
                     onClick={() => setSelectedFrame(f.id)}
                     style={{
-                      padding: '3px 8px',
+                      padding: '4px 8px',
                       borderRadius: '6px',
                       fontSize: '0.68rem',
                       fontWeight: 700,
                       border: selectedFrame === f.id ? '2px solid #0A2315' : '1px solid #CBD5E1',
                       background: selectedFrame === f.id ? '#F1F5F9' : '#FFFFFF',
                       color: '#0F172A',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     {f.name}
@@ -1353,11 +1339,11 @@ export default function QrGeneratorView({
             </div>
 
             {/* QR Color Picker */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="standee-control-row">
               <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>
                 QR Code Ink
               </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div className="standee-control-buttons">
                 {[
                   { id: '#000000', label: 'Black' },
                   { id: '#0F172A', label: 'Slate' },
@@ -1372,14 +1358,15 @@ export default function QrGeneratorView({
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
-                      padding: '3px 8px',
+                      padding: '4px 8px',
                       borderRadius: '6px',
                       fontSize: '0.68rem',
                       fontWeight: 700,
                       border: qrColor === c.id ? '2px solid #0A2315' : '1px solid #CBD5E1',
                       background: qrColor === c.id ? '#F1F5F9' : '#FFFFFF',
                       color: '#0F172A',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: c.id, display: 'inline-block' }} />
@@ -1392,14 +1379,14 @@ export default function QrGeneratorView({
 
           {/* PRIMARY EXPORT BUTTONS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="standee-export-actions">
               {/* Single Print Button */}
               <button
                 type="button"
                 onClick={handlePrintSingleStandee}
                 disabled={!isActiveTokenReady || !activeQrDataUrl}
+                className="standee-export-btn"
                 style={{
-                  flex: 1,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1424,8 +1411,8 @@ export default function QrGeneratorView({
                 type="button"
                 onClick={() => handleDownloadPng(1)}
                 disabled={!isActiveTokenReady || !activeQrDataUrl || exportingPng}
+                className="standee-export-btn"
                 style={{
-                  flex: 1,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

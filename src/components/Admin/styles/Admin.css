@@ -860,3 +860,167 @@
   }
 }
 
+/* ==========================================================================
+   TouchQR Unified Standee Workspace — Responsive Design System
+   ========================================================================== */
+.standee-workspace-wrapper {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px 20px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.standee-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.standee-inventory-panel {
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+.standee-spaces-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 680px;
+  overflow-y: auto;
+  padding-right: 4px;
+  box-sizing: border-box;
+}
+
+.standee-preview-panel {
+  position: sticky;
+  top: 20px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+.standee-preview-card-frame {
+  max-width: 280px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.standee-bulk-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #F1F5F9;
+  border-radius: 8px;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+}
+
+.standee-control-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.standee-control-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.standee-export-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.standee-export-btn {
+  flex: 1 1 140px;
+  min-height: 42px;
+  box-sizing: border-box;
+}
+
+/* Responsive Breakpoint for Mobile Screens (< 768px) */
+@media (max-width: 767px) {
+  .standee-workspace-wrapper {
+    padding: 12px 4px calc(84px + env(safe-area-inset-bottom, 0px)) 4px;
+  }
+
+  .standee-workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .standee-inventory-panel {
+    padding: 14px 12px;
+    border-radius: 12px;
+  }
+
+  .standee-spaces-list {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .standee-preview-panel {
+    position: static;
+    top: auto;
+    padding: 16px 12px;
+    border-radius: 12px;
+  }
+
+  .standee-control-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .standee-bulk-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .standee-export-btn {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
+
+/* Extra Compact Tweaks for 360px & Under */
+@media (max-width: 360px) {
+  .standee-workspace-wrapper {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .standee-inventory-panel,
+  .standee-preview-panel {
+    padding: 12px 8px;
+  }
+}
+
