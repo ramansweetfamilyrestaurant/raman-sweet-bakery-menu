@@ -459,6 +459,7 @@ export default function QrGeneratorView({
         space: activeSpace,
         restaurant: settingsForm || restaurantInfo || {},
         themeId: selectedTheme,
+        frameStyle: selectedFrame,
         qrDataUrl: activeQrDataUrl,
         targetWidth,
         targetHeight,

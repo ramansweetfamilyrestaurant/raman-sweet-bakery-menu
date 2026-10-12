@@ -5,7 +5,8 @@ import {
   STANDEE_THEMES,
   STANDEE_FRAMES,
   buildStandeeCardHtml,
-  generateStandeePrintDocument
+  generateStandeePrintDocument,
+  wrapCanvasText
 } from '../../src/utils/standeeTemplates.js';
 import {
   normalizeSpaceType,
@@ -381,7 +382,65 @@ test('Print document includes strict @page A4 styling and prevents card splittin
 });
 
 // ----------------------------------------------------------------------
-// 6. Summary
+// 6. Canvas Text Wrapping & Balanced Standee Geometry
+// ----------------------------------------------------------------------
+console.log('\n--- SECTION 6: Canvas Text Measurement & Balanced Wrapping ---');
+
+test('wrapCanvasText leaves short text intact on 1 line', () => {
+  // Mock simple character-width ctx
+  const mockCtx = {
+    measureText: (str) => ({ width: str.length * 10 })
+  };
+  const lines = wrapCanvasText(mockCtx, 'Raman Cafe', 500);
+  assert.strictEqual(lines.length, 1);
+  assert.strictEqual(lines[0], 'Raman Cafe');
+});
+
+test('wrapCanvasText balances 2-line headings to prevent orphan words', () => {
+  const mockCtx = {
+    measureText: (str) => ({ width: str.length * 10 })
+  };
+  // "Raman Sweet Bakery & Family Restaurant"
+  // Total length = 38 chars = 380px.
+  // With maxWidth = 250px (cannot fit on 1 line):
+  const lines = wrapCanvasText(mockCtx, 'Raman Sweet Bakery & Family Restaurant', 250);
+  assert.strictEqual(lines.length, 2, 'Should wrap to exactly 2 lines');
+  assert.strictEqual(lines[0], 'Raman Sweet Bakery &', 'Line 1 should balance before &');
+  assert.strictEqual(lines[1], 'Family Restaurant', 'Line 2 should contain Family Restaurant');
+});
+
+test('wrapCanvasText splits long unbroken strings cleanly without clipping', () => {
+  const mockCtx = {
+    measureText: (str) => ({ width: str.length * 10 })
+  };
+  const superLongWord = 'SupercalifragilisticexpialidociousAndExtraLongWordWithoutSpaces';
+  const lines = wrapCanvasText(mockCtx, superLongWord, 200);
+  assert.ok(lines.length > 1, 'Should split unbroken word into multiple chunks');
+  for (const l of lines) {
+    assert.ok(mockCtx.measureText(l).width <= 200, 'Every chunk must fit within maxWidth');
+  }
+});
+
+test('All 4 standee themes and 3 frame styles have valid styles and metrics', () => {
+  const expectedThemes = ['emerald', 'slate', 'royal', 'minimal'];
+  const expectedFrames = ['acrylic', 'wood', 'minimal'];
+
+  for (const tid of expectedThemes) {
+    assert.ok(STANDEE_THEMES[tid], `Theme ${tid} exists in STANDEE_THEMES`);
+    assert.ok(STANDEE_THEMES[tid].cardBg, `Theme ${tid} has cardBg`);
+    assert.ok(STANDEE_THEMES[tid].cardBorder, `Theme ${tid} has cardBorder`);
+    assert.ok(STANDEE_THEMES[tid].titleColor, `Theme ${tid} has titleColor`);
+  }
+
+  for (const fid of expectedFrames) {
+    assert.ok(STANDEE_FRAMES[fid], `Frame style ${fid} exists in STANDEE_FRAMES`);
+    assert.ok(STANDEE_FRAMES[fid].borderWidth, `Frame ${fid} has borderWidth`);
+    assert.ok(STANDEE_FRAMES[fid].borderRadius, `Frame ${fid} has borderRadius`);
+  }
+});
+
+// ----------------------------------------------------------------------
+// 7. Summary
 // ----------------------------------------------------------------------
 console.log('\n======================================================================');
 console.log(`🏁 TEST RESULTS: ${passed} PASSED | ${failed} FAILED`);

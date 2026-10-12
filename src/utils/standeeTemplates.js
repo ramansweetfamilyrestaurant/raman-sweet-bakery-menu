@@ -475,18 +475,111 @@ export function generateStandeePrintDocument({
 }
 
 /**
+ * Wraps text into multiple centered lines given a maximum canvas width.
+ * Splits long unbroken words if needed to prevent border overflow.
+ */
+export function wrapCanvasText(ctx, text, maxWidth) {
+  if (!text) return [];
+  const str = String(text).trim();
+  if (!str) return [];
+
+  const words = str.split(/\s+/);
+  if (words.length === 0) return [];
+
+  // If entire text fits on one line:
+  if (ctx.measureText(str).width <= maxWidth) {
+    return [str];
+  }
+
+  // If text would fit in 2 lines, find the optimal balanced break point
+  // to prevent awkward orphan words and match live preview typography:
+  if (words.length > 2) {
+    let bestSplitIndex = -1;
+    let minDiff = Infinity;
+
+    for (let i = 1; i < words.length; i++) {
+      const line1 = words.slice(0, i).join(' ');
+      const line2 = words.slice(i).join(' ');
+      const w1 = ctx.measureText(line1).width;
+      const w2 = ctx.measureText(line2).width;
+
+      if (w1 <= maxWidth && w2 <= maxWidth) {
+        // Favorable weight for keeping '&' or 'and' at the end of line 1
+        let penalty = 0;
+        const lastWordLine1 = words[i - 1];
+        if (lastWordLine1 === '&' || lastWordLine1.toLowerCase() === 'and') {
+          penalty = -40;
+        }
+        const diff = Math.abs(w1 - w2) + penalty;
+        if (diff < minDiff) {
+          minDiff = diff;
+          bestSplitIndex = i;
+        }
+      }
+    }
+
+    if (bestSplitIndex !== -1) {
+      return [
+        words.slice(0, bestSplitIndex).join(' '),
+        words.slice(bestSplitIndex).join(' ')
+      ];
+    }
+  }
+
+  // Standard greedy wrapping for 3+ lines or edge cases:
+  const lines = [];
+  let currentLine = '';
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+
+    if (ctx.measureText(word).width > maxWidth) {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = '';
+      }
+      let chunk = '';
+      for (let c = 0; c < word.length; c++) {
+        const testChunk = chunk + word[c];
+        if (ctx.measureText(testChunk).width <= maxWidth) {
+          chunk = testChunk;
+        } else {
+          if (chunk) lines.push(chunk);
+          chunk = word[c];
+        }
+      }
+      currentLine = chunk;
+      continue;
+    }
+
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (ctx.measureText(testLine).width <= maxWidth) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+/**
  * Draws a high-resolution 300 DPI acrylic standee card on HTML5 Canvas.
+ * Matches live preview hierarchy, balanced vertical rhythm, and text wrapping.
  */
 export async function renderStandeeToCanvas(canvas, {
   space,
   restaurant = {},
   themeId = 'emerald',
+  frameStyle = 'acrylic',
   qrDataUrl = '',
   targetWidth = 1200,
   targetHeight = 1650,
   showReassurance = true
 }) {
   const theme = STANDEE_THEMES[themeId] || STANDEE_THEMES.emerald;
+  const frame = STANDEE_FRAMES[frameStyle] || STANDEE_FRAMES.acrylic;
   canvas.width = targetWidth;
   canvas.height = targetHeight;
   const ctx = canvas.getContext('2d');
@@ -496,43 +589,148 @@ export async function renderStandeeToCanvas(canvas, {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  // 1. Acrylic Background
+  // 1. Standee Background
   ctx.fillStyle = theme.cardBg;
   ctx.fillRect(0, 0, targetWidth, targetHeight);
 
-  // 2. Outer Border (Gold / Slate)
+  // 2. Outer Border (Width tuned to selected frame style)
+  let outerBorderWidth = 8 * scale;
+  if (frameStyle === 'wood') {
+    outerBorderWidth = 14 * scale;
+  } else if (frameStyle === 'minimal') {
+    outerBorderWidth = 4 * scale;
+  }
   ctx.strokeStyle = theme.cardBorder;
-  ctx.lineWidth = 10 * scale;
-  ctx.strokeRect(10 * scale, 10 * scale, targetWidth - 20 * scale, targetHeight - 20 * scale);
+  ctx.lineWidth = outerBorderWidth;
+  ctx.strokeRect(
+    outerBorderWidth,
+    outerBorderWidth,
+    targetWidth - (outerBorderWidth * 2),
+    targetHeight - (outerBorderWidth * 2)
+  );
 
-  // 3. Inner Hairline Border
-  ctx.strokeStyle = theme.innerBorder;
-  ctx.lineWidth = 3 * scale;
-  ctx.strokeRect(24 * scale, 24 * scale, targetWidth - 48 * scale, targetHeight - 48 * scale);
+  // 3. Inner Hairline Border (only if frame.hasInnerFrame)
+  if (frame.hasInnerFrame) {
+    ctx.strokeStyle = theme.innerBorder;
+    ctx.lineWidth = 2.5 * scale;
+    const innerInset = 24 * scale;
+    ctx.strokeRect(
+      innerInset,
+      innerInset,
+      targetWidth - (innerInset * 2),
+      targetHeight - (innerInset * 2)
+    );
+  }
 
-  // 4. Glare effect in top-right
-  const glareGrad = ctx.createRadialGradient(targetWidth, 0, 0, targetWidth, 0, 300 * scale);
-  glareGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
-  glareGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-  ctx.fillStyle = glareGrad;
-  ctx.fillRect(targetWidth - 300 * scale, 0, 300 * scale, 300 * scale);
+  // 4. Glare effect in top-right (only if frame.hasGlare)
+  if (frame.hasGlare) {
+    const glareRadius = 300 * scale;
+    const glareGrad = ctx.createRadialGradient(targetWidth, 0, 0, targetWidth, 0, glareRadius);
+    glareGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+    glareGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = glareGrad;
+    ctx.fillRect(targetWidth - glareRadius, 0, glareRadius, glareRadius);
+  }
 
-  let curY = 90 * scale;
+  // Safe inner content width (never touches inner border of 24*scale)
+  const maxSafeTextWidth = targetWidth - (180 * scale);
+
+  // Measure Restaurant Title & Wrap
+  const rawName = restaurant.name || 'Digital Menu';
+  let titleFontSize = 36 * scale;
+  if (rawName.length > 42) {
+    titleFontSize = 28 * scale;
+  } else if (rawName.length > 22) {
+    titleFontSize = 32 * scale;
+  }
+
+  ctx.font = `bold ${titleFontSize}px "Playfair Display", Georgia, serif`;
+  let titleLines = wrapCanvasText(ctx, rawName, maxSafeTextWidth);
+
+  if (titleLines.length > 2 && titleFontSize > 26 * scale) {
+    titleFontSize = 26 * scale;
+    ctx.font = `bold ${titleFontSize}px "Playfair Display", Georgia, serif`;
+    titleLines = wrapCanvasText(ctx, rawName, maxSafeTextWidth);
+  }
+  const titleLineHeight = Math.round(titleFontSize * 1.25);
+
+  // Measure Tagline & Wrap
+  const isCinema = space.spaceType === 'cinema_seat' || space.spaceType === 'cinema';
+  const taglineText = restaurant.tagline || (isCinema ? 'IN-SEAT FOOD ORDERING' : 'SCAN QR CODE FOR DIGITAL MENU');
+  const taglineFontSize = 18 * scale;
+  ctx.font = `bold ${taglineFontSize}px "Plus Jakarta Sans", sans-serif`;
+  const taglineLines = wrapCanvasText(ctx, taglineText.toUpperCase(), maxSafeTextWidth);
+  const taglineLineHeight = Math.round(24 * scale);
+
+  // Measure Contact & Wrap
+  const contactParts = [
+    restaurant.address,
+    restaurant.phone ? `Phone: ${restaurant.phone}` : null
+  ].filter(Boolean);
+  const contactText = contactParts.join(' • ');
+  const contactFontSize = 15.5 * scale;
+  ctx.font = `bold ${contactFontSize}px "Plus Jakarta Sans", sans-serif`;
+  const contactLines = wrapCanvasText(ctx, contactText, maxSafeTextWidth);
+  const contactLineHeight = Math.round(21 * scale);
+
+  // Component Sizing
+  const badgeHeight = 42 * scale;
+  const dividerHeight = 16 * scale;
+  const qrBoxSize = 465 * scale;
+  const qrImgSize = 395 * scale;
+  const pillHeight = 32 * scale;
+  const stepHeight = 36 * scale;
+  const instructionEnHeight = 26 * scale;
+  const instructionHiHeight = 21 * scale;
+  const reassuranceHeight = showReassurance ? (18 * scale) : 0;
+  const watermarkHeight = !restaurant.watermark_removal_enabled ? (18 * scale) : 0;
+
+  // Intrinsic Group Heights
+  const headerGaps = (18 * scale) + (14 * scale) + (14 * scale);
+  const headerHeight = badgeHeight + (titleLines.length * titleLineHeight) + dividerHeight + (taglineLines.length * taglineLineHeight) + headerGaps;
+
+  const qrHeight = qrBoxSize;
+
+  const instGaps = (12 * scale) + (16 * scale) + (showReassurance ? (14 * scale) : 0);
+  const instructionsHeight = instructionEnHeight + instructionHiHeight + stepHeight + reassuranceHeight + instGaps;
+
+  const footerLineHeight = 2 * scale;
+  let footerGaps = 0;
+  if (contactLines.length > 0) footerGaps += 18 * scale;
+  if (watermarkHeight > 0) footerGaps += (contactLines.length > 0 ? 14 * scale : 16 * scale);
+  const footerHeight = footerLineHeight + (contactLines.length * contactLineHeight) + watermarkHeight + footerGaps;
+
+  // Total Intrinsic Content Height
+  const totalContentHeight = headerHeight + qrHeight + instructionsHeight + footerHeight;
+  const totalGapsAvailable = targetHeight - totalContentHeight;
+
+  // Proportional Vertical Gap Allocation (Eliminates voids & avoids border collisions)
+  const topMargin = Math.max(50 * scale, Math.round(totalGapsAvailable * 0.26));
+  const bottomMargin = Math.max(55 * scale, Math.round(totalGapsAvailable * 0.26));
+  const remainingInternal = Math.max(60 * scale, totalGapsAvailable - topMargin - bottomMargin);
+
+  const gapHeaderToQr = Math.round(remainingInternal * 0.34);
+  const gapQrToInstructions = Math.round(remainingInternal * 0.33);
+  const gapInstructionsToFooter = remainingInternal - gapHeaderToQr - gapQrToInstructions;
+
+  // -------------------------------------------------------------
+  // RENDERING ELEMENTS SEQUENTIALLY WITH ADAPTIVE FLOW
+  // -------------------------------------------------------------
+  let curY = topMargin;
 
   // 5. Space Badge Pill
   const badgeText = `✦ ${space.badge || space.label || 'TABLE'} ✦`;
   ctx.font = `bold ${22 * scale}px "Plus Jakarta Sans", sans-serif`;
-  const badgeWidth = ctx.measureText(badgeText).width + (50 * scale);
-  const badgeHeight = 44 * scale;
+  const badgeWidth = ctx.measureText(badgeText).width + (48 * scale);
   const badgeX = (targetWidth - badgeWidth) / 2;
 
   ctx.fillStyle = theme.badgeBg;
-  drawRoundRect(ctx, badgeX, curY, badgeWidth, badgeHeight, 22 * scale);
+  drawRoundRect(ctx, badgeX, curY, badgeWidth, badgeHeight, 21 * scale);
   ctx.fill();
 
   ctx.strokeStyle = theme.badgeBorder;
-  ctx.lineWidth = 3 * scale;
-  drawRoundRect(ctx, badgeX, curY, badgeWidth, badgeHeight, 22 * scale);
+  ctx.lineWidth = 2.5 * scale;
+  drawRoundRect(ctx, badgeX, curY, badgeWidth, badgeHeight, 21 * scale);
   ctx.stroke();
 
   ctx.fillStyle = theme.badgeText;
@@ -540,44 +738,49 @@ export async function renderStandeeToCanvas(canvas, {
   ctx.textBaseline = 'middle';
   ctx.fillText(badgeText, targetWidth / 2, curY + (badgeHeight / 2));
 
-  curY += 75 * scale;
+  curY += badgeHeight + (18 * scale);
 
-  // 6. Restaurant Title
+  // 6. Restaurant Title (Wrapped Centered Lines)
   ctx.fillStyle = theme.titleColor;
-  ctx.font = `bold ${36 * scale}px "Playfair Display", Georgia, serif`;
+  ctx.font = `bold ${titleFontSize}px "Playfair Display", Georgia, serif`;
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(restaurant.name || 'Digital Menu', targetWidth / 2, curY);
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < titleLines.length; i++) {
+    const lineY = curY + (i * titleLineHeight) + (titleLineHeight / 2);
+    ctx.fillText(titleLines[i], targetWidth / 2, lineY);
+  }
+  curY += (titleLines.length * titleLineHeight) + (14 * scale);
 
-  curY += 24 * scale;
-
-  // 7. Gold Divider
+  // 7. Gold / Theme Divider
   ctx.fillStyle = theme.dividerColor;
-  ctx.font = `bold ${18 * scale}px sans-serif`;
-  ctx.fillText('── ◆ ──', targetWidth / 2, curY);
+  ctx.font = `bold ${16 * scale}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('── ◆ ──', targetWidth / 2, curY + (dividerHeight / 2));
+  curY += dividerHeight + (14 * scale);
 
-  curY += 28 * scale;
-
-  // 8. Tagline
-  const isCinema = space.spaceType === 'cinema_seat' || space.spaceType === 'cinema';
+  // 8. Tagline (Wrapped Centered Lines)
   ctx.fillStyle = theme.subtitleColor;
-  ctx.font = `bold ${20 * scale}px "Plus Jakarta Sans", sans-serif`;
-  ctx.fillText(restaurant.tagline || (isCinema ? 'IN-SEAT FOOD ORDERING' : 'SCAN QR CODE FOR DIGITAL MENU'), targetWidth / 2, curY);
-
-  curY += 35 * scale;
+  ctx.font = `bold ${taglineFontSize}px "Plus Jakarta Sans", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < taglineLines.length; i++) {
+    const lineY = curY + (i * taglineLineHeight) + (taglineLineHeight / 2);
+    ctx.fillText(taglineLines[i], targetWidth / 2, lineY);
+  }
+  curY += (taglineLines.length * taglineLineHeight) + gapHeaderToQr;
 
   // 9. QR Plaque & Box
-  const qrBoxSize = 460 * scale;
   const qrBoxX = (targetWidth - qrBoxSize) / 2;
   const qrBoxY = curY;
 
   ctx.fillStyle = theme.qrBoxBg;
-  drawRoundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 28 * scale);
+  drawRoundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 26 * scale);
   ctx.fill();
 
   ctx.strokeStyle = theme.qrBoxBorder;
-  ctx.lineWidth = 4 * scale;
-  drawRoundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 28 * scale);
+  ctx.lineWidth = 3.5 * scale;
+  drawRoundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 26 * scale);
   ctx.stroke();
 
   // Draw QR Image
@@ -586,10 +789,9 @@ export async function renderStandeeToCanvas(canvas, {
     qrImg.src = qrDataUrl;
     await new Promise(resolve => {
       qrImg.onload = () => {
-        const qrSize = 390 * scale;
-        const qrX = (targetWidth - qrSize) / 2;
-        const qrY = qrBoxY + (35 * scale);
-        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+        const qrX = (targetWidth - qrImgSize) / 2;
+        const qrY = qrBoxY + ((qrBoxSize - qrImgSize) / 2) + (6 * scale);
+        ctx.drawImage(qrImg, qrX, qrY, qrImgSize, qrImgSize);
         resolve();
       };
       qrImg.onerror = resolve;
@@ -601,91 +803,109 @@ export async function renderStandeeToCanvas(canvas, {
   const pillText = 'SCAN TO ORDER';
   ctx.font = `bold ${16 * scale}px "Plus Jakarta Sans", sans-serif`;
   const pillW = ctx.measureText(pillText).width + (36 * scale);
-  const pillH = 32 * scale;
   const pillX = (targetWidth - pillW) / 2;
-  const pillY = qrBoxY - (16 * scale);
+  const pillY = qrBoxY - (pillHeight / 2);
 
   ctx.fillStyle = theme.pillBg;
-  drawRoundRect(ctx, pillX, pillY, pillW, pillH, 16 * scale);
+  drawRoundRect(ctx, pillX, pillY, pillW, pillHeight, 16 * scale);
   ctx.fill();
 
   ctx.strokeStyle = theme.pillBorder;
   ctx.lineWidth = 2.5 * scale;
-  drawRoundRect(ctx, pillX, pillY, pillW, pillH, 16 * scale);
+  drawRoundRect(ctx, pillX, pillY, pillW, pillHeight, 16 * scale);
   ctx.stroke();
 
   ctx.fillStyle = theme.pillText;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(pillText, targetWidth / 2, pillY + (pillH / 2));
+  ctx.fillText(pillText, targetWidth / 2, pillY + (pillHeight / 2));
 
-  curY = qrBoxY + qrBoxSize + (45 * scale);
+  curY += qrBoxSize + gapQrToInstructions;
 
   // 10. Bilingual Instructions
   ctx.fillStyle = theme.instructionEn;
-  ctx.font = `bold ${28 * scale}px "Plus Jakarta Sans", sans-serif`;
+  ctx.font = `bold ${instructionEnHeight}px "Plus Jakarta Sans", sans-serif`;
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText('📱 POINT CAMERA AT QR TO ORDER', targetWidth / 2, curY);
-
-  curY += 36 * scale;
+  ctx.textBaseline = 'middle';
+  ctx.fillText('📱 POINT CAMERA AT QR TO ORDER', targetWidth / 2, curY + (instructionEnHeight / 2));
+  curY += instructionEnHeight + (12 * scale);
 
   ctx.fillStyle = theme.instructionHi;
-  ctx.font = `bold ${22 * scale}px "Plus Jakarta Sans", sans-serif`;
-  ctx.fillText(isCinema ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'कैमरे से स्कैन करें और खाना ऑर्डर करें', targetWidth / 2, curY);
-
-  curY += 40 * scale;
+  ctx.font = `bold ${instructionHiHeight}px "Plus Jakarta Sans", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(
+    isCinema ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'कैमरे से स्कैन करें और खाना ऑर्डर करें',
+    targetWidth / 2,
+    curY + (instructionHiHeight / 2)
+  );
+  curY += instructionHiHeight + (16 * scale);
 
   // 11. 3-Step Bar
   const stepText = '① Open Camera   ➔   ② Scan QR   ➔   ③ Order Food';
-  ctx.font = `bold ${17 * scale}px "Plus Jakarta Sans", sans-serif`;
-  const stepW = ctx.measureText(stepText).width + (40 * scale);
-  const stepH = 36 * scale;
+  ctx.font = `bold ${16 * scale}px "Plus Jakarta Sans", sans-serif`;
+  const stepW = ctx.measureText(stepText).width + (38 * scale);
   const stepX = (targetWidth - stepW) / 2;
 
   ctx.fillStyle = theme.stepBg;
-  drawRoundRect(ctx, stepX, curY - (24 * scale), stepW, stepH, 10 * scale);
+  drawRoundRect(ctx, stepX, curY, stepW, stepHeight, 10 * scale);
   ctx.fill();
 
   ctx.strokeStyle = theme.stepBorder;
   ctx.lineWidth = 2 * scale;
-  drawRoundRect(ctx, stepX, curY - (24 * scale), stepW, stepH, 10 * scale);
+  drawRoundRect(ctx, stepX, curY, stepW, stepHeight, 10 * scale);
   ctx.stroke();
 
   ctx.fillStyle = theme.stepText;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(stepText, targetWidth / 2, curY - (6 * scale));
-
-  curY += 35 * scale;
+  ctx.fillText(stepText, targetWidth / 2, curY + (stepHeight / 2));
+  curY += stepHeight;
 
   // 12. Reassurance Line
   if (showReassurance) {
+    curY += (14 * scale);
     ctx.fillStyle = theme.accentColor;
-    ctx.font = `bold ${17 * scale}px "Plus Jakarta Sans", sans-serif`;
-    ctx.fillText('⚡ Instant Digital Menu • No App Required', targetWidth / 2, curY);
-    curY += 35 * scale;
+    ctx.font = `bold ${16.5 * scale}px "Plus Jakarta Sans", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚡ Instant Digital Menu • No App Required', targetWidth / 2, curY + (reassuranceHeight / 2));
+    curY += reassuranceHeight;
   }
 
-  // 13. Footer
-  ctx.strokeStyle = theme.isDark ? '#334155' : '#E2E8F0';
-  ctx.lineWidth = 2 * scale;
-  ctx.beginPath();
-  ctx.moveTo(80 * scale, targetHeight - (90 * scale));
-  ctx.lineTo(targetWidth - (80 * scale), targetHeight - (90 * scale));
-  ctx.stroke();
+  curY += gapInstructionsToFooter;
 
-  ctx.fillStyle = theme.isDark ? '#94A3B8' : '#64748B';
-  ctx.font = `bold ${16 * scale}px "Plus Jakarta Sans", sans-serif`;
-  const contact = [restaurant.address, restaurant.phone ? `Phone: ${restaurant.phone}` : null].filter(Boolean).join(' • ');
-  if (contact) {
-    ctx.fillText(contact, targetWidth / 2, targetHeight - (60 * scale));
+  // 13. Footer Block
+  ctx.strokeStyle = theme.isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)';
+  ctx.lineWidth = 1.5 * scale;
+  ctx.beginPath();
+  const footerLineMargin = 100 * scale;
+  ctx.moveTo(footerLineMargin, curY);
+  ctx.lineTo(targetWidth - footerLineMargin, curY);
+  ctx.stroke();
+  curY += footerLineHeight;
+
+  if (contactLines.length > 0) {
+    curY += (18 * scale);
+    ctx.fillStyle = theme.isDark ? '#94A3B8' : '#64748B';
+    ctx.font = `bold ${contactFontSize}px "Plus Jakarta Sans", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < contactLines.length; i++) {
+      const lineY = curY + (i * contactLineHeight) + (contactLineHeight / 2);
+      ctx.fillText(contactLines[i], targetWidth / 2, lineY);
+    }
+    curY += (contactLines.length * contactLineHeight);
   }
 
   if (!restaurant.watermark_removal_enabled) {
+    curY += (contactLines.length > 0 ? (14 * scale) : (16 * scale));
     ctx.fillStyle = theme.subtitleColor;
     ctx.font = `bold ${15 * scale}px "Plus Jakarta Sans", sans-serif`;
-    ctx.fillText('⚡ Powered by TouchQR', targetWidth / 2, targetHeight - (32 * scale));
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚡ Powered by TouchQR', targetWidth / 2, curY + (watermarkHeight / 2));
+    curY += watermarkHeight;
   }
 }
 
