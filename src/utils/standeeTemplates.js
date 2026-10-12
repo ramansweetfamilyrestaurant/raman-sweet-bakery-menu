@@ -645,19 +645,39 @@ export async function renderStandeeToCanvas(canvas, {
   const maxSafeTextWidth = targetWidth - (180 * scale);
 
   // Measure Restaurant Title & Wrap
+  // Adaptive sizing targeting ~50 * scale (approx 75px at 1200px width / ~6.25% prominence)
+  // to match live preview while ensuring zero border collision and strict safe-width containment.
   const rawName = restaurant.name || 'Digital Menu';
-  let titleFontSize = 36 * scale;
+  let targetFontSize;
   if (rawName.length > 42) {
-    titleFontSize = 29 * scale;
+    targetFontSize = Math.round(32 * scale);
   } else if (rawName.length > 22) {
-    titleFontSize = 33 * scale;
+    targetFontSize = Math.round(50 * scale); // 75px target for medium-length names
+  } else {
+    targetFontSize = Math.round(48 * scale); // 72px target for short names
   }
 
-  ctx.font = `bold ${titleFontSize}px "Playfair Display", Georgia, serif`;
-  let titleLines = wrapCanvasText(ctx, rawName, maxSafeTextWidth);
+  let titleFontSize = targetFontSize;
+  const minTitleFontSize = Math.round(26 * scale);
+  let titleLines = [];
 
-  if (titleLines.length > 2 && titleFontSize > 26 * scale) {
-    titleFontSize = 26 * scale;
+  while (titleFontSize >= minTitleFontSize) {
+    ctx.font = `bold ${titleFontSize}px "Playfair Display", Georgia, serif`;
+    titleLines = wrapCanvasText(ctx, rawName, maxSafeTextWidth);
+
+    // Verify all lines fit within maxSafeTextWidth and line count is appropriate
+    const allFit = titleLines.every(l => ctx.measureText(l).width <= maxSafeTextWidth);
+    const lineCountOk = rawName.length <= 42 ? (titleLines.length <= 2) : (titleLines.length <= 3);
+
+    if (allFit && lineCountOk) {
+      break;
+    }
+    titleFontSize -= 1;
+  }
+
+  // Graceful fallback for exceptionally long titles (> 2 lines)
+  if (titleLines.length > 2 && titleFontSize > 28 * scale) {
+    titleFontSize = Math.round(28 * scale);
     ctx.font = `bold ${titleFontSize}px "Playfair Display", Georgia, serif`;
     titleLines = wrapCanvasText(ctx, rawName, maxSafeTextWidth);
   }
