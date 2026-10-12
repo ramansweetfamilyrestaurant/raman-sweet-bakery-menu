@@ -496,6 +496,7 @@ export function wrapCanvasText(ctx, text, maxWidth) {
   if (words.length > 2) {
     let bestSplitIndex = -1;
     let minDiff = Infinity;
+    const isolatedConjunctions = new Set(['&', '+', 'and', 'or', 'et']);
 
     for (let i = 1; i < words.length; i++) {
       const line1 = words.slice(0, i).join(' ');
@@ -504,12 +505,20 @@ export function wrapCanvasText(ctx, text, maxWidth) {
       const w2 = ctx.measureText(line2).width;
 
       if (w1 <= maxWidth && w2 <= maxWidth) {
-        // Favorable weight for keeping '&' or 'and' at the end of line 1
         let penalty = 0;
-        const lastWordLine1 = words[i - 1];
-        if (lastWordLine1 === '&' || lastWordLine1.toLowerCase() === 'and') {
-          penalty = -40;
+
+        // Strongly disfavor isolated conjunctions leading line 2 (e.g. '& Family Restaurant')
+        const firstWordLine2 = words[i].toLowerCase();
+        if (isolatedConjunctions.has(firstWordLine2)) {
+          penalty += 250;
         }
+
+        // Favorable weight for keeping '&' or 'and' at the end of line 1 (e.g. 'Raman Sweet Bakery &')
+        const lastWordLine1 = words[i - 1].toLowerCase();
+        if (isolatedConjunctions.has(lastWordLine1)) {
+          penalty -= 60;
+        }
+
         const diff = Math.abs(w1 - w2) + penalty;
         if (diff < minDiff) {
           minDiff = diff;
@@ -639,9 +648,9 @@ export async function renderStandeeToCanvas(canvas, {
   const rawName = restaurant.name || 'Digital Menu';
   let titleFontSize = 36 * scale;
   if (rawName.length > 42) {
-    titleFontSize = 28 * scale;
+    titleFontSize = 29 * scale;
   } else if (rawName.length > 22) {
-    titleFontSize = 32 * scale;
+    titleFontSize = 33 * scale;
   }
 
   ctx.font = `bold ${titleFontSize}px "Playfair Display", Georgia, serif`;
@@ -673,11 +682,11 @@ export async function renderStandeeToCanvas(canvas, {
   const contactLines = wrapCanvasText(ctx, contactText, maxSafeTextWidth);
   const contactLineHeight = Math.round(21 * scale);
 
-  // Component Sizing
+  // Component Sizing (Carefully proportioned to 1200x1650 to match preview)
   const badgeHeight = 42 * scale;
   const dividerHeight = 16 * scale;
-  const qrBoxSize = 465 * scale;
-  const qrImgSize = 395 * scale;
+  const qrBoxSize = 475 * scale;
+  const qrImgSize = 405 * scale;
   const pillHeight = 32 * scale;
   const stepHeight = 36 * scale;
   const instructionEnHeight = 26 * scale;
@@ -696,22 +705,25 @@ export async function renderStandeeToCanvas(canvas, {
 
   const footerLineHeight = 2 * scale;
   let footerGaps = 0;
-  if (contactLines.length > 0) footerGaps += 18 * scale;
-  if (watermarkHeight > 0) footerGaps += (contactLines.length > 0 ? 14 * scale : 16 * scale);
+  if (contactLines.length > 0) footerGaps += 16 * scale;
+  if (watermarkHeight > 0) footerGaps += (contactLines.length > 0 ? 12 * scale : 14 * scale);
   const footerHeight = footerLineHeight + (contactLines.length * contactLineHeight) + watermarkHeight + footerGaps;
 
   // Total Intrinsic Content Height
   const totalContentHeight = headerHeight + qrHeight + instructionsHeight + footerHeight;
   const totalGapsAvailable = targetHeight - totalContentHeight;
 
-  // Proportional Vertical Gap Allocation (Eliminates voids & avoids border collisions)
-  const topMargin = Math.max(50 * scale, Math.round(totalGapsAvailable * 0.26));
-  const bottomMargin = Math.max(55 * scale, Math.round(totalGapsAvailable * 0.26));
-  const remainingInternal = Math.max(60 * scale, totalGapsAvailable - topMargin - bottomMargin);
+  // Proportional Vertical Gap Allocation (Matches live preview compactness)
+  const topMargin = Math.max(50 * scale, Math.round(totalGapsAvailable * 0.27));
+  const bottomMargin = Math.max(55 * scale, Math.round(totalGapsAvailable * 0.27));
+  const remainingInternal = Math.max(50 * scale, totalGapsAvailable - topMargin - bottomMargin);
 
-  const gapHeaderToQr = Math.round(remainingInternal * 0.34);
-  const gapQrToInstructions = Math.round(remainingInternal * 0.33);
-  const gapInstructionsToFooter = remainingInternal - gapHeaderToQr - gapQrToInstructions;
+  // Compact spacing between reassurance and footer divider to closely match live preview
+  const gapInstructionsToFooter = Math.round(Math.min(22 * scale, Math.max(16 * scale, remainingInternal * 0.18)));
+  const remainingForQrGaps = remainingInternal - gapInstructionsToFooter;
+
+  const gapHeaderToQr = Math.round(remainingForQrGaps * 0.52);
+  const gapQrToInstructions = remainingForQrGaps - gapHeaderToQr;
 
   // -------------------------------------------------------------
   // RENDERING ELEMENTS SEQUENTIALLY WITH ADAPTIVE FLOW
