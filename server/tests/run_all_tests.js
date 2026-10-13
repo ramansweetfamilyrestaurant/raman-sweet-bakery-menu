@@ -70,6 +70,11 @@ const suites = [
     name: 'Billing Hardening Regression & Consistency',
     file: 'server/tests/billing_hardening.test.js',
     requiresDb: true
+  },
+  {
+    name: 'Impersonation & Tenant Authorization Regression',
+    file: 'server/tests/impersonation_and_tenant_data_fixes.test.js',
+    requiresDb: true
   }
 ];
 

@@ -22,7 +22,9 @@ import { JWT_SECRET } from '../config/jwt.js';
 import { resolveTenantCapabilities } from '../../src/utils/planCapabilities.js';
 
 const TEST_DB_PATH = path.resolve('menu_test_impersonation.db');
-process.env.TEST_DATABASE_URL = `sqlite:${TEST_DB_PATH}`;
+if (!process.env.TEST_DATABASE_URL) {
+  process.env.TEST_DATABASE_URL = `sqlite:${TEST_DB_PATH}`;
+}
 
 // Verify test isolation guard accepts this path
 validateTestDatabaseUrl(process.env.TEST_DATABASE_URL);
@@ -67,31 +69,32 @@ async function runAllTests() {
     await query("DELETE FROM dishes WHERE restaurant_id IN (901, 902)");
     await query("DELETE FROM categories WHERE restaurant_id IN (901, 902)");
     await query("DELETE FROM admins WHERE restaurant_id IN (901, 902)");
+    await query("DELETE FROM subscriptions WHERE restaurant_id IN (901, 902)").catch(() => {});
     await query("DELETE FROM restaurants WHERE id IN (901, 902)");
 
     // Tenant 901: Active Tenant ('alpha-diner')
     await query(`
       INSERT INTO restaurants (id, name, slug, active, plan_tier, plan_price, direct_ordering_enabled, whatsapp_enabled, kds_screen_enabled)
-      VALUES (901, 'Alpha Diner', 'alpha-diner', 1, 'basic', 499, 1, 1, 1)
+      VALUES (901, 'Alpha Diner', 'alpha-diner', true, 'basic', 499, 1, 1, 1)
     `);
 
     // Tenant 902: Suspended Tenant ('beta-bakery', like 'yrty')
     await query(`
       INSERT INTO restaurants (id, name, slug, active, plan_tier, plan_price, direct_ordering_enabled, whatsapp_enabled, kds_screen_enabled)
-      VALUES (902, 'Beta Bakery', 'beta-bakery', 0, 'vip_ultra_plan', 2499, 1, 1, 1)
+      VALUES (902, 'Beta Bakery', 'beta-bakery', false, 'vip_ultra_plan', 2499, 1, 1, 1)
     `);
 
     // Categories & dishes for Tenant 901
-    await query(`INSERT INTO categories (id, restaurant_id, name, active, sort_order) VALUES (9101, 901, 'Alpha Main', 1, 1)`);
-    await query(`INSERT INTO categories (id, restaurant_id, name, active, sort_order) VALUES (9102, 901, 'Alpha Hidden', 0, 2)`);
-    await query(`INSERT INTO dishes (id, restaurant_id, category_id, name, price, available) VALUES (9201, 901, 9101, 'Alpha Burger', 150, 1)`);
-    await query(`INSERT INTO dishes (id, restaurant_id, category_id, name, price, available) VALUES (9202, 901, 9102, 'Alpha Secret Sauce', 50, 0)`);
+    await query(`INSERT INTO categories (id, restaurant_id, name, active, sort_order) VALUES (9101, 901, 'Alpha Main', true, 1)`);
+    await query(`INSERT INTO categories (id, restaurant_id, name, active, sort_order) VALUES (9102, 901, 'Alpha Hidden', false, 2)`);
+    await query(`INSERT INTO dishes (id, restaurant_id, category_id, name, price, available) VALUES (9201, 901, 9101, 'Alpha Burger', 150, true)`);
+    await query(`INSERT INTO dishes (id, restaurant_id, category_id, name, price, available) VALUES (9202, 901, 9102, 'Alpha Secret Sauce', 50, false)`);
 
     // Categories & dishes for Tenant 902
-    await query(`INSERT INTO categories (id, restaurant_id, name, active, sort_order) VALUES (9201, 902, 'Beta Pastry', 1, 1)`);
-    await query(`INSERT INTO categories (id, restaurant_id, name, active, sort_order) VALUES (9202, 902, 'Beta Private', 0, 2)`);
-    await query(`INSERT INTO dishes (id, restaurant_id, category_id, name, price, available) VALUES (9301, 902, 9201, 'Beta Croissant', 120, 1)`);
-    await query(`INSERT INTO dishes (id, restaurant_id, category_id, name, price, available) VALUES (9302, 902, 9202, 'Beta Secret Recipe', 250, 0)`);
+    await query(`INSERT INTO categories (id, restaurant_id, name, active, sort_order) VALUES (9201, 902, 'Beta Pastry', true, 1)`);
+    await query(`INSERT INTO categories (id, restaurant_id, name, active, sort_order) VALUES (9202, 902, 'Beta Private', false, 2)`);
+    await query(`INSERT INTO dishes (id, restaurant_id, category_id, name, price, available) VALUES (9301, 902, 9201, 'Beta Croissant', 120, true)`);
+    await query(`INSERT INTO dishes (id, restaurant_id, category_id, name, price, available) VALUES (9302, 902, 9202, 'Beta Secret Recipe', 250, false)`);
 
     // Create JWT tokens
     const tokenAdminA = jwt.sign(
@@ -402,9 +405,19 @@ async function runAllTests() {
 
   } finally {
     server.close();
-    // Clean up test database file
+    // Clean up test database records
     try {
-      if (fs.existsSync(TEST_DB_PATH)) fs.unlinkSync(TEST_DB_PATH);
+      await query("DELETE FROM dishes WHERE restaurant_id IN (901, 902)");
+      await query("DELETE FROM categories WHERE restaurant_id IN (901, 902)");
+      await query("DELETE FROM admins WHERE restaurant_id IN (901, 902)");
+      await query("DELETE FROM subscriptions WHERE restaurant_id IN (901, 902)").catch(() => {});
+      await query("DELETE FROM restaurants WHERE id IN (901, 902)");
+    } catch {}
+    // Clean up test database file if SQLite was used
+    try {
+      if (process.env.TEST_DATABASE_URL?.startsWith('sqlite') && fs.existsSync(TEST_DB_PATH)) {
+        fs.unlinkSync(TEST_DB_PATH);
+      }
     } catch {}
   }
 
