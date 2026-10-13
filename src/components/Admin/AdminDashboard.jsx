@@ -18,7 +18,6 @@ import './styles/Admin.css';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
 import AdminBottomNavigation from './components/AdminBottomNavigation';
-import AdminDesktopNavigation from './components/AdminDesktopNavigation';
 import OrdersView from './views/OrdersView';
 import HomeView from './views/HomeView';
 import AnalyticsView from './views/AnalyticsView';

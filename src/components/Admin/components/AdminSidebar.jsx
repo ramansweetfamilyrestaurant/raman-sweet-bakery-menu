@@ -1,21 +1,12 @@
 import React from 'react';
 import { 
-  Home, 
-  ShoppingBag, 
-  Utensils, 
-  BarChart2, 
-  Settings, 
-  MoreHorizontal,
   Headphones,
   LogOut,
   QrCode,
-  Users,
-  Megaphone,
-  CreditCard,
-  ArrowRight,
-  Tag
+  ArrowRight
 } from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
+import { DESKTOP_SIDEBAR_ITEMS, isNavItemActive } from '../adminNavigation';
 
 export default function AdminSidebar({
   activeTab,
@@ -32,12 +23,6 @@ export default function AdminSidebar({
   const truncatedName = restoName.length > 22 ? `${restoName.substring(0, 20)}...` : restoName;
   const logoUrl = restaurantInfo?.logo;
   const resolvedLogo = resolveImageUrl(logoUrl);
-
-  const isHomeActive = activeTab === 'home';
-  const isOrdersActive = ['orders', 'floor-map', 'service-requests'].includes(activeTab);
-  const isMenuActive = ['dishes', 'categories', 'combos'].includes(activeTab);
-  const isAnalyticsActive = activeTab === 'analytics';
-  const isSetupActive = ['settings'].includes(activeTab);
 
   return (
     <aside style={{
@@ -161,243 +146,81 @@ export default function AdminSidebar({
 
         {/* 3. PRIMARY NAVIGATION LINKS */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          
-          {/* Dashboard */}
-          <button
-            onClick={() => setActiveTab('home')}
-            className="sidebar-nav-item"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: isHomeActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-              cursor: 'pointer',
-              background: isHomeActive ? '#1C1917' : 'transparent',
-              color: isHomeActive ? '#FFFFFF' : '#94A3B8',
-              fontWeight: isHomeActive ? 700 : 500,
-              fontSize: '0.84rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Home size={17} color={isHomeActive ? '#FFFFFF' : '#94A3B8'} />
-              <span>Dashboard</span>
-            </div>
-          </button>
+          {DESKTOP_SIDEBAR_ITEMS.map(item => {
+            const Icon = item.icon;
+            const isActive = isNavItemActive(item, activeTab, 'desktop');
 
-          {/* Orders */}
-          <button
-            onClick={() => setActiveTab('orders')}
-            className="sidebar-nav-item"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: isOrdersActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-              cursor: 'pointer',
-              background: isOrdersActive ? '#1C1917' : 'transparent',
-              color: isOrdersActive ? '#FFFFFF' : '#94A3B8',
-              fontWeight: isOrdersActive ? 700 : 500,
-              fontSize: '0.84rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ShoppingBag size={17} color={isOrdersActive ? '#FFFFFF' : '#94A3B8'} />
-              <span>Orders</span>
-            </div>
-            {pendingOrdersCount > 0 && (
-              <span style={{
-                background: '#EA580C',
-                color: '#FFFFFF',
-                fontSize: '0.66rem',
-                fontWeight: 900,
-                padding: '1px 7px',
-                borderRadius: '10px'
-              }}>
-                {pendingOrdersCount}
-              </span>
-            )}
-          </button>
+            // Style variations matching existing design
+            let border = '1px solid transparent';
+            let background = 'transparent';
+            let color = '#94A3B8';
+            let iconColor = '#94A3B8';
+            let fontWeight = 500;
+            let boxShadow = 'none';
 
-          {/* Menu (Active: Warm Caramel / Brown Pill from Reference) */}
-          <button
-            onClick={() => setActiveTab('dishes')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: isMenuActive ? '1px solid rgba(217, 119, 6, 0.35)' : '1px solid transparent',
-              cursor: 'pointer',
-              background: isMenuActive ? '#3D271D' : 'transparent',
-              color: isMenuActive ? '#FFFFFF' : '#94A3B8',
-              fontWeight: isMenuActive ? 800 : 500,
-              fontSize: '0.84rem',
-              boxShadow: isMenuActive ? '0 2px 8px rgba(61, 39, 29, 0.4)' : 'none'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Utensils size={17} color={isMenuActive ? '#FB923C' : '#94A3B8'} />
-              <span>Menu</span>
-            </div>
-          </button>
+            if (isActive) {
+              if (item.id === 'dishes') {
+                border = '1px solid rgba(217, 119, 6, 0.35)';
+                background = '#3D271D';
+                color = '#FFFFFF';
+                iconColor = '#FB923C';
+                fontWeight = 800;
+                boxShadow = '0 2px 8px rgba(61, 39, 29, 0.4)';
+              } else if (['customers', 'offers', 'qr-generator', 'billing'].includes(item.id)) {
+                border = '1px solid #1E293B';
+                background = '#0F172A';
+                color = '#FFFFFF';
+                iconColor = '#10B981';
+                fontWeight = 700;
+              } else {
+                border = '1px solid rgba(255,255,255,0.1)';
+                background = '#1C1917';
+                color = '#FFFFFF';
+                iconColor = '#FFFFFF';
+                fontWeight = 700;
+              }
+            }
 
-          {/* Analytics */}
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className="sidebar-nav-item"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: isAnalyticsActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-              cursor: 'pointer',
-              background: isAnalyticsActive ? '#1C1917' : 'transparent',
-              color: isAnalyticsActive ? '#FFFFFF' : '#94A3B8',
-              fontWeight: isAnalyticsActive ? 700 : 500,
-              fontSize: '0.84rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <BarChart2 size={17} color={isAnalyticsActive ? '#FFFFFF' : '#94A3B8'} />
-              <span>Analytics</span>
-            </div>
-          </button>
-
-          {/* Customers & Guest Insights */}
-          <button
-            onClick={() => setActiveTab('customers')}
-            className={`sidebar-nav-item ${activeTab === 'customers' ? 'active' : ''}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: activeTab === 'customers' ? '1px solid #1E293B' : '1px solid transparent',
-              cursor: 'pointer',
-              background: activeTab === 'customers' ? '#0F172A' : 'transparent',
-              color: activeTab === 'customers' ? '#FFFFFF' : '#94A3B8',
-              fontWeight: activeTab === 'customers' ? 700 : 500,
-              fontSize: '0.84rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Users size={17} color={activeTab === 'customers' ? '#10B981' : '#94A3B8'} />
-              <span>Customers</span>
-            </div>
-          </button>
-
-          {/* Offers & Promotions */}
-          <button
-            onClick={() => setActiveTab('offers')}
-            className={`sidebar-nav-item ${activeTab === 'offers' ? 'active' : ''}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: activeTab === 'offers' ? '1px solid #1E293B' : '1px solid transparent',
-              cursor: 'pointer',
-              background: activeTab === 'offers' ? '#0F172A' : 'transparent',
-              color: activeTab === 'offers' ? '#FFFFFF' : '#94A3B8',
-              fontWeight: activeTab === 'offers' ? 700 : 500,
-              fontSize: '0.84rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Tag size={17} color={activeTab === 'offers' ? '#10B981' : '#94A3B8'} />
-              <span>Offers & Deals</span>
-            </div>
-          </button>
-
-          {/* QR Standees / Marketing */}
-          <button
-            onClick={() => setActiveTab('qr-generator')}
-            className={`sidebar-nav-item ${activeTab === 'qr-generator' ? 'active' : ''}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: activeTab === 'qr-generator' ? '1px solid #1E293B' : '1px solid transparent',
-              cursor: 'pointer',
-              background: activeTab === 'qr-generator' ? '#0F172A' : 'transparent',
-              color: activeTab === 'qr-generator' ? '#FFFFFF' : '#94A3B8',
-              fontWeight: activeTab === 'qr-generator' ? 700 : 500,
-              fontSize: '0.84rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <QrCode size={17} color={activeTab === 'qr-generator' ? '#10B981' : '#94A3B8'} />
-              <span>QR Standees</span>
-            </div>
-          </button>
-
-          {/* Billing & Subscription */}
-          <button
-            onClick={() => setActiveTab('billing')}
-            className={`sidebar-nav-item ${(activeTab === 'billing' || activeTab === 'subscription') ? 'active' : ''}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: (activeTab === 'billing' || activeTab === 'subscription') ? '1px solid #1E293B' : '1px solid transparent',
-              cursor: 'pointer',
-              background: (activeTab === 'billing' || activeTab === 'subscription') ? '#0F172A' : 'transparent',
-              color: (activeTab === 'billing' || activeTab === 'subscription') ? '#FFFFFF' : '#94A3B8',
-              fontWeight: (activeTab === 'billing' || activeTab === 'subscription') ? 700 : 500,
-              fontSize: '0.84rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <CreditCard size={17} color={(activeTab === 'billing' || activeTab === 'subscription') ? '#10B981' : '#94A3B8'} />
-              <span>Billing</span>
-            </div>
-          </button>
-
-          {/* Settings */}
-          <button
-            onClick={() => setActiveTab('settings')}
-            className="sidebar-nav-item"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: isSetupActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-              cursor: 'pointer',
-              background: isSetupActive ? '#1C1917' : 'transparent',
-              color: isSetupActive ? '#FFFFFF' : '#94A3B8',
-              fontWeight: isSetupActive ? 700 : 500,
-              fontSize: '0.84rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Settings size={17} color={isSetupActive ? '#FFFFFF' : '#94A3B8'} />
-              <span>Settings</span>
-            </div>
-          </button>
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  border,
+                  cursor: 'pointer',
+                  background,
+                  color,
+                  fontWeight,
+                  fontSize: '0.84rem',
+                  boxShadow
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Icon size={17} color={iconColor} />
+                  <span>{item.label}</span>
+                </div>
+                {item.hasBadge && pendingOrdersCount > 0 && (
+                  <span style={{
+                    background: '#EA580C',
+                    color: '#FFFFFF',
+                    fontSize: '0.66rem',
+                    fontWeight: 900,
+                    padding: '1px 7px',
+                    borderRadius: '10px'
+                  }}>
+                    {pendingOrdersCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
       </div>
 

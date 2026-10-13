@@ -2,26 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   Store, 
   Bell, 
-  ChevronDown, 
   Menu, 
   HelpCircle, 
-  Phone, 
   LogOut, 
-  ExternalLink,
-  Home,
-  ShoppingBag,
-  Utensils,
-  BarChart2,
-  Settings,
-  Users,
-  Tag,
-  QrCode,
-  CreditCard,
-  Star,
-  Megaphone,
   X
 } from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
+import { MOBILE_DRAWER_ITEMS, isNavItemActive } from '../adminNavigation';
 
 export default function AdminHeader({
   restaurantInfo,
@@ -70,9 +57,11 @@ export default function AdminHeader({
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
       <style>{`
+        .adm-header-mobile-toggle { display: none !important; }
         .header-biz-text { display: inline !important; }
         .header-global-search { display: flex !important; }
         @media (max-width: 900px) {
+          .adm-header-mobile-toggle { display: flex !important; }
           .header-global-search { display: none !important; }
         }
         @media (max-width: 640px) {
@@ -86,13 +75,13 @@ export default function AdminHeader({
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <button
           onClick={() => setShowMobileDrawer(true)}
+          className="adm-header-mobile-toggle"
           style={{
             background: 'transparent',
             border: 'none',
             color: '#0F172A',
             cursor: 'pointer',
             padding: '4px',
-            display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}
@@ -457,21 +446,10 @@ export default function AdminHeader({
 
                 {/* Navigation Links */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {[
-                    { id: 'home', label: 'Dashboard', icon: Home },
-                    { id: 'orders', label: 'Orders', icon: ShoppingBag, badge: pendingOrdersCount > 0 ? pendingOrdersCount : null },
-                    { id: 'dishes', label: 'Menu & Catalog', icon: Utensils },
-                    { id: 'customers', label: 'Customers & Guests', icon: Users, highlight: true },
-                    { id: 'offers', label: 'Offers & Deals', icon: Tag, highlight: true },
-                    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-                    { id: 'qr-generator', label: 'QR Standees', icon: QrCode },
-                    { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
-                    { id: 'review', label: 'Reviews & Feedback', icon: Star },
-                    { id: 'notifications', label: 'Notifications', icon: Bell },
-                    { id: 'settings', label: 'Settings & Setup', icon: Settings }
-                  ].map(item => {
+                  {MOBILE_DRAWER_ITEMS.map(item => {
                     const Icon = item.icon;
-                    const isActive = activeTab === item.id || (item.id === 'dishes' && ['categories', 'combos'].includes(activeTab)) || (item.id === 'orders' && ['floor-map', 'service-requests'].includes(activeTab));
+                    const isActive = isNavItemActive(item, activeTab, 'mobileDrawer');
+                    const showBadge = item.hasBadge && pendingOrdersCount > 0;
 
                     return (
                       <button
@@ -504,7 +482,7 @@ export default function AdminHeader({
                           </span>
                         </div>
 
-                        {item.badge && (
+                        {showBadge && (
                           <span style={{
                             background: '#DC2626',
                             color: '#FFFFFF',
@@ -513,7 +491,7 @@ export default function AdminHeader({
                             padding: '1px 6px',
                             borderRadius: '10px'
                           }}>
-                            {item.badge}
+                            {pendingOrdersCount}
                           </span>
                         )}
                       </button>

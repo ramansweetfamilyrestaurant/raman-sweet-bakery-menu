@@ -103,6 +103,17 @@
   }
 }
 
+/* Mobile Header Hamburger Toggle Button */
+.adm-header-mobile-toggle {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .adm-header-mobile-toggle {
+    display: flex !important;
+  }
+}
+
 /* Main Content Area */
 .adm-main-canvas {
   flex: 1;
