@@ -233,22 +233,7 @@ async function ensureRestoSecret(resto) {
 }
 
 async function resolveRestaurant(req, slug) {
-  // 1. Authenticated Admin Requests: If Authorization header with valid JWT is present, JWT restaurant_id is 100% authoritative!
-  if (req && req.headers && req.headers.authorization) {
-    try {
-      const authHeader = req.headers.authorization;
-      const token = authHeader.split(' ')[1];
-      if (token && token !== 'undefined' && token !== 'null') {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        if (decoded && decoded.restaurant_id) {
-          const restos = await query('SELECT * FROM restaurants WHERE id = $1', [decoded.restaurant_id]);
-          if (restos && restos.length > 0) return await ensureRestoSecret(restos[0]);
-        }
-      }
-    } catch (e) {}
-  }
-
-  // 2. Explicit URL slug parameter passed in public route (e.g. /api/menu-bundle?slug=rama or /api/info?slug=rama)
+  // 1. Explicit URL slug parameter passed in public route or query (e.g. /api/menu-bundle?slug=rama or /api/info?slug=rama)
   if (slug && typeof slug === 'string' && slug.trim() !== '') {
     const cleanSlug = slug.trim().toLowerCase();
     if (!['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'].includes(cleanSlug)) {
@@ -273,6 +258,21 @@ async function resolveRestaurant(req, slug) {
       }
       return null;
     }
+  }
+
+  // 2. Authenticated Admin Requests: If no explicit slug was provided, JWT restaurant_id is authoritative!
+  if (req && req.headers && req.headers.authorization) {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader.split(' ')[1];
+      if (token && token !== 'undefined' && token !== 'null') {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded && decoded.restaurant_id) {
+          const restos = await query('SELECT * FROM restaurants WHERE id = $1', [decoded.restaurant_id]);
+          if (restos && restos.length > 0) return await ensureRestoSecret(restos[0]);
+        }
+      }
+    } catch (e) {}
   }
 
   // 3. Check incoming Host header for custom domain mapping (e.g. menu.restaurant.com)
@@ -621,10 +621,7 @@ router.get('/info', async (req, res) => {
   res.setHeader('Expires', '0');
   try {
     const { slug } = req.query;
-    console.error('[INFO DEBUG] slug:', slug);
     const resto = await resolveRestaurant(req, slug);
-    console.error('[INFO DEBUG] resolvedRestaurant:', resto ? { id: resto.id, slug: resto.slug, name: resto.name } : null);
-    console.error('[INFO DEBUG] restaurantId:', resto?.id);
 
     if (!resto) {
       return res.status(404).json({
@@ -634,14 +631,38 @@ router.get('/info', async (req, res) => {
       });
     }
 
-    const isActive = resto.active === 1 || resto.active === true || resto.active === '1' || resto.active === undefined || resto.active === null;
-    if (!isActive && resto.active === false) {
-      return res.status(403).json({
-        error: 'Restaurant Suspended',
-        suspended: true,
-        name: resto.name,
-        slug: resto.slug
-      });
+    const isSuspended = resto.active === 0 || resto.active === false || resto.active === '0' || resto.active === 'false';
+    const isActive = !isSuspended;
+
+    // Check caller authentication: allow authenticated admin or authorized impersonation session
+    // ONLY when its verified restaurant_id strictly matches the target restaurant's ID.
+    let isAuthorizedAdminForResto = false;
+    if (req.headers && req.headers.authorization) {
+      try {
+        const authHeader = req.headers.authorization;
+        const token = authHeader.split(' ')[1];
+        if (token && token !== 'undefined' && token !== 'null') {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          const isAdminRole = decoded && (decoded.role === 'restaurant_admin' || decoded.role === 'admin' || decoded.role === 'superadmin');
+          if (isAdminRole) {
+            if (decoded.role === 'superadmin' || Number(decoded.restaurant_id) === Number(resto.id)) {
+              isAuthorizedAdminForResto = true;
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (isSuspended) {
+      // Unauthenticated customers and unauthorized callers receive 403
+      if (!isAuthorizedAdminForResto) {
+        return res.status(403).json({
+          error: 'Restaurant Suspended',
+          suspended: true,
+          name: resto.name,
+          slug: resto.slug
+        });
+      }
     }
 
     // Parse filters_visibility if stored as JSON string or object
@@ -744,7 +765,8 @@ router.get('/info', async (req, res) => {
       kds_pin_configured: Boolean(resto.kds_pin_hash),
       onboarding_completed: resto.onboarding_completed !== undefined && resto.onboarding_completed !== null ? (resto.onboarding_completed === true || resto.onboarding_completed === 1 || resto.onboarding_completed === 'true') : true,
       location_initialized: resto.location_initialized !== undefined && resto.location_initialized !== null ? (resto.location_initialized === true || resto.location_initialized === 1 || resto.location_initialized === 'true') : false,
-      active: true
+      active: Boolean(isActive),
+      suspended: Boolean(!isActive)
     });
   } catch (err) {
     console.error('[INFO ERROR]', err);
@@ -763,6 +785,53 @@ router.get('/announcements', async (req, res) => {
   }
 });
 
+// Helper: Authenticate and resolve tenant access for menu routes (categories/dishes)
+function resolveMenuRouteAccess(req, requestedAdminView, requestedRestoId) {
+  const isAdminView = requestedAdminView === 'true' || requestedAdminView === true;
+  let decodedUser = null;
+
+  if (req.headers && req.headers.authorization) {
+    try {
+      const token = req.headers.authorization.split(' ')[1];
+      if (token && token !== 'undefined' && token !== 'null') {
+        decodedUser = jwt.verify(token, JWT_SECRET);
+      }
+    } catch (e) {}
+  }
+
+  if (isAdminView) {
+    if (!decodedUser) {
+      return { error: 'Unauthorized: Admin authentication required for admin view', statusCode: 401 };
+    }
+    const isAdminRole = decodedUser.role === 'restaurant_admin' || decodedUser.role === 'admin' || decodedUser.role === 'superadmin';
+    if (!isAdminRole) {
+      return { error: 'Forbidden: Admin role required for admin view', statusCode: 403 };
+    }
+
+    if (decodedUser.role === 'superadmin') {
+      if (requestedRestoId) {
+        return { targetId: Number(requestedRestoId), isAdminView: true, isSuperAdmin: true, decodedUser };
+      }
+      return { isAdminView: true, isSuperAdmin: true, decodedUser };
+    }
+
+    const authRestoId = Number(decodedUser.restaurant_id);
+    if (!authRestoId) {
+      return { error: 'Unauthorized: Restaurant session required', statusCode: 401 };
+    }
+
+    // Fail closed if untrusted query parameter attempts to override authenticated tenant scope
+    if (requestedRestoId && Number(requestedRestoId) !== authRestoId) {
+      return { error: 'Forbidden: Tenant ID mismatch', statusCode: 403 };
+    }
+
+    return { targetId: authRestoId, isAdminView: true, isSuperAdmin: false, decodedUser };
+  }
+
+  // Public customer view
+  return { isAdminView: false, isPublic: true, decodedUser };
+}
+
 // Get Categories for a specific restaurant
 router.get('/categories', async (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
@@ -770,18 +839,42 @@ router.get('/categories', async (req, res) => {
   res.setHeader('Expires', '0');
   try {
     const { admin_view, slug, restaurant_id } = req.query;
-    let targetId = restaurant_id;
+
+    const access = resolveMenuRouteAccess(req, admin_view, restaurant_id);
+    if (access.error) {
+      return res.status(access.statusCode).json({ error: access.error });
+    }
+
+    let targetId = access.targetId;
 
     if (!targetId) {
       const resto = await resolveRestaurant(req, slug);
       if (!resto) return res.json([]);
+
+      // For public customer browsing, verify restaurant is active
+      const isSuspended = resto.active === 0 || resto.active === false || resto.active === '0' || resto.active === 'false';
+      if (isSuspended) {
+        return res.status(403).json({ error: 'Restaurant Suspended', suspended: true });
+      }
+
       targetId = resto.id;
+    }
+
+    // If an authenticated restaurant admin also supplied a slug, fail closed on mismatch
+    if (access.isAdminView && !access.isSuperAdmin && slug) {
+      const checkResto = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (checkResto && checkResto.length > 0) {
+        const actualSlug = (checkResto[0].slug || '').toLowerCase();
+        if (slug.toLowerCase() !== actualSlug) {
+          return res.status(403).json({ error: 'Forbidden: Slug mismatch for authenticated tenant' });
+        }
+      }
     }
 
     let sql = 'SELECT * FROM categories WHERE restaurant_id = $1';
     const params = [targetId];
 
-    if (!admin_view) {
+    if (!access.isAdminView) {
       sql += " AND (active IS NULL OR active::text NOT IN ('0', 'false', 'f'))";
     }
 
@@ -802,12 +895,36 @@ router.get('/dishes', async (req, res) => {
   res.setHeader('Expires', '0');
   try {
     const { q, category_id, admin_view, slug, restaurant_id } = req.query;
-    let targetId = restaurant_id;
+
+    const access = resolveMenuRouteAccess(req, admin_view, restaurant_id);
+    if (access.error) {
+      return res.status(access.statusCode).json({ error: access.error });
+    }
+
+    let targetId = access.targetId;
 
     if (!targetId) {
       const resto = await resolveRestaurant(req, slug);
       if (!resto) return res.json([]);
+
+      // For public customer browsing, verify restaurant is active
+      const isSuspended = resto.active === 0 || resto.active === false || resto.active === '0' || resto.active === 'false';
+      if (isSuspended) {
+        return res.status(403).json({ error: 'Restaurant Suspended', suspended: true });
+      }
+
       targetId = resto.id;
+    }
+
+    // If an authenticated restaurant admin also supplied a slug, fail closed on mismatch
+    if (access.isAdminView && !access.isSuperAdmin && slug) {
+      const checkResto = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (checkResto && checkResto.length > 0) {
+        const actualSlug = (checkResto[0].slug || '').toLowerCase();
+        if (slug.toLowerCase() !== actualSlug) {
+          return res.status(403).json({ error: 'Forbidden: Slug mismatch for authenticated tenant' });
+        }
+      }
     }
 
     let sql = `
@@ -819,7 +936,7 @@ router.get('/dishes', async (req, res) => {
     const params = [targetId];
 
     // By default, customer view only sees available dishes in active categories
-    if (!admin_view) {
+    if (!access.isAdminView) {
       sql += ` AND (d.available IS NOT FALSE) AND (c.active IS NOT FALSE OR c.id IS NULL)`;
     }
 

@@ -2500,7 +2500,7 @@ export default function SetupView({
                 )}
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {settingsForm.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
+                    {settingsForm.name || restaurantInfo?.name || 'Restaurant Name'}
                   </div>
                   <div style={{ fontSize: '0.70rem', color: '#FDE68A', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {settingsForm.tagline || 'Pure Veg Family Restaurant & Bakery'}
@@ -10212,7 +10212,7 @@ export default function SetupView({
                 )}
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {settingsForm.name || restaurantInfo?.name || 'Raman Sweet Bakery & Family Restaurant'}
+                    {settingsForm.name || restaurantInfo?.name || 'Restaurant Name'}
                   </div>
                   <div style={{ fontSize: '0.68rem', color: '#FDE68A' }}>
                     Scan QR Code • Digital Menu
@@ -10620,7 +10620,7 @@ export default function SetupView({
               {/* Body Content Area */}
               <div style={{ padding: '0 16px 16px 16px', textAlign: 'center', background: '#FFFFFF' }}>
                 <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900, display: 'block', marginBottom: '2px' }}>
-                  {settingsForm.name || 'Raman Sweet Bakery & Family Restaurant'}
+                  {settingsForm.name || 'Restaurant Name'}
                 </strong>
                 <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginBottom: '10px' }}>
                   {settingsForm.tagline || 'Pure Veg Family Restaurant & Bakery'}

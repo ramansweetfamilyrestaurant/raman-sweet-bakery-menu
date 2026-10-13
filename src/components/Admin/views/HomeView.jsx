@@ -197,17 +197,43 @@ export default function HomeView({
     restaurantInfo?.plan_tier === 'vip'
   );
 
+  const formatTierDisplay = (tier) => {
+    if (!tier) return 'PRO PLAN';
+    const clean = String(tier).replace(/_/g, ' ').toUpperCase();
+    return clean.includes('PLAN') ? clean : `${clean} PLAN`;
+  };
+
   const planName = isComplimentary
     ? (capabilities?.plan_name ? `${capabilities.plan_name.toUpperCase()}` : (restaurantInfo?.plan_name ? `${restaurantInfo.plan_name.toUpperCase()}` : 'ENTERPRISE VIP ACCESS'))
-    : (capabilities?.plan_name || (restaurantInfo?.plan_name ? restaurantInfo.plan_name.toUpperCase() : 'ENTERPRISE PLAN'));
+    : (capabilities?.plan_name 
+        ? `${capabilities.plan_name.toUpperCase()}` 
+        : (restaurantInfo?.plan_name 
+            ? restaurantInfo.plan_name.toUpperCase() 
+            : (subscriptionStatus?.plan_name 
+                ? subscriptionStatus.plan_name.toUpperCase() 
+                : (subscriptionStatus?.plan_tier 
+                    ? formatTierDisplay(subscriptionStatus.plan_tier) 
+                    : (capabilities?.plan_tier 
+                        ? formatTierDisplay(capabilities.plan_tier) 
+                        : (restaurantInfo?.plan_tier 
+                            ? formatTierDisplay(restaurantInfo.plan_tier) 
+                            : 'PRO PLAN'))))));
 
   const planPrice = isComplimentary 
     ? 0 
-    : (capabilities?.plan_price !== undefined ? capabilities.plan_price : (restaurantInfo?.plan_price || 1999));
+    : (restaurantInfo?.plan_price !== undefined && restaurantInfo?.plan_price !== null && restaurantInfo?.plan_price !== ''
+        ? Number(restaurantInfo.plan_price)
+        : (subscriptionStatus?.plan_price !== undefined && subscriptionStatus?.plan_price !== null && subscriptionStatus?.plan_price !== ''
+            ? Number(subscriptionStatus.plan_price)
+            : (capabilities?.plan_price !== undefined && capabilities?.plan_price !== null
+                ? Number(capabilities.plan_price)
+                : 999)));
 
   const subStatus = isComplimentary
     ? 'vip_lifetime'
     : (subscriptionStatus?.status || capabilities?.subscription_status || restaurantInfo?.subscription_status || 'active').toLowerCase();
+
+  const isAccountSuspended = subStatus === 'suspended' || restaurantInfo?.active === false || restaurantInfo?.active === 0 || restaurantInfo?.active === '0' || restaurantInfo?.suspended === true;
 
   const isTrial = subStatus === 'trialing';
 
@@ -1436,9 +1462,23 @@ export default function HomeView({
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
             boxSizing: 'border-box'
           }}>
-            <h4 style={{ fontSize: '0.90rem', fontWeight: 800, color: '#0F172A', margin: '0 0 16px 0' }}>
-              Quick Status
-            </h4>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '0.90rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Quick Status
+              </h4>
+              {isAccountSuspended && (
+                <span style={{ 
+                  fontSize: '0.68rem', 
+                  fontWeight: 800, 
+                  color: '#DC2626', 
+                  background: '#FEE2E2', 
+                  padding: '2px 8px', 
+                  borderRadius: '6px' 
+                }}>
+                  🔴 Offline (Suspended)
+                </span>
+              )}
+            </div>
 
             <div style={{
               display: 'grid',
@@ -1450,54 +1490,60 @@ export default function HomeView({
                 {/* QR Ordering */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0F172A', fontWeight: 600 }}>
-                    <CheckCircle2 size={16} color={isQrOrderingLive ? "#16A34A" : "#94A3B8"} />
+                    <CheckCircle2 size={16} color={isAccountSuspended && isQrOrderingLive ? "#DC2626" : (isQrOrderingLive ? "#16A34A" : "#94A3B8")} />
                     <span>QR Ordering</span>
                   </div>
-                  <span style={{ 
-                    fontSize: '0.70rem', 
-                    fontWeight: 700, 
-                    color: isQrOrderingLive ? '#16A34A' : '#64748B', 
-                    background: isQrOrderingLive ? '#DCFCE7' : '#F1F5F9', 
-                    padding: '2px 8px', 
-                    borderRadius: '6px' 
-                  }}>
-                    {isQrOrderingLive ? 'Enabled' : (capabilities?.direct_ordering_enabled ? 'Off' : 'Locked')}
+                  <span 
+                    title={isAccountSuspended && isQrOrderingLive ? "Configured on plan, but currently unavailable because restaurant subscription is suspended" : undefined}
+                    style={{ 
+                      fontSize: '0.70rem', 
+                      fontWeight: 700, 
+                      color: isAccountSuspended && isQrOrderingLive ? '#DC2626' : (isQrOrderingLive ? '#16A34A' : '#64748B'), 
+                      background: isAccountSuspended && isQrOrderingLive ? '#FEE2E2' : (isQrOrderingLive ? '#DCFCE7' : '#F1F5F9'), 
+                      padding: '2px 8px', 
+                      borderRadius: '6px' 
+                    }}>
+                    {isAccountSuspended && isQrOrderingLive ? 'Suspended' : (isQrOrderingLive ? 'Enabled' : (capabilities?.direct_ordering_enabled ? 'Off' : 'Locked'))}
                   </span>
                 </div>
 
                 {/* WhatsApp Orders */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0F172A', fontWeight: 600 }}>
-                    <Share2 size={16} color={isWhatsappLive ? "#16A34A" : "#94A3B8"} />
+                    <Share2 size={16} color={isAccountSuspended && isWhatsappLive ? "#DC2626" : (isWhatsappLive ? "#16A34A" : "#94A3B8")} />
                     <span>WhatsApp Orders</span>
                   </div>
-                  <span style={{ 
-                    fontSize: '0.70rem', 
-                    fontWeight: 700, 
-                    color: isWhatsappLive ? '#16A34A' : '#64748B', 
-                    background: isWhatsappLive ? '#DCFCE7' : '#F1F5F9', 
-                    padding: '2px 8px', 
-                    borderRadius: '6px' 
-                  }}>
-                    {isWhatsappLive ? 'Enabled' : (capabilities?.whatsapp_ordering_enabled ? 'Off' : 'Locked')}
+                  <span 
+                    title={isAccountSuspended && isWhatsappLive ? "Configured on plan, but currently unavailable because restaurant subscription is suspended" : undefined}
+                    style={{ 
+                      fontSize: '0.70rem', 
+                      fontWeight: 700, 
+                      color: isAccountSuspended && isWhatsappLive ? '#DC2626' : (isWhatsappLive ? '#16A34A' : '#64748B'), 
+                      background: isAccountSuspended && isWhatsappLive ? '#FEE2E2' : (isWhatsappLive ? '#DCFCE7' : '#F1F5F9'), 
+                      padding: '2px 8px', 
+                      borderRadius: '6px' 
+                    }}>
+                    {isAccountSuspended && isWhatsappLive ? 'Suspended' : (isWhatsappLive ? 'Enabled' : (capabilities?.whatsapp_ordering_enabled ? 'Off' : 'Locked'))}
                   </span>
                 </div>
 
                 {/* KDS */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0F172A', fontWeight: 600 }}>
-                    <ChefHat size={16} color={isKdsLive ? "#16A34A" : (capabilities?.kds_enabled ? "#64748B" : "#F59E0B")} />
+                    <ChefHat size={16} color={isAccountSuspended && isKdsLive ? "#DC2626" : (isKdsLive ? "#16A34A" : (capabilities?.kds_enabled ? "#64748B" : "#F59E0B"))} />
                     <span>KDS</span>
                   </div>
-                  <span style={{ 
-                    fontSize: '0.70rem', 
-                    fontWeight: 700, 
-                    color: isKdsLive ? '#16A34A' : (capabilities?.kds_enabled ? '#64748B' : '#D97706'), 
-                    background: isKdsLive ? '#DCFCE7' : (capabilities?.kds_enabled ? '#F1F5F9' : '#FEF3C7'), 
-                    padding: '2px 8px', 
-                    borderRadius: '6px' 
-                  }}>
-                    {isKdsLive ? 'Enabled' : (capabilities?.kds_enabled ? 'Off' : 'Locked')}
+                  <span 
+                    title={isAccountSuspended && isKdsLive ? "Configured on plan, but currently unavailable because restaurant subscription is suspended" : undefined}
+                    style={{ 
+                      fontSize: '0.70rem', 
+                      fontWeight: 700, 
+                      color: isAccountSuspended && isKdsLive ? '#DC2626' : (isKdsLive ? '#16A34A' : (capabilities?.kds_enabled ? '#64748B' : '#D97706')), 
+                      background: isAccountSuspended && isKdsLive ? '#FEE2E2' : (isKdsLive ? '#DCFCE7' : (capabilities?.kds_enabled ? '#F1F5F9' : '#FEF3C7')), 
+                      padding: '2px 8px', 
+                      borderRadius: '6px' 
+                    }}>
+                    {isAccountSuspended && isKdsLive ? 'Suspended' : (isKdsLive ? 'Enabled' : (capabilities?.kds_enabled ? 'Off' : 'Locked'))}
                   </span>
                 </div>
               </div>

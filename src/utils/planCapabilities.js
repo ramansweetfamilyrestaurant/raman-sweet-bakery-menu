@@ -92,11 +92,14 @@ export const FEATURE_METADATA = Object.freeze({
 /**
  * Resolves full tenant plan capabilities from live restaurantInfo.
  */
-export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}) {
-  const planTier = (restaurantInfo?.plan_tier || settingsForm?.plan_tier || 'pro').toLowerCase();
-  const perms = restaurantInfo?.permissions || {};
+export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}, subscriptionStatus = {}) {
+  const rawTier = restaurantInfo?.plan_tier || subscriptionStatus?.plan_tier || settingsForm?.plan_tier || '';
+  const planTier = (rawTier || 'pro').toLowerCase();
+  const perms = restaurantInfo?.permissions || subscriptionStatus?.permissions || {};
   const isComplimentary = restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || 
                           restaurantInfo?.mandate_status === 'admin_granted' ||
+                          subscriptionStatus?.subscription_type === 'ADMIN_GRANTED' ||
+                          subscriptionStatus?.mandate_status === 'admin_granted' ||
                           settingsForm?.subscription_type === 'ADMIN_GRANTED' ||
                           restaurantInfo?.is_vip === 1 ||
                           restaurantInfo?.is_vip === true ||
@@ -114,11 +117,32 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
     return isNaN(n) ? fallback : n;
   };
 
+  const formatTierLabel = (tier) => {
+    if (!tier) return 'Pro Plan';
+    return `${tier.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} Plan`;
+  };
+
+  const defaultPlanName = isComplimentary
+    ? 'Enterprise VIP Access'
+    : (rawTier ? formatTierLabel(rawTier) : 'Pro Plan');
+
+  const rawPrice = restaurantInfo?.plan_price !== undefined && restaurantInfo?.plan_price !== null && restaurantInfo?.plan_price !== ''
+    ? restaurantInfo.plan_price
+    : (subscriptionStatus?.plan_price !== undefined && subscriptionStatus?.plan_price !== null && subscriptionStatus?.plan_price !== ''
+        ? subscriptionStatus.plan_price
+        : (settingsForm?.plan_price !== undefined && settingsForm?.plan_price !== null && settingsForm?.plan_price !== ''
+            ? settingsForm.plan_price
+            : null));
+
+  const planPrice = isComplimentary ? 0 : (rawPrice !== null ? getNum(rawPrice, 999) : 999);
+  const rawSubStatus = subscriptionStatus?.status || restaurantInfo?.subscription_status || 'active';
+  const subStatus = isComplimentary ? 'active' : rawSubStatus;
+
   return {
     plan_tier: planTier,
-    plan_name: restaurantInfo?.plan_name || (isComplimentary ? 'Enterprise VIP Access' : `${planTier.toUpperCase()} Plan`),
-    plan_price: getNum(restaurantInfo?.plan_price, isComplimentary ? 0 : 999),
-    subscription_status: isComplimentary ? 'active' : (restaurantInfo?.subscription_status || 'active'),
+    plan_name: restaurantInfo?.plan_name || subscriptionStatus?.plan_name || defaultPlanName,
+    plan_price: planPrice,
+    subscription_status: subStatus,
     is_complimentary: isComplimentary,
     is_vip: isComplimentary || planTier === 'vip',
     business_type: restaurantInfo?.business_type || 'restaurant',

@@ -19,7 +19,7 @@ export default function AdminSidebar({
   onReturnToMenu,
   capabilities = {}
 }) {
-  const restoName = restaurantInfo?.name || 'Raman Sweet Bakery & Restaurant';
+  const restoName = restaurantInfo?.name || 'Restaurant Admin';
   const truncatedName = restoName.length > 22 ? `${restoName.substring(0, 20)}...` : restoName;
   const logoUrl = restaurantInfo?.logo;
   const resolvedLogo = resolveImageUrl(logoUrl);

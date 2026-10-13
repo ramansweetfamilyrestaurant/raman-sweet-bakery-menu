@@ -270,6 +270,8 @@ export default function AdminDashboard({
   const pendingLoopRef = useRef(null);
   const orderAlarmEnabledRef = useRef(true);
   const pendingUpdatesRef = useRef(new Map());
+  const activeTenantKeyRef = useRef('');
+  const activeRequestIdRef = useRef(0);
 
   const stopPendingAlarm = () => {
     if (pendingLoopRef.current) {
@@ -1654,11 +1656,14 @@ export default function AdminDashboard({
   };
 
   const loadData = async (silent = false) => {
+    const requestId = ++activeRequestIdRef.current;
+    const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+    const requestTenantKey = `${token}_${currentSlug}`;
+
     if (!silent && dishes.length === 0) {
       setLoading(true);
     }
     try {
-      const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
       let [catData, dishData, infoData, comboData, subStatusData, analyticsResp] = await Promise.all([
         fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => []),
         fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => []),
@@ -1667,6 +1672,11 @@ export default function AdminDashboard({
         fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
         fetchAdminAnalytics(token, 'all').catch(() => null)
       ]);
+
+      // Guard: Late response from an earlier tenant request or superseded request must not overwrite current state
+      if (requestId !== activeRequestIdRef.current || (activeTenantKeyRef.current && requestTenantKey !== activeTenantKeyRef.current)) {
+        return;
+      }
 
       const safeCats = Array.isArray(catData) ? catData : [];
       const safeDishes = Array.isArray(dishData) ? dishData : [];
@@ -1680,10 +1690,14 @@ export default function AdminDashboard({
 
       setCategories(safeCats);
       setDishes(safeDishes);
+      setCombos(safeCombos);
+
       if (infoData) {
         setRestaurantInfo(infoData);
+      } else {
+        // If tenant-info request failed, do not retain previous tenant or fabricate data
+        setRestaurantInfo(currentSlug ? getInitialAdminState('info', null) : null);
       }
-      setCombos(safeCombos);
 
       if (currentSlug) {
         if (safeCats.length > 0) localStorage.setItem(`admin_cache_${currentSlug}_categories`, JSON.stringify(safeCats));
@@ -1692,8 +1706,8 @@ export default function AdminDashboard({
         if (safeCombos.length > 0) localStorage.setItem(`admin_cache_${currentSlug}_combos`, JSON.stringify(safeCombos));
       }
 
-      if (subStatusData) setSubscriptionStatus(subStatusData);
-      if (analyticsResp) setAnalyticsData(analyticsResp);
+      setSubscriptionStatus(subStatusData || null);
+      setAnalyticsData(analyticsResp || null);
       if (infoData) {
         const defaultVis = { must_try: true, combo: true, special: true, under100: true };
         setSettingsForm({
@@ -1736,11 +1750,15 @@ export default function AdminDashboard({
           theme_color: infoData.theme_color || 'gold',
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
+      } else {
+        setSettingsForm({});
       }
     } catch (err) {
       console.error('Error loading admin dashboard data:', err);
     } finally {
-      setLoading(false);
+      if (requestId === activeRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -1757,11 +1775,29 @@ export default function AdminDashboard({
       if (onLogout) onLogout();
       return;
     }
+
+    const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || '';
+    const currentTenantKey = `${token}_${currentSlug}`;
+    const isTenantSwitch = activeTenantKeyRef.current !== '' && activeTenantKeyRef.current !== currentTenantKey;
+    activeTenantKeyRef.current = currentTenantKey;
+
+    if (isTenantSwitch) {
+      // Promptly clear previous tenant in-memory state before loading new tenant
+      setRestaurantInfo(currentSlug ? getInitialAdminState('info', null) : null);
+      setCategories(currentSlug ? getInitialAdminState('categories', []) : []);
+      setDishes(currentSlug ? getInitialAdminState('dishes', []) : []);
+      setCombos(currentSlug ? getInitialAdminState('combos', []) : []);
+      setOrders([]);
+      setAnalyticsData(null);
+      setSubscriptionStatus(null);
+      setSettingsForm({});
+    }
+
     loadData();
     fetchAnnouncements().then(data => {
       if (Array.isArray(data)) setAnnouncements(data);
     }).catch(() => {});
-  }, [token]);
+  }, [token, propSlug]);
 
   const handleToggleDish = async (id, nextAvailable) => {
     try {
@@ -2649,7 +2685,7 @@ export default function AdminDashboard({
   const occupiedTablesCount = tableGrid.filter(t => t.status === 'occupied').length;
   const serviceNeededCount = tableGrid.filter(t => t.status === 'service_needed').length;
 
-  const tenantCaps = resolveTenantCapabilities(restaurantInfo, settingsForm);
+  const tenantCaps = resolveTenantCapabilities(restaurantInfo, settingsForm, subscriptionStatus);
   const isAnalyticsEnabled = true;
   const isDirectOrderingEnabled = tenantCaps.direct_ordering_enabled;
 
