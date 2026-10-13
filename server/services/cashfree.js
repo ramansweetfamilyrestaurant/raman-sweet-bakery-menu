@@ -159,7 +159,7 @@ export async function createCashfreeSubscriptionSession({
   const cleanName = (customerName || `Restaurant ${restaurantId}`).trim();
   const cleanEmail = (customerEmail || `owner_${restaurantId}@touchqr.app`).trim();
 
-  // 14-day SaaS trial alignment for subscription_first_charge_time
+  // 16-day SaaS trial alignment for subscription_first_charge_time
   const firstChargeTime = formatISTISO(trialEndISO);
   const amount = Number(planPrice) || 999;
   const maxAmount = Math.max(amount * 5, 5000);

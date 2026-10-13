@@ -33,7 +33,7 @@ export async function checkExpiredSubscriptions() {
     // === 2. Handle scheduled plan changes whose effective date has passed ===
     try {
       const scheduledChanges = await query(`
-        SELECT s.id, s.restaurant_id, s.scheduled_plan_key, s.plan_change_effective_at, r.name
+        SELECT s.id, s.restaurant_id, s.plan_id, s.amount, s.scheduled_plan_id, s.scheduled_plan_key, s.plan_change_effective_at, r.name, r.plan_tier
         FROM subscriptions s
         JOIN restaurants r ON r.id = s.restaurant_id
         WHERE s.scheduled_plan_key IS NOT NULL
@@ -46,6 +46,20 @@ export async function checkExpiredSubscriptions() {
         const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [sub.scheduled_plan_key.toLowerCase()]);
         const newPlan = planRows[0];
         if (newPlan) {
+          const currentPlanRows = await query('SELECT * FROM saas_plans WHERE id = $1', [sub.plan_id]);
+          const currentPlan = currentPlanRows[0];
+          const currentPrice = Number(currentPlan?.price || sub.amount || 0);
+          const newPrice = Number(newPlan.price || 0);
+
+          // P0-03 FIX: Upgrades (newPrice > currentPrice) MUST NOT be activated by cron!
+          // Paid upgrades require verified Cashfree payment confirmation before entitlement is granted.
+          if (newPrice > currentPrice) {
+            console.log(`⏳ Scheduled upgrade for ${sub.name} (ID: ${sub.restaurant_id}) to ${newPlan.key} (₹${newPrice}) remains pending payment confirmation.`);
+            continue;
+          }
+
+          // Scheduled DOWNGRADE or lateral move (newPrice <= currentPrice):
+          // The tenant has already completed their higher-tier paid cycle. At period boundary, apply the downgrade.
           await query(
             `UPDATE subscriptions SET plan_id = $1, amount = $2, scheduled_plan_key = NULL, scheduled_plan_id = NULL, plan_change_effective_at = NULL, updated_at = $3 WHERE id = $4`,
             [newPlan.id, Number(newPlan.price), nowISO, sub.id]
@@ -54,7 +68,7 @@ export async function checkExpiredSubscriptions() {
             `UPDATE restaurants SET plan_tier = $1, plan_price = $2 WHERE id = $3`,
             [newPlan.key, Number(newPlan.price), sub.restaurant_id]
           );
-          console.log(`📋 Scheduled plan change activated: ${sub.name} (ID: ${sub.restaurant_id}) → ${newPlan.key} (₹${newPlan.price})`);
+          console.log(`📋 Scheduled plan change (downgrade/lateral) activated: ${sub.name} (ID: ${sub.restaurant_id}) → ${newPlan.key} (₹${newPlan.price})`);
         }
       }
     } catch (e) { console.warn('Cron scheduled plan change error:', e.message); }

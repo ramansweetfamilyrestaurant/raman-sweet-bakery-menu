@@ -127,11 +127,12 @@ async function runTests() {
     await query('DELETE FROM restaurants WHERE id = $1', [restoId]);
   });
 
-  // Test 6: Scheduled plan change activation in cron
-  await test('6. Cron Logic: Scheduled plan change activates when effective date passed', async () => {
+  // Test 6: Scheduled plan change in cron (P0-03: upgrades require payment; downgrades activate at period end)
+  await test('6. Cron Logic: Scheduled plan change enforces P0-03 payment rules', async () => {
     const now = new Date();
     const pastEffective = new Date(now.getTime() - 1 * 86400 * 1000).toISOString();
 
+    // Case A: Scheduled UPGRADE (Basic ₹499 to Pro ₹999) must REMAIN PENDING until payment
     const testResto = await query(`
       INSERT INTO restaurants (name, slug, plan_tier, plan_price, active)
       VALUES ('Test Plan Change', 'test-plan-change-${Date.now()}', 'basic', 499, true)
@@ -144,8 +145,8 @@ async function runTests() {
     const restoId = testResto[0].id;
 
     await query(`
-      INSERT INTO subscriptions (restaurant_id, status, scheduled_plan_key, plan_change_effective_at, amount)
-      VALUES ($1, 'active', 'pro', $2, 499)
+      INSERT INTO subscriptions (restaurant_id, plan_id, status, scheduled_plan_key, plan_change_effective_at, amount)
+      VALUES ($1, 1, 'active', 'pro', $2, 499)
     `, [restoId, pastEffective]);
 
     await checkExpiredSubscriptions();
@@ -153,10 +154,26 @@ async function runTests() {
     const restoRows = await query('SELECT plan_tier, plan_price FROM restaurants WHERE id = $1', [restoId]);
     const subRows = await query('SELECT scheduled_plan_key, amount FROM subscriptions WHERE restaurant_id = $1', [restoId]);
 
-    assert.strictEqual(restoRows[0].plan_tier, 'pro', 'Restaurant plan_tier should be updated to pro');
-    assert.strictEqual(Number(restoRows[0].plan_price), 999, 'Restaurant plan_price should be updated to 999');
-    assert.strictEqual(subRows[0].scheduled_plan_key, null, 'scheduled_plan_key should be cleared after activation');
-    assert.strictEqual(Number(subRows[0].amount), 999, 'Subscription amount should be updated to 999');
+    // Under P0-03 fix: Unpaid upgrade must NOT activate!
+    assert.strictEqual(restoRows[0].plan_tier, 'basic', 'Restaurant plan_tier must remain basic without payment confirmation');
+    assert.strictEqual(Number(restoRows[0].plan_price), 499, 'Restaurant plan_price must remain 499');
+    assert.strictEqual(subRows[0].scheduled_plan_key, 'pro', 'scheduled_plan_key must remain pending');
+
+    // Case B: Scheduled DOWNGRADE (Pro ₹999 to Basic ₹499) activates at period boundary
+    await query(`
+      UPDATE subscriptions SET plan_id = 2, amount = 999, scheduled_plan_key = 'basic', plan_change_effective_at = $1
+      WHERE restaurant_id = $2
+    `, [pastEffective, restoId]);
+    await query(`UPDATE restaurants SET plan_tier = 'pro', plan_price = 999 WHERE id = $1`, [restoId]);
+
+    await checkExpiredSubscriptions();
+
+    const restoDown = await query('SELECT plan_tier, plan_price FROM restaurants WHERE id = $1', [restoId]);
+    const subDown = await query('SELECT plan_id, scheduled_plan_key, amount FROM subscriptions WHERE restaurant_id = $1', [restoId]);
+
+    assert.strictEqual(restoDown[0].plan_tier, 'basic', 'Scheduled downgrade should activate after paid cycle ends');
+    assert.strictEqual(Number(restoDown[0].plan_price), 499, 'Plan price should update to 499 on downgrade');
+    assert.strictEqual(subDown[0].scheduled_plan_key, null, 'scheduled_plan_key should be cleared on downgrade');
 
     await query('DELETE FROM subscriptions WHERE restaurant_id = $1', [restoId]);
     await query('DELETE FROM restaurants WHERE id = $1', [restoId]);

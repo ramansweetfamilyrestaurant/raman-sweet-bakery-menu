@@ -1737,7 +1737,7 @@ export default function App() {
     );
   }
 
-  // Register Page View — Self-Service 14-Day Free Trial Registration Wizard
+  // Register Page View — Self-Service Free Trial Registration Wizard
   if (view === 'register') {
     return (
       <Suspense fallback={

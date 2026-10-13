@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { query, withTransaction } from '../db.js';
@@ -10,6 +11,12 @@ import { registrationRateLimiter } from '../middleware/rateLimiters.js';
 import { resolveBusinessCategoryFromType } from '../config/businessTaxonomy.js';
 
 const router = express.Router();
+
+export function normalizeGatewayPaymentId(id) {
+  if (id === null || id === undefined) return null;
+  const trimmed = String(id).trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 function getAppBaseUrl(req) {
   if (process.env.APP_BASE_URL && !process.env.APP_BASE_URL.includes('onrender.com')) {
@@ -146,8 +153,6 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
       owner_email: cleanOwnerEmail,
       phone: cleanPhone,
       owner_username: owner_username.trim(),
-      owner_password,
-      password_hash: passwordHash,
       plan_tier: dbPlan.key,
       plan_price: dbPlan.price,
       trial_days: trialDays,
@@ -199,7 +204,7 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
  * Fully idempotent — safe against duplicate webhooks & user page refreshes.
  */
 export async function finalizePendingRegistration(reg_id, inputSubId = null) {
-  const regRows = await query('SELECT payload, created_slug, created_jwt, created_user, status, cashfree_subscription_id FROM pending_registrations WHERE id = $1', [reg_id]);
+  const regRows = await query('SELECT payload, created_slug, created_jwt, created_user, status, cashfree_subscription_id, password_hash FROM pending_registrations WHERE id = $1', [reg_id]);
   if (!regRows || regRows.length === 0) {
     throw new Error('Registration session expired or invalid');
   }
@@ -318,6 +323,10 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
     const effectiveBiz = regData.business_type || 'restaurant';
     const regCategory = resolveBusinessCategoryFromType(effectiveBiz);
 
+    const isMandateActive = (statusStr === 'ACTIVE' || statusStr === 'COMPLETED');
+    const mandateStatus = isMandateActive ? 'active' : 'bank_approval_pending';
+    const autoDebitEnabled = isMandateActive ? 1 : 0;
+
     const restoRes = await txQuery(`
       INSERT INTO restaurants (
         name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, total_tables, mandate_status, mandate_id, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email, subscription_type
@@ -330,7 +339,7 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
       effectiveBiz,
       regCategory,
       regCategory,
-      1, 0, 'active', targetSubId || null, 1, false, false, regData.owner_name || '',
+      1, 0, mandateStatus, targetSubId || null, autoDebitEnabled, false, false, regData.owner_name || '',
       regData.owner_email || null,
       subType
     ]);
@@ -345,7 +354,14 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
       newRestoId, dbPlan.id, 'cashfree', targetSubId || null, subStatus, dbPlan.price, 'INR', 'monthly', trialStartedAt, trialEndsAt, nowISO, expiryDateISO, subType
     ]);
 
-    const hash = regData.password_hash || (await bcrypt.hash(regData.owner_password || 'default123', await bcrypt.genSalt(10)));
+    let hash = regRecord.password_hash || regData.password_hash;
+    if (!hash && regData.owner_password) {
+      const salt = await bcrypt.genSalt(10);
+      hash = await bcrypt.hash(regData.owner_password, salt);
+    }
+    if (!hash) {
+      throw new Error('Registration authentication credentials missing or invalid in session');
+    }
 
     const adminRes = await txQuery(`
       INSERT INTO admins (restaurant_id, username, password_hash, role)
@@ -358,6 +374,11 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
       { id: adminId, username: regData.owner_username, role: 'restaurant_admin', restaurant_id: newRestoId, slug: cleanSlug },
       JWT_SECRET,
       { expiresIn: '30d' }
+    );
+
+    await txQuery(
+      "UPDATE pending_registrations SET status = 'completed', completed_at = CURRENT_TIMESTAMP, restaurant_id = $1, created_slug = $2, created_jwt = $3, created_user = $4, mandate_status = $5 WHERE id = $6",
+      [newRestoId, cleanSlug, jwtToken, regData.owner_username, mandateStatus, reg_id]
     );
 
     return { newRestoId, cleanSlug, jwtToken, username: regData.owner_username };
@@ -523,13 +544,14 @@ const handleCreateSubscription = async (req, res) => {
       auth_link: cfResult.auth_link,
       subscription_status: cfResult.subscription_status || 'INITIALIZED',
       is_sandbox: cfResult.is_sandbox,
+      environment: cfResult.environment || (cfResult.is_sandbox ? 'sandbox' : 'production'),
       plan: {
         id: dbPlan.id,
         key: dbPlan.key,
         name: dbPlan.name,
         price: Number(dbPlan.price)
       },
-      message: 'Cashfree Sandbox subscription created successfully.'
+      message: 'Cashfree subscription session created successfully.'
     });
   } catch (err) {
     console.error('Create Cashfree subscription error:', err);
@@ -543,10 +565,10 @@ router.post('/create-mandate', authenticateToken, handleCreateSubscription);
 // ==========================================
 // 2. SERVER-SIDE SUBSCRIPTION VERIFICATION
 // ==========================================
-router.get('/verify-subscription', authenticateToken, async (req, res) => {
+const handleVerifySubscription = async (req, res) => {
   try {
     const restoId = req.user?.restaurant_id;
-    const subscriptionId = (req.query.subscription_id || '').trim();
+    const subscriptionId = (req.query.subscription_id || req.body?.subscription_id || '').trim();
 
     if (!restoId) {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
@@ -593,9 +615,13 @@ router.get('/verify-subscription', authenticateToken, async (req, res) => {
       });
     }
 
-    const isAuthorized = cfStatus.subscription_status === 'ACTIVE';
+    const subStatus = (cfStatus.subscription_status || cfStatus.status || '').toUpperCase();
+    const isMandateActive = subStatus === 'ACTIVE' || subStatus === 'COMPLETED';
+    const isApprovalPending = subStatus === 'BANK_APPROVAL_PENDING';
+    const isTerminalFailure = ['FAILED', 'REJECTED', 'CANCELLED'].includes(subStatus);
+    const isAuthorized = isMandateActive || isApprovalPending;
 
-    if (isAuthorized) {
+    if (isMandateActive) {
       await query(`
         UPDATE restaurants SET mandate_id = $1, mandate_status = 'active', auto_debit_enabled = 1 WHERE id = $2
       `, [subscriptionId, restoId]);
@@ -608,20 +634,60 @@ router.get('/verify-subscription', authenticateToken, async (req, res) => {
         subscription_id: subscriptionId,
         status: cfStatus.subscription_status
       });
+    } else if (isApprovalPending) {
+      await query(`
+        UPDATE restaurants SET mandate_id = $1, mandate_status = 'bank_approval_pending', auto_debit_enabled = 0 WHERE id = $2
+      `, [subscriptionId, restoId]);
+
+      await query(`
+        UPDATE subscriptions SET status = 'trialing', updated_at = CURRENT_TIMESTAMP WHERE restaurant_id = $1 AND gateway_subscription_id = $2 AND status = 'pending'
+      `, [restoId, subscriptionId]);
+
+      await logPaymentAudit(restoId, 'CASHFREE_SANDBOX_SUB_PENDING_APPROVAL', {
+        subscription_id: subscriptionId,
+        status: cfStatus.subscription_status
+      });
+    } else if (isTerminalFailure) {
+      // Fix F-02: Explicitly record terminal failure and disable auto debit while strictly preserving trial_ends_at
+      await query(`
+        UPDATE restaurants SET mandate_status = 'failed', auto_debit_enabled = 0 WHERE id = $1
+      `, [restoId]);
+
+      await query(`
+        UPDATE subscriptions SET status = 'payment_failed', updated_at = CURRENT_TIMESTAMP WHERE restaurant_id = $1 AND gateway_subscription_id = $2 AND status IN ('pending', 'initialized')
+      `, [restoId, subscriptionId]);
+
+      await logPaymentAudit(restoId, 'CASHFREE_SUB_TERMINAL_FAILURE', {
+        subscription_id: subscriptionId,
+        status: cfStatus.subscription_status
+      });
+    } else {
+      // Unknown or unhandled status: do not mark mandate active; log notice and fail closed
+      console.warn(`[VERIFY-SUB] Unhandled or unknown subscription status '${subStatus}' for restaurant ${restoId}. Entitlement not granted.`);
     }
+
+    const normalizedMandateStatus = isMandateActive
+      ? 'active'
+      : (isApprovalPending
+        ? 'bank_approval_pending'
+        : (isTerminalFailure ? 'failed' : (subStatus ? 'unknown' : 'pending')));
 
     res.json({
       success: true,
       subscription_id: subscriptionId,
       subscription_status: cfStatus.subscription_status,
       authorized: isAuthorized,
+      mandate_status: normalizedMandateStatus,
       details: cfStatus
     });
   } catch (err) {
     console.error('Verify subscription error:', err);
     res.status(500).json({ error: 'Failed to verify subscription status' });
   }
-});
+};
+
+router.get('/verify-subscription', authenticateToken, handleVerifySubscription);
+router.post('/verify-subscription', authenticateToken, handleVerifySubscription);
 
 // Calendar-month date calculation helper (e.g. Jan 15 -> Feb 15, Jan 31 -> Feb 28)
 function addCalendarMonth(date = new Date()) {
@@ -714,10 +780,14 @@ const handleSubscriptionReturn = async (req, res) => {
       const restoRows = await query('SELECT slug FROM restaurants WHERE id = $1', [restoId]);
       const restoSlug = restoRows[0]?.slug;
 
+      const isMandateActive = (subStatus === 'ACTIVE' || subStatus === 'COMPLETED');
+      const mandateStatus = isMandateActive ? 'active' : 'bank_approval_pending';
+      const autoDebit = isMandateActive ? 1 : 0;
+
       // Mandate Authorized! Update active status in DB
       await query(
-        "UPDATE restaurants SET mandate_id = $1, mandate_status = 'active', auto_debit_enabled = 1 WHERE id = $2",
-        [subscriptionId, restoId]
+        "UPDATE restaurants SET mandate_id = $1, mandate_status = $2, auto_debit_enabled = $3 WHERE id = $4",
+        [subscriptionId, mandateStatus, autoDebit, restoId]
       );
       await query(
         "UPDATE subscriptions SET status = 'trialing', updated_at = CURRENT_TIMESTAMP WHERE restaurant_id = $1 AND (status = 'pending' OR status = 'initialized')",
@@ -726,20 +796,21 @@ const handleSubscriptionReturn = async (req, res) => {
       await logPaymentAudit(restoId, 'CASHFREE_RETURN_VERIFIED', {
         subscription_id: subscriptionId,
         status: subStatus,
+        mandate_status: mandateStatus,
         via: req.method === 'POST' ? 'FORM_POST' : 'GET'
       });
-      console.log('[Cashfree Return] ✅ Mandate authorized & activated for restaurant', restoId, 'slug:', restoSlug);
+      console.log(`[Cashfree Return] ✅ Mandate status set to '${mandateStatus}' for restaurant`, restoId, 'slug:', restoSlug);
 
       if (restoSlug) {
-        return res.redirect(303, `${appBase}/${restoSlug}/admin?verified=true`);
+        return res.redirect(303, `${appBase}/${restoSlug}/admin?verified=true&status=${mandateStatus}`);
       }
-      return res.redirect(303, `${baseRedirectUrl}?verified=true&status=ACTIVE`);
+      return res.redirect(303, `${baseRedirectUrl}?verified=true&status=${mandateStatus}`);
     }
 
     // Mandate Authorization Failed, Pending, or Cancelled!
     console.warn('[Cashfree Return] Mandate NOT authorized. Status:', subStatus, 'restoId:', restoId);
     await query(
-      "UPDATE restaurants SET mandate_status = 'pending', auto_debit_enabled = 0 WHERE id = $1 AND (mandate_status IS NULL OR mandate_status != 'active')",
+      "UPDATE restaurants SET mandate_status = 'failed', auto_debit_enabled = 0 WHERE id = $1 AND (mandate_status IS NULL OR mandate_status != 'active')",
       [restoId]
     );
     return res.redirect(303, `${baseRedirectUrl}?verified=false&status=${encodeURIComponent(subStatus)}`);
@@ -788,8 +859,23 @@ const handleCashfreeWebhook = async (req, res) => {
   const data = payload.data || payload;
 
   const subscriptionId = data.subscription_details?.subscription_id || data.subscription_id || data.order_tags?.subscription_id || null;
-  const paymentId = data.payment_details?.payment_id || data.payment_id || data.cf_payment_id || null;
-  const eventId = payload.event_id || payload.id || (subscriptionId && paymentId ? `${eventType}_${subscriptionId}_${paymentId}` : `${eventType}_${Date.now()}`);
+  const rawPaymentId = data.payment_details?.payment_id || data.payment_id || data.cf_payment_id || null;
+  const paymentId = normalizeGatewayPaymentId(rawPaymentId);
+
+  // Stable event ID resolution without non-deterministic Date.now() fallbacks (Fix F-03)
+  const rawEventId = payload.event_id || payload.id || null;
+  let eventId = (rawEventId && typeof rawEventId === 'string' && rawEventId.trim().length > 0)
+    ? rawEventId.trim()
+    : null;
+
+  if (!eventId && subscriptionId && paymentId) {
+    eventId = `${eventType}_${subscriptionId}_${paymentId}`;
+  } else if (!eventId) {
+    // Deterministic payload fingerprint fallback using SHA-256 of verified raw request body
+    // Limitations: Distinguishes distinct webhook payloads deterministically; identical replays share fingerprint.
+    const bodySha = crypto.createHash('sha256').update(rawBody).digest('hex').substring(0, 32);
+    eventId = `${eventType}_sha256_${bodySha}`;
+  }
 
   try {
     // 2. Atomic Database Transaction with Webhook Idempotency Check
@@ -850,15 +936,21 @@ const handleCashfreeWebhook = async (req, res) => {
       // Handle Specific Event Types
       if (eventType === 'SUBSCRIPTION_AUTH_STATUS' || eventType === 'SUBSCRIPTION_AUTHORIZATION_SUCCESS') {
         // Never default missing/unknown status to ACTIVE
-        const authStatus = data.authorization_details?.authorization_status || data.status || data.subscription_status || null;
+        const rawAuthStatus = data.authorization_details?.authorization_status || data.status || data.subscription_status || null;
+        const authStatus = rawAuthStatus ? String(rawAuthStatus).toUpperCase() : null;
         if (authStatus === 'ACTIVE' || authStatus === 'SUCCESS') {
           if (restoId) {
             await txQuery("UPDATE restaurants SET mandate_status = 'active', mandate_id = $1, auto_debit_enabled = 1 WHERE id = $2", [subscriptionId, restoId]);
           }
           await txQuery("UPDATE subscriptions SET status = 'trialing' WHERE gateway_subscription_id = $1 AND status = 'pending'", [subscriptionId]);
+        } else if (authStatus === 'BANK_APPROVAL_PENDING') {
+          if (restoId) {
+            await txQuery("UPDATE restaurants SET mandate_status = 'bank_approval_pending', mandate_id = $1, auto_debit_enabled = 0 WHERE id = $2", [subscriptionId, restoId]);
+          }
+          await txQuery("UPDATE subscriptions SET status = 'trialing' WHERE gateway_subscription_id = $1 AND status = 'pending'", [subscriptionId]);
         } else if (authStatus === 'FAILED' || authStatus === 'REJECTED' || authStatus === 'CANCELLED') {
           if (restoId) {
-            await txQuery("UPDATE restaurants SET mandate_status = 'failed' WHERE id = $1", [restoId]);
+            await txQuery("UPDATE restaurants SET mandate_status = 'failed', auto_debit_enabled = 0 WHERE id = $1", [restoId]);
           }
         } else {
           console.warn(`[WEBHOOK] Authorization status unknown or missing: ${authStatus}. Entitlement will not be granted.`);
@@ -891,6 +983,16 @@ const handleCashfreeWebhook = async (req, res) => {
       }
 
       else if (eventType === 'SUBSCRIPTION_PAYMENT_SUCCESS' || eventType === 'SUBSCRIPTION_NEW_PAYMENT') {
+        // Fix F-03: FAIL CLOSED if paymentId is missing or empty. Do not grant entitlement, extend period, or insert fabricated ID
+        if (!paymentId) {
+          console.warn(`⚠️ [WEBHOOK] ${eventType} rejected: missing reliable gateway payment_id for subscription ${subscriptionId}. Entitlement fail-closed.`);
+          if (restoId) {
+            await logPaymentAudit(restoId, 'REJECTED_MISSING_PAYMENT_IDENTIFIER', { subscription_id: subscriptionId, event_id: eventId });
+          }
+          await txQuery('UPDATE webhook_events SET processed = $1, processed_at = CURRENT_TIMESTAMP WHERE gateway = $2 AND event_id = $3', [true, 'cashfree', eventId]);
+          return { status: 'REJECTED_MISSING_PAYMENT_IDENTIFIER', message: 'Payment-success event lacks reliable gateway payment identifier' };
+        }
+
         const payStatus = (data.payment_details?.payment_status || data.payment_status || data.status || 'SUCCESS').toUpperCase();
         if (payStatus !== 'SUCCESS') {
           console.warn(`[WEBHOOK] Payment status is ${payStatus}, not SUCCESS. Entitlement skipped.`);
@@ -914,14 +1016,17 @@ const handleCashfreeWebhook = async (req, res) => {
               reconciliation: 'preserved_paid_period_without_higher_tier'
             });
 
-            const existingPayments = await txQuery('SELECT id FROM payments WHERE gateway = $1 AND gateway_payment_id = $2', ['cashfree', paymentId || eventId]);
-            if (!existingPayments || existingPayments.length === 0) {
-              const paidAtISO = new Date().toISOString();
-              await txQuery(`
-                INSERT INTO payments (restaurant_id, subscription_id, gateway, gateway_payment_id, amount, currency, status, payment_type, paid_at)
-                VALUES ($1, $2, 'cashfree', $3, $4, 'INR', 'SUCCESS', 'recurring_mismatch', $5)
-              `, [restoId, subDbRecord.id, paymentId || eventId, payAmount, paidAtISO]);
+            // Idempotent: Only process and extend period if this payment was not already recorded!
+            const existingPayments = await txQuery('SELECT id FROM payments WHERE gateway = $1 AND gateway_payment_id = $2', ['cashfree', paymentId]);
+            if (existingPayments && existingPayments.length > 0) {
+              return { status: 'DUPLICATE_PAYMENT_IGNORED', message: 'Payment already processed' };
             }
+
+            const paidAtISO = new Date().toISOString();
+            await txQuery(`
+              INSERT INTO payments (restaurant_id, subscription_id, gateway, gateway_payment_id, amount, currency, status, payment_type, paid_at)
+              VALUES ($1, $2, 'cashfree', $3, $4, 'INR', 'SUCCESS', 'recurring_mismatch', $5)
+            `, [restoId, subDbRecord.id, paymentId, payAmount, paidAtISO]);
 
             const now = new Date();
             const periodEnd = addCalendarMonth(now);
@@ -942,6 +1047,12 @@ const handleCashfreeWebhook = async (req, res) => {
             `, [periodEnd, restoId]);
           } else {
             // Paid amount is valid and meets or exceeds expectedPrice
+            // Idempotent: Only process and extend period if this payment was not already recorded!
+            const existingPayments = await txQuery('SELECT id FROM payments WHERE gateway = $1 AND gateway_payment_id = $2', ['cashfree', paymentId]);
+            if (existingPayments && existingPayments.length > 0) {
+              return { status: 'DUPLICATE_PAYMENT_IGNORED', message: 'Payment already processed' };
+            }
+
             // Check if there was a scheduled plan upgrade waiting for payment confirmation
             if (subDbRecord.scheduled_plan_id) {
               const scheduledPlanRows = await txQuery('SELECT * FROM saas_plans WHERE id = $1', [subDbRecord.scheduled_plan_id]);
@@ -959,18 +1070,15 @@ const handleCashfreeWebhook = async (req, res) => {
                 await txQuery(`
                   UPDATE restaurants SET plan_tier = $1, plan_price = $2 WHERE id = $3
                 `, [schedPlan.key, Number(schedPlan.price), restoId]);
+                console.log(`✅ Paid upgrade confirmed and applied: tenant ${restoId} upgraded to ${schedPlan.key} (₹${schedPlan.price})`);
               }
             }
 
-            // Idempotent payment recording
-            const existingPayments = await txQuery('SELECT id FROM payments WHERE gateway = $1 AND gateway_payment_id = $2', ['cashfree', paymentId || eventId]);
-            if (!existingPayments || existingPayments.length === 0) {
-              const paidAtISO = new Date().toISOString();
-              await txQuery(`
-                INSERT INTO payments (restaurant_id, subscription_id, gateway, gateway_payment_id, amount, currency, status, payment_type, paid_at)
-                VALUES ($1, $2, 'cashfree', $3, $4, 'INR', 'SUCCESS', 'recurring', $5)
-              `, [restoId, subDbRecord.id, paymentId || eventId, payAmount || expectedPrice, paidAtISO]);
-            }
+            const paidAtISO = new Date().toISOString();
+            await txQuery(`
+              INSERT INTO payments (restaurant_id, subscription_id, gateway, gateway_payment_id, amount, currency, status, payment_type, paid_at)
+              VALUES ($1, $2, 'cashfree', $3, $4, 'INR', 'SUCCESS', 'recurring', $5)
+            `, [restoId, subDbRecord.id, paymentId, payAmount || expectedPrice, paidAtISO]);
 
             const now = new Date();
             const periodEnd = addCalendarMonth(now);
@@ -1247,8 +1355,37 @@ router.post('/change-plan', authenticateToken, async (req, res) => {
 
     // TRIAL: Immediate plan change (trial dates unchanged)
     if (sub.status === 'trialing' || sub.status === 'pending') {
+      if (isHigherPrice && sub.gateway === 'cashfree' && sub.gateway_subscription_id) {
+        // P0-03 FIX: Upgrading to a higher-priced plan during trial cannot simply override the mandate without customer re-authorization
+        await query(
+          `UPDATE subscriptions SET scheduled_plan_id = $1, scheduled_plan_key = $2, plan_change_effective_at = $3, updated_at = $4
+           WHERE id = $5`,
+          [targetPlan.id, targetPlanKey, sub.trial_ends_at || sub.plan_expires_at || nowISO, nowISO, sub.id]
+        );
+
+        await logPaymentAudit(targetRestoId, 'PLAN_UPGRADE_SCHEDULED_TRIAL', {
+          from_plan: currentPlanKey,
+          to_plan: targetPlanKey,
+          new_price: targetPrice,
+          effective: 'next_charge',
+          reauthorization_required: true,
+          trial_end: sub.trial_ends_at || sub.plan_expires_at
+        });
+
+        return res.json({
+          success: true,
+          effective: 'next_charge',
+          from_plan: currentPlanKey,
+          to_plan: targetPlanKey,
+          new_price: targetPrice,
+          reauthorization_required: true,
+          trial_ends_at: sub.trial_ends_at || sub.plan_expires_at,
+          message: `Upgrade to ${targetPlan.name} scheduled. Re-authorization on Cashfree is required for ₹${targetPrice}/month before the first charge.`
+        });
+      }
+
       await query(
-        `UPDATE subscriptions SET plan_id = $1, amount = $2, scheduled_plan_key = NULL, plan_change_effective_at = NULL, updated_at = $3
+        `UPDATE subscriptions SET plan_id = $1, amount = $2, scheduled_plan_key = NULL, scheduled_plan_id = NULL, plan_change_effective_at = NULL, updated_at = $3
          WHERE id = $4`,
         [targetPlan.id, targetPrice, nowISO, sub.id]
       );

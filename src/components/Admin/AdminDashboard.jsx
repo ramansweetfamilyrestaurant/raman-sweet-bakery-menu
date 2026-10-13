@@ -71,6 +71,7 @@ export default function AdminDashboard({
   };
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentModalPlan, setPaymentModalPlan] = useState(null);
   const [activeTab, setActiveTab] = useState('home'); // 'home', 'orders', 'dishes', 'analytics', 'settings'
   const [initialSetupDrawer, setInitialSetupDrawer] = useState(null);
   const [categories, setCategories] = useState(() => getInitialAdminState('categories', []));
@@ -2789,7 +2790,7 @@ export default function AdminDashboard({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '20px' }}>⏳</span>
             <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
-              Your 14-Day Free Pro Trial expires in <strong style={{ color: '#B45309', fontSize: '0.88rem' }}>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>! Renew now to prevent menu interruption.
+              Your Free Pro Trial expires in <strong style={{ color: '#B45309', fontSize: '0.88rem' }}>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>! Renew now to prevent menu interruption.
             </span>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -2834,7 +2835,7 @@ export default function AdminDashboard({
               Subscription Plan Expired!
             </h2>
             <p style={{ color: '#9CA3AF', fontSize: '0.88rem', lineHeight: 1.5, margin: '0 0 24px 0' }}>
-              The 14-day free trial or subscription plan for <strong>'{restaurantInfo?.name || 'your restaurant'}'</strong> has ended.
+              The free trial or subscription plan for <strong>'{restaurantInfo?.name || 'your restaurant'}'</strong> has ended.
               Renew your plan to reactivate your Digital Menu & QR Orders.
             </p>
 
@@ -3195,7 +3196,12 @@ export default function AdminDashboard({
                 capabilities={tenantCaps}
                 currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                 onUpgrade={(planKey) => {
-                  setActiveTab('billing');
+                  setPaymentModalPlan(planKey || 'pro');
+                  setShowPaymentModal(true);
+                }}
+                onOpenBillingModal={(planKey) => {
+                  setPaymentModalPlan(planKey || 'pro');
+                  setShowPaymentModal(true);
                 }}
                 onNavigate={(tab) => setActiveTab(tab)}
                 onRefreshInfo={() => loadData(true)}
@@ -3831,15 +3837,20 @@ export default function AdminDashboard({
       {showPaymentModal && (
         <PaymentModal
           restoInfo={restaurantInfo}
-          planTier={restaurantInfo?.plan_tier || 'pro'}
-          planPrice={restaurantInfo?.plan_price || (restaurantInfo?.plan_tier === 'enterprise' ? 1999 : restaurantInfo?.plan_tier === 'basic' ? 499 : 999)}
-          onClose={() => setShowPaymentModal(false)}
+          planTier={paymentModalPlan || restaurantInfo?.plan_tier || 'pro'}
+          planPrice={paymentModalPlan === 'enterprise' ? 1999 : paymentModalPlan === 'basic' ? 499 : (paymentModalPlan === 'pro' ? 999 : (restaurantInfo?.plan_price || 999))}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setPaymentModalPlan(null);
+          }}
           onSuccess={() => {
-            setToastMessage('🎉 Cashfree Subscription Authorized! Mandate registered for automatic billing after trial.');
+            setToastMessage('🎉 Cashfree Subscription Authorized! Mandate registered for automatic billing.');
             setTimeout(() => setToastMessage(''), 4000);
             fetchRestaurantInfo().then(data => {
               if (data) setRestaurantInfo(data);
             });
+            setShowPaymentModal(false);
+            setPaymentModalPlan(null);
           }}
         />
       )}

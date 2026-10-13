@@ -61,7 +61,7 @@ export async function checkSubscriptionStatus(restaurantId) {
     return payload;
   } catch (err) {
     console.error('Subscription status check error:', err.message);
-    return { status: 'unknown', active: true };
+    return { status: 'unknown', active: false };
   }
 }
 
@@ -84,8 +84,10 @@ export function authenticateToken(req, res, next) {
       const subInfo = await checkSubscriptionStatus(user.restaurant_id);
       req.restaurant = subInfo.resto;
       req.subscriptionStatus = subInfo.status;
+      req.subscriptionActive = subInfo.active;
     } else {
       req.subscriptionStatus = 'active';
+      req.subscriptionActive = true;
     }
 
     next();
@@ -99,10 +101,11 @@ export function requireActiveSubscription(req, res, next) {
   }
 
   const status = req.subscriptionStatus || 'active';
-  if (status === 'expired') {
+  const isActive = req.subscriptionActive !== false && !['expired', 'suspended', 'pending', 'bank_approval_pending'].includes(status);
+  if (!isActive) {
     return res.status(403).json({
       error: 'SUBSCRIPTION_EXPIRED',
-      message: 'Your free trial or SaaS subscription has expired. Please renew your subscription to continue using operational features.'
+      message: 'Your free trial or SaaS subscription is inactive or has expired. Please renew your subscription to continue using operational features.'
     });
   }
 

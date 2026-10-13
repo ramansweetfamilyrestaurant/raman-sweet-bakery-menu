@@ -45,7 +45,8 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
         }
 
         if (window.Cashfree) {
-          const cashfree = window.Cashfree({ mode: data.is_sandbox ? 'sandbox' : 'production' });
+          const envMode = data.environment || (data.is_sandbox ? 'sandbox' : 'production');
+          const cashfree = window.Cashfree({ mode: envMode });
           // Launch Cashfree SDK subscription checkout
           if (typeof cashfree.subscriptionsCheckout === 'function') {
             cashfree.subscriptionsCheckout({
@@ -60,14 +61,14 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
               redirectTarget: '_modal'
             });
           }
-          setStatusMsg('🚀 Cashfree Sandbox Mandate Checkout launched! Please complete subscription authorization.');
+          setStatusMsg(`🚀 Cashfree ${data.is_sandbox ? 'Sandbox ' : ''}Mandate Checkout launched! Please complete subscription authorization.`);
           setLoading(false);
           return;
         }
       }
 
       if (data.auth_link) {
-        setStatusMsg('🔗 Cashfree Sandbox Subscription Session Created! Redirecting to Mandate Authorization page...');
+        setStatusMsg(`🔗 Cashfree ${data.is_sandbox ? 'Sandbox ' : ''}Subscription Session Created! Redirecting to Mandate Authorization page...`);
         setTimeout(() => {
           window.location.href = data.auth_link;
         }, 1200);

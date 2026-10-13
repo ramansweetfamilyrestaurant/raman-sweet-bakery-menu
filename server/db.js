@@ -12,6 +12,8 @@ let dbType = 'sqlite';
 let pgPool = null;
 let sqliteDb = null;
 let isDbInitialized = false;
+let paymentIndexVerified = false;
+let paymentIndexMigrationError = null;
 
 const dbFilePath = path.resolve('menu.db');
 
@@ -70,7 +72,11 @@ async function initDb(options = {}) {
     }
 
     if (!process.env.VERCEL) {
-      await createTables().catch(() => {});
+      await createTables(options);
+      if (!paymentIndexVerified) {
+        isDbInitialized = false;
+        throw new Error(`Database initialization failed: payment uniqueness protection is absent (${paymentIndexMigrationError || 'unverified'})`);
+      }
       isDbInitialized = true;
       await seedData().catch(() => {});
     } else {
@@ -115,7 +121,11 @@ async function initDb(options = {}) {
   }
 
   if (!process.env.VERCEL) {
-    await createTables().catch(() => {});
+    await createTables(options);
+    if (!paymentIndexVerified) {
+      isDbInitialized = false;
+      throw new Error(`Database initialization failed: payment uniqueness protection is absent (${paymentIndexMigrationError || 'unverified'})`);
+    }
     isDbInitialized = true;
     await seedData().catch(() => {});
   } else {
@@ -123,7 +133,7 @@ async function initDb(options = {}) {
   }
 }
 
-async function createTables() {
+async function createTables(options = {}) {
   if (dbType === 'postgres') {
     const pgTables = [
       `CREATE TABLE IF NOT EXISTS restaurants (
@@ -499,6 +509,7 @@ async function createTables() {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_type VARCHAR(50);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS food_type VARCHAR(50);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_category VARCHAR(50) DEFAULT 'dine_in';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(50) DEFAULT 'pro';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_price NUMERIC DEFAULT 999;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_expires_at VARCHAR(100);`,
@@ -550,7 +561,6 @@ async function createTables() {
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);`,
       `CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);`,
-      `CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_gateway_payid ON payments(gateway, gateway_payment_id);`,
       // Phase 4: Subscription Lifecycle Management columns
       `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancel_requested_at TIMESTAMP;`,
       `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS auto_renew INT DEFAULT 1;`,
@@ -709,6 +719,104 @@ async function createTables() {
       try { await pgPool.query(alt); } catch (e) { console.warn('Postgres alter query notice:', e.message); }
     }
 
+    // Safe payment uniqueness migration & partial unique index (versioned migration)
+    try {
+      // 1. Inspect existing index definition in pg_indexes
+      const existingIdxRes = await pgPool.query(`
+        SELECT indexdef FROM pg_indexes 
+        WHERE tablename = 'payments' AND indexname = 'idx_payments_gateway_payid'
+      `);
+      const existingDef = existingIdxRes.rows[0]?.indexdef || '';
+      const oldIndexExists = existingIdxRes.rows.length > 0;
+      const isUpToDate = oldIndexExists && (
+        existingDef.includes("<> ''") || 
+        existingDef.includes("!= ''") || 
+        existingDef.includes("<> ''::text") ||
+        existingDef.includes("!= ''::text")
+      );
+
+      if (!isUpToDate) {
+        // 2. Pre-flight duplicate check on valid non-empty IDs (never blindly drop or mutate)
+        const dupCheck = await pgPool.query(`
+          SELECT COUNT(*) as duplicate_groups, COALESCE(SUM(grp_count - 1), 0) as excess_rows FROM (
+            SELECT gateway, gateway_payment_id, COUNT(*) as grp_count
+            FROM payments
+            WHERE gateway_payment_id IS NOT NULL AND gateway_payment_id != ''
+            GROUP BY gateway, gateway_payment_id
+            HAVING COUNT(*) > 1
+          ) dups
+        `);
+        const excess = Number(dupCheck.rows[0]?.excess_rows || 0);
+        if (excess > 0) {
+          paymentIndexMigrationError = `payments table has ${excess} duplicate records on non-empty gateway_payment_ids. Existing index was PRESERVED and upgrade was DEFERRED pending manual review.`;
+          console.error(`❌ [MIGRATION ERROR] ${paymentIndexMigrationError}`);
+        } else {
+          // 3. Atomic upgrade on a single checked-out client with rollback safety
+          const client = await pgPool.connect();
+          try {
+            await client.query('BEGIN');
+            if (oldIndexExists) {
+              await client.query(`DROP INDEX IF EXISTS idx_payments_gateway_payid;`);
+            }
+            if (options?.simulateIndexRecreationFailure) {
+              throw new Error('Simulated failure during index recreation');
+            }
+            await client.query(`
+              CREATE UNIQUE INDEX idx_payments_gateway_payid 
+              ON payments(gateway, gateway_payment_id) 
+              WHERE gateway_payment_id IS NOT NULL AND gateway_payment_id != '';
+            `);
+            const verifyTx = await client.query(`
+              SELECT indexdef FROM pg_indexes 
+              WHERE tablename = 'payments' AND indexname = 'idx_payments_gateway_payid'
+            `);
+            const verifiedDefTx = verifyTx.rows[0]?.indexdef || '';
+            const isVerifiedTx = verifyTx.rows.length > 0 && (
+              verifiedDefTx.includes("<> ''") || 
+              verifiedDefTx.includes("!= ''") || 
+              verifiedDefTx.includes("<> ''::text") ||
+              verifiedDefTx.includes("!= ''::text")
+            );
+            if (!isVerifiedTx) {
+              throw new Error('PostgreSQL payment index verification failed post-creation');
+            }
+            await client.query('COMMIT');
+            console.log(`✅ [MIGRATION] idx_payments_gateway_payid successfully upgraded to exclude empty strings.`);
+          } catch (txErr) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            throw txErr;
+          } finally {
+            client.release();
+          }
+        }
+      }
+
+      // 4. Verify resulting index state
+      const verifyRes = await pgPool.query(`
+        SELECT indexdef FROM pg_indexes 
+        WHERE tablename = 'payments' AND indexname = 'idx_payments_gateway_payid'
+      `);
+      const verifiedDef = verifyRes.rows[0]?.indexdef || '';
+      paymentIndexVerified = verifyRes.rows.length > 0 && (
+        verifiedDef.includes("<> ''") || 
+        verifiedDef.includes("!= ''") || 
+        verifiedDef.includes("<> ''::text") ||
+        verifiedDef.includes("!= ''::text")
+      );
+      if (!paymentIndexVerified) {
+        if (!paymentIndexMigrationError) {
+          paymentIndexMigrationError = 'idx_payments_gateway_payid is not active with required predicate excluding empty strings';
+        }
+        console.error(`❌ [MIGRATION ERROR] ${paymentIndexMigrationError}! Uniqueness protection for payment records is incomplete.`);
+      } else {
+        paymentIndexMigrationError = null;
+      }
+    } catch (e) {
+      paymentIndexVerified = false;
+      paymentIndexMigrationError = e.message;
+      console.error('❌ [MIGRATION ERROR] Failed to migrate payment unique index idx_payments_gateway_payid:', e.message);
+    }
+
     try {
       await pgPool.query(`
         UPDATE table_location_verifications SET space_type = 'table' WHERE space_type IS NULL;
@@ -752,6 +860,7 @@ async function createTables() {
         business_type TEXT,
         food_type TEXT,
         service_model TEXT,
+        business_category TEXT DEFAULT 'dine_in',
         plan_tier TEXT DEFAULT 'pro',
         plan_price REAL DEFAULT 999,
         plan_expires_at TEXT,
@@ -760,6 +869,9 @@ async function createTables() {
         theme_color TEXT DEFAULT 'gold',
         scan_count INTEGER DEFAULT 0,
         active INTEGER DEFAULT 1,
+        onboarding_completed INTEGER DEFAULT 1,
+        location_initialized INTEGER DEFAULT 0,
+        owner_email TEXT DEFAULT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -1028,7 +1140,8 @@ async function createTables() {
         restaurant_id INTEGER,
         created_slug TEXT,
         created_jwt TEXT,
-        created_user TEXT
+        created_user TEXT,
+        owner_email TEXT DEFAULT NULL
       );
       CREATE TABLE IF NOT EXISTS table_location_verifications (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1109,6 +1222,7 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'business_type')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN business_type TEXT");
       if (!restoCols.some(c => c.name === 'food_type')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN food_type TEXT");
       if (!restoCols.some(c => c.name === 'service_model')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN service_model TEXT");
+      if (!restoCols.some(c => c.name === 'business_category')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN business_category TEXT DEFAULT 'dine_in'");
       if (!restoCols.some(c => c.name === 'plan_tier')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_tier TEXT DEFAULT 'pro'");
       if (!restoCols.some(c => c.name === 'plan_price')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_price REAL DEFAULT 999");
       if (!restoCols.some(c => c.name === 'plan_expires_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN plan_expires_at TEXT");
@@ -1145,7 +1259,12 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'service_model')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN service_model TEXT DEFAULT 'dine_in'");
       sqliteDb.exec("UPDATE restaurants SET service_model = 'cinema' WHERE business_type = 'cinema_theatre' OR service_model = 'seat_service' OR service_model = 'cinema'");
       sqliteDb.exec("UPDATE restaurants SET service_model = 'hotel' WHERE business_type = 'hotel_resort' OR service_model = 'in_room_dining' OR service_model = 'hotel'");
-      sqliteDb.exec("UPDATE restaurants SET service_model = 'dine_in' WHERE service_model IS NULL OR service_model = '' OR service_model = 'dine_in_table' OR (business_type != 'cinema_theatre' AND business_type != 'hotel_resort')");
+      if (!restoCols.some(c => c.name === 'onboarding_completed')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN onboarding_completed INTEGER DEFAULT 1");
+      if (!restoCols.some(c => c.name === 'location_initialized')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN location_initialized INTEGER DEFAULT 0");
+      if (!restoCols.some(c => c.name === 'owner_email')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN owner_email TEXT DEFAULT NULL");
+
+      const pendingCols = sqliteDb.pragma('table_info(pending_registrations)');
+      if (!pendingCols.some(c => c.name === 'owner_email')) sqliteDb.exec("ALTER TABLE pending_registrations ADD COLUMN owner_email TEXT DEFAULT NULL");
 
       const planCols = sqliteDb.pragma('table_info(saas_plans)');
       if (!planCols.some(c => c.name === 'is_active')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN is_active INTEGER DEFAULT 1");
@@ -1298,7 +1417,91 @@ async function createTables() {
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at)");
       sqliteDb.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_restaurants_phone_unique ON restaurants(phone) WHERE phone IS NOT NULL AND phone != ''");
-      sqliteDb.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_gateway_payid ON payments(gateway, gateway_payment_id)");
+
+      // Safe payment uniqueness migration & partial unique index (versioned migration)
+      try {
+        // 1. Inspect existing index definition in sqlite_master
+        const existingIdx = sqliteDb.prepare(`
+          SELECT sql FROM sqlite_master 
+          WHERE type = 'index' AND tbl_name = 'payments' AND name = 'idx_payments_gateway_payid'
+        `).get();
+        const existingSql = existingIdx?.sql || '';
+        const oldIndexExists = Boolean(existingIdx);
+        const isUpToDate = oldIndexExists && (
+          existingSql.includes("!= ''") || 
+          existingSql.includes("<> ''")
+        );
+
+        if (!isUpToDate) {
+          // 2. Pre-flight duplicate check on valid non-empty IDs (never blindly drop or mutate)
+          const dupCheck = sqliteDb.prepare(`
+            SELECT COUNT(*) as duplicate_groups, COALESCE(SUM(grp_count - 1), 0) as excess_rows FROM (
+              SELECT gateway, gateway_payment_id, COUNT(*) as grp_count
+              FROM payments
+              WHERE gateway_payment_id IS NOT NULL AND gateway_payment_id != ''
+              GROUP BY gateway, gateway_payment_id
+              HAVING COUNT(*) > 1
+            ) dups
+          `).get();
+          const excess = Number(dupCheck?.excess_rows || 0);
+          if (excess > 0) {
+            paymentIndexMigrationError = `payments table has ${excess} duplicate records on non-empty gateway_payment_ids. Existing index was PRESERVED and upgrade was DEFERRED pending manual review.`;
+            console.error(`❌ [MIGRATION ERROR] ${paymentIndexMigrationError}`);
+          } else {
+            // 3. Atomic upgrade inside a single transaction with rollback safety
+            const upgradeMigration = sqliteDb.transaction(() => {
+              if (oldIndexExists) {
+                sqliteDb.exec(`DROP INDEX IF EXISTS idx_payments_gateway_payid;`);
+              }
+              if (options?.simulateIndexRecreationFailure) {
+                throw new Error('Simulated failure during index recreation');
+              }
+              sqliteDb.exec(`
+                CREATE UNIQUE INDEX idx_payments_gateway_payid 
+                ON payments(gateway, gateway_payment_id) 
+                WHERE gateway_payment_id IS NOT NULL AND gateway_payment_id != '';
+              `);
+              const verifyTx = sqliteDb.prepare(`
+                SELECT sql FROM sqlite_master 
+                WHERE type = 'index' AND tbl_name = 'payments' AND name = 'idx_payments_gateway_payid'
+              `).get();
+              const verifiedSqlTx = verifyTx?.sql || '';
+              const isVerifiedTx = Boolean(verifyTx) && (
+                verifiedSqlTx.includes("!= ''") || 
+                verifiedSqlTx.includes("<> ''")
+              );
+              if (!isVerifiedTx) {
+                throw new Error('SQLite payment index verification failed post-creation');
+              }
+            });
+            upgradeMigration();
+            console.log(`✅ [MIGRATION] idx_payments_gateway_payid successfully upgraded to exclude empty strings.`);
+          }
+        }
+
+        // 4. Verify resulting index state
+        const verifyIdx = sqliteDb.prepare(`
+          SELECT sql FROM sqlite_master 
+          WHERE type = 'index' AND tbl_name = 'payments' AND name = 'idx_payments_gateway_payid'
+        `).get();
+        const verifiedSql = verifyIdx?.sql || '';
+        paymentIndexVerified = Boolean(verifyIdx) && (
+          verifiedSql.includes("!= ''") || 
+          verifiedSql.includes("<> ''")
+        );
+        if (!paymentIndexVerified) {
+          if (!paymentIndexMigrationError) {
+            paymentIndexMigrationError = 'SQLite idx_payments_gateway_payid is not active with required predicate excluding empty strings';
+          }
+          console.error(`❌ [MIGRATION ERROR] ${paymentIndexMigrationError}! Uniqueness protection for payment records is incomplete.`);
+        } else {
+          paymentIndexMigrationError = null;
+        }
+      } catch (err) {
+        paymentIndexVerified = false;
+        paymentIndexMigrationError = err.message;
+        console.error('❌ [MIGRATION ERROR] SQLite payment unique index migration error:', err.message);
+      }
     } catch (err) {
       console.warn('SQLite migration info:', err.message);
     }
@@ -2143,6 +2346,13 @@ async function closeDbPool() {
   }
 }
 
+function getPaymentIndexStatus() {
+  return {
+    verified: paymentIndexVerified,
+    error: paymentIndexMigrationError
+  };
+}
+
 async function resetDbForTesting() {
   if (pgPool) {
     try { await pgPool.end(); } catch (e) {}
@@ -2153,7 +2363,14 @@ async function resetDbForTesting() {
     sqliteDb = null;
   }
   isDbInitialized = false;
+  paymentIndexVerified = false;
+  paymentIndexMigrationError = null;
+  initDbPromise = null;
   dbType = 'sqlite';
 }
 
-export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting };
+function getRawDb() {
+  return { pgPool, sqliteDb };
+}
+
+export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting, getPaymentIndexStatus, getRawDb };

@@ -602,10 +602,12 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
     const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1 LIMIT 1', [effectivePlanTier]);
     const dbPlan = planRows[0] || { id: 2, key: 'pro', name: 'Pro Luxury Plan', price: 999 };
 
+    const sysRows = await query("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
+    const canonicalTrialDays = sysRows.length > 0 && parseInt(sysRows[0].value, 10) ? parseInt(sysRows[0].value, 10) : 16;
     const isTrial = (req.body.onboarding_mode === 'trial');
-    const trialDays = isTrial ? 16 : 0;
+    const trialDays = isTrial ? canonicalTrialDays : 0;
     const trialEndISO = isTrial 
-      ? new Date(Date.now() + 16 * 86400 * 1000).toISOString()
+      ? new Date(Date.now() + canonicalTrialDays * 86400 * 1000).toISOString()
       : new Date(Date.now() + 30 * 86400 * 1000).toISOString();
 
     const regId = `reg_sa_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
@@ -647,8 +649,6 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
       service_model: service_model || 'dine_in',
       gstin_number: gstin_number || null,
       owner_username: owner_username.trim(),
-      owner_password,
-      password_hash: passwordHash,
       plan_tier: dbPlan.key,
       plan_price: dbPlan.price,
       subscription_id: cfResult.subscription_id,

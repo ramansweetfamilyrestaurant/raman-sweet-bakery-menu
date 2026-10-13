@@ -53,6 +53,7 @@ export default function BillingView({
   capabilities,
   currencySymbol = '₹',
   onUpgrade,
+  onOpenBillingModal,
   onNavigate,
   onRefreshInfo
 }) {
@@ -217,37 +218,52 @@ export default function BillingView({
     if (!targetPlan || targetPlan.key === currentPlanTier) return;
     setChangingPlanKey(targetPlan.key);
 
+    const openCheckoutModal = (planKey) => {
+      if (typeof onUpgrade === 'function') {
+        onUpgrade(planKey);
+        return true;
+      }
+      if (typeof onOpenBillingModal === 'function') {
+        onOpenBillingModal(planKey);
+        return true;
+      }
+      return false;
+    };
+
     try {
-      // If Cashfree mandate exists, call changePlan API
-      if (isMandateActive) {
-        const res = await changePlan(targetPlan.key, token);
-        if (res && res.success) {
-          setActionSuccessMsg(`✓ Plan upgrade to ${targetPlan.name} scheduled successfully!`);
+      // 1. If no active mandate on file, open Cashfree checkout modal directly
+      if (!isMandateActive) {
+        if (openCheckoutModal(targetPlan.key)) return;
+      }
+
+      // 2. If mandate exists, call server changePlan endpoint
+      const res = await changePlan(targetPlan.key, token);
+      if (res && res.success) {
+        if (res.reauthorization_required) {
+          setActionSuccessMsg(`✓ Plan upgrade to ${targetPlan.name} scheduled! Opening Cashfree to authorize new amount...`);
+          await loadBillingData(true);
+          if (onRefreshInfo) onRefreshInfo();
+          openCheckoutModal(targetPlan.key);
+        } else {
+          setActionSuccessMsg(`✓ Plan change to ${targetPlan.name} scheduled successfully!`);
           await loadBillingData(true);
           if (onRefreshInfo) onRefreshInfo();
           setTimeout(() => setActionSuccessMsg(''), 5000);
-        } else {
-          // Fallback to Cashfree subscription checkout flow
-          if (onUpgrade) onUpgrade(targetPlan.key);
-          else {
-            const checkoutRes = await createCashfreeSubscription(targetPlan.key, token, window.location.href);
-            if (checkoutRes?.payment_url) {
-              window.location.href = checkoutRes.payment_url;
-            }
-          }
         }
       } else {
-        // Direct Cashfree Checkout
-        const checkoutRes = await createCashfreeSubscription(targetPlan.key, token, window.location.href);
-        if (checkoutRes?.payment_url) {
-          window.location.href = checkoutRes.payment_url;
-        } else if (onUpgrade) {
-          onUpgrade(targetPlan.key);
+        // Fallback to Cashfree checkout modal
+        if (!openCheckoutModal(targetPlan.key)) {
+          const checkoutRes = await createCashfreeSubscription(targetPlan.key, token, window.location.href);
+          if (checkoutRes?.auth_link) {
+            window.location.href = checkoutRes.auth_link;
+          }
         }
       }
     } catch (err) {
-      console.warn('Plan change error:', err);
-      alert(err.message || 'Failed to initiate plan upgrade. Please contact support.');
+      console.warn('Plan change notice:', err);
+      if (!openCheckoutModal(targetPlan.key)) {
+        alert(err.message || 'Failed to initiate plan upgrade. Please contact support.');
+      }
     } finally {
       setChangingPlanKey(null);
     }

@@ -60,6 +60,16 @@ const suites = [
     name: 'Payment-First Registration Architecture',
     file: 'server/test_registration.js',
     requiresDb: true
+  },
+  {
+    name: 'P0 Subscription Billing Bug Fixes',
+    file: 'server/tests/p0_billing_fixes.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'Billing Hardening Regression & Consistency',
+    file: 'server/tests/billing_hardening.test.js',
+    requiresDb: true
   }
 ];
 

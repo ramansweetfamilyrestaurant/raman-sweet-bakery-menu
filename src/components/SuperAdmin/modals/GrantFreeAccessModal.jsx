@@ -85,7 +85,7 @@ export default function GrantFreeAccessModal({ resto, plansList, isOpen, onClose
                 style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontWeight: 700 }}
               >
                 <option value="7">7 Days</option>
-                <option value="14">14 Days</option>
+                <option value="16">16 Days (Canonical Trial)</option>
                 <option value="30">30 Days (1 Month)</option>
                 <option value="90">90 Days (3 Months)</option>
                 <option value="180">6 Months</option>

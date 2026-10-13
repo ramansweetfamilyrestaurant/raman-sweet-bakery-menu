@@ -311,8 +311,10 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
       // Mode B: Launch Cashfree JS SDK v3 Subscriptions Checkout (subsSessionId)
       const sessionId = subRes.subscription_session_id || subRes.payment_session_id;
+      const isSandboxMode = subRes.is_sandbox !== false && subRes.environment !== 'production';
+      const sdkMode = subRes.environment || (isSandboxMode ? 'sandbox' : 'production');
       if (sessionId && typeof window.Cashfree === 'function') {
-        const cashfree = window.Cashfree({ mode: subRes.environment || 'sandbox' });
+        const cashfree = window.Cashfree({ mode: sdkMode });
         console.log('[Cashfree SDK] Launching subscription checkout for session:', sessionId);
         
         if (typeof cashfree.subscriptionsCheckout === 'function') {
@@ -332,9 +334,10 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         }
       }
 
-      // Mode C: Fallback Direct URL Redirect for Cashfree Subscriptions Sandbox
+      // Mode C: Fallback Direct URL Redirect for Cashfree Subscriptions
       if (sessionId) {
-        const directSubUrl = `https://sandbox.cashfree.com/subscriptions/auth?sub_session_id=${encodeURIComponent(sessionId)}`;
+        const domain = isSandboxMode ? 'sandbox.cashfree.com' : 'api.cashfree.com';
+        const directSubUrl = subRes.auth_link || `https://${domain}/subscriptions/auth?sub_session_id=${encodeURIComponent(sessionId)}`;
         console.log('[Cashfree Checkout] Redirecting to direct subscription URL:', directSubUrl);
         window.location.href = directSubUrl;
         return;
