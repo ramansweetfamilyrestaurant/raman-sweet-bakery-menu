@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+import { getVerifiedTestDatabaseUrl, verifyTestDatabaseIdentity } from './tests/testDbGuard.js';
+
 let dbType = 'sqlite';
 let pgPool = null;
 let sqliteDb = null;
@@ -13,9 +15,69 @@ let isDbInitialized = false;
 
 const dbFilePath = path.resolve('menu.db');
 
-async function initDb() {
+async function initDb(options = {}) {
   if (isDbInitialized) return;
 
+  const isTestRun =
+    process.env.NODE_ENV === 'test' ||
+    options.isTest === true ||
+    Boolean(process.env.TEST_DATABASE_URL) ||
+    (typeof process.env.npm_lifecycle_event === 'string' && process.env.npm_lifecycle_event.includes('test')) ||
+    (Array.isArray(process.argv) && process.argv.some(arg => typeof arg === 'string' && (arg.includes('test') || arg.includes('.test.'))));
+
+  if (isTestRun) {
+    // HARDENED TEST ISOLATION:
+    // Integration tests MUST use TEST_DATABASE_URL. Never silently read DATABASE_URL!
+    const testDbUrl = getVerifiedTestDatabaseUrl();
+
+    if (testDbUrl.startsWith('postgres://') || testDbUrl.startsWith('postgresql://')) {
+      try {
+        if (!pgPool) {
+          pgPool = new pg.Pool({
+            connectionString: testDbUrl,
+            ssl: { rejectUnauthorized: false },
+            connectionTimeoutMillis: 10000,
+            max: 5,
+            idleTimeoutMillis: 15000,
+          });
+        }
+        dbType = 'postgres';
+        console.log('⚡ Connected to Isolated PostgreSQL Test Database');
+      } catch (err) {
+        console.error('❌ Failed to connect to test PostgreSQL database:', err.message);
+        throw err;
+      }
+    } else {
+      // Isolated test SQLite database
+      const rawPath = testDbUrl.replace(/^sqlite:/i, '').replace(/^file:/i, '').trim() || 'menu_test.db';
+      const testDbPath = rawPath === ':memory:' ? ':memory:' : path.resolve(rawPath);
+      try {
+        const sqliteModule = await import('better-sqlite3');
+        const Database = sqliteModule.default || sqliteModule;
+        sqliteDb = new Database(testDbPath);
+        sqliteDb.pragma('foreign_keys = ON');
+        dbType = 'sqlite';
+        console.log('⚡ Connected to Isolated SQLite Test Database at:', testDbPath);
+      } catch (err) {
+        console.error('❌ Failed to open test SQLite database:', err.message);
+        throw err;
+      }
+    }
+
+    if (!process.env.VERCEL) {
+      await createTables().catch(() => {});
+      isDbInitialized = true;
+      await seedData().catch(() => {});
+    } else {
+      isDbInitialized = true;
+    }
+
+    // Explicit test database identity check where infrastructure permits
+    await verifyTestDatabaseIdentity(query, { isPostgres: dbType === 'postgres' });
+    return;
+  }
+
+  // PRODUCTION & NORMAL RUNTIME:
   if (process.env.DATABASE_URL) {
     try {
       if (!pgPool) {
@@ -828,11 +890,14 @@ async function createTables() {
         restaurant_id INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
-      try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN storage_provider TEXT DEFAULT 'local'"); } catch (e) {}
-      try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_key TEXT"); } catch (e) {}
-      try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_url TEXT"); } catch (e) {}
-      try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN restaurant_id INTEGER DEFAULT 1"); } catch (e) {}
+    `);
 
+    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN storage_provider TEXT DEFAULT 'local'"); } catch (e) {}
+    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_key TEXT"); } catch (e) {}
+    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_url TEXT"); } catch (e) {}
+    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN restaurant_id INTEGER DEFAULT 1"); } catch (e) {}
+
+    sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS daily_sales_summaries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         restaurant_id INTEGER DEFAULT 1,
@@ -846,11 +911,14 @@ async function createTables() {
         UNIQUE (restaurant_id, summary_date),
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
-      try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN items_summary TEXT"); } catch (e) {}
-      try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN payment_methods_summary TEXT"); } catch (e) {}
-      try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_created_status ON orders(restaurant_id, created_at, status)"); } catch (e) {}
-      try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_daily_sales_summaries_resto_date ON daily_sales_summaries(restaurant_id, summary_date)"); } catch (e) {}
+    `);
 
+    try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN items_summary TEXT"); } catch (e) {}
+    try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN payment_methods_summary TEXT"); } catch (e) {}
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_created_status ON orders(restaurant_id, created_at, status)"); } catch (e) {}
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_daily_sales_summaries_resto_date ON daily_sales_summaries(restaurant_id, summary_date)"); } catch (e) {}
+
+    sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS subscriptions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         restaurant_id INTEGER NOT NULL,
@@ -1002,9 +1070,13 @@ async function createTables() {
     const sqliteAlters = [
       'ALTER TABLE subscriptions ADD COLUMN cancel_requested_at TEXT',
       'ALTER TABLE subscriptions ADD COLUMN auto_renew INTEGER DEFAULT 1',
+      'ALTER TABLE subscriptions ADD COLUMN scheduled_plan_id INTEGER',
       'ALTER TABLE subscriptions ADD COLUMN scheduled_plan_key TEXT',
       'ALTER TABLE subscriptions ADD COLUMN plan_change_effective_at TEXT',
-      'ALTER TABLE subscriptions ADD COLUMN cancellation_reason TEXT'
+      'ALTER TABLE subscriptions ADD COLUMN cancellation_reason TEXT',
+      "ALTER TABLE subscriptions ADD COLUMN subscription_type TEXT DEFAULT 'PAID'",
+      'ALTER TABLE subscriptions ADD COLUMN admin_notes TEXT',
+      'ALTER TABLE subscriptions ADD COLUMN grace_period_expires_at TEXT'
     ];
     for (const alt of sqliteAlters) {
       try { sqliteDb.exec(alt); } catch (e) { /* column may already exist */ }
@@ -1058,6 +1130,9 @@ async function createTables() {
       if (!restoCols.some(c => c.name === 'trial_ends_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_ends_at TEXT");
       if (!restoCols.some(c => c.name === 'auto_debit_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_debit_enabled INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'trial_started_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN trial_started_at TEXT");
+      if (!restoCols.some(c => c.name === 'subscription_type')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN subscription_type TEXT DEFAULT 'PAID'");
+      if (!restoCols.some(c => c.name === 'admin_notes')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN admin_notes TEXT");
+      if (!restoCols.some(c => c.name === 'grace_period_expires_at')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN grace_period_expires_at TEXT");
       if (!restoCols.some(c => c.name === 'owner_name')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN owner_name TEXT");
       if (!restoCols.some(c => c.name === 'city')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN city TEXT");
       if (!restoCols.some(c => c.name === 'state')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN state TEXT");
@@ -1068,6 +1143,11 @@ async function createTables() {
       sqliteDb.exec("UPDATE restaurants SET service_model = 'dine_in' WHERE service_model IS NULL OR service_model = '' OR service_model = 'dine_in_table' OR (business_type != 'cinema_theatre' AND business_type != 'hotel_resort')");
 
       const planCols = sqliteDb.pragma('table_info(saas_plans)');
+      if (!planCols.some(c => c.name === 'is_active')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN is_active INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'display_order')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN display_order INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'features')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN features TEXT");
+      if (!planCols.some(c => c.name === 'billing_interval')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN billing_interval TEXT DEFAULT 'monthly'");
+      if (!planCols.some(c => c.name === 'updated_at')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN updated_at TEXT DEFAULT CURRENT_TIMESTAMP");
       if (!planCols.some(c => c.name === 'max_dishes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_dishes INTEGER DEFAULT 9999");
       if (!planCols.some(c => c.name === 'max_categories')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_categories INTEGER DEFAULT 9999");
       if (!planCols.some(c => c.name === 'max_combos')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_combos INTEGER DEFAULT 9999");
@@ -1555,6 +1635,8 @@ async function query(text, params = []) {
     let sql = text;
     // Strip PostgreSQL typecasts (e.g. ::text, ::boolean, ::int, ::bigint)
     sql = sql.replace(/::[a-zA-Z_]+/g, '');
+    // Strip PostgreSQL row-level locking clauses (e.g. FOR UPDATE, FOR SHARE, FOR NO KEY UPDATE, SKIP LOCKED)
+    sql = sql.replace(/\s+FOR\s+(UPDATE|NO\s+KEY\s+UPDATE|SHARE|KEY\s+SHARE)(\s+OF\s+[a-zA-Z0-9_,\s]+)?(\s+(NOWAIT|SKIP\s+LOCKED))?/gi, '');
 
     // Convert booleans to 1 or 0 for SQLite
     const sanitizedParams = params.map(p => (typeof p === 'boolean' ? (p ? 1 : 0) : p));
@@ -2056,4 +2138,17 @@ async function closeDbPool() {
   }
 }
 
-export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb };
+async function resetDbForTesting() {
+  if (pgPool) {
+    try { await pgPool.end(); } catch (e) {}
+    pgPool = null;
+  }
+  if (sqliteDb) {
+    try { sqliteDb.close(); } catch (e) {}
+    sqliteDb = null;
+  }
+  isDbInitialized = false;
+  dbType = 'sqlite';
+}
+
+export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting };

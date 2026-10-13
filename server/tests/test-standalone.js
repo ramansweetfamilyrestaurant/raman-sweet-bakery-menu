@@ -28,3 +28,4 @@ assert(typeof fetchCashfreeSubscriptionStatus === 'function', 'fetchCashfreeSubs
 assert(typeof verifyCashfreeWebhookSignature === 'function', 'verifyCashfreeWebhookSignature is a function');
 
 console.log('✅ ALL SERVER MODULES IMPORTED AND VERIFIED SUCCESSFULLY!');
+process.exit(0);

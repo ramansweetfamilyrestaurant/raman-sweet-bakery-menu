@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { query, withTransaction } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, getCashfreeConfigAsync, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
+import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, getCashfreeConfig, getCashfreeConfigAsync, verifyCashfreeWebhookSignature, verifyCashfreeWebhookSignatureAsync } from '../services/cashfree.js';
 import { createOneTimeAuthCode } from '../services/authCodeService.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import { registrationRateLimiter } from '../middleware/rateLimiters.js';
@@ -199,7 +199,7 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
  * Fully idempotent — safe against duplicate webhooks & user page refreshes.
  */
 export async function finalizePendingRegistration(reg_id, inputSubId = null) {
-  const regRows = await query('SELECT payload, created_slug, created_jwt, created_user, status FROM pending_registrations WHERE id = $1', [reg_id]);
+  const regRows = await query('SELECT payload, created_slug, created_jwt, created_user, status, cashfree_subscription_id FROM pending_registrations WHERE id = $1', [reg_id]);
   if (!regRows || regRows.length === 0) {
     throw new Error('Registration session expired or invalid');
   }
@@ -224,12 +224,21 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
     };
   }
 
-  const targetSubId = inputSubId || regData.subscription_id;
+  // Authoritative server-issued subscription ID from pending_registrations record
+  const authoritativeSubId = regRecord.cashfree_subscription_id || regData.subscription_id;
 
-  if (!targetSubId) {
-    console.warn('[REGISTRATION] verification failed — missing subscription_id');
-    throw new Error('Payment session verification failed. Missing subscription ID.');
+  if (!authoritativeSubId) {
+    console.warn('[REGISTRATION] verification failed — missing authoritative subscription_id in DB record');
+    throw new Error('Payment session verification failed. Missing authoritative subscription ID in registration record.');
   }
+
+  // Enforce ownership: reject if client callback supplies a mismatched subscription ID
+  if (inputSubId && String(inputSubId).trim() !== String(authoritativeSubId).trim()) {
+    console.warn(`[REGISTRATION] Security Violation: Client callback subscription ID '${inputSubId}' does not match authoritative ID '${authoritativeSubId}'`);
+    throw new Error('Subscription reference mismatch: The callback subscription identifier does not match this registration session.');
+  }
+
+  const targetSubId = authoritativeSubId;
 
   // Server-side Cashfree API Verification
   console.log('[REGISTRATION] verification started for subId:', targetSubId);
@@ -243,6 +252,14 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
     console.warn(`[REGISTRATION] verification failed — status '${statusStr}' not authorized`);
     await query("UPDATE pending_registrations SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [reg_id]);
     throw new Error(`Subscription payment was not authorized (Status: ${statusStr || 'FAILED'})`);
+  }
+
+  // Validate customer phone from Cashfree against registration data if present
+  const cfPhone = (cfStatus.customer_details?.customer_phone || '').replace(/[^0-9]/g, '').slice(-10);
+  const regPhone = (regData.phone || '').replace(/[^0-9]/g, '').slice(-10);
+  if (cfPhone && regPhone && cfPhone !== regPhone) {
+    console.warn(`[REGISTRATION] Security Alert: Customer phone mismatch! Cashfree has '${cfPhone}', registration has '${regPhone}'`);
+    throw new Error('Customer identity mismatch between registration session and payment gateway mandate.');
   }
 
   console.log('[REGISTRATION] verification successful for subId:', targetSubId);
@@ -529,24 +546,63 @@ router.post('/create-mandate', authenticateToken, handleCreateSubscription);
 router.get('/verify-subscription', authenticateToken, async (req, res) => {
   try {
     const restoId = req.user?.restaurant_id;
-    const subscriptionId = req.query.subscription_id;
+    const subscriptionId = (req.query.subscription_id || '').trim();
+
+    if (!restoId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
 
     if (!subscriptionId) {
       return res.status(400).json({ error: 'subscription_id parameter is required' });
     }
 
-    const cfStatus = await fetchCashfreeSubscriptionStatus(subscriptionId);
+    // 1. Authoritative Local Record Check: verify that subscriptionId belongs strictly to this restaurant!
+    const subRows = await query(
+      'SELECT id, gateway_subscription_id, status FROM subscriptions WHERE restaurant_id = $1 AND gateway_subscription_id = $2',
+      [restoId, subscriptionId]
+    );
 
+    const restoRows = await query(
+      'SELECT id, mandate_id FROM restaurants WHERE id = $1',
+      [restoId]
+    );
+
+    const isOwnedByResto = (subRows && subRows.length > 0) || (restoRows && restoRows[0]?.mandate_id === subscriptionId);
+    if (!isOwnedByResto) {
+      console.warn(`[VERIFY-SUB] Cross-tenant access attempt rejected: Restaurant ${restoId} attempted to verify unowned subscription ${subscriptionId}`);
+      return res.status(403).json({
+        error: 'SUBSCRIPTION_OWNERSHIP_MISMATCH',
+        message: 'The requested subscription does not belong to this restaurant.'
+      });
+    }
+
+    // 2. Fetch Cashfree Subscription Status server-side
+    const cfStatus = await fetchCashfreeSubscriptionStatus(subscriptionId);
     if (!cfStatus.success) {
       return res.status(400).json(cfStatus);
     }
 
+    // 3. Verify Cashfree customer identity
+    const expectedCustomerId = `cust_${restoId}`;
+    const cfCustomerId = cfStatus.customer_details?.customer_id;
+    if (cfCustomerId && cfCustomerId !== expectedCustomerId) {
+      console.warn(`[VERIFY-SUB] Cashfree customer ID mismatch: Expected ${expectedCustomerId}, got ${cfCustomerId}`);
+      return res.status(403).json({
+        error: 'TENANT_MISMATCH',
+        message: 'The payment gateway customer details do not match your restaurant identity.'
+      });
+    }
+
     const isAuthorized = cfStatus.subscription_status === 'ACTIVE';
 
-    if (restoId && isAuthorized) {
+    if (isAuthorized) {
       await query(`
         UPDATE restaurants SET mandate_id = $1, mandate_status = 'active', auto_debit_enabled = 1 WHERE id = $2
       `, [subscriptionId, restoId]);
+
+      await query(`
+        UPDATE subscriptions SET status = 'trialing', updated_at = CURRENT_TIMESTAMP WHERE restaurant_id = $1 AND gateway_subscription_id = $2 AND status = 'pending'
+      `, [restoId, subscriptionId]);
 
       await logPaymentAudit(restoId, 'CASHFREE_SANDBOX_SUB_VERIFIED', {
         subscription_id: subscriptionId,
@@ -601,72 +657,70 @@ const handleSubscriptionReturn = async (req, res) => {
     appBase = getAppBaseUrl(req);
     baseRedirectUrl = `${appBase}/billing`;
 
-    // 1. Read subscriptionId from POST body fields OR query parameters
-    let subscriptionId =
-      (req.body && (req.body.subscriptionId || req.body.subscription_id || req.body.subId || req.body.cf_subscription_id || req.body.sub_id || req.body.order_id || req.body.orderId || req.body.referenceId || req.body.payment_id)) ||
+    // 1. Read subscriptionId from POST body fields OR query parameters strictly
+    const rawSubId =
+      (req.body && (req.body.subscriptionId || req.body.subscription_id || req.body.subId || req.body.cf_subscription_id || req.body.sub_id)) ||
       req.query.subscription_id ||
       req.query.subscriptionId ||
       req.query.sub_id ||
       req.query.subId ||
       req.query.cf_subscription_id ||
-      req.query.order_id ||
-      req.query.orderId ||
       null;
 
-    // Fallback: If subscriptionId missing in request, lookup the most recent subscription in DB
-    let fallbackRestoId = null;
+    const subscriptionId = rawSubId ? String(rawSubId).trim() : null;
+
+    // Strict rejection: NEVER use global database fallback (ORDER BY id DESC LIMIT 1)!
     if (!subscriptionId) {
-      const recentSub = await query(
-        "SELECT gateway_subscription_id, restaurant_id FROM subscriptions ORDER BY id DESC LIMIT 1"
-      );
-      if (recentSub && recentSub.length > 0) {
-        subscriptionId = recentSub[0].gateway_subscription_id;
-        fallbackRestoId = recentSub[0].restaurant_id;
-        console.log('[Cashfree Return] Resolved subscriptionId from DB fallback:', subscriptionId, 'restoId:', fallbackRestoId);
-      }
+      console.warn('[Cashfree Return] Rejected: Missing subscription ID in callback request.');
+      return res.redirect(303, `${baseRedirectUrl}?verified=false&status=MISSING_SUBSCRIPTION_REFERENCE`);
     }
 
     console.log('[Cashfree Return] Processing return for subscription_id:', subscriptionId);
 
-    // 2. Fetch Cashfree Subscription Status server-side
-    let isAuthorized = false;
-    let subStatus = 'PENDING';
+    // 2. Resolve target restaurant strictly by authoritative mapping in database
+    const subRows = await query(
+      'SELECT restaurant_id FROM subscriptions WHERE gateway_subscription_id = $1 ORDER BY id DESC LIMIT 1',
+      [subscriptionId]
+    );
+    let restoId = subRows[0]?.restaurant_id || null;
 
-    if (subscriptionId) {
-      const cfStatus = await fetchCashfreeSubscriptionStatus(subscriptionId);
-      subStatus = cfStatus.subscription_status || 'PENDING';
-      // ONLY 'ACTIVE' status means UPI AutoPay Mandate is authorized!
-      isAuthorized = cfStatus.success && (subStatus === 'ACTIVE' || subStatus === 'BANK_APPROVAL_PENDING');
-    }
-
-    // 3. Resolve target restaurant from database
-    let restoId = fallbackRestoId;
-    if (!restoId && subscriptionId) {
-      const subRows = await query(
-        'SELECT restaurant_id FROM subscriptions WHERE gateway_subscription_id = $1 OR gateway_customer_id = $1 ORDER BY id DESC LIMIT 1',
+    if (!restoId) {
+      const restoRows = await query(
+        'SELECT id FROM restaurants WHERE mandate_id = $1 LIMIT 1',
         [subscriptionId]
       );
-      restoId = subRows[0]?.restaurant_id;
+      restoId = restoRows[0]?.id || null;
     }
 
     if (!restoId) {
-      const recentRows = await query(
-        "SELECT id FROM restaurants WHERE mandate_status = 'pending' ORDER BY id DESC LIMIT 1"
-      );
-      restoId = recentRows[0]?.id;
+      console.warn('[Cashfree Return] Rejected: Unmapped subscription reference:', subscriptionId);
+      return res.redirect(303, `${baseRedirectUrl}?verified=false&status=UNMAPPED_SUBSCRIPTION`);
     }
 
-    if (restoId && isAuthorized) {
+    // 3. Fetch Cashfree Subscription Status server-side
+    const cfStatus = await fetchCashfreeSubscriptionStatus(subscriptionId);
+    const subStatus = cfStatus.subscription_status || 'PENDING';
+    const isAuthorized = cfStatus.success && (subStatus === 'ACTIVE' || subStatus === 'BANK_APPROVAL_PENDING');
+
+    // 4. Verify tenant customer identity matches Cashfree record
+    const cfCustomerId = cfStatus.customer_details?.customer_id;
+    const expectedCustomerId = `cust_${restoId}`;
+    if (cfCustomerId && cfCustomerId !== expectedCustomerId) {
+      console.error('[Cashfree Return] Security Violation: Customer ID mismatch. Expected:', expectedCustomerId, 'Received:', cfCustomerId);
+      return res.redirect(303, `${baseRedirectUrl}?verified=false&status=TENANT_MISMATCH`);
+    }
+
+    if (isAuthorized) {
       const restoRows = await query('SELECT slug FROM restaurants WHERE id = $1', [restoId]);
       const restoSlug = restoRows[0]?.slug;
 
       // Mandate Authorized! Update active status in DB
       await query(
         "UPDATE restaurants SET mandate_id = $1, mandate_status = 'active', auto_debit_enabled = 1 WHERE id = $2",
-        [subscriptionId || `sub_${restoId}`, restoId]
+        [subscriptionId, restoId]
       );
       await query(
-        "UPDATE subscriptions SET status = 'trialing' WHERE restaurant_id = $1",
+        "UPDATE subscriptions SET status = 'trialing', updated_at = CURRENT_TIMESTAMP WHERE restaurant_id = $1 AND (status = 'pending' OR status = 'initialized')",
         [restoId]
       );
       await logPaymentAudit(restoId, 'CASHFREE_RETURN_VERIFIED', {
@@ -684,12 +738,10 @@ const handleSubscriptionReturn = async (req, res) => {
 
     // Mandate Authorization Failed, Pending, or Cancelled!
     console.warn('[Cashfree Return] Mandate NOT authorized. Status:', subStatus, 'restoId:', restoId);
-    if (restoId) {
-      await query(
-        "UPDATE restaurants SET mandate_status = 'pending', auto_debit_enabled = 0 WHERE id = $1 AND (mandate_status IS NULL OR mandate_status != 'active')",
-        [restoId]
-      );
-    }
+    await query(
+      "UPDATE restaurants SET mandate_status = 'pending', auto_debit_enabled = 0 WHERE id = $1 AND (mandate_status IS NULL OR mandate_status != 'active')",
+      [restoId]
+    );
     return res.redirect(303, `${baseRedirectUrl}?verified=false&status=${encodeURIComponent(subStatus)}`);
   } catch (err) {
     console.error('[Cashfree Return] Error during return processing:', err.message);
@@ -711,18 +763,13 @@ const handleCashfreeWebhook = async (req, res) => {
   const signature = req.headers['x-webhook-signature'] || req.headers['x-cashfree-signature'];
   const timestamp = req.headers['x-webhook-timestamp'] || req.headers['x-cashfree-timestamp'];
 
-  // 1. Signature Verification Security Check & Test Bypass Hardening
-  const isTestEnv = process.env.NODE_ENV === 'test';
-  const isProduction = Boolean(process.env.NODE_ENV === 'production' || process.env.VERCEL);
-  const isBypassTesting = Boolean(isTestEnv && req.headers['x-test-bypass'] === 'true');
-  const secretPresent = Boolean((process.env.CASHFREE_CLIENT_SECRET || '').trim());
-
-  if (isProduction && !secretPresent) {
-    console.error('⚠️ [WEBHOOK ERROR] CASHFREE_CLIENT_SECRET is missing in production environment.');
-    return res.status(500).json({ error: 'CONFIG_ERROR', message: 'Webhook secret is unconfigured in production environment' });
+  if (!rawBody || !signature || !timestamp) {
+    return res.status(401).json({ error: 'INVALID_SIGNATURE', message: 'Missing signature headers or raw request payload' });
   }
 
-  const isValidSignature = isBypassTesting || verifyCashfreeWebhookSignature(rawBody, timestamp, signature);
+  // 1. Signature Verification Security Check (Strict Async Resolution from system_settings or env)
+  // Request header bypass ('x-test-bypass') is REMOVED permanently.
+  const isValidSignature = await verifyCashfreeWebhookSignatureAsync(rawBody, timestamp, signature);
 
   if (!isValidSignature) {
     console.warn(`⚠️ [WEBHOOK REJECTED] Invalid Cashfree signature from IP: ${req.ip}`);
@@ -733,14 +780,16 @@ const handleCashfreeWebhook = async (req, res) => {
   try {
     payload = (typeof req.body === 'object' && req.body !== null) ? req.body : JSON.parse(rawBody || '{}');
   } catch (e) {
-    payload = {};
+    return res.status(400).json({ error: 'INVALID_PAYLOAD', message: 'Malformed JSON payload' });
   }
-  const eventType = payload.type || payload.event_type || 'UNKNOWN_EVENT';
+
+  // Support event field according to Cashfree Subscriptions API schema
+  const eventType = payload.event || payload.type || payload.event_type || 'UNKNOWN_EVENT';
   const data = payload.data || payload;
 
-  const subscriptionId = data.subscription_details?.subscription_id || data.subscription_id || data.order_tags?.subscription_id;
-  const paymentId = data.payment_details?.payment_id || data.payment_id || data.cf_payment_id || `pay_${Date.now()}`;
-  const eventId = payload.event_id || payload.id || `${eventType}_${subscriptionId || 'nosub'}_${paymentId}`;
+  const subscriptionId = data.subscription_details?.subscription_id || data.subscription_id || data.order_tags?.subscription_id || null;
+  const paymentId = data.payment_details?.payment_id || data.payment_id || data.cf_payment_id || null;
+  const eventId = payload.event_id || payload.id || (subscriptionId && paymentId ? `${eventType}_${subscriptionId}_${paymentId}` : `${eventType}_${Date.now()}`);
 
   try {
     // 2. Atomic Database Transaction with Webhook Idempotency Check
@@ -786,44 +835,143 @@ const handleCashfreeWebhook = async (req, res) => {
         }
       }
 
+      // Out-of-order check: do not reactivate cancelled or expired subscriptions
+      if (subDbRecord && ['cancelled', 'expired'].includes(subDbRecord.status)) {
+        if (['SUBSCRIPTION_AUTH_STATUS', 'SUBSCRIPTION_AUTHORIZATION_SUCCESS', 'SUBSCRIPTION_STATUS_CHANGED'].includes(eventType)) {
+          const incomingStatus = (data.authorization_details?.authorization_status || data.status || data.subscription_status || '').toUpperCase();
+          if (incomingStatus === 'ACTIVE' || incomingStatus === 'SUCCESS') {
+            console.warn(`[WEBHOOK] Out-of-order activation event ${eventType} ignored for terminated subscription ${subscriptionId}`);
+            await txQuery('UPDATE webhook_events SET processed = $1, processed_at = CURRENT_TIMESTAMP WHERE gateway = $2 AND event_id = $3', [true, 'cashfree', eventId]);
+            return { status: 'IGNORED_OUT_OF_ORDER', message: 'Subscription is in terminal state' };
+          }
+        }
+      }
+
       // Handle Specific Event Types
       if (eventType === 'SUBSCRIPTION_AUTH_STATUS' || eventType === 'SUBSCRIPTION_AUTHORIZATION_SUCCESS') {
-        const authStatus = data.authorization_details?.authorization_status || data.status || 'ACTIVE';
+        // Never default missing/unknown status to ACTIVE
+        const authStatus = data.authorization_details?.authorization_status || data.status || data.subscription_status || null;
         if (authStatus === 'ACTIVE' || authStatus === 'SUCCESS') {
           if (restoId) {
             await txQuery("UPDATE restaurants SET mandate_status = 'active', mandate_id = $1, auto_debit_enabled = 1 WHERE id = $2", [subscriptionId, restoId]);
           }
           await txQuery("UPDATE subscriptions SET status = 'trialing' WHERE gateway_subscription_id = $1 AND status = 'pending'", [subscriptionId]);
-        } else {
+        } else if (authStatus === 'FAILED' || authStatus === 'REJECTED' || authStatus === 'CANCELLED') {
           if (restoId) {
             await txQuery("UPDATE restaurants SET mandate_status = 'failed' WHERE id = $1", [restoId]);
           }
+        } else {
+          console.warn(`[WEBHOOK] Authorization status unknown or missing: ${authStatus}. Entitlement will not be granted.`);
+        }
+      }
+
+      else if (eventType === 'SUBSCRIPTION_STATUS_CHANGED') {
+        const subStatus = (data.status || data.subscription_status || '').toUpperCase();
+        if (subStatus === 'ACTIVE') {
+          if (restoId && subDbRecord && !['cancelled', 'expired'].includes(subDbRecord.status)) {
+            await txQuery("UPDATE restaurants SET mandate_status = 'active', auto_debit_enabled = 1 WHERE id = $1", [restoId]);
+            await txQuery("UPDATE subscriptions SET status = 'active' WHERE gateway_subscription_id = $1", [subscriptionId]);
+          }
+        } else if (subStatus === 'CANCELLED') {
+          if (restoId) {
+            await txQuery(`UPDATE subscriptions SET cancel_requested_at = COALESCE(cancel_requested_at, CURRENT_TIMESTAMP), auto_renew = 0, cancelled_at = CURRENT_TIMESTAMP WHERE gateway_subscription_id = $1`, [subscriptionId]);
+            await txQuery("UPDATE restaurants SET mandate_status = 'cancelled', auto_debit_enabled = 0 WHERE id = $1", [restoId]);
+          }
+        } else if (subStatus === 'PAUSED') {
+          if (restoId) {
+            await txQuery("UPDATE subscriptions SET status = 'paused' WHERE gateway_subscription_id = $1", [subscriptionId]);
+          }
+        } else if (subStatus === 'EXPIRED' || subStatus === 'COMPLETED') {
+          if (restoId) {
+            await txQuery("UPDATE subscriptions SET status = 'expired' WHERE gateway_subscription_id = $1", [subscriptionId]);
+          }
+        } else {
+          console.warn(`[WEBHOOK] SUBSCRIPTION_STATUS_CHANGED received unhandled status: ${subStatus}`);
         }
       }
 
       else if (eventType === 'SUBSCRIPTION_PAYMENT_SUCCESS' || eventType === 'SUBSCRIPTION_NEW_PAYMENT') {
-        const payAmount = Number(data.payment_details?.payment_amount || data.payment_amount || data.plan_details?.plan_amount || 0);
-        
-        if (restoId && subDbRecord) {
-          // Amount Validation against SaaS Plan
-          const planRows = await txQuery('SELECT price FROM saas_plans WHERE id = $1', [subDbRecord.plan_id || 2]);
-          const expectedPrice = Number(planRows[0]?.price || 499);
+        const payStatus = (data.payment_details?.payment_status || data.payment_status || data.status || 'SUCCESS').toUpperCase();
+        if (payStatus !== 'SUCCESS') {
+          console.warn(`[WEBHOOK] Payment status is ${payStatus}, not SUCCESS. Entitlement skipped.`);
+        } else if (restoId && subDbRecord) {
+          const payAmount = Number(data.payment_details?.payment_amount || data.payment_amount || data.plan_details?.plan_amount || 0);
+          const planRows = await txQuery('SELECT * FROM saas_plans WHERE id = $1', [subDbRecord.plan_id || 2]);
+          const currentPlan = planRows[0];
+          const expectedPrice = Number(currentPlan?.price || 499);
 
-          if (payAmount > 0 && payAmount < expectedPrice) {
-            console.warn(`⚠️ Payment amount discrepancy: Received ₹${payAmount}, expected ₹${expectedPrice}. Marking for manual reconciliation.`);
-            await logPaymentAudit(restoId, 'PAYMENT_AMOUNT_MISMATCH', { subscription_id: subscriptionId, received: payAmount, expected: expectedPrice });
+          if (payAmount <= 0) {
+            console.warn(`⚠️ Payment amount non-positive: ₹${payAmount}. Entitlement not granted.`);
+            await logPaymentAudit(restoId, 'INVALID_PAYMENT_AMOUNT', { subscription_id: subscriptionId, received: payAmount });
+          } else if (payAmount < expectedPrice) {
+            // Discrepancy: paid amount is less than expected plan price
+            // Record payment for reconciliation; do NOT grant higher tier entitlement, but preserve access for paid period
+            console.warn(`⚠️ Payment amount discrepancy: Received ₹${payAmount}, expected ₹${expectedPrice}. Reconciling for tenant.`);
+            await logPaymentAudit(restoId, 'PAYMENT_AMOUNT_MISMATCH', {
+              subscription_id: subscriptionId,
+              received: payAmount,
+              expected: expectedPrice,
+              reconciliation: 'preserved_paid_period_without_higher_tier'
+            });
+
+            const existingPayments = await txQuery('SELECT id FROM payments WHERE gateway = $1 AND gateway_payment_id = $2', ['cashfree', paymentId || eventId]);
+            if (!existingPayments || existingPayments.length === 0) {
+              const paidAtISO = new Date().toISOString();
+              await txQuery(`
+                INSERT INTO payments (restaurant_id, subscription_id, gateway, gateway_payment_id, amount, currency, status, payment_type, paid_at)
+                VALUES ($1, $2, 'cashfree', $3, $4, 'INR', 'SUCCESS', 'recurring_mismatch', $5)
+              `, [restoId, subDbRecord.id, paymentId || eventId, payAmount, paidAtISO]);
+            }
+
+            const now = new Date();
+            const periodEnd = addCalendarMonth(now);
+            const periodStart = now.toISOString();
+
+            await txQuery(`
+              UPDATE subscriptions SET 
+                status = 'active',
+                current_period_start = $1,
+                current_period_end = $2,
+                next_billing_at = $3,
+                updated_at = $4
+              WHERE gateway_subscription_id = $5
+            `, [periodStart, periodEnd, periodEnd, periodStart, subscriptionId]);
+
+            await txQuery(`
+              UPDATE restaurants SET active = true, plan_expires_at = $1 WHERE id = $2
+            `, [periodEnd, restoId]);
           } else {
+            // Paid amount is valid and meets or exceeds expectedPrice
+            // Check if there was a scheduled plan upgrade waiting for payment confirmation
+            if (subDbRecord.scheduled_plan_id) {
+              const scheduledPlanRows = await txQuery('SELECT * FROM saas_plans WHERE id = $1', [subDbRecord.scheduled_plan_id]);
+              const schedPlan = scheduledPlanRows[0];
+              if (schedPlan && payAmount >= Number(schedPlan.price)) {
+                await txQuery(`
+                  UPDATE subscriptions SET 
+                    plan_id = $1,
+                    amount = $2,
+                    scheduled_plan_id = NULL,
+                    scheduled_plan_key = NULL,
+                    plan_change_effective_at = NULL
+                  WHERE gateway_subscription_id = $3
+                `, [schedPlan.id, Number(schedPlan.price), subscriptionId]);
+                await txQuery(`
+                  UPDATE restaurants SET plan_tier = $1, plan_price = $2 WHERE id = $3
+                `, [schedPlan.key, Number(schedPlan.price), restoId]);
+              }
+            }
+
             // Idempotent payment recording
-            const existingPayments = await txQuery('SELECT id FROM payments WHERE gateway = $1 AND gateway_payment_id = $2', ['cashfree', paymentId]);
+            const existingPayments = await txQuery('SELECT id FROM payments WHERE gateway = $1 AND gateway_payment_id = $2', ['cashfree', paymentId || eventId]);
             if (!existingPayments || existingPayments.length === 0) {
               const paidAtISO = new Date().toISOString();
               await txQuery(`
                 INSERT INTO payments (restaurant_id, subscription_id, gateway, gateway_payment_id, amount, currency, status, payment_type, paid_at)
                 VALUES ($1, $2, 'cashfree', $3, $4, 'INR', 'SUCCESS', 'recurring', $5)
-              `, [restoId, subDbRecord.id, paymentId, payAmount || expectedPrice, paidAtISO]);
+              `, [restoId, subDbRecord.id, paymentId || eventId, payAmount || expectedPrice, paidAtISO]);
             }
 
-            // Calendar-month billing extension (e.g. Jan 15 -> Feb 15)
             const now = new Date();
             const periodEnd = addCalendarMonth(now);
             const periodStart = now.toISOString();
@@ -1094,6 +1242,8 @@ router.post('/change-plan', authenticateToken, async (req, res) => {
 
     const nowISO = new Date().toISOString();
     const targetPrice = Number(targetPlan.price);
+    const currentPrice = Number(sub.amount || sub.plan_price || 0);
+    const isHigherPrice = targetPrice > currentPrice;
 
     // TRIAL: Immediate plan change (trial dates unchanged)
     if (sub.status === 'trialing' || sub.status === 'pending') {
@@ -1113,6 +1263,7 @@ router.post('/change-plan', authenticateToken, async (req, res) => {
         to_plan: targetPlanKey,
         new_price: targetPrice,
         effective: 'immediate',
+        reauthorization_required: isHigherPrice,
         trial_end: sub.trial_ends_at || sub.plan_expires_at
       });
 
@@ -1122,6 +1273,7 @@ router.post('/change-plan', authenticateToken, async (req, res) => {
         from_plan: currentPlanKey,
         to_plan: targetPlanKey,
         new_price: targetPrice,
+        reauthorization_required: isHigherPrice,
         trial_ends_at: sub.trial_ends_at || sub.plan_expires_at,
         message: `Plan changed to ${targetPlan.name}. Your trial continues unchanged. First charge after trial will be ₹${targetPrice}/month.`
       });
@@ -1144,7 +1296,8 @@ router.post('/change-plan', authenticateToken, async (req, res) => {
       from_plan: currentPlanKey,
       to_plan: targetPlanKey,
       new_price: targetPrice,
-      effective_at: effectiveAt
+      effective_at: effectiveAt,
+      reauthorization_required: isHigherPrice
     });
 
     res.json({
@@ -1154,7 +1307,10 @@ router.post('/change-plan', authenticateToken, async (req, res) => {
       to_plan: targetPlanKey,
       new_price: targetPrice,
       effective_at: effectiveAt,
-      message: `Plan change scheduled. Your current ${currentPlanKey} plan continues until ${new Date(effectiveAt).toLocaleDateString('en-IN')}. ${targetPlan.name} (₹${targetPrice}/month) will activate from your next billing cycle.`
+      reauthorization_required: isHigherPrice,
+      message: isHigherPrice
+        ? `Plan change scheduled. Your current ${currentPlanKey} plan continues until ${new Date(effectiveAt).toLocaleDateString('en-IN')}. ${targetPlan.name} (₹${targetPrice}/month) will take effect at your next billing cycle. Re-authorization may be prompted at renewal.`
+        : `Plan change scheduled. Your current ${currentPlanKey} plan continues until ${new Date(effectiveAt).toLocaleDateString('en-IN')}. ${targetPlan.name} (₹${targetPrice}/month) will activate from your next billing cycle.`
     });
   } catch (err) {
     console.error('Change plan error:', err);

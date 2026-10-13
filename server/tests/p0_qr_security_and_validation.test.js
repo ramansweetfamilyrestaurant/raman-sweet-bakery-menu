@@ -18,6 +18,7 @@ import {
   isValidQrTokenFormat as clientIsValidQrTokenFormat
 } from '../../src/utils/qrSecurity.js';
 import { query, initDb } from '../db.js';
+import { assertTestDatabaseEnv, hasTestDatabaseConfigured, isCiTestMode } from './testDbGuard.js';
 
 async function runTestSuite() {
   console.log('======================================================================');
@@ -26,6 +27,7 @@ async function runTestSuite() {
 
   let passed = 0;
   let failed = 0;
+  let skipped = 0;
 
   function test(name, fn) {
     try {
@@ -197,7 +199,7 @@ async function runTestSuite() {
   // ----------------------------------------------------------------------
   console.log('\n--- SECTION 4: Physical Space Capacity Validation ---');
 
-  testAsync('Cabins reject requests when total_cabins is 0, even if total_tables > 0', async () => {
+  await testAsync('Cabins reject requests when total_cabins is 0, even if total_tables > 0', async () => {
     const resto = {
       id: 101,
       total_tables: 20,
@@ -210,7 +212,7 @@ async function runTestSuite() {
     assert.match(check.message, /does not have cabin spaces configured/i);
   });
 
-  testAsync('Rooms reject requests when total_rooms is 0, even if total_tables > 0', async () => {
+  await testAsync('Rooms reject requests when total_rooms is 0, even if total_tables > 0', async () => {
     const resto = {
       id: 101,
       total_tables: 20,
@@ -223,7 +225,7 @@ async function runTestSuite() {
     assert.match(check.message, /does not have room spaces configured/i);
   });
 
-  testAsync('VIP lounges reject requests when total_vip is 0, even if total_tables > 0', async () => {
+  await testAsync('VIP lounges reject requests when total_vip is 0, even if total_tables > 0', async () => {
     const resto = {
       id: 101,
       total_tables: 20,
@@ -236,7 +238,7 @@ async function runTestSuite() {
     assert.match(check.message, /does not have vip spaces configured/i);
   });
 
-  testAsync('Valid configured physical spaces within limits are accepted', async () => {
+  await testAsync('Valid configured physical spaces within limits are accepted', async () => {
     const resto = {
       id: 101,
       total_tables: 15,
@@ -257,7 +259,7 @@ async function runTestSuite() {
     assert.strictEqual(validTable.valid, true);
   });
 
-  testAsync('Physical space exceeding capacity is rejected', async () => {
+  await testAsync('Physical space exceeding capacity is rejected', async () => {
     const resto = {
       id: 101,
       total_tables: 15,
@@ -277,78 +279,91 @@ async function runTestSuite() {
   // ----------------------------------------------------------------------
   console.log('\n--- SECTION 5: Authoritative Cinema Seat DB Validation ---');
 
-  await initDb();
-
-  // Find or insert valid test restaurant
-  let testRestoId = 1;
-  try {
-    const existingRestos = await query('SELECT id FROM restaurants ORDER BY id ASC LIMIT 1');
-    if (existingRestos && existingRestos.length > 0) {
-      testRestoId = existingRestos[0].id;
+  const hasTestDb = hasTestDatabaseConfigured();
+  const isCi = isCiTestMode();
+  if (!hasTestDb) {
+    if (isCi) {
+      console.error('  ❌ [CI VALIDATION FAILURE] Cinema Seat DB Validation requires TEST_DATABASE_URL. Integration tests cannot be skipped in CI mode.');
+      failed += 4;
+    } else {
+      console.log('  ⚠️  [NOT RUN] Cinema Seat DB Validation skipped: TEST_DATABASE_URL not set (isolated test database required).');
+      skipped += 4;
     }
-  } catch (e) {}
+  } else {
+    assertTestDatabaseEnv();
+    await initDb();
 
-  let screenId = null;
-  let activeSeatId = null;
-  let inactiveSeatId = null;
+    // Find or insert valid test restaurant
+    let testRestoId = 1;
+    try {
+      const existingRestos = await query('SELECT id FROM restaurants ORDER BY id ASC LIMIT 1');
+      if (existingRestos && existingRestos.length > 0) {
+        testRestoId = existingRestos[0].id;
+      }
+    } catch (e) {}
 
-  try {
-    const scrRes = await query(`
-      INSERT INTO restaurant_cinema_screens (restaurant_id, screen_number, name, active)
-      VALUES ($1, 88, 'Screen 88 Test Audi', true)
-      RETURNING id
-    `, [testRestoId]);
-    screenId = scrRes[0]?.id || scrRes.lastInsertRowid;
+    let screenId = null;
+    let activeSeatId = null;
+    let inactiveSeatId = null;
 
-    const seat1Res = await query(`
-      INSERT INTO restaurant_cinema_seats (restaurant_id, screen_id, row_label, seat_number, seat_code, active)
-      VALUES ($1, $2, 'A', 1, 'S88-A-1', true)
-      RETURNING id
-    `, [testRestoId, screenId]);
-    activeSeatId = seat1Res[0]?.id || seat1Res.lastInsertRowid;
+    try {
+      const scrRes = await query(`
+        INSERT INTO restaurant_cinema_screens (restaurant_id, screen_number, name, active)
+        VALUES ($1, 88, 'Screen 88 Test Audi', true)
+        RETURNING id
+      `, [testRestoId]);
+      screenId = scrRes[0]?.id || scrRes.lastInsertRowid;
 
-    const seat2Res = await query(`
-      INSERT INTO restaurant_cinema_seats (restaurant_id, screen_id, row_label, seat_number, seat_code, active)
-      VALUES ($1, $2, 'A', 2, 'S88-A-2', false)
-      RETURNING id
-    `, [testRestoId, screenId]);
-    inactiveSeatId = seat2Res[0]?.id || seat2Res.lastInsertRowid;
-  } catch (seedErr) {
-    console.warn('Cinema test seed notice:', seedErr.message);
+      const seat1Res = await query(`
+        INSERT INTO restaurant_cinema_seats (restaurant_id, screen_id, row_label, seat_number, seat_code, active)
+        VALUES ($1, $2, 'A', 1, 'S88-A-1', true)
+        RETURNING id
+      `, [testRestoId, screenId]);
+      activeSeatId = seat1Res[0]?.id || seat1Res.lastInsertRowid;
+
+      const seat2Res = await query(`
+        INSERT INTO restaurant_cinema_seats (restaurant_id, screen_id, row_label, seat_number, seat_code, active)
+        VALUES ($1, $2, 'A', 2, 'S88-A-2', false)
+        RETURNING id
+      `, [testRestoId, screenId]);
+      inactiveSeatId = seat2Res[0]?.id || seat2Res.lastInsertRowid;
+    } catch (seedErr) {
+      console.warn('Cinema test seed notice:', seedErr.message);
+    }
+
+    const cinemaResto = { id: testRestoId, slug: 'test-cinema' };
+
+    await testAsync('Configured, active cinema seat is accepted', async () => {
+      const check = await validateSpaceCapacity(cinemaResto, 'cinema_seat', 'S88-A-1');
+      assert.strictEqual(check.valid, true);
+    });
+
+    await testAsync('Unknown cinema seat (not in database) is rejected', async () => {
+      const check = await validateSpaceCapacity(cinemaResto, 'cinema_seat', 'S88-A-99');
+      assert.strictEqual(check.valid, false);
+      assert.match(check.message, /does not exist in this cinema/i);
+    });
+
+    await testAsync('Inactive cinema seat is rejected', async () => {
+      const check = await validateSpaceCapacity(cinemaResto, 'cinema_seat', 'S88-A-2');
+      assert.strictEqual(check.valid, false);
+      assert.match(check.message, /is currently inactive/i);
+    });
+
+    await testAsync('Cross-restaurant cinema seat is rejected', async () => {
+      const otherResto = { id: testRestoId + 99999, slug: 'other-cinema' };
+      const check = await validateSpaceCapacity(otherResto, 'cinema_seat', 'S88-A-1');
+      assert.strictEqual(check.valid, false);
+      assert.match(check.message, /does not exist in this cinema/i);
+    });
+
+    // Clean up test cinema records
+    try {
+      if (activeSeatId) await query('DELETE FROM restaurant_cinema_seats WHERE id = $1', [activeSeatId]);
+      if (inactiveSeatId) await query('DELETE FROM restaurant_cinema_seats WHERE id = $1', [inactiveSeatId]);
+      if (screenId) await query('DELETE FROM restaurant_cinema_screens WHERE id = $1', [screenId]);
+    } catch (cleanErr) {}
   }
-
-  const cinemaResto = { id: testRestoId, slug: 'test-cinema' };
-
-  await testAsync('Configured, active cinema seat is accepted', async () => {
-    const check = await validateSpaceCapacity(cinemaResto, 'cinema_seat', 'S88-A-1');
-    assert.strictEqual(check.valid, true);
-  });
-
-  await testAsync('Unknown cinema seat (not in database) is rejected', async () => {
-    const check = await validateSpaceCapacity(cinemaResto, 'cinema_seat', 'S88-A-99');
-    assert.strictEqual(check.valid, false);
-    assert.match(check.message, /does not exist in this cinema/i);
-  });
-
-  await testAsync('Inactive cinema seat is rejected', async () => {
-    const check = await validateSpaceCapacity(cinemaResto, 'cinema_seat', 'S88-A-2');
-    assert.strictEqual(check.valid, false);
-    assert.match(check.message, /is currently inactive/i);
-  });
-
-  await testAsync('Cross-restaurant cinema seat is rejected', async () => {
-    const otherResto = { id: testRestoId + 99999, slug: 'other-cinema' };
-    const check = await validateSpaceCapacity(otherResto, 'cinema_seat', 'S88-A-1');
-    assert.strictEqual(check.valid, false);
-    assert.match(check.message, /does not exist in this cinema/i);
-  });
-
-  // Clean up test cinema records
-  try {
-    if (activeSeatId) await query('DELETE FROM restaurant_cinema_seats WHERE id = $1', [activeSeatId]);
-    if (inactiveSeatId) await query('DELETE FROM restaurant_cinema_seats WHERE id = $1', [inactiveSeatId]);
-    if (screenId) await query('DELETE FROM restaurant_cinema_screens WHERE id = $1', [screenId]);
-  } catch (cleanErr) {}
 
   // ----------------------------------------------------------------------
   // SECTION 6: Secret Secrecy & Response Sanitization
@@ -429,10 +444,22 @@ async function runTestSuite() {
   // ----------------------------------------------------------------------
   console.log('\n--- SECTION 8: Real Express HTTP Endpoint Regression Tests ---');
 
-  const app = (await import('../index.js')).default;
-  const server = app.listen(0);
-  const serverPort = server.address().port;
-  const baseUrl = `http://127.0.0.1:${serverPort}`;
+  if (!hasTestDb) {
+    if (isCi) {
+      console.error('  ❌ [CI VALIDATION FAILURE] Express HTTP Endpoint DB Regression Tests require TEST_DATABASE_URL. Integration tests cannot be skipped in CI mode.');
+      failed += 8;
+    } else {
+      console.log('  ⚠️  [NOT RUN] Express HTTP Endpoint DB Regression Tests skipped: TEST_DATABASE_URL not set (isolated test database required).');
+      skipped += 8;
+    }
+  } else {
+    assertTestDatabaseEnv();
+    const app = (await import('../index.js')).default;
+    const server = app.listen(0);
+    const serverPort = server.address().port;
+    const baseUrl = `http://127.0.0.1:${serverPort}`;
+
+    try {
 
   // Find or setup valid test restaurant in DB
   let epResto = null;
@@ -674,17 +701,22 @@ async function runTestSuite() {
     }
   });
 
-  // Cleanly close test HTTP server
-  await new Promise((resolve) => server.close(resolve));
+    } finally {
+      // Cleanly close test HTTP server
+      if (server) {
+        await new Promise((resolve) => server.close(resolve));
+      }
+    }
+  }
 
   // ----------------------------------------------------------------------
   // Summary
   // ----------------------------------------------------------------------
   console.log('\n======================================================================');
-  console.log(`🏁 TEST EXECUTION SUMMARY: ${passed} PASSED | ${failed} FAILED`);
+  console.log(`🏁 TEST EXECUTION SUMMARY: ${passed} PASSED | ${failed} FAILED | ${skipped} NOT RUN`);
   console.log('======================================================================\n');
 
-  if (failed > 0) {
+  if (failed > 0 || (isCi && skipped > 0)) {
     process.exit(1);
   } else {
     process.exit(0);

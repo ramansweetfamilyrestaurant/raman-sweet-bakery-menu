@@ -102,7 +102,7 @@ export function requireActiveSubscription(req, res, next) {
   if (status === 'expired') {
     return res.status(403).json({
       error: 'SUBSCRIPTION_EXPIRED',
-      message: 'Your 14-day trial or SaaS subscription has expired. Please renew your subscription to continue using operational features.'
+      message: 'Your free trial or SaaS subscription has expired. Please renew your subscription to continue using operational features.'
     });
   }
 

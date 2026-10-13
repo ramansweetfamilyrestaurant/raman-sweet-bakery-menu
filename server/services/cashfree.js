@@ -68,16 +68,17 @@ export async function getCashfreeConfigAsync() {
 
 /**
  * Verifies Cashfree Webhook Signature (HMAC-SHA256 of timestamp + rawBody)
+ * Supports passing secretOverride or falls back to environment configuration.
  */
-export function verifyCashfreeWebhookSignature(rawBody, timestamp, signature) {
-  const config = getCashfreeConfig();
-  if (!config.clientSecret || !rawBody || !signature) {
+export function verifyCashfreeWebhookSignature(rawBody, timestamp, signature, secretOverride = null) {
+  const secret = (secretOverride || process.env.CASHFREE_CLIENT_SECRET || process.env.CASHFREE_SECRET_KEY || '').trim();
+  if (!secret || !rawBody || !signature) {
     return false;
   }
   try {
     const signatureData = (timestamp || '') + rawBody;
     const expectedSignature = crypto
-      .createHmac('sha256', config.clientSecret)
+      .createHmac('sha256', secret)
       .update(signatureData)
       .digest('base64');
 
@@ -91,6 +92,19 @@ export function verifyCashfreeWebhookSignature(rawBody, timestamp, signature) {
     return crypto.timingSafeEqual(signatureBuf, expectedBuf);
   } catch (err) {
     console.error('Webhook signature verification error:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Asynchronously verifies webhook signature after resolving secret from env and system_settings DB.
+ */
+export async function verifyCashfreeWebhookSignatureAsync(rawBody, timestamp, signature) {
+  try {
+    const config = await getCashfreeConfigAsync();
+    return verifyCashfreeWebhookSignature(rawBody, timestamp, signature, config.clientSecret);
+  } catch (err) {
+    console.error('Async webhook signature verification error:', err.message);
     return false;
   }
 }
@@ -152,13 +166,19 @@ export async function createCashfreeSubscriptionSession({
 
   const subUrl = `${config.baseUrl}/subscriptions`;
 
+  let effectiveReturnUrl = returnUrl || null;
+  if (effectiveReturnUrl && !effectiveReturnUrl.includes('subscription_id') && !effectiveReturnUrl.includes('sub_id') && !effectiveReturnUrl.includes('reg_id')) {
+    const separator = effectiveReturnUrl.includes('?') ? '&' : '?';
+    effectiveReturnUrl = `${effectiveReturnUrl}${separator}subscription_id=${encodeURIComponent(subscriptionId)}`;
+  }
+
   // CRITICAL: return_url passed at root level, subscription_meta, and authorization_details for universal SDK compatibility
   const subPayload = {
     subscription_id: subscriptionId,
     subscription_first_charge_time: firstChargeTime,
-    return_url: returnUrl || null,
+    return_url: effectiveReturnUrl,
     subscription_meta: {
-      return_url: returnUrl || null
+      return_url: effectiveReturnUrl
     },
     customer_details: {
       customer_id: customerId,

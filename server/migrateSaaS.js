@@ -6,7 +6,11 @@ import bcrypt from 'bcryptjs';
 async function runSaaSMigration() {
   console.log('🚀 Running Multi-Tenant SaaS Database Migration...');
 
-  const neonUrl = 'postgresql://neondb_owner:npg_b8kmMozyl1hZ@ep-morning-flower-azvujg61.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+  const neonUrl = process.env.DATABASE_URL;
+  if (!neonUrl) {
+    console.error('❌ Configuration Error: DATABASE_URL environment variable is required.');
+    process.exit(1);
+  }
   
   try {
     const pool = new pg.Pool({ connectionString: neonUrl });

@@ -4,8 +4,14 @@ import bcrypt from 'bcryptjs';
 
 const { Pool } = pg;
 
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error('❌ Configuration Error: DATABASE_URL environment variable is required.');
+  process.exit(1);
+}
+
 const pool = new Pool({
-  connectionString: 'postgresql://neondb_owner:npg_b8kmMozyl1hZ@ep-morning-flower-azvujg61.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require'
+  connectionString
 });
 
 async function main() {

@@ -31,6 +31,7 @@ scratch/
 server/debug_*.cjs
 server/check_*.cjs
 server/test_*.js
+!server/test_registration.js
 server/test_*.cjs
 server/testSaaSLocal.js
 server/testSecurityLocal.js

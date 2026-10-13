@@ -447,7 +447,7 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     const billingRequired = !isComplimentary && (!isAllowed || isExpired || isCancelled);
 
     const sysRows = await query("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
-    const defaultTrialDays = parseInt(sysRows[0]?.value || '14', 10);
+    const defaultTrialDays = parseInt(sysRows[0]?.value || '16', 10);
 
     res.json({
       status: isComplimentary ? 'active' : subStatus,

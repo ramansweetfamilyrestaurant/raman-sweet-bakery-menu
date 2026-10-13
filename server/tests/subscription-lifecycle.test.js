@@ -1,7 +1,10 @@
 import assert from 'assert';
+import { checkTestDatabaseRequirement } from './testDbGuard.js';
 import { query, initDb } from '../db.js';
 import { checkSubscriptionStatus } from '../middleware/auth.js';
 import { checkExpiredSubscriptions } from '../subscriptionCron.js';
+
+checkTestDatabaseRequirement('Phase 4 Subscription Lifecycle & Cron');
 
 console.log('🧪 Starting Phase 4 Subscription Lifecycle Test Suite...');
 
