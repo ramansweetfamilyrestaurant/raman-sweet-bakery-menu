@@ -33,9 +33,14 @@ async function initDb(options = {}) {
     if (testDbUrl.startsWith('postgres://') || testDbUrl.startsWith('postgresql://')) {
       try {
         if (!pgPool) {
+          const isLocalOrNoSsl =
+            testDbUrl.includes('sslmode=disable') ||
+            testDbUrl.includes('localhost') ||
+            testDbUrl.includes('127.0.0.1');
+          const sslConfig = isLocalOrNoSsl ? false : { rejectUnauthorized: false };
           pgPool = new pg.Pool({
             connectionString: testDbUrl,
-            ssl: { rejectUnauthorized: false },
+            ssl: sslConfig,
             connectionTimeoutMillis: 10000,
             max: 5,
             idleTimeoutMillis: 15000,
