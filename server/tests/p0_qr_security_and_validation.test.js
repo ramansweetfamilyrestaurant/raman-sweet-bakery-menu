@@ -294,13 +294,21 @@ async function runTestSuite() {
     await initDb();
 
     // Find or insert valid test restaurant
-    let testRestoId = 1;
-    try {
-      const existingRestos = await query('SELECT id FROM restaurants ORDER BY id ASC LIMIT 1');
-      if (existingRestos && existingRestos.length > 0) {
-        testRestoId = existingRestos[0].id;
-      }
-    } catch (e) {}
+    let testRestoId = null;
+    const existingRestos = await query('SELECT id FROM restaurants ORDER BY id ASC LIMIT 1');
+    if (existingRestos && existingRestos.length > 0) {
+      testRestoId = existingRestos[0].id;
+    } else {
+      const ins = await query(`
+        INSERT INTO restaurants (name, slug, active, subscription_type)
+        VALUES ('Cinema Test Resto', 'cinema-test-resto', true, 'ADMIN_GRANTED')
+        RETURNING id
+      `).catch(async () => {
+        await query(`INSERT INTO restaurants (name, slug, active, subscription_type) VALUES ('Cinema Test Resto', 'cinema-test-resto', 1, 'ADMIN_GRANTED')`);
+        return await query("SELECT id FROM restaurants WHERE slug = 'cinema-test-resto'");
+      });
+      testRestoId = ins[0]?.id || ins.lastInsertRowid;
+    }
 
     let screenId = null;
     let activeSeatId = null;
@@ -480,7 +488,7 @@ async function runTestSuite() {
     epResto.qr_secret = generateRestaurantQrSecret();
     await query('UPDATE restaurants SET qr_secret = $1 WHERE id = $2', [epResto.qr_secret, epResto.id]);
   }
-  await query('UPDATE restaurants SET total_tables = 10, direct_ordering_enabled = 1, active = true WHERE id = $1', [epResto.id]);
+  await query("UPDATE restaurants SET total_tables = 10, direct_ordering_enabled = 1, active = true, subscription_type = 'ADMIN_GRANTED' WHERE id = $1", [epResto.id]);
 
   const epSlug = epResto.slug;
   const epSecret = epResto.qr_secret;

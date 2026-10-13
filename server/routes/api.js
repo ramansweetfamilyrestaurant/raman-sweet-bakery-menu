@@ -292,15 +292,6 @@ async function resolveRestaurant(req, slug) {
     }
   }
 
-  // 4. Generic public /menu fallback ONLY for unauthenticated public browsing:
-  const cleanSlug = (slug && typeof slug === 'string') ? slug.trim().toLowerCase() : '';
-  if (!cleanSlug || ['menu', 'default', 'null', 'undefined', 'home', 'index'].includes(cleanSlug)) {
-    const demoRestos = await query("SELECT * FROM restaurants WHERE LOWER(slug) = 'touchqr-demo'");
-    if (demoRestos && demoRestos.length > 0) {
-      return demoRestos[0];
-    }
-  }
-
   return null;
 }// In-Memory Fast Cache for Public Menu Bundle (20s TTL)
 const menuBundleCache = new Map();

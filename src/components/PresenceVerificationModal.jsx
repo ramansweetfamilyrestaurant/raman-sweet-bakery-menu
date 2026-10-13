@@ -405,7 +405,7 @@ export default function PresenceVerificationModal({
                 {modalTitle}
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 800 }}>
-                {currentLabel} • {restaurantInfo?.name || 'TouchQR'}
+                {currentLabel} • {restaurantInfo?.name || 'Your Restaurant'}
               </span>
             </div>
           </div>

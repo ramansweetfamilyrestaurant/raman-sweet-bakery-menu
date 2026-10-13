@@ -1019,8 +1019,13 @@ export default function App() {
       return;
     }
     const isAdminMode = Boolean(adminToken && isAdminRoute);
+    if (!slug && !isAdminMode) {
+      setRestaurantStatus('not_found');
+      setLoading(false);
+      return;
+    }
     console.log('[PUBLIC TENANT] URL slug:', urlSlug || '(none)');
-    console.log('[PUBLIC TENANT] resolved slug:', slug || '(default demo tenant)');
+    console.log('[PUBLIC TENANT] resolved slug:', slug || '(none)');
     try {
       let infoData = null;
       let catData = [];
@@ -1064,9 +1069,6 @@ export default function App() {
         if (!comboData || comboData.length === 0) comboData = resCombo || [];
       }
 
-      if (!infoData && dishData && dishData.length > 0) {
-        infoData = { id: dishData[0]?.restaurant_id || 0, name: 'Digital Restaurant Menu', slug: slug || 'menu' };
-      }
 
       if ((!infoData || infoData.notFound) && (!dishData || dishData.length === 0)) {
         console.warn('[MENU] Restaurant not found for slug:', slug);
@@ -1325,8 +1327,8 @@ export default function App() {
         setView('landing');
         document.title = 'TouchQR - Digital Menu & QR Ordering Platform';
       } else if (path === '/menu' || path === '/menu/') {
-        window.history.replaceState({}, '', '/touchqr-demo');
-        loadMenuData('touchqr-demo');
+        setRestaurantStatus('not_found');
+        setLoading(false);
         setView('menu');
       } else {
         setView('menu');

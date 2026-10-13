@@ -75,6 +75,11 @@ const suites = [
     name: 'Impersonation & Tenant Authorization Regression',
     file: 'server/tests/impersonation_and_tenant_data_fixes.test.js',
     requiresDb: true
+  },
+  {
+    name: 'Tenant-Driven Resolution & Default Elimination',
+    file: 'server/tests/tenant_defaults_and_isolation.test.js',
+    requiresDb: true
   }
 ];
 

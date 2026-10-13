@@ -445,7 +445,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  placeholder="e.g. Raman Sweet Bakery"
+                  placeholder="e.g. Grand Bistro & Cafe"
                   style={{
                     width: '100%', padding: '12px 16px', borderRadius: '12px',
                     background: '#071A0E', border: fieldErrors.name ? '1.5px solid #EF4444' : '1px solid rgba(223, 186, 103, 0.3)',

@@ -513,7 +513,7 @@ export function wrapCanvasText(ctx, text, maxWidth) {
           penalty += 250;
         }
 
-        // Favorable weight for keeping '&' or 'and' at the end of line 1 (e.g. 'Raman Sweet Bakery &')
+        // Favorable weight for keeping '&' or 'and' at the end of line 1 (e.g. 'Grand Bistro &')
         const lastWordLine1 = words[i - 1].toLowerCase();
         if (isolatedConjunctions.has(lastWordLine1)) {
           penalty -= 60;

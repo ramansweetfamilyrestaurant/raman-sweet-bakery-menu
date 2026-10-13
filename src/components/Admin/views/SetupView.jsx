@@ -1763,7 +1763,7 @@ export default function SetupView({
                     flexShrink: 0,
                     boxShadow: '0 4px 10px rgba(6, 78, 59, 0.2)'
                   }}>
-                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
+                    {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1800,7 +1800,7 @@ export default function SetupView({
               <input
                 type="text"
                 required
-                placeholder="Raman Sweet Bakery & Family Restaurant"
+                placeholder="e.g. Grand Bistro & Cafe"
                 value={settingsForm.name || ''}
                 onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
                 style={{
@@ -2003,7 +2003,7 @@ export default function SetupView({
               </label>
               <input
                 type="text"
-                placeholder="Raman Kumar"
+                placeholder="e.g. John Doe"
                 value={settingsForm.owner_name || ''}
                 onChange={(e) => setSettingsForm({ ...settingsForm, owner_name: e.target.value })}
                 style={{
@@ -2046,7 +2046,7 @@ export default function SetupView({
                 </div>
                 <input
                   type="tel"
-                  placeholder="9708366583"
+                  placeholder="9876543210"
                   value={settingsForm.phone || ''}
                   onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
                   style={{
@@ -2074,7 +2074,7 @@ export default function SetupView({
               </label>
               <input
                 type="email"
-                placeholder="contact@ramansweet.com"
+                placeholder="contact@yourrestaurant.com"
                 value={settingsForm.owner_email || settingsForm.email || ''}
                 onChange={(e) => setSettingsForm({ ...settingsForm, owner_email: e.target.value })}
                 style={{
@@ -2495,7 +2495,7 @@ export default function SetupView({
                     border: '1.5px solid #F59E0B',
                     flexShrink: 0
                   }}>
-                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
+                    {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -10052,7 +10052,7 @@ export default function SetupView({
                   <img src={settingsForm.logo || restaurantInfo?.logo} alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '14px', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0, background: '#FFFFFF' }} />
                 ) : (
                   <div style={{ width: '80px', height: '80px', borderRadius: '14px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.8rem', border: '2px solid #F59E0B', flexShrink: 0, boxShadow: '0 4px 10px rgba(124, 29, 29, 0.2)' }}>
-                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
+                    {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <label style={{
@@ -10086,7 +10086,7 @@ export default function SetupView({
               <input
                 type="text"
                 required
-                placeholder="Raman Sweet Bakery & Family Restaurant"
+                placeholder="e.g. Grand Bistro & Cafe"
                 value={settingsForm.name || ''}
                 onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
                 style={{
@@ -10207,7 +10207,7 @@ export default function SetupView({
                   />
                 ) : (
                   <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', border: '1.5px solid #F59E0B', flexShrink: 0 }}>
-                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
+                    {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div style={{ minWidth: 0 }}>
@@ -10267,7 +10267,7 @@ export default function SetupView({
               </label>
               <input
                 type="text"
-                placeholder="Raman Kumar"
+                placeholder="e.g. John Doe"
                 value={settingsForm.owner_name || ''}
                 onChange={(e) => setSettingsForm({ ...settingsForm, owner_name: e.target.value })}
                 style={{
@@ -10292,7 +10292,7 @@ export default function SetupView({
               </label>
               <input
                 type="email"
-                placeholder="raman@example.com"
+                placeholder="contact@yourrestaurant.com"
                 value={settingsForm.owner_email || ''}
                 onChange={(e) => setSettingsForm({ ...settingsForm, owner_email: e.target.value })}
                 style={{
@@ -10334,7 +10334,7 @@ export default function SetupView({
                 </div>
                 <input
                   type="text"
-                  placeholder="9708366583"
+                  placeholder="9876543210"
                   value={settingsForm.phone || ''}
                   onChange={(e) => setSettingsForm({ ...settingsForm, phone: e.target.value })}
                   style={{
@@ -10512,7 +10512,7 @@ export default function SetupView({
               <div style={{ position: 'relative' }}>
                 <input
                   type="url"
-                  placeholder="https://www.google.com/search?q=raman+sweet+bakery..."
+                  placeholder="https://g.page/r/your-restaurant-review"
                   value={settingsForm.google_review_url || ''}
                   onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
                   style={{
@@ -10612,7 +10612,7 @@ export default function SetupView({
                     margin: '0 auto 8px auto',
                     boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
                   }}>
-                    {(settingsForm.name || restaurantInfo?.name || 'R').charAt(0).toUpperCase()}
+                    {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>

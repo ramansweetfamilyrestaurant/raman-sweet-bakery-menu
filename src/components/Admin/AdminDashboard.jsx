@@ -3881,7 +3881,8 @@ export default function AdminDashboard({
           onSuccess={() => {
             setToastMessage('🎉 Cashfree Subscription Authorized! Mandate registered for automatic billing.');
             setTimeout(() => setToastMessage(''), 4000);
-            fetchRestaurantInfo().then(data => {
+            const activeSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+            fetchRestaurantInfo({ token, slug: activeSlug }).then(data => {
               if (data) setRestaurantInfo(data);
             });
             setShowPaymentModal(false);

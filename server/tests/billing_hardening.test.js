@@ -370,6 +370,15 @@ async function runHardeningTests() {
   // SECTION 2: PAYMENT UNIQUENESS & WEBHOOK IDEMPOTENCY
   // =========================================================================
 
+  // Ensure test restaurant id = 1 exists for payments foreign key constraint
+  const existingResto1 = await query("SELECT id FROM restaurants WHERE id = 1");
+  if (!existingResto1 || existingResto1.length === 0) {
+    await query("INSERT INTO restaurants (id, name, slug, active) VALUES (1, 'Hardening Test Restaurant', 'hardening-test-resto', true)")
+      .catch(async () => {
+        await query("INSERT INTO restaurants (name, slug, active) VALUES ('Hardening Test Restaurant', 'hardening-test-resto', true)");
+      });
+  }
+
   // TEST 5: Fix F-01 — Payment Record Uniqueness: NULLs & empty strings co-exist, duplicate non-empty rejected
   await test('5. Fix F-01: Payment Record Uniqueness: partial unique index blocks duplicate non-empty IDs while allowing NULLs and empty strings', async () => {
     const uniqueSuffix = `${Date.now()}_5`;

@@ -16,9 +16,13 @@ let paymentIndexVerified = false;
 let paymentIndexMigrationError = null;
 
 const dbFilePath = path.resolve('menu.db');
-
 async function initDb(options = {}) {
-  if (isDbInitialized) return;
+  if (isDbInitialized) {
+    if (options.seedDemoTenant === true || process.env.ENABLE_DEMO_TENANT_SEED === 'true') {
+      await seedData(options).catch(() => {});
+    }
+    return;
+  }
 
   const isTestRun =
     process.env.NODE_ENV === 'test' ||
@@ -78,7 +82,7 @@ async function initDb(options = {}) {
         throw new Error(`Database initialization failed: payment uniqueness protection is absent (${paymentIndexMigrationError || 'unverified'})`);
       }
       isDbInitialized = true;
-      await seedData().catch(() => {});
+      await seedData(options).catch(() => {});
     } else {
       isDbInitialized = true;
     }
@@ -127,7 +131,7 @@ async function initDb(options = {}) {
       throw new Error(`Database initialization failed: payment uniqueness protection is absent (${paymentIndexMigrationError || 'unverified'})`);
     }
     isDbInitialized = true;
-    await seedData().catch(() => {});
+    await seedData(options).catch(() => {});
   } else {
     isDbInitialized = true;
   }
@@ -1544,42 +1548,53 @@ async function createTables(options = {}) {
   }
 }
 
-async function seedData() {
-  // Ensure a generic TouchQR demo restaurant exists for local/dev previews.
-  try {
-    const demoCheck = await query('SELECT * FROM restaurants WHERE slug = $1', ['touchqr-demo']);
-    if (!demoCheck || demoCheck.length === 0) {
-      const demoRes = await query(`
-        INSERT INTO restaurants (
-          name, slug, tagline, logo, phone, address, opening_hours, active, plan_tier, plan_price, order_retention_days
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id
-      `, [
-        'TouchQR Demo Restaurant',
-        'touchqr-demo',
-        'Experience the TouchQR Digital Menu',
-        null,
-        '+919876543210',
-        'Demo Business Center, Suite 100',
-        '8:00 AM - 10:30 PM (Mon - Sun)',
-        1,
-        'enterprise',
-        1990,
-        90
-      ]);
-      const demoId = demoRes[0]?.id || demoRes.lastInsertRowid;
-      
-      const salt = await bcrypt.genSalt(10);
-      const hash = await bcrypt.hash('admin123', salt);
-      await query(`
-        INSERT INTO admins (restaurant_id, username, password_hash, role)
-        VALUES ($1, $2, $3, $4)
-      `, [demoId, 'demo_admin', hash, 'restaurant_admin']);
+async function seedData(options = {}) {
+  const shouldSeedDemoTenant = Boolean(
+    options.seedDemoTenant === true ||
+    process.env.ENABLE_DEMO_TENANT_SEED === 'true'
+  );
+
+  let primaryRestoId = null;
+
+  if (shouldSeedDemoTenant) {
+    // Ensure a generic TouchQR demo restaurant exists ONLY when explicitly requested for dev/local previews.
+    try {
+      const demoCheck = await query('SELECT * FROM restaurants WHERE slug = $1', ['touchqr-demo']);
+      if (!demoCheck || demoCheck.length === 0) {
+        const demoRes = await query(`
+          INSERT INTO restaurants (
+            name, slug, tagline, logo, phone, address, opening_hours, active, plan_tier, plan_price, order_retention_days
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id
+        `, [
+          'TouchQR Demo Restaurant',
+          'touchqr-demo',
+          'Experience the TouchQR Digital Menu',
+          null,
+          '+919876543210',
+          'Demo Business Center, Suite 100',
+          '8:00 AM - 10:30 PM (Mon - Sun)',
+          1,
+          'enterprise',
+          1990,
+          90
+        ]);
+        primaryRestoId = demoRes[0]?.id || demoRes.lastInsertRowid;
+        
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash('admin123', salt);
+        await query(`
+          INSERT INTO admins (restaurant_id, username, password_hash, role)
+          VALUES ($1, $2, $3, $4)
+        `, [primaryRestoId, 'demo_admin', hash, 'restaurant_admin']);
+      } else {
+        primaryRestoId = demoCheck[0]?.id;
+      }
+    } catch (e) {
+      console.error('Demo tenant seed notice:', e);
     }
-  } catch (e) {
-    console.error('Demo tenant seed notice:', e);
   }
 
-  // Seed default SaaS Plans if empty
+  // Seed default SaaS Plans if empty (Platform SaaS configuration)
   try {
     // Migration: Add max_combos and original_price columns if not existing
     try {
@@ -1695,71 +1710,7 @@ async function seedData() {
     console.warn('SaaS plan seeding notice:', err.message);
   }
 
-  // Update existing data to link to primaryRestoId
-  await query('UPDATE categories SET restaurant_id = $1 WHERE restaurant_id IS NULL OR restaurant_id = 0', [primaryRestoId]);
-  await query('UPDATE dishes SET restaurant_id = $1 WHERE restaurant_id IS NULL OR restaurant_id = 0', [primaryRestoId]);
-  await query("UPDATE admins SET restaurant_id = $1 WHERE (restaurant_id IS NULL OR restaurant_id = 0) AND role != 'superadmin'", [primaryRestoId]);
-
-  const catCheck = await query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [primaryRestoId]);
-  const count = parseInt(catCheck[0]?.count || 0, 10);
-
-  if (count === 0) {
-    console.log('Seeding demo menu data for TouchQR demo tenant...');
-    try {
-      await query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE restaurant_id = $1)', [primaryRestoId]);
-      await query('DELETE FROM orders WHERE restaurant_id = $1', [primaryRestoId]);
-      await query('DELETE FROM dishes WHERE restaurant_id = $1', [primaryRestoId]);
-      await query('DELETE FROM categories WHERE restaurant_id = $1', [primaryRestoId]);
-    } catch (e) {
-      console.warn('Seeding cleanup notice:', e.message);
-    }
-
-    const jsonPath = path.resolve('server/exported_menu_data.json');
-    if (fs.existsSync(jsonPath)) {
-      const data = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-      const catIdMap = {};
-
-      for (const cat of data.categories) {
-        const res = await query(
-          'INSERT INTO categories (restaurant_id, name, name_hi, image, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-          [primaryRestoId, cat.name, cat.name_hi || '', null, cat.sort_order || 0]
-        );
-        const newId = res[0]?.id || res.lastInsertRowid;
-        catIdMap[cat.id] = newId;
-      }
-
-      for (const d of data.dishes) {
-        const newCatId = catIdMap[d.category_id];
-        try {
-          await query(
-            `INSERT INTO dishes (
-              restaurant_id, category_id, name, name_hi, description, description_hi, image, price, price_half,
-              portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-            [
-              primaryRestoId, newCatId, d.name, d.name_hi || '', d.description || '', d.description_hi || '', null, d.price, d.price_half || null,
-              d.portion || '', d.portion_half_label || '', d.portion_full_label || '', d.badge || '', d.ingredients || '', d.taste_profile || '', d.available !== false ? 1 : 0
-            ]
-          );
-        } catch (e) {
-          console.warn('Skipping existing dish:', d.name);
-        }
-      }
-      console.log(`Seeded ${data.categories.length} categories and ${data.dishes.length} dishes for TouchQR demo tenant.`);
-    }
-  }
-
-  // Ensure a demo admin user exists.
-  const adminCheck = await query('SELECT COUNT(*) as count FROM admins WHERE username = $1', ['admin']);
-  const adminCount = parseInt(adminCheck[0]?.count || 0, 10);
-  if (adminCount === 0) {
-    const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash('admin123', salt);
-    await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [primaryRestoId, 'admin', hash, 'restaurant_admin']);
-    console.log('🔐 Created default restaurant admin account: admin / admin123');
-  }
-
-  // Ensure Super Admin user exists
+  // Ensure Master Super Admin user exists (Platform Administrator, not a restaurant tenant)
   const superCheck = await query('SELECT COUNT(*) as count FROM admins WHERE username = $1 OR role = $2', ['superadmin', 'superadmin']);
   const superCount = parseInt(superCheck[0]?.count || 0, 10);
   if (superCount === 0) {
@@ -1769,57 +1720,119 @@ async function seedData() {
     console.log('👑 Created Master Super Admin account: superadmin / superadmin123');
   }
 
-  // Seed default sample Combos if empty
-  try {
-    const comboCheck = await query('SELECT COUNT(*) as count FROM combos WHERE restaurant_id = $1', [primaryRestoId]);
-    const comboCount = parseInt(comboCheck[0]?.count || 0, 10);
-    if (comboCount === 0) {
-      const sampleItems1 = JSON.stringify([
-        { dish_id: 24, dish_name: "Aloo Tikki Chaat", qty: 1, portion: "full", original_price: 60 },
-        { dish_id: 31, dish_name: "Paneer Pakoda", qty: 1, portion: "full", original_price: 90 },
-        { dish_id: 28, dish_name: "Kachori", qty: 2, portion: "full", original_price: 30 }
-      ]);
-      const sampleItems2 = JSON.stringify([
-        { dish_id: 32, dish_name: "Steam Momo", qty: 1, portion: "full", original_price: 70 },
-        { dish_id: 29, dish_name: "Bread Pakoda", qty: 2, portion: "full", original_price: 50 }
-      ]);
-      await query(`
-        INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, available, sort_order)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      `, [
-        primaryRestoId,
-        'TouchQR Demo Snacks Combo',
-        'Complete evening snacks platter with Aloo Tikki, Paneer Pakoda & 2x Kachoris',
-        149,
-        'https://images.unsplash.com/photo-1617692855027-33b14f061079?w=600&auto=format&fit=crop&q=80',
-        sampleItems1,
-        '⭐ Bestseller',
-        1,
-        1
-      ]);
-      await query(`
-        INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, available, sort_order)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      `, [
-        primaryRestoId,
-        '☕ Evening Snack Combo',
-        'Tasty Momo & Bread Pakoda combo deal',
-        99,
-        'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80',
-        sampleItems2,
-        '💰 Value Deal',
-        1,
-        2
-      ]);
-      console.log('🛒 Seeded default sample Combo Deals into combos table');
+  // Demo menu and sample combos: ONLY when demo tenant was explicitly seeded and primaryRestoId is present
+  if (shouldSeedDemoTenant && primaryRestoId) {
+    const catCheck = await query('SELECT COUNT(*) as count FROM categories WHERE restaurant_id = $1', [primaryRestoId]);
+    const count = parseInt(catCheck[0]?.count || 0, 10);
+
+    if (count === 0) {
+      console.log('Seeding demo menu data for TouchQR demo tenant...');
+      try {
+        await query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE restaurant_id = $1)', [primaryRestoId]);
+        await query('DELETE FROM orders WHERE restaurant_id = $1', [primaryRestoId]);
+        await query('DELETE FROM dishes WHERE restaurant_id = $1', [primaryRestoId]);
+        await query('DELETE FROM categories WHERE restaurant_id = $1', [primaryRestoId]);
+      } catch (e) {
+        console.warn('Seeding cleanup notice:', e.message);
+      }
+
+      const jsonPath = path.resolve('server/exported_menu_data.json');
+      if (fs.existsSync(jsonPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        const catIdMap = {};
+
+        for (const cat of data.categories) {
+          const res = await query(
+            'INSERT INTO categories (restaurant_id, name, name_hi, image, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+            [primaryRestoId, cat.name, cat.name_hi || '', null, cat.sort_order || 0]
+          );
+          const newId = res[0]?.id || res.lastInsertRowid;
+          catIdMap[cat.id] = newId;
+        }
+
+        for (const d of data.dishes) {
+          const newCatId = catIdMap[d.category_id];
+          try {
+            await query(
+              `INSERT INTO dishes (
+                restaurant_id, category_id, name, name_hi, description, description_hi, image, price, price_half,
+                portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, available
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+              [
+                primaryRestoId, newCatId, d.name, d.name_hi || '', d.description || '', d.description_hi || '', null, d.price, d.price_half || null,
+                d.portion || '', d.portion_half_label || '', d.portion_full_label || '', d.badge || '', d.ingredients || '', d.taste_profile || '', d.available !== false ? 1 : 0
+              ]
+            );
+          } catch (e) {
+            console.warn('Skipping existing dish:', d.name);
+          }
+        }
+        console.log(`Seeded ${data.categories.length} categories and ${data.dishes.length} dishes for TouchQR demo tenant.`);
+      }
     }
 
-    // Clean up default logo image references so dishes & categories without custom photos stay clean (NULL)
-    await query("UPDATE categories SET image = NULL WHERE image = '/uploads/logo.jpg'");
-    await query("UPDATE dishes SET image = NULL WHERE image = '/uploads/logo.jpg'");
-    await query("UPDATE combos SET image = NULL WHERE image = '/uploads/logo.jpg'");
-  } catch (err) {
-    console.warn('Combo seeding notice:', err.message);
+    // Ensure a demo admin user exists for demo tenant
+    const adminCheck = await query('SELECT COUNT(*) as count FROM admins WHERE username = $1 AND restaurant_id = $2', ['admin', primaryRestoId]);
+    const adminCount = parseInt(adminCheck[0]?.count || 0, 10);
+    if (adminCount === 0) {
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash('admin123', salt);
+      await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [primaryRestoId, 'admin', hash, 'restaurant_admin']);
+      console.log('🔐 Created demo restaurant admin account: admin / admin123');
+    }
+
+    // Seed default sample Combos if empty
+    try {
+      const comboCheck = await query('SELECT COUNT(*) as count FROM combos WHERE restaurant_id = $1', [primaryRestoId]);
+      const comboCount = parseInt(comboCheck[0]?.count || 0, 10);
+      if (comboCount === 0) {
+        const sampleItems1 = JSON.stringify([
+          { dish_id: 24, dish_name: "Aloo Tikki Chaat", qty: 1, portion: "full", original_price: 60 },
+          { dish_id: 31, dish_name: "Paneer Pakoda", qty: 1, portion: "full", original_price: 90 },
+          { dish_id: 28, dish_name: "Kachori", qty: 2, portion: "full", original_price: 30 }
+        ]);
+        const sampleItems2 = JSON.stringify([
+          { dish_id: 32, dish_name: "Steam Momo", qty: 1, portion: "full", original_price: 70 },
+          { dish_id: 29, dish_name: "Bread Pakoda", qty: 2, portion: "full", original_price: 50 }
+        ]);
+        await query(`
+          INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, available, sort_order)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [
+          primaryRestoId,
+          'TouchQR Demo Snacks Combo',
+          'Complete evening snacks platter with Aloo Tikki, Paneer Pakoda & 2x Kachoris',
+          149,
+          'https://images.unsplash.com/photo-1617692855027-33b14f061079?w=600&auto=format&fit=crop&q=80',
+          sampleItems1,
+          '⭐ Bestseller',
+          1,
+          1
+        ]);
+        await query(`
+          INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, available, sort_order)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [
+          primaryRestoId,
+          '☕ Evening Snack Combo',
+          'Tasty Momo & Bread Pakoda combo deal',
+          99,
+          'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80',
+          sampleItems2,
+          '💰 Value Deal',
+          1,
+          2
+        ]);
+        console.log('🛒 Seeded default sample Combo Deals into combos table');
+      }
+
+      // Clean up default logo image references so dishes & categories without custom photos stay clean (NULL)
+      await query("UPDATE categories SET image = NULL WHERE image = '/uploads/logo.jpg' AND restaurant_id = $1", [primaryRestoId]);
+      await query("UPDATE dishes SET image = NULL WHERE image = '/uploads/logo.jpg' AND restaurant_id = $1", [primaryRestoId]);
+      await query("UPDATE combos SET image = NULL WHERE image = '/uploads/logo.jpg' AND restaurant_id = $1", [primaryRestoId]);
+    } catch (err) {
+      console.warn('Combo seeding notice:', err.message);
+    }
   }
 }
 
