@@ -18,8 +18,8 @@ import path from 'path';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import { validateTestDatabaseUrl } from './testDbGuard.js';
-import { query, initDb } from '../db.js';
-import apiRoutes from '../routes/api.js';
+import { query, initDb, isDemoSeedPermitted } from '../db.js';
+import apiRoutes, { clearRestoResolveCache, clearMenuBundleCache } from '../routes/api.js';
 import { JWT_SECRET } from '../config/jwt.js';
 
 const TEST_DB_PATH = path.resolve('menu_test_tenant_defaults.db');
@@ -318,20 +318,81 @@ async function runAllTests() {
     });
 
     // ----------------------------------------------------------------------
-    // TEST 9: Explicit Demo Tenant Seed Flag Verification
+    // TEST 9: Production Mode Blocks Demo Seeding Even When Opt-In Flag Is Enabled
     // ----------------------------------------------------------------------
-    await test('Explicit demo tenant seeding (seedDemoTenant: true) seeds touchqr-demo tenant', async () => {
+    await test('Production mode blocks demo seeding even when opt-in flag is enabled', async () => {
+      // Ensure clean state without demo tenant
+      await query("DELETE FROM dishes WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
+      await query("DELETE FROM categories WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
+      await query("DELETE FROM admins WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
+      await query("DELETE FROM restaurants WHERE slug = 'touchqr-demo'");
+
+      const savedNodeEnv = process.env.NODE_ENV;
+      const savedVercelEnv = process.env.VERCEL_ENV;
+      const savedDemoFlag = process.env.ENABLE_DEMO_TENANT_SEED;
+
+      try {
+        // Case 1: NODE_ENV=production with ENABLE_DEMO_TENANT_SEED=true and seedDemoTenant: true
+        process.env.NODE_ENV = 'production';
+        process.env.ENABLE_DEMO_TENANT_SEED = 'true';
+
+        assert.strictEqual(isDemoSeedPermitted(), false, 'isDemoSeedPermitted must return false when NODE_ENV=production');
+
+        // Run initDb with opt-in requested
+        await initDb({ seedDemoTenant: true });
+
+        const prodDemoRestos = await query("SELECT * FROM restaurants WHERE slug = 'touchqr-demo'");
+        assert.strictEqual(prodDemoRestos.length, 0, 'No demo restaurant must be created in production mode');
+
+        const prodDemoAdmins = await query("SELECT * FROM admins WHERE username = 'demo_admin' OR (username = 'admin' AND role = 'restaurant_admin')");
+        assert.strictEqual(prodDemoAdmins.length, 0, 'No demo restaurant admin must be created in production mode');
+
+        // Case 2: VERCEL_ENV=production with opt-in requested
+        process.env.NODE_ENV = 'development';
+        process.env.VERCEL_ENV = 'production';
+
+        assert.strictEqual(isDemoSeedPermitted(), false, 'isDemoSeedPermitted must return false when VERCEL_ENV=production');
+
+        await initDb({ seedDemoTenant: true });
+
+        const vercelDemoRestos = await query("SELECT * FROM restaurants WHERE slug = 'touchqr-demo'");
+        assert.strictEqual(vercelDemoRestos.length, 0, 'No demo restaurant must be created when VERCEL_ENV=production');
+      } finally {
+        if (savedNodeEnv !== undefined) {
+          process.env.NODE_ENV = savedNodeEnv;
+        } else {
+          delete process.env.NODE_ENV;
+        }
+        if (savedVercelEnv !== undefined) {
+          process.env.VERCEL_ENV = savedVercelEnv;
+        } else {
+          delete process.env.VERCEL_ENV;
+        }
+        if (savedDemoFlag !== undefined) {
+          process.env.ENABLE_DEMO_TENANT_SEED = savedDemoFlag;
+        } else {
+          delete process.env.ENABLE_DEMO_TENANT_SEED;
+        }
+      }
+    });
+
+    // ----------------------------------------------------------------------
+    // TEST 10: Explicit Demo Tenant Seed in Permitted Dev/Test Mode
+    // ----------------------------------------------------------------------
+    await test('Explicit demo tenant seeding (seedDemoTenant: true) in permitted dev/test mode seeds touchqr-demo', async () => {
+      process.env.NODE_ENV = 'test';
       // Clean up touchqr-demo if existing
       await query("DELETE FROM dishes WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
       await query("DELETE FROM categories WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
       await query("DELETE FROM admins WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
       await query("DELETE FROM restaurants WHERE slug = 'touchqr-demo'");
 
-      // Run initDb with seedDemoTenant: true
+      // Run initDb with seedDemoTenant: true in test mode
+      assert.strictEqual(isDemoSeedPermitted(), true, 'isDemoSeedPermitted must return true in test/dev environment');
       await initDb({ seedDemoTenant: true });
 
       const demoRestos = await query("SELECT * FROM restaurants WHERE slug = 'touchqr-demo'");
-      assert(demoRestos && demoRestos.length > 0, 'Demo tenant must be created when explicitly requested');
+      assert(demoRestos && demoRestos.length > 0, 'Demo tenant must be created when explicitly requested in dev/test');
       assert.strictEqual(demoRestos[0].name, 'TouchQR Demo Restaurant');
 
       // Now explicit resolution of touchqr-demo works via slug
@@ -339,6 +400,40 @@ async function runAllTests() {
       assert.strictEqual(res.status, 200);
       const data = await res.json();
       assert.strictEqual(data.name, 'TouchQR Demo Restaurant');
+
+      const bundleRes = await fetch(`${baseUrl}/menu-bundle?slug=touchqr-demo`);
+      assert.strictEqual(bundleRes.status, 200);
+      const bundle = await bundleRes.json();
+      assert(bundle.dishes && bundle.dishes.length > 0, 'Demo tenant must have seeded dishes');
+    });
+
+    // ----------------------------------------------------------------------
+    // TEST 11: Absent Demo Tenant Fails Safely with Neutral Not-Found (No Fallback)
+    // ----------------------------------------------------------------------
+    await test('Absent demo tenant returns neutral 404 and does not trigger fallback or auto-seed', async () => {
+      // Remove demo tenant and clear in-memory caches
+      await query("DELETE FROM dishes WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
+      await query("DELETE FROM categories WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
+      await query("DELETE FROM admins WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
+      await query("DELETE FROM restaurants WHERE slug = 'touchqr-demo'");
+      clearRestoResolveCache();
+      clearMenuBundleCache();
+
+      // GET /api/info?slug=touchqr-demo must return 404 notFound
+      const res = await fetch(`${baseUrl}/info?slug=touchqr-demo`);
+      assert.strictEqual(res.status, 404);
+      const data = await res.json();
+      assert.strictEqual(data.notFound, true);
+
+      // GET /api/menu-bundle?slug=touchqr-demo must return 404 notFound
+      const bundleRes = await fetch(`${baseUrl}/menu-bundle?slug=touchqr-demo`);
+      assert.strictEqual(bundleRes.status, 404);
+      const bundle = await bundleRes.json();
+      assert.strictEqual(bundle.notFound, true);
+
+      // Verify that calling absent demo route did NOT auto-create any records
+      const demoRestos = await query("SELECT * FROM restaurants WHERE slug = 'touchqr-demo'");
+      assert.strictEqual(demoRestos.length, 0, 'Accessing absent demo route must never auto-seed demo records');
     });
 
     // Clean up test tenants

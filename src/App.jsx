@@ -1858,6 +1858,7 @@ export default function App() {
 
   // Check if requested restaurant is deleted / not found
   if (restaurantStatus === 'not_found') {
+    const isDemoSlug = getSlugFromUrl() === 'touchqr-demo';
     return (
       <div style={{
         minHeight: '100vh', display: 'flex', flexDirection: 'column',
@@ -1867,29 +1868,50 @@ export default function App() {
       }}>
         <div style={{
           fontSize: '4.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 16px rgba(239,68,68,0.3))'
-        }}>❌</div>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#F87171', margin: '0 0 8px 0' }}>
-          404 - Page Not Found
+        }}>{isDemoSlug ? '🍽️' : '❌'}</div>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: isDemoSlug ? '#E2E8F0' : '#F87171', margin: '0 0 8px 0' }}>
+          {isDemoSlug ? 'Live Demo Unavailable' : '404 - Page Not Found'}
         </h1>
         <p style={{ fontSize: '0.92rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
-          The page you are looking for does not exist or has been moved.
+          {isDemoSlug
+            ? 'The interactive demo preview is not provisioned in this environment. You can explore TouchQR features from the homepage or start a free trial.'
+            : 'The page you are looking for does not exist or has been moved.'}
         </p>
-        <button
-          onClick={() => { window.location.href = '/'; }}
-          style={{
-            padding: '13px 30px',
-            borderRadius: '9999px',
-            border: 'none',
-            background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
-            color: '#0A0A0A',
-            fontWeight: 900,
-            fontSize: '0.92rem',
-            cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(255,215,0,0.3)'
-          }}
-        >
-          🏠 Go to TouchQR Homepage
-        </button>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button
+            onClick={() => { window.location.href = '/'; }}
+            style={{
+              padding: '13px 30px',
+              borderRadius: '9999px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+              color: '#0A0A0A',
+              fontWeight: 900,
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(255,215,0,0.3)'
+            }}
+          >
+            🏠 Go to TouchQR Homepage
+          </button>
+          {isDemoSlug && (
+            <button
+              onClick={() => { window.location.href = '/register'; }}
+              style={{
+                padding: '13px 30px',
+                borderRadius: '9999px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.1)',
+                color: '#FFFFFF',
+                fontWeight: 700,
+                fontSize: '0.92rem',
+                cursor: 'pointer'
+              }}
+            >
+              ⚡ Start Free Trial
+            </button>
+          )}
+        </div>
       </div>
     );
   }

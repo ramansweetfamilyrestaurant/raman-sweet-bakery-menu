@@ -16,9 +16,29 @@ let paymentIndexVerified = false;
 let paymentIndexMigrationError = null;
 
 const dbFilePath = path.resolve('menu.db');
+
+function isDemoSeedPermitted() {
+  const rawNodeEnv = process.env.NODE_ENV;
+  const nodeEnv = (rawNodeEnv && rawNodeEnv !== 'undefined' ? rawNodeEnv : 'development').toLowerCase().trim();
+  const vercelEnv = (process.env.VERCEL_ENV || '').toLowerCase().trim();
+
+  // Production environments strictly forbid demo tenant creation
+  if (nodeEnv === 'production' || nodeEnv === 'prod' || vercelEnv === 'production') {
+    return false;
+  }
+
+  // Explicit demo seeding is restricted to permitted development and test environments
+  const permittedEnvs = ['development', 'dev', 'test', 'local'];
+  return permittedEnvs.includes(nodeEnv);
+}
+
 async function initDb(options = {}) {
   if (isDbInitialized) {
-    if (options.seedDemoTenant === true || process.env.ENABLE_DEMO_TENANT_SEED === 'true') {
+    const requestedDemoSeed = Boolean(
+      options.seedDemoTenant === true ||
+      process.env.ENABLE_DEMO_TENANT_SEED === 'true'
+    );
+    if (requestedDemoSeed && isDemoSeedPermitted()) {
       await seedData(options).catch(() => {});
     }
     return;
@@ -1549,10 +1569,16 @@ async function createTables(options = {}) {
 }
 
 async function seedData(options = {}) {
-  const shouldSeedDemoTenant = Boolean(
+  const requestedDemoSeed = Boolean(
     options.seedDemoTenant === true ||
     process.env.ENABLE_DEMO_TENANT_SEED === 'true'
   );
+  const demoPermitted = isDemoSeedPermitted();
+  const shouldSeedDemoTenant = Boolean(requestedDemoSeed && demoPermitted);
+
+  if (requestedDemoSeed && !demoPermitted) {
+    console.warn(`⚠️ [SAFETY GUARD] Demo tenant seeding blocked: environment is not permitted (NODE_ENV=${process.env.NODE_ENV || 'undefined'}). Production environments strictly prohibit demo tenant seeding.`);
+  }
 
   let primaryRestoId = null;
 
@@ -2386,4 +2412,4 @@ function getRawDb() {
   return { pgPool, sqliteDb };
 }
 
-export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting, getPaymentIndexStatus, getRawDb };
+export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting, getPaymentIndexStatus, getRawDb, isDemoSeedPermitted };
