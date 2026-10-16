@@ -26,6 +26,7 @@ import {
   renderStandeeToCanvas 
 } from '../../../utils/standeeTemplates';
 import QRCode from 'qrcode';
+import { resolveBusinessProfile } from '../../../utils/businessTaxonomy';
 
 export default function QrGeneratorView({
   tableNumber,
@@ -45,8 +46,13 @@ export default function QrGeneratorView({
   const liveOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 
   // Business Vertical & Cinema Detection
-  const businessType = String(settingsForm?.business_type || restaurantInfo?.business_type || 'restaurant').toLowerCase();
-  const isCinema = businessType === 'cinema' || Boolean(capabilities?.cinema_ordering_enabled);
+  const profile = resolveBusinessProfile(settingsForm || restaurantInfo || {});
+  const rawBiz = String(settingsForm?.business_type || restaurantInfo?.business_type || '').trim().toLowerCase();
+  const rawService = String(settingsForm?.service_model || restaurantInfo?.service_model || '').trim().toLowerCase();
+  const effectiveBiz = String(profile?.business_type || rawBiz || 'restaurant').trim().toLowerCase();
+  const effectiveService = String(profile?.service_model || rawService || 'dine_in').trim().toLowerCase();
+  const isCinema = effectiveBiz === 'cinema_theatre' || effectiveBiz === 'cinema' || rawBiz === 'cinema_theatre' || rawBiz === 'cinema' || effectiveService === 'cinema' || effectiveService === 'seat_service' || rawService === 'cinema' || rawService === 'seat_service' || Boolean(capabilities?.cinema_ordering_enabled);
+  const isHotel = effectiveBiz === 'hotel_resort' || effectiveBiz === 'hotel' || rawBiz === 'hotel_resort' || rawBiz === 'hotel' || effectiveService === 'hotel' || effectiveService === 'in_room_dining' || rawService === 'hotel' || rawService === 'in_room_dining';
 
   // Appearance & Customization State
   const [selectedTheme, setSelectedTheme] = useState('emerald');
@@ -139,6 +145,23 @@ export default function QrGeneratorView({
           });
         });
       }
+    } else if (isHotel) {
+      // Hotel Rooms: 1 .. total_rooms
+      const roomsCount = Math.max(0, Number(settingsForm?.total_rooms ?? restaurantInfo?.total_rooms ?? 0));
+      for (let i = 1; i <= roomsCount; i++) {
+        const numStr = String(i);
+        spaces.push({
+          key: `room:${numStr}`,
+          spaceType: 'room',
+          spaceNumber: numStr,
+          paramName: 'room',
+          label: `Room ${i}`,
+          badge: `ROOM NO. ${i}`,
+          category: 'room',
+          categoryLabel: 'Hotel Rooms',
+          icon: '🏨'
+        });
+      }
     } else {
       // Dining Tables: 1 .. total_tables
       const tablesCount = Math.max(0, Number(settingsForm?.total_tables ?? restaurantInfo?.total_tables ?? 0));
@@ -174,23 +197,6 @@ export default function QrGeneratorView({
         });
       }
 
-      // Hotel Rooms: 1 .. total_rooms
-      const roomsCount = Math.max(0, Number(settingsForm?.total_rooms ?? restaurantInfo?.total_rooms ?? 0));
-      for (let i = 1; i <= roomsCount; i++) {
-        const numStr = String(i);
-        spaces.push({
-          key: `room:${numStr}`,
-          spaceType: 'room',
-          spaceNumber: numStr,
-          paramName: 'room',
-          label: `Room ${i}`,
-          badge: `ROOM NO. ${i}`,
-          category: 'room',
-          categoryLabel: 'Hotel Rooms',
-          icon: '🏨'
-        });
-      }
-
       // VIP Lounges: 1 .. total_vip
       const vipCount = Math.max(0, Number(settingsForm?.total_vip ?? restaurantInfo?.total_vip ?? 0));
       for (let i = 1; i <= vipCount; i++) {
@@ -212,6 +218,7 @@ export default function QrGeneratorView({
     return spaces;
   }, [
     isCinema, 
+    isHotel,
     cinemaSeats, 
     settingsForm?.total_tables, 
     settingsForm?.total_cabins, 
@@ -662,7 +669,7 @@ export default function QrGeneratorView({
           {onBackToSetup && (
             <button
               type="button"
-              onClick={() => onBackToSetup('general')}
+              onClick={() => onBackToSetup(isCinema ? 'cinema' : 'general')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -678,7 +685,7 @@ export default function QrGeneratorView({
               }}
             >
               <Settings size={14} />
-              <span>Configure Spaces</span>
+              <span>{isCinema ? 'Cinema Setup' : 'Configure Spaces'}</span>
             </button>
           )}
         </div>
@@ -872,18 +879,20 @@ export default function QrGeneratorView({
               <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748B' }}>
                 <AlertTriangle size={36} color="#D97706" style={{ margin: '0 auto 12px auto' }} />
                 <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 6px 0' }}>
-                  No Physical Spaces Configured
+                  {isHotel ? 'No Guest Rooms Configured' : 'No Physical Spaces Configured'}
                 </h3>
                 <p style={{ fontSize: '0.84rem', margin: '0 0 16px 0' }}>
                   {isCinema
                     ? 'No cinema screens or seats found in database. Configure seats in Cinema Setup.'
-                    : 'Set your total tables, cabins, rooms, or VIP spaces in Restaurant Setup to generate standees.'
+                    : isHotel
+                    ? 'No hotel guest rooms configured. Set your Total Guest Rooms in Business Profile to generate room QR codes.'
+                    : 'Set your total tables, cabins, or VIP spaces in Restaurant Setup to generate standees.'
                   }
                 </p>
                 {onBackToSetup && (
                   <button
                     type="button"
-                    onClick={() => onBackToSetup('general')}
+                    onClick={() => onBackToSetup(isCinema ? 'cinema' : isHotel ? 'profile' : 'general')}
                     style={{
                       padding: '8px 16px',
                       borderRadius: '8px',
@@ -895,7 +904,7 @@ export default function QrGeneratorView({
                       cursor: 'pointer'
                     }}
                   >
-                    Go to Restaurant Settings
+                    {isCinema ? 'Go to Cinema Settings' : isHotel ? 'Go to Hotel Settings' : 'Go to Restaurant Settings'}
                   </button>
                 )}
               </div>

@@ -61,6 +61,11 @@ export default function OrdersView({
   token = null,
   onNavigateToSetup = null
 }) {
+  // Authoritative KDS entitlement (strictly respects plan capability logic, prevents stale local override from bypassing plan lock)
+  const isKdsEntitled = capabilities && capabilities.kds_enabled !== undefined
+    ? Boolean(capabilities.kds_enabled)
+    : Boolean(restaurantInfo?.kds_enabled);
+
   const safeParseItems = (rawItems) => {
     if (!rawItems) return [];
     if (Array.isArray(rawItems)) return rawItems;
@@ -93,7 +98,7 @@ export default function OrdersView({
   const effectiveBiz = profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type;
   const effectiveService = profile?.service_model || settingsForm?.service_model || restaurantInfo?.service_model;
   const isCinema = effectiveBiz === 'cinema_theatre' || effectiveService === 'cinema' || effectiveService === 'seat_service';
-  const isHotel = effectiveBiz === 'hotel_resort' || effectiveService === 'hotel' || effectiveService === 'in_room_dining';
+  const isHotel = effectiveBiz === 'hotel_resort' || effectiveBiz === 'hotel' || effectiveService === 'hotel' || effectiveService === 'in_room_dining';
   const isDining = !isCinema && !isHotel;
 
   const [cinemaScreens, setCinemaScreens] = useState([]);
@@ -209,7 +214,10 @@ export default function OrdersView({
   const spaceInventory = useMemo(() => {
     if (isCinema) return [];
     if (isHotel) {
-      const roomCount = Number(restaurantInfo?.total_rooms ?? settingsForm?.total_rooms) || 10;
+      const rawRooms = restaurantInfo?.total_rooms ?? settingsForm?.total_rooms;
+      const roomCount = (rawRooms !== undefined && rawRooms !== null && !isNaN(Number(rawRooms)))
+        ? Math.max(0, Math.floor(Number(rawRooms)))
+        : 0;
       return Array.from({ length: roomCount }, (_, i) => {
         const num = String(i + 1);
         return {
@@ -633,9 +641,11 @@ export default function OrdersView({
           {/* KDS Subtab */}
           <button
             onClick={() => {
-              if (capabilities?.kds_enabled || settingsForm?.kds_enabled || restaurantInfo?.kds_enabled) {
-                const currentSlug = restaurantInfo?.slug || '';
+              if (isKdsEntitled) {
+                const currentSlug = restaurantInfo?.slug || settingsForm?.slug || '';
                 window.open(currentSlug ? `/${currentSlug}/kitchen` : '/kitchen', '_blank');
+              } else if (onNavigateToSetup) {
+                onNavigateToSetup('subscription');
               } else {
                 setActiveSubTab && setActiveSubTab('kds');
               }
@@ -664,7 +674,7 @@ export default function OrdersView({
       {/* ========================================================
           2. LIVE ORDERS SUBTAB (ORDERS METRICS + TABLE + CARDS)
          ======================================================== */}
-      {activeSubTab === 'orders' && (
+      {(activeSubTab === 'orders' || !['floor-map', 'service-requests', 'kds'].includes(activeSubTab)) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="orders-metric-grid">
         {/* Needs Attention (Pending) */}
@@ -1345,10 +1355,11 @@ export default function OrdersView({
             </div>
           </div>
 
-          {/* Category Filter Pills (Tables, Cabins, VIP) */}
+          {/* Category Filter Pills (Tables, Cabins, VIP, Rooms) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
             {[
               { id: 'all', label: `All Spaces (${spaceGrid.length})` },
+              { id: 'room', label: `🏨 Rooms (${spaceGrid.filter(s => s.category === 'room').length})` },
               { id: 'table', label: `🍽️ Tables (${spaceGrid.filter(s => s.category === 'table').length})` },
               { id: 'cabin', label: `🛋️ Cabins (${spaceGrid.filter(s => s.category === 'cabin').length})` },
               { id: 'vip', label: `👑 VIP (${spaceGrid.filter(s => s.category === 'vip').length})` }
@@ -1374,11 +1385,57 @@ export default function OrdersView({
           </div>
 
           {/* Physical Spaces Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-            gap: '14px'
-          }}>
+          {filteredSpaceGrid.length === 0 ? (
+            <div style={{
+              padding: '48px 24px',
+              textAlign: 'center',
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #E2E8F0',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px'
+            }}>
+              <span style={{ fontSize: '2.5rem' }}>{isHotel ? '🏨' : '🍽️'}</span>
+              <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                {isHotel ? 'No Guest Rooms Configured' : 'No Physical Spaces Configured'}
+              </h4>
+              <p style={{ fontSize: '0.8rem', color: '#64748B', margin: 0, maxWidth: '420px', lineHeight: 1.5 }}>
+                {isHotel
+                  ? 'Set your Total Guest Rooms in Business Profile or Physical Space settings to start tracking room service and live occupancy.'
+                  : 'Configure dining tables, cabins, or VIP sections in Settings to view live floor occupancy.'}
+              </p>
+              {onNavigateToSetup && (
+                <button
+                  onClick={() => onNavigateToSetup(isHotel ? 'profile' : 'general')}
+                  style={{
+                    marginTop: '8px',
+                    padding: '8px 18px',
+                    borderRadius: '10px',
+                    background: '#261B14',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>{isHotel ? 'Configure Hotel Rooms' : 'Go to Setup'}</span>
+                  <ChevronRight size={14} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+              gap: '14px'
+            }}>
             {filteredSpaceGrid.map(space => {
               const isFree = space.status === 'free';
               const isOrder = Boolean(space.activeOrder);
@@ -1565,6 +1622,7 @@ export default function OrdersView({
               );
             })}
           </div>
+          )}
         </div>
       )}
 
@@ -1663,6 +1721,104 @@ export default function OrdersView({
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ========================================================
+          4.5. KDS SUBTAB (ACTIVE LAUNCHER OR PLAN-LOCKED UI)
+         ======================================================== */}
+      {activeSubTab === 'kds' && !isKdsEntitled && (
+        <div style={{ padding: '24px 16px', maxWidth: '800px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+          <PlanLockedCard
+            featureKey="kds_enabled"
+            featureName="Kitchen Display System (KDS)"
+            featureDescription="Dedicated chef terminal with real-time kitchen ticket management, ticking timers, PIN security, and loud audio chimes."
+            requiredPlanName="Pro Plan or Higher"
+            onUpgradeClick={() => onNavigateToSetup && onNavigateToSetup('subscription')}
+          />
+        </div>
+      )}
+
+      {activeSubTab === 'kds' && isKdsEntitled && (
+        <div style={{ padding: '32px 16px', maxWidth: '800px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            padding: '32px 24px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            gap: '16px'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '14px',
+              background: '#FEF3C7',
+              color: '#D97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <ChefHat size={30} />
+            </div>
+            <div>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
+                Kitchen Display System (KDS) Active
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.86rem', color: '#64748B', maxWidth: '520px', lineHeight: 1.5 }}>
+                Your dedicated chef terminal runs as a standalone, distraction-free screen designed for kitchen tablets with real-time ticket sync, ticking timers, and PIN protection.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentSlug = restaurantInfo?.slug || settingsForm?.slug || '';
+                  window.open(currentSlug ? `/${currentSlug}/kitchen` : '/kitchen', '_blank');
+                }}
+                style={{
+                  background: '#261B14',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '10px 20px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(38, 27, 20, 0.2)'
+                }}
+              >
+                <ChefHat size={16} color="#F59E0B" />
+                <span>Open Kitchen Display</span>
+                <ArrowUpRight size={14} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveSubTab && setActiveSubTab('orders')}
+                style={{
+                  background: '#F1F5F9',
+                  color: '#334155',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '10px',
+                  padding: '10px 18px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Back to Live Orders
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -495,6 +495,59 @@ export default function TenantDetailsView({
             </div>
           )}
 
+          {/* Real Support Tickets Summary */}
+          <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '16px', border: '1px solid var(--sa-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MessageSquare size={13} color="var(--sa-primary)" />
+                <span>Support Inquiries ({support.total_tickets ?? 0} total · {support.open_tickets ?? 0} open)</span>
+              </span>
+            </div>
+
+            {Array.isArray(support.recent_tickets) && support.recent_tickets.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {support.recent_tickets.map(t => (
+                  <div
+                    key={t.id}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      background: '#FAF8F5',
+                      border: '1px solid #EAE5DF',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '0.76rem'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#0F172A' }}>
+                        #{t.ticket_ref} · {t.subject}
+                      </div>
+                      <span style={{ fontSize: '0.66rem', color: '#64748B' }}>
+                        Category: {t.category} · {t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN') : ''}
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: '0.64rem',
+                      fontWeight: 900,
+                      padding: '2px 6px',
+                      borderRadius: '6px',
+                      background: t.status === 'resolved' ? '#ECFDF5' : (t.status === 'closed' ? '#F1F5F9' : '#FEF3C7'),
+                      color: t.status === 'resolved' ? '#059669' : (t.status === 'closed' ? '#64748B' : '#D97706')
+                    }}>
+                      {t.status.toUpperCase()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.78rem', color: '#64748B', background: '#FAF8F5', padding: '10px 12px', borderRadius: '10px' }}>
+                {support.notes || 'No active support tickets reported for this restaurant.'}
+              </div>
+            )}
+          </div>
+
           {/* Quick Admin Actions Row */}
           <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '16px', border: '1px solid var(--sa-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>

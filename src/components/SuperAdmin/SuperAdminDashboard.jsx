@@ -16,6 +16,7 @@ import TenantDetailsView from './views/TenantDetailsView';
 import CommunicationView from './views/CommunicationView';
 import OperationsView from './views/OperationsView';
 import AuditLogsView from './views/AuditLogsView';
+import SupportTicketsView from './views/SupportTicketsView';
 import { KpiCard, SectionHeader, StatusBadge, EmptyState, DataTable, FilterPills, SearchBar, TenantCard } from './components';
 import './styles/SuperAdmin.css';
 
@@ -2659,6 +2660,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               />
             </div>
           )}
+
+          {/* ========================================================================= */}
+          {/* VIEW 9: SUPPORT TICKETS COMMAND CENTER                                    */}
+          {/* ========================================================================= */}
+          {activeView === 'tickets' && (
+            <div style={{ maxWidth: '1240px', margin: '0 auto', width: '100%' }}>
+              <SupportTicketsView token={token} />
+            </div>
+          )}
         </main>
 
         {/* 📱 MOBILE FIXED BOTTOM NAVIGATION BAR */}
@@ -2717,6 +2727,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               {[
                 { id: 'overview', label: 'Overview & KPIs', desc: 'Real-time telemetry & stats', icon: LayoutGrid, count: null, color: '#2563EB', bg: '#EFF6FF' },
                 { id: 'tenants', label: 'Shops Directory', desc: 'Manage client accounts & access', icon: Store, count: restaurants.length, color: '#059669', bg: '#ECFDF5' },
+                { id: 'tickets', label: 'Support Tickets Desk', desc: 'Manage tenant tickets & replies', icon: MessageSquare, count: null, color: '#059669', bg: '#ECFDF5' },
                 { id: 'billing', label: 'Billing & Subscriptions', desc: 'Cashfree mandates & renewals', icon: CreditCard, count: restaurants.filter(r => getTenantStatus(r) === 'active').length, color: '#7C3AED', bg: '#F5F3FF' },
               ].map((item, idx, arr) => {
                 const isActive = activeView === item.id;

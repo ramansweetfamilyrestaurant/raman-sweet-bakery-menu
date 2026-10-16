@@ -1037,3 +1037,115 @@ export async function rotateQrSecretApi(token) {
   return handleResponse(res, 'Failed to rotate QR secret');
 }
 
+// =========================================================================
+// TENANT SUPPORT TICKET API CLIENT FUNCTIONS
+// =========================================================================
+
+export async function createTenantSupportTicket(ticketData, token) {
+  const res = await fetch(`${API_BASE}/admin/support/tickets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(ticketData)
+  });
+  return handleResponse(res, 'Failed to create support ticket');
+}
+
+export async function fetchTenantSupportTickets(token, { page = 1, limit = 20, status = '' } = {}) {
+  const params = new URLSearchParams();
+  if (page) params.append('page', page);
+  if (limit) params.append('limit', limit);
+  if (status) params.append('status', status);
+
+  const res = await fetch(`${API_BASE}/admin/support/tickets?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  return handleResponse(res, 'Failed to fetch support tickets');
+}
+
+export async function fetchTenantSupportTicketDetails(ticketId, token) {
+  const res = await fetch(`${API_BASE}/admin/support/tickets/${encodeURIComponent(ticketId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  return handleResponse(res, 'Failed to fetch ticket details');
+}
+
+export async function addTenantSupportTicketReply(ticketId, message, token) {
+  const res = await fetch(`${API_BASE}/admin/support/tickets/${encodeURIComponent(ticketId)}/reply`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ message })
+  });
+  return handleResponse(res, 'Failed to send reply');
+}
+
+// =========================================================================
+// SUPER ADMIN SUPPORT TICKET API CLIENT FUNCTIONS
+// =========================================================================
+
+export async function fetchSuperAdminSupportOperators(token) {
+  const res = await fetch(`${API_BASE}/superadmin/support/operators`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  return handleResponse(res, 'Failed to fetch support operators');
+}
+
+export async function fetchSuperAdminSupportTickets(token, { page = 1, limit = 50, status = '', priority = '', category = '', business_type = '', restaurant_id = '', search = '' } = {}) {
+  const params = new URLSearchParams();
+  if (page) params.append('page', page);
+  if (limit) params.append('limit', limit);
+  if (status) params.append('status', status);
+  if (priority) params.append('priority', priority);
+  if (category) params.append('category', category);
+  if (business_type) params.append('business_type', business_type);
+  if (restaurant_id) params.append('restaurant_id', restaurant_id);
+  if (search) params.append('search', search);
+
+  const res = await fetch(`${API_BASE}/superadmin/support/tickets?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  return handleResponse(res, 'Failed to fetch support tickets');
+}
+
+export async function fetchSuperAdminSupportTicketDetails(ticketId, token) {
+  const res = await fetch(`${API_BASE}/superadmin/support/tickets/${encodeURIComponent(ticketId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  return handleResponse(res, 'Failed to fetch ticket details');
+}
+
+export async function updateSuperAdminSupportTicket(ticketId, updateData, token) {
+  const res = await fetch(`${API_BASE}/superadmin/support/tickets/${encodeURIComponent(ticketId)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(updateData)
+  });
+  return handleResponse(res, 'Failed to update support ticket');
+}
+
+export async function addSuperAdminSupportTicketReply(ticketId, { message, status = '' }, token) {
+  const res = await fetch(`${API_BASE}/superadmin/support/tickets/${encodeURIComponent(ticketId)}/reply`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ message, status })
+  });
+  return handleResponse(res, 'Failed to send official reply');
+}
+
+

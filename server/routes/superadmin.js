@@ -6,9 +6,10 @@ import { authenticateToken } from '../middleware/auth.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
 import { createCashfreeSubscriptionSession, getCashfreeConfigAsync } from '../services/cashfree.js';
 import { JWT_SECRET } from '../config/jwt.js';
-import { superAdminLoginRateLimiter } from '../middleware/rateLimiters.js';
+import { superAdminLoginRateLimiter, supportTicketReplyRateLimiter } from '../middleware/rateLimiters.js';
 import { resolveCanonicalSubscriptionState } from '../services/subscriptionState.js';
 import { resolveBusinessCategoryFromType, resolveBusinessProfile } from '../config/businessTaxonomy.js';
+import { validateReplyInput, validateStatusTransition, VALID_STATUSES, VALID_PRIORITIES, VALID_CATEGORIES, normalizeCategory } from '../services/supportTicketService.js';
 
 function getAppBaseUrl(req) {
   if (process.env.APP_BASE_URL && !process.env.APP_BASE_URL.includes('onrender.com')) {
@@ -414,9 +415,41 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
         auto_renew_enabled: sub?.auto_renew !== undefined ? (sub.auto_renew === 1 || sub.auto_renew === true || sub.auto_renew === '1') : (resto.auto_debit_enabled === 1),
         last_impersonation: null
       },
-      support: {
-        notes: "Internal tenant notes: not currently available."
-      }
+      support: await (async () => {
+        try {
+          const statsRows = await query(`
+            SELECT 
+              COUNT(*) as total_tickets,
+              SUM(CASE WHEN status IN ('open', 'in_progress', 'waiting_on_tenant') THEN 1 ELSE 0 END) as active_tickets,
+              SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_tickets,
+              MAX(created_at) as last_ticket_at
+            FROM support_tickets 
+            WHERE restaurant_id = $1
+          `, [id]);
+          const stats = statsRows[0] || {};
+          const recentTickets = await query(`
+            SELECT id, ticket_ref, subject, category, status, priority, created_at, updated_at
+            FROM support_tickets
+            WHERE restaurant_id = $1
+            ORDER BY created_at DESC LIMIT 5
+          `, [id]);
+          return {
+            total_tickets: parseInt(stats.total_tickets || 0, 10),
+            active_tickets: parseInt(stats.active_tickets || 0, 10),
+            resolved_tickets: parseInt(stats.resolved_tickets || 0, 10),
+            last_ticket_at: stats.last_ticket_at || null,
+            recent_tickets: recentTickets || []
+          };
+        } catch (e) {
+          return {
+            total_tickets: 0,
+            active_tickets: 0,
+            resolved_tickets: 0,
+            last_ticket_at: null,
+            recent_tickets: []
+          };
+        }
+      })()
     });
   } catch (err) {
     console.error('Fetch Tenant 360 error:', err);
@@ -1955,4 +1988,412 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
   }
 });
 
+// =========================================================================
+// SUPER ADMIN SUPPORT TICKET MANAGEMENT ENDPOINTS
+// =========================================================================
+
+// GET /api/superadmin/support/operators - List eligible Super Admin operators for assignment
+router.get('/support/operators', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const operators = await query("SELECT id, username, role FROM admins WHERE role = 'superadmin' ORDER BY username ASC");
+    res.json({ operators: operators || [] });
+  } catch (err) {
+    console.error('Fetch support operators error:', err.message);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to fetch support operators.' });
+  }
+});
+
+// GET /api/superadmin/support/tickets - View, search and filter all tenant tickets with KPIs
+router.get('/support/tickets', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || 1, 10));
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || 50, 10)));
+    const offset = (page - 1) * limit;
+
+    const statusFilter = String(req.query.status || '').trim().toLowerCase();
+    const priorityFilter = String(req.query.priority || '').trim().toLowerCase();
+    const categoryFilter = String(req.query.category || '').trim().toLowerCase();
+    const businessTypeFilter = String(req.query.business_type || '').trim().toLowerCase();
+    const restaurantIdFilter = req.query.restaurant_id ? parseInt(req.query.restaurant_id, 10) : null;
+    const search = String(req.query.search || '').trim().toLowerCase();
+
+    let whereConditions = [];
+    let params = [];
+
+    if (statusFilter && VALID_STATUSES.includes(statusFilter)) {
+      params.push(statusFilter);
+      whereConditions.push(`st.status = $${params.length}`);
+    }
+
+    if (priorityFilter && VALID_PRIORITIES.includes(priorityFilter)) {
+      params.push(priorityFilter);
+      whereConditions.push(`st.priority = $${params.length}`);
+    }
+
+    if (categoryFilter) {
+      const cleanCat = normalizeCategory(categoryFilter);
+      if (cleanCat) {
+        params.push(cleanCat);
+        whereConditions.push(`st.category = $${params.length}`);
+      }
+    }
+
+    if (restaurantIdFilter) {
+      params.push(restaurantIdFilter);
+      whereConditions.push(`st.restaurant_id = $${params.length}`);
+    }
+
+    if (businessTypeFilter) {
+      params.push(businessTypeFilter);
+      whereConditions.push(`r.business_type = $${params.length}`);
+    }
+
+    if (search) {
+      params.push(`%${search}%`);
+      const pIdx = params.length;
+      whereConditions.push(`(
+        LOWER(st.ticket_ref) LIKE $${pIdx} OR 
+        LOWER(st.subject) LIKE $${pIdx} OR 
+        LOWER(r.name) LIKE $${pIdx} OR 
+        LOWER(r.slug) LIKE $${pIdx}
+      )`);
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    // Total Count
+    const countSql = `
+      SELECT COUNT(*) as total 
+      FROM support_tickets st 
+      JOIN restaurants r ON r.id = st.restaurant_id 
+      ${whereClause}
+    `;
+    const countRes = await query(countSql, params);
+    const countRows = countRes.rows || countRes;
+    const total = parseInt(countRows[0]?.total || 0, 10);
+
+    // Fetch Tickets
+    const dataSql = `
+      SELECT 
+        st.id,
+        st.restaurant_id,
+        st.ticket_ref,
+        st.subject,
+        st.category,
+        st.message,
+        st.status,
+        st.priority,
+        st.assigned_to_admin_id,
+        st.assigned_to_name,
+        st.created_at,
+        st.updated_at,
+        st.resolved_at,
+        st.closed_at,
+        r.name as restaurant_name,
+        r.slug as restaurant_slug,
+        r.business_type,
+        r.phone as restaurant_phone
+      FROM support_tickets st
+      JOIN restaurants r ON r.id = st.restaurant_id
+      ${whereClause}
+      ORDER BY st.updated_at DESC, st.id DESC
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+    `;
+    const queryParams = [...params, limit, offset];
+    const ticketRes = await query(dataSql, queryParams);
+    const tickets = ticketRes.rows || ticketRes;
+
+    // Rollup KPIs across all tickets
+    const kpiSql = `
+      SELECT 
+        COUNT(*) as total_all,
+        SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as total_open,
+        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as total_in_progress,
+        SUM(CASE WHEN status = 'waiting_on_tenant' THEN 1 ELSE 0 END) as total_waiting_tenant,
+        SUM(CASE WHEN priority = 'urgent' AND status NOT IN ('resolved', 'closed') THEN 1 ELSE 0 END) as total_urgent,
+        SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as total_resolved,
+        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as total_closed
+      FROM support_tickets
+    `;
+    const kpiRes = await query(kpiSql);
+    const kpiRows = kpiRes.rows || kpiRes;
+    const kpiRow = kpiRows[0] || {};
+    const kpis = {
+      total_all: parseInt(kpiRow.total_all || 0, 10),
+      total_open: parseInt(kpiRow.total_open || 0, 10),
+      total_in_progress: parseInt(kpiRow.total_in_progress || 0, 10),
+      total_waiting_tenant: parseInt(kpiRow.total_waiting_tenant || 0, 10),
+      total_urgent: parseInt(kpiRow.total_urgent || 0, 10),
+      total_resolved: parseInt(kpiRow.total_resolved || 0, 10),
+      total_closed: parseInt(kpiRow.total_closed || 0, 10),
+      open: parseInt(kpiRow.total_open || 0, 10),
+      in_progress: parseInt(kpiRow.total_in_progress || 0, 10),
+      waiting_on_tenant: parseInt(kpiRow.total_waiting_tenant || 0, 10),
+      urgent: parseInt(kpiRow.total_urgent || 0, 10),
+      resolved: parseInt(kpiRow.total_resolved || 0, 10),
+      total: parseInt(kpiRow.total_all || 0, 10)
+    };
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    res.json({
+      tickets: tickets || [],
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages
+      },
+      metrics: kpis,
+      kpis
+    });
+  } catch (err) {
+    console.error('Super Admin fetch tickets error:', err.message);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to fetch tickets.' });
+  }
+});
+
+// GET /api/superadmin/support/tickets/:id - Get full ticket details with conversation thread
+router.get('/support/tickets/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const ticketId = parseInt(req.params.id, 10);
+    if (!ticketId || isNaN(ticketId)) {
+      return res.status(400).json({ error: 'INVALID_ID', message: 'Invalid ticket identifier.' });
+    }
+
+    const ticketRes = await query(`
+      SELECT 
+        st.*,
+        r.name as restaurant_name,
+        r.slug as restaurant_slug,
+        r.business_type,
+        r.phone as restaurant_phone,
+        r.address as restaurant_address
+      FROM support_tickets st
+      JOIN restaurants r ON r.id = st.restaurant_id
+      WHERE st.id = $1
+    `, [ticketId]);
+    const ticketRows = ticketRes.rows || ticketRes;
+
+    if (!ticketRows || ticketRows.length === 0) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Support ticket not found.' });
+    }
+    const ticket = ticketRows[0];
+
+    const msgRes = await query('SELECT * FROM support_ticket_messages WHERE ticket_id = $1 ORDER BY id ASC, created_at ASC', [ticket.id]);
+    const messages = msgRes.rows || msgRes;
+
+    res.json({
+      ticket,
+      messages: messages || []
+    });
+  } catch (err) {
+    console.error('Super Admin fetch ticket details error:', err.message);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to fetch ticket details.' });
+  }
+});
+
+// PATCH /api/superadmin/support/tickets/:id - Update status, priority, or operator assignment
+router.patch('/support/tickets/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const ticketId = parseInt(req.params.id, 10);
+    if (!ticketId || isNaN(ticketId)) {
+      return res.status(400).json({ error: 'INVALID_ID', message: 'Invalid ticket identifier.' });
+    }
+
+    const ticketRes = await query('SELECT * FROM support_tickets WHERE id = $1', [ticketId]);
+    const ticketRows = ticketRes.rows || ticketRes;
+    if (!ticketRows || ticketRows.length === 0) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Support ticket not found.' });
+    }
+    const currentTicket = ticketRows[0];
+
+    const { status, priority } = req.body || {};
+    const assignedIdInput = req.body?.assigned_to !== undefined ? req.body.assigned_to : req.body?.assigned_to_admin_id;
+
+    let targetStatus = currentTicket.status;
+    let targetPriority = currentTicket.priority;
+    let targetAssignedId = currentTicket.assigned_to_admin_id;
+    let targetAssignedName = currentTicket.assigned_to_name;
+    let resolvedAt = currentTicket.resolved_at;
+    let closedAt = currentTicket.closed_at;
+
+    // 1. Status Validation & State Transition
+    if (status !== undefined && status !== currentTicket.status) {
+      const cleanStatus = String(status).toLowerCase().trim();
+      const transition = validateStatusTransition(currentTicket.status, cleanStatus);
+      if (!transition.isValid) {
+        return res.status(400).json({ error: 'INVALID_STATUS_TRANSITION', message: transition.error });
+      }
+      targetStatus = cleanStatus;
+
+      // Handle resolution timestamp
+      if (targetStatus === 'resolved') {
+        resolvedAt = new Date().toISOString();
+      } else if (currentTicket.status === 'resolved' && targetStatus !== 'closed') {
+        resolvedAt = null;
+      }
+
+      // Handle closure timestamp
+      if (targetStatus === 'closed') {
+        closedAt = new Date().toISOString();
+      } else if (currentTicket.status === 'closed') {
+        closedAt = null;
+      }
+    }
+
+    // 2. Priority Validation
+    if (priority !== undefined && priority !== currentTicket.priority) {
+      const cleanPriority = String(priority).toLowerCase().trim();
+      if (!VALID_PRIORITIES.includes(cleanPriority)) {
+        return res.status(400).json({
+          error: 'INVALID_PRIORITY',
+          code: 'INVALID_PRIORITY',
+          message: `Priority must be one of: ${VALID_PRIORITIES.join(', ')}.`
+        });
+      }
+      targetPriority = cleanPriority;
+    }
+
+    // 3. Operator Assignment Validation
+    if (assignedIdInput !== undefined) {
+      if (!assignedIdInput || assignedIdInput === 0 || assignedIdInput === 'none' || assignedIdInput === '') {
+        targetAssignedId = null;
+        targetAssignedName = null;
+      } else {
+        const opId = parseInt(assignedIdInput, 10);
+        const opRes = await query("SELECT id, username, role FROM admins WHERE id = $1 AND role = 'superadmin'", [opId]);
+        const opCheck = opRes.rows || opRes;
+        if (!opCheck || opCheck.length === 0) {
+          return res.status(400).json({
+            error: 'INVALID_OPERATOR',
+            code: 'INVALID_OPERATOR',
+            message: 'Assigned operator must be an active Super Admin account.'
+          });
+        }
+        targetAssignedId = opCheck[0].id;
+        targetAssignedName = opCheck[0].username;
+      }
+    }
+
+    // Execute update
+    await query(`
+      UPDATE support_tickets
+      SET 
+        status = $1,
+        priority = $2,
+        assigned_to_admin_id = $3,
+        assigned_to_name = $4,
+        resolved_at = $5,
+        closed_at = $6,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $7
+    `, [targetStatus, targetPriority, targetAssignedId, targetAssignedName, resolvedAt, closedAt, ticketId]);
+
+    const updatedRes = await query(`
+      SELECT 
+        st.*,
+        st.assigned_to_name as assigned_operator_username,
+        st.assigned_to_admin_id as assigned_to,
+        r.name as restaurant_name,
+        r.slug as restaurant_slug,
+        r.business_type,
+        r.phone as restaurant_phone
+      FROM support_tickets st
+      JOIN restaurants r ON r.id = st.restaurant_id
+      WHERE st.id = $1
+    `, [ticketId]);
+    const updatedRows = updatedRes.rows || updatedRes;
+
+    await logAudit(
+      currentTicket.restaurant_id,
+      'superadmin',
+      'SUPPORT_TICKET_UPDATED',
+      `Updated ticket ${currentTicket.ticket_ref}: status='${targetStatus}', priority='${targetPriority}', assigned_to='${targetAssignedName || 'unassigned'}'`
+    );
+
+    res.json({
+      success: true,
+      ticket: updatedRows[0]
+    });
+  } catch (err) {
+    console.error('Super Admin update ticket error:', err.message);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to update ticket.' });
+  }
+});
+
+// POST /api/superadmin/support/tickets/:id/reply - Post official Super Admin reply
+router.post('/support/tickets/:id/reply', authenticateToken, requireSuperAdmin, supportTicketReplyRateLimiter, async (req, res) => {
+  try {
+    const ticketId = parseInt(req.params.id, 10);
+    if (!ticketId || isNaN(ticketId)) {
+      return res.status(400).json({ error: 'INVALID_ID', message: 'Invalid ticket identifier.' });
+    }
+
+    const ticketRes = await query('SELECT * FROM support_tickets WHERE id = $1', [ticketId]);
+    const ticketRows = ticketRes.rows || ticketRes;
+    if (!ticketRows || ticketRows.length === 0) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Support ticket not found.' });
+    }
+    const ticket = ticketRows[0];
+
+    // Closed ticket check
+    if (ticket.status === 'closed') {
+      return res.status(400).json({
+        error: 'TICKET_CLOSED',
+        code: 'TICKET_CLOSED',
+        message: 'This ticket is closed. Please reopen it before sending replies.'
+      });
+    }
+
+    const validation = validateReplyInput(req.body?.message);
+    if (!validation.isValid) {
+      return res.status(400).json({ error: 'VALIDATION_FAILED', message: validation.error });
+    }
+
+    const replyText = validation.data;
+    const senderName = req.user?.username || 'TouchQR Support';
+    const senderId = req.user?.id || null;
+
+    // Transition status to 'waiting_on_tenant' unless ticket was already 'in_progress' and caller explicitly kept it
+    const targetStatus = req.body?.status === 'in_progress' ? 'in_progress' : 'waiting_on_tenant';
+
+    const newMsg = await withTransaction(async (txQuery) => {
+      const msgRes = await txQuery(`
+        INSERT INTO support_ticket_messages (
+          ticket_id, sender_type, sender_id, sender_name, message, created_at
+        ) VALUES (
+          $1, 'superadmin', $2, $3, $4, CURRENT_TIMESTAMP
+        ) RETURNING id, ticket_id, sender_type, sender_id, sender_name, message, created_at
+      `, [ticket.id, senderId, senderName, replyText]);
+      const msgRows = msgRes.rows || msgRes;
+
+      await txQuery(`
+        UPDATE support_tickets 
+        SET status = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [targetStatus, ticket.id]);
+
+      return msgRows[0] || (await txQuery('SELECT * FROM support_ticket_messages WHERE ticket_id = $1 ORDER BY id DESC LIMIT 1', [ticket.id]))[0];
+    });
+
+    await logAudit(
+      ticket.restaurant_id,
+      'superadmin',
+      'SUPPORT_TICKET_REPLY',
+      `Super Admin '${senderName}' replied on ticket ${ticket.ticket_ref}`
+    );
+
+    res.status(201).json({
+      success: true,
+      message: newMsg,
+      ticket_status: targetStatus
+    });
+  } catch (err) {
+    console.error('Super Admin post reply error:', err.message);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to post reply.' });
+  }
+});
+
 export default router;
+

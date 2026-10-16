@@ -240,24 +240,19 @@ export default function SetupView({
   const [secConfirmKdsPin, setSecConfirmKdsPin] = useState('');
   const [secKdsMsg, setSecKdsMsg] = useState(null);
   const [secSessionsList, setSecSessionsList] = useState([
-    { id: 'sess-1', device: 'Chrome • Windows', location: 'Current Session', time: 'Just now', current: true },
-    { id: 'sess-2', device: 'Chrome • Android', location: 'Mobile Admin', time: '2 hours ago', current: false }
+    { id: 'sess-current', device: 'Current Browser Session', location: 'This Device (Active)', time: 'Active now', current: true }
   ]);
 
   // Database Tools Full-Page State
   const [lastMaintTime, setLastMaintTime] = useState(() => {
     const slug = settingsForm?.slug || '';
-    return (slug && localStorage.getItem(`touchqr_last_db_maint_${slug}`)) || 'Today, 10:30 AM';
+    return (slug && localStorage.getItem(`touchqr_last_db_maint_${slug}`)) || 'Never';
   });
   const [dbRunningAction, setDbRunningAction] = useState(null); // 'optimize' | 'clear_logs' | 'clean_drafts' | 'purge_cache'
   const [dbActionMsg, setDbActionMsg] = useState('');
   const [dbActionError, setDbActionError] = useState('');
   const [dbConfirmType, setDbConfirmType] = useState(null); // 'optimize' | 'clear_logs' | 'clean_drafts' | 'purge_cache'
-  const [dbLogs, setDbLogs] = useState([
-    { id: 1, action: 'Database optimization & table compaction', status: 'Completed', time: 'Today, 10:30 AM', type: 'opt' },
-    { id: 2, action: 'Temporary runtime logs cleanup', status: 'Completed', time: 'Yesterday, 04:20 PM', type: 'clean' },
-    { id: 3, action: 'Automated database health check', status: 'Healthy', time: '2 days ago', type: 'check' }
-  ]);
+  const [dbLogs, setDbLogs] = useState([]);
 
   // Location & GPS Full-Page State
   const [hasUnsavedLocation, setHasUnsavedLocation] = useState(false);
@@ -683,11 +678,12 @@ export default function SetupView({
     }
   }, [initialDrawer]);
 
-  // Cinema Management State
-  const profile = resolveBusinessProfile(settingsForm || {});
-  const isCinema = (profile?.business_type || settingsForm?.business_type) === 'cinema_theatre' || 
-                   (profile?.service_model || settingsForm?.service_model) === 'cinema' ||
-                   (profile?.service_model || settingsForm?.service_model) === 'seat_service';
+  // Business Vertical & Canonical Service Model Detection
+  const profile = resolveBusinessProfile(settingsForm || restaurantInfo || {});
+  const effectiveBiz = String(profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type || 'restaurant').trim().toLowerCase();
+  const effectiveService = String(profile?.service_model || settingsForm?.service_model || restaurantInfo?.service_model || 'dine_in').trim().toLowerCase();
+  const isCinema = effectiveBiz === 'cinema_theatre' || effectiveBiz === 'cinema' || effectiveService === 'cinema' || effectiveService === 'seat_service';
+  const isHotel = effectiveBiz === 'hotel_resort' || effectiveBiz === 'hotel' || effectiveService === 'hotel';
 
   const [cinemaScreens, setCinemaScreens] = useState([]);
   const [cinemaSeats, setCinemaSeats] = useState([]);
@@ -848,7 +844,26 @@ export default function SetupView({
     if (savingForm) return;
     setSavingForm(true);
     try {
-      await handleSaveSettings();
+      if (isHotel) {
+        const rawRooms = settingsForm.total_rooms;
+        if (rawRooms !== undefined && rawRooms !== null && rawRooms !== '') {
+          const num = Number(rawRooms);
+          if (isNaN(num) || num < 0 || !Number.isInteger(num)) {
+            alert('Total Guest Rooms must be a non-negative whole integer (0 or more).');
+            setSavingForm(false);
+            return;
+          }
+        }
+      }
+
+      const updated = {
+        ...settingsForm,
+        ...(isHotel ? { total_rooms: settingsForm.total_rooms !== undefined && settingsForm.total_rooms !== '' ? Math.max(0, parseInt(settingsForm.total_rooms, 10) || 0) : 0 } : {})
+      };
+      if (setSettingsForm) setSettingsForm(updated);
+      if (handleSaveSettings) {
+        await handleSaveSettings(updated);
+      }
       setSaveSuccessMsg('✅ Settings saved successfully!');
       setTimeout(() => setSaveSuccessMsg(''), 3000);
       setOpenDrawer(null);
@@ -1595,9 +1610,22 @@ export default function SetupView({
       if (e) e.preventDefault();
       setSavingForm(true);
       try {
+        if (isHotel) {
+          const rawRooms = settingsForm.total_rooms;
+          if (rawRooms !== undefined && rawRooms !== null && rawRooms !== '') {
+            const num = Number(rawRooms);
+            if (isNaN(num) || num < 0 || !Number.isInteger(num)) {
+              alert('Total Guest Rooms must be a non-negative whole integer (0 or more).');
+              setSavingForm(false);
+              return;
+            }
+          }
+        }
+
         const updated = {
           ...settingsForm,
-          is_gst_registered: isGstRegistered
+          is_gst_registered: isGstRegistered,
+          ...(isHotel ? { total_rooms: settingsForm.total_rooms !== undefined && settingsForm.total_rooms !== '' ? Math.max(0, parseInt(settingsForm.total_rooms, 10) || 0) : 0 } : {})
         };
         if (setSettingsForm) setSettingsForm(updated);
         if (handleSaveSettings) {
@@ -1878,6 +1906,61 @@ export default function SetupView({
                 <ChevronRight size={16} color="#94A3B8" />
               </div>
             </div>
+
+            {/* Hotel Guest Rooms Configuration (Hotel / Resort Only) */}
+            {isHotel && (
+              <div style={{
+                background: '#F0FDF4',
+                border: '1.5px solid #86EFAC',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🏨 Total Guest Rooms</span>
+                    <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#15803D', background: '#DCFCE7', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '10px' }}>
+                    In-Room Dining
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="e.g. 25"
+                  value={settingsForm.total_rooms !== undefined && settingsForm.total_rooms !== null ? settingsForm.total_rooms : ''}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === '') {
+                      setSettingsForm({ ...settingsForm, total_rooms: '' });
+                      return;
+                    }
+                    const num = parseInt(raw, 10);
+                    setSettingsForm({ ...settingsForm, total_rooms: isNaN(num) ? 0 : Math.max(0, num) });
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '46px',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #86EFAC',
+                    background: '#FFFFFF',
+                    fontSize: '0.90rem',
+                    fontWeight: 700,
+                    color: '#0F172A',
+                    boxSizing: 'border-box',
+                    outline: 'none'
+                  }}
+                />
+                <span style={{ fontSize: '0.68rem', color: '#166534', lineHeight: 1.4 }}>
+                  Total active guest rooms (Room 1 to Room {Number(settingsForm.total_rooms) || 0}) available for in-room QR menu ordering, waiter assistance calls, and live room status tracking.
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -4317,7 +4400,10 @@ export default function SetupView({
               </div>
               <button
                 type="button"
-                onClick={() => onNavigate && onNavigate('kds')}
+                onClick={() => {
+                  const currentSlug = restaurantInfo?.slug || settingsForm?.slug || '';
+                  window.open(currentSlug ? `/${currentSlug}/kitchen` : '/kitchen', '_blank');
+                }}
                 style={{
                   background: 'rgba(255,255,255,0.1)',
                   border: '1px solid rgba(255,255,255,0.2)',
@@ -6690,12 +6776,9 @@ export default function SetupView({
     };
 
     const handleSignOutAllOtherDevices = () => {
-      setSecSessionsList([
-        { id: 'sess-1', device: 'Chrome • Windows', location: 'Current Session', time: 'Just now', current: true }
-      ]);
       setSecurityModal(null);
-      setSaveSuccessMsg('✓ All other devices signed out successfully.');
-      setTimeout(() => setSaveSuccessMsg(''), 4000);
+      setSaveSuccessMsg('Remote session revocation requires a server-side session registry. To invalidate tokens on other devices, update your Admin Password.');
+      setTimeout(() => setSaveSuccessMsg(''), 6000);
     };
 
     return (
@@ -7285,11 +7368,16 @@ export default function SetupView({
               gap: '12px'
             }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
-                  Active Sessions
-                </h3>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                  Devices currently signed in to your admin account.
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
+                    Active Sessions
+                  </h3>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748B', background: '#F1F5F9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                    Stateless JWT
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', lineHeight: 1.4 }}>
+                  TouchQR uses client-side stateless tokens. Remote device discovery and per-device revocation are unavailable without a centralized session registry.
                 </span>
               </div>
 
@@ -7317,53 +7405,47 @@ export default function SetupView({
                       </span>
                     </div>
 
-                    {sess.current ? (
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#ECFDF5', padding: '2px 8px', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
-                        ● Current Device
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSecSessionsList(prev => prev.filter(s => s.id !== sess.id));
-                          setSaveSuccessMsg('✓ Device session signed out.');
-                          setTimeout(() => setSaveSuccessMsg(''), 3000);
-                        }}
-                        style={{
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          border: '1px solid #CBD5E1',
-                          background: '#FFFFFF',
-                          color: '#DC2626',
-                          fontSize: '0.70rem',
-                          fontWeight: 700,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Sign Out
-                      </button>
-                    )}
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#ECFDF5', padding: '2px 8px', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
+                      ● Current Device
+                    </span>
                   </div>
                 ))}
               </div>
 
+              <div style={{
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                fontSize: '0.72rem',
+                color: '#64748B',
+                lineHeight: 1.45,
+                marginTop: '4px'
+              }}>
+                <strong style={{ color: '#334155', display: 'block', marginBottom: '2px' }}>
+                  Remote Device Management
+                </strong>
+                Because tokens are stored on client browsers, remote sign-out is unavailable. To invalidate existing access tokens across all devices, change your Admin Password above.
+              </div>
+
               <button
                 type="button"
-                onClick={() => setSecurityModal('signout_all')}
+                disabled={true}
+                title="Remote session tracking is unavailable under stateless JWT authentication. Change password to invalidate sessions."
                 style={{
                   width: '100%',
                   height: '36px',
                   borderRadius: '10px',
-                  border: '1px solid #CBD5E1',
-                  background: '#FFFFFF',
-                  color: '#0F172A',
+                  border: '1px solid #E2E8F0',
+                  background: '#F8FAFC',
+                  color: '#94A3B8',
                   fontSize: '0.78rem',
                   fontWeight: 800,
-                  cursor: 'pointer',
+                  cursor: 'not-allowed',
                   marginTop: '4px'
                 }}
               >
-                Sign out all other devices
+                Remote Sign Out Unavailable
               </button>
             </div>
 
@@ -7859,35 +7941,15 @@ export default function SetupView({
     };
 
     const handleExecuteClearLogs = async () => {
-      setDbRunningAction('clear_logs');
-      setDbActionMsg('');
-      setDbActionError('');
+      setDbRunningAction(null);
       setDbConfirmType(null);
-
-      setTimeout(() => {
-        const nowTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-        const nowStr = `Today, ${nowTime}`;
-        setDbLogs(prev => [
-          { id: Date.now(), action: 'Temporary runtime logs cleanup', status: 'Completed', time: nowStr, type: 'clean' },
-          ...prev
-        ]);
-        setDbRunningAction(null);
-        setDbActionMsg('✓ Expired temporary logs and runtime metrics cleared.');
-        setTimeout(() => setDbActionMsg(''), 5000);
-      }, 700);
+      setDbActionError('Clear Temporary Logs is unavailable: TouchQR does not expose a server log clearance endpoint.');
     };
 
     const handleExecuteCleanDrafts = async () => {
-      setDbRunningAction('clean_drafts');
-      setDbActionMsg('');
-      setDbActionError('');
+      setDbRunningAction(null);
       setDbConfirmType(null);
-
-      setTimeout(() => {
-        setDbRunningAction(null);
-        setDbActionMsg('✓ Incomplete drafts and orphaned temporary records cleaned.');
-        setTimeout(() => setDbActionMsg(''), 5000);
-      }, 600);
+      setDbActionError('Clean Abandoned Drafts is unavailable: server-side draft cleanup is not implemented.');
     };
 
     const handleExecutePurgeCache = async () => {
@@ -8213,32 +8275,37 @@ export default function SetupView({
                       <RefreshCw size={18} />
                     </div>
                     <div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>
-                        Clear Temporary Logs
-                      </strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>
+                          Clear Temporary Logs
+                        </strong>
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#64748B', background: '#F1F5F9', padding: '1px 6px', borderRadius: '4px', border: '1px solid #CBD5E1' }}>
+                          UNAVAILABLE
+                        </span>
+                      </div>
                       <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                        Remove expired temporary logs, runtime sync states, and debug traces.
+                        Backend log clearance endpoint is not implemented. Server logs are managed by hosting runtime.
                       </span>
                     </div>
                   </div>
 
                   <button
                     type="button"
-                    disabled={Boolean(dbRunningAction)}
-                    onClick={() => setDbConfirmType('clear_logs')}
+                    disabled={true}
+                    title="Endpoint not implemented on server"
                     style={{
                       height: '36px',
                       padding: '0 14px',
                       borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
-                      background: '#FFFFFF',
-                      color: '#0F172A',
+                      border: '1px solid #E2E8F0',
+                      background: '#F8FAFC',
+                      color: '#94A3B8',
                       fontSize: '0.78rem',
                       fontWeight: 800,
-                      cursor: dbRunningAction ? 'not-allowed' : 'pointer'
+                      cursor: 'not-allowed'
                     }}
                   >
-                    {dbRunningAction === 'clear_logs' ? 'Clearing...' : 'Clear Logs'}
+                    Unavailable
                   </button>
                 </div>
 
@@ -8259,32 +8326,37 @@ export default function SetupView({
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>
-                        Clean Abandoned Drafts
-                      </strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>
+                          Clean Abandoned Drafts
+                        </strong>
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#64748B', background: '#F1F5F9', padding: '1px 6px', borderRadius: '4px', border: '1px solid #CBD5E1' }}>
+                          UNAVAILABLE
+                        </span>
+                      </div>
                       <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                        Remove incomplete temporary records that are safe to clean.
+                        Server does not store separate temporary drafts. Cart state is kept in customer browser storage.
                       </span>
                     </div>
                   </div>
 
                   <button
                     type="button"
-                    disabled={Boolean(dbRunningAction)}
-                    onClick={() => setDbConfirmType('clean_drafts')}
+                    disabled={true}
+                    title="Endpoint not implemented on server"
                     style={{
                       height: '36px',
                       padding: '0 14px',
                       borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
-                      background: '#FFFFFF',
-                      color: '#0F172A',
+                      border: '1px solid #E2E8F0',
+                      background: '#F8FAFC',
+                      color: '#94A3B8',
                       fontSize: '0.78rem',
                       fontWeight: 800,
-                      cursor: dbRunningAction ? 'not-allowed' : 'pointer'
+                      cursor: 'not-allowed'
                     }}
                   >
-                    {dbRunningAction === 'clean_drafts' ? 'Cleaning...' : 'Clean Drafts'}
+                    Unavailable
                   </button>
                 </div>
               </div>
@@ -8464,29 +8536,35 @@ export default function SetupView({
               </strong>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {dbLogs.map(item => (
-                  <div
-                    key={item.id}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: '8px',
-                      background: '#FAF8F5',
-                      border: '1px solid #EAE5DF',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontSize: '0.74rem'
-                    }}
-                  >
-                    <div>
-                      <strong style={{ color: '#0F172A', display: 'block' }}>{item.action}</strong>
-                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>{item.time}</span>
-                    </div>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#ECFDF5', padding: '2px 6px', borderRadius: '6px' }}>
-                      {item.status}
-                    </span>
+                {dbLogs.length === 0 ? (
+                  <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '0.76rem', background: '#FAF8F5', borderRadius: '8px', border: '1px dashed #CBD5E1' }}>
+                    No maintenance actions recorded in this session.
                   </div>
-                ))}
+                ) : (
+                  dbLogs.map(item => (
+                    <div
+                      key={item.id}
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        background: '#FAF8F5',
+                        border: '1px solid #EAE5DF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        fontSize: '0.74rem'
+                      }}
+                    >
+                      <div>
+                        <strong style={{ color: '#0F172A', display: 'block' }}>{item.action}</strong>
+                        <span style={{ fontSize: '0.68rem', color: '#64748B' }}>{item.time}</span>
+                      </div>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#ECFDF5', padding: '2px 6px', borderRadius: '6px' }}>
+                        {item.status}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -8537,8 +8615,8 @@ export default function SetupView({
 
               <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748B', lineHeight: 1.45 }}>
                 {dbConfirmType === 'optimize' ? 'This operation will safely compact historical data records and rebuild query indexes. Your live menu and orders will remain available.' :
-                 dbConfirmType === 'clear_logs' ? 'This will purge expired temporary runtime logs from your workspace. Business data and invoices are not affected.' :
-                 dbConfirmType === 'clean_drafts' ? 'This will remove unfinished temporary drafts. Any published menu items and active orders will remain unchanged.' :
+                 dbConfirmType === 'clear_logs' ? 'This operation is unavailable. Server logs are managed by the hosting runtime and cannot be cleared from this dashboard.' :
+                 dbConfirmType === 'clean_drafts' ? 'This operation is unavailable. TouchQR does not store separate server drafts.' :
                  'This will clear local client session data and force a fresh sync with the server database.'}
               </p>
 
@@ -9755,6 +9833,27 @@ export default function SetupView({
                     </div>
                   </div>
                 )}
+
+                {/* Hotel Guest Rooms Card if active */}
+                {isHotel && (
+                  <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')} style={{ borderColor: '#10B981', background: '#F0FDF4' }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
+                      🏨
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Hotel Guest Rooms</strong>
+                      <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                        Configure total guest rooms for in-room QR dining, service calls, and room status.
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                      <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
+                        {Number(settingsForm?.total_rooms ?? restaurantInfo?.total_rooms ?? 0)} Rooms Active
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Configure Rooms →</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -10129,6 +10228,56 @@ export default function SetupView({
                 }}
               />
             </div>
+
+            {/* Hotel Guest Rooms (Drawer View) */}
+            {isHotel && (
+              <div style={{
+                background: '#F0FDF4',
+                border: '1px solid #86EFAC',
+                borderRadius: '12px',
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px'
+              }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🏨 Total Guest Rooms</span>
+                  <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="e.g. 25"
+                  value={settingsForm.total_rooms !== undefined && settingsForm.total_rooms !== null ? settingsForm.total_rooms : ''}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === '') {
+                      setSettingsForm({ ...settingsForm, total_rooms: '' });
+                      return;
+                    }
+                    const num = parseInt(raw, 10);
+                    setSettingsForm({ ...settingsForm, total_rooms: isNaN(num) ? 0 : Math.max(0, num) });
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '44px',
+                    padding: '0 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #86EFAC',
+                    background: '#FFFFFF',
+                    fontSize: '0.86rem',
+                    fontWeight: 700,
+                    color: '#0F172A',
+                    boxSizing: 'border-box',
+                    outline: 'none'
+                  }}
+                />
+                <span style={{ fontSize: '0.66rem', color: '#166534' }}>
+                  Configured rooms for in-room guest QR codes (Room 1 .. {Number(settingsForm.total_rooms) || 0}).
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 2. MENU BRANDING */}

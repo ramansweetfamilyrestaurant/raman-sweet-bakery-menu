@@ -211,3 +211,36 @@ export const kdsPinRateLimiter = rateLimit({
   handler: createRateLimitHandler({ error: 'TOO_MANY_PIN_ATTEMPTS', message: 'Too many KDS PIN attempts. Please wait 15 minutes and try again.' })
 });
 
+/**
+ * 9. Support Ticket Creation Rate Limiter
+ * Protection against automated ticket creation spam
+ * Limit: 15 requests per IP per 5 minutes (elevated in test mode)
+ */
+export const supportTicketCreateRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: process.env.NODE_ENV === 'test' ? 1000 : 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  passOnStoreError: true,
+  store: getRateLimitStore('tkt_create:'),
+  message: { error: 'TOO_MANY_TICKETS', message: 'Too many support ticket submissions. Please wait a few minutes before submitting another request.' },
+  handler: createRateLimitHandler({ error: 'TOO_MANY_TICKETS', message: 'Too many support ticket submissions. Please wait a few minutes before submitting another request.' })
+});
+
+/**
+ * 10. Support Ticket Message Reply Rate Limiter
+ * Protection against ticket thread reply flooding
+ * Limit: 30 replies per IP per 5 minutes (elevated in test mode)
+ */
+export const supportTicketReplyRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: process.env.NODE_ENV === 'test' ? 1000 : 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  passOnStoreError: true,
+  store: getRateLimitStore('tkt_reply:'),
+  message: { error: 'TOO_MANY_REPLIES', message: 'Too many messages sent. Please wait a moment before sending another reply.' },
+  handler: createRateLimitHandler({ error: 'TOO_MANY_REPLIES', message: 'Too many messages sent. Please wait a moment before sending another reply.' })
+});
+
+

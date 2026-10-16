@@ -463,6 +463,33 @@ async function createTables(options = {}) {
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
         dish_id INT REFERENCES dishes(id) ON DELETE CASCADE,
         combo_id INT REFERENCES combos(id) ON DELETE CASCADE
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS support_tickets (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+        ticket_ref VARCHAR(64) UNIQUE NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        message TEXT NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'open',
+        priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+        assigned_to_admin_id INT REFERENCES admins(id) ON DELETE SET NULL,
+        assigned_to_name VARCHAR(100) DEFAULT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        resolved_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+        closed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS support_ticket_messages (
+        id SERIAL PRIMARY KEY,
+        ticket_id INT NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+        sender_type VARCHAR(20) NOT NULL,
+        sender_id INT DEFAULT NULL,
+        sender_name VARCHAR(100) NOT NULL,
+        message TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );`
     ];
 
@@ -736,7 +763,13 @@ async function createTables(options = {}) {
         CONSTRAINT uq_cinema_seat_per_screen UNIQUE (restaurant_id, screen_id, row_label, seat_number)
       );`,
       `CREATE INDEX IF NOT EXISTS idx_cinema_seats_resto ON restaurant_cinema_seats(restaurant_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_cinema_seats_screen ON restaurant_cinema_seats(screen_id);`
+      `CREATE INDEX IF NOT EXISTS idx_cinema_seats_screen ON restaurant_cinema_seats(screen_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_support_tickets_resto_created ON support_tickets(restaurant_id, created_at DESC);`,
+      `CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status);`,
+      `CREATE INDEX IF NOT EXISTS idx_support_tickets_priority ON support_tickets(priority);`,
+      `CREATE INDEX IF NOT EXISTS idx_support_tickets_ref ON support_tickets(ticket_ref);`,
+      `CREATE INDEX IF NOT EXISTS idx_support_tickets_assigned ON support_tickets(assigned_to_admin_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_support_ticket_msgs_ticket ON support_ticket_messages(ticket_id, created_at ASC);`
     ];
 
     for (const alt of pgAlters) {
@@ -1206,6 +1239,36 @@ async function createTables(options = {}) {
         FOREIGN KEY (dish_id) REFERENCES dishes (id) ON DELETE CASCADE,
         FOREIGN KEY (combo_id) REFERENCES combos (id) ON DELETE CASCADE
       );
+
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER NOT NULL,
+        ticket_ref TEXT UNIQUE NOT NULL,
+        subject TEXT NOT NULL,
+        category TEXT NOT NULL,
+        message TEXT NOT NULL,
+        status TEXT DEFAULT 'open',
+        priority TEXT DEFAULT 'medium',
+        assigned_to_admin_id INTEGER DEFAULT NULL,
+        assigned_to_name TEXT DEFAULT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        resolved_at TEXT DEFAULT NULL,
+        closed_at TEXT DEFAULT NULL,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE,
+        FOREIGN KEY (assigned_to_admin_id) REFERENCES admins (id) ON DELETE SET NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS support_ticket_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticket_id INTEGER NOT NULL,
+        sender_type TEXT NOT NULL,
+        sender_id INTEGER DEFAULT NULL,
+        sender_name TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (ticket_id) REFERENCES support_tickets (id) ON DELETE CASCADE
+      );
     `);
 
     // Phase 4: Subscription Lifecycle columns for SQLite
@@ -1441,6 +1504,12 @@ async function createTables(options = {}) {
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at)");
       sqliteDb.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_restaurants_phone_unique ON restaurants(phone) WHERE phone IS NOT NULL AND phone != ''");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_support_tickets_resto_created ON support_tickets(restaurant_id, created_at DESC)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_support_tickets_priority ON support_tickets(priority)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_support_tickets_ref ON support_tickets(ticket_ref)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_support_tickets_assigned ON support_tickets(assigned_to_admin_id)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_support_ticket_msgs_ticket ON support_ticket_messages(ticket_id, created_at ASC)");
 
       // Safe payment uniqueness migration & partial unique index (versioned migration)
       try {

@@ -80,6 +80,11 @@ const suites = [
     name: 'Tenant-Driven Resolution & Default Elimination',
     file: 'server/tests/tenant_defaults_and_isolation.test.js',
     requiresDb: true
+  },
+  {
+    name: 'Support Ticket System & Safeguards',
+    file: 'server/tests/support_tickets_system.test.js',
+    requiresDb: true
   }
 ];
 

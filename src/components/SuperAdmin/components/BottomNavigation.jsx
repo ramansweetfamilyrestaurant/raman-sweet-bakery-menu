@@ -30,7 +30,7 @@ export default function BottomNavigation({ activeView, setActiveView, onOpenMore
 
       <button
         onClick={onOpenMoreDrawer}
-        className={`sa-mobile-nav-item ${['plans', 'operations', 'activity', 'settings', 'communication'].includes(activeView) ? 'active' : ''}`}
+        className={`sa-mobile-nav-item ${['tickets', 'plans', 'operations', 'activity', 'settings', 'communication'].includes(activeView) ? 'active' : ''}`}
       >
         <Menu size={19} />
         <span>More</span>

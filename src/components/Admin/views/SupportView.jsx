@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Headphones, 
   Search, 
@@ -7,8 +7,10 @@ import {
   Send, 
   ArrowLeft, 
   ChevronRight, 
+  ChevronLeft,
   CheckCircle2, 
   AlertCircle, 
+  AlertTriangle,
   Clock, 
   ShoppingBag, 
   Utensils, 
@@ -25,9 +27,17 @@ import {
   CheckCheck,
   HelpCircle,
   Phone,
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  MessageSquare
 } from 'lucide-react';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
+import { 
+  createTenantSupportTicket, 
+  fetchTenantSupportTickets, 
+  fetchTenantSupportTicketDetails, 
+  addTenantSupportTicketReply 
+} from '../../../api/client';
 
 export default function SupportView({
   restaurantInfo = {},
@@ -50,72 +60,145 @@ export default function SupportView({
   // Contact Support Form State
   const [supportSubject, setSupportSubject] = useState('');
   const [supportCategory, setSupportCategory] = useState('orders');
+  const [supportPriority, setSupportPriority] = useState('medium');
   const [supportMessage, setSupportMessage] = useState('');
   const [supportSubmitting, setSupportSubmitting] = useState(false);
+  const [supportError, setSupportError] = useState('');
   const [supportSuccessToast, setSupportSuccessToast] = useState('');
+  const [confirmedTicket, setConfirmedTicket] = useState(null);
 
   // Support WhatsApp Number from Restaurant or System Config
   const supportWhatsapp = settingsForm?.support_whatsapp || restaurantInfo?.support_whatsapp || '919876543210';
   const cleanWhatsappNumber = supportWhatsapp.replace(/[^0-9]/g, '');
-
-  // Support Tickets History (Persisted in localStorage per restaurant slug)
   const businessSlug = settingsForm?.slug || restaurantInfo?.slug || 'default';
-  const storageKey = `touchqr_support_tickets_${businessSlug}`;
+  const restoName = settingsForm?.name || restaurantInfo?.name || 'My Restaurant';
 
-  const [supportTickets, setSupportTickets] = useState(() => {
+  // Real Backend Persistent Tickets State
+  const [tickets, setTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [ticketPage, setTicketPage] = useState(1);
+  const [ticketPagination, setTicketPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+
+  // Conversation History Drawer / Modal State
+  const [activeTicketId, setActiveTicketId] = useState(null);
+  const [activeTicketData, setActiveTicketData] = useState(null);
+  const [loadingThread, setLoadingThread] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const [replyError, setReplyError] = useState('');
+
+  // Fetch real tickets from backend
+  const loadTickets = async (p = 1) => {
+    if (!token) return;
+    setLoadingTickets(true);
     try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Failed to load support tickets from storage:', e);
+      const res = await fetchTenantSupportTickets(token, { page: p, limit: 10 });
+      setTickets(res.tickets || []);
+      setTicketPagination(res.pagination || { page: 1, limit: 10, total: 0, totalPages: 1 });
+    } catch (err) {
+      console.warn('Failed to load support tickets from server:', err.message);
+    } finally {
+      setLoadingTickets(false);
     }
-    return [
-      {
-        id: 'TICK-1082',
-        subject: 'Thermal printer auto-print configuration query',
-        category: 'Hardware & Printers',
-        status: 'Resolved',
-        created: '2 days ago',
-        updated: 'Yesterday, 03:30 PM'
-      }
-    ];
-  });
+  };
 
-  const handleCreateTicket = (e) => {
+  useEffect(() => {
+    loadTickets(ticketPage);
+  }, [token, ticketPage]);
+
+  // Load ticket conversation thread when a ticket is opened
+  const loadTicketThread = async (id) => {
+    if (!token || !id) return;
+    setLoadingThread(true);
+    setReplyError('');
+    try {
+      const res = await fetchTenantSupportTicketDetails(id, token);
+      setActiveTicketData(res);
+    } catch (err) {
+      console.warn('Failed to load ticket thread:', err.message);
+      setReplyError('Failed to load conversation thread. Please try again.');
+    } finally {
+      setLoadingThread(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTicketId) {
+      loadTicketThread(activeTicketId);
+    } else {
+      setActiveTicketData(null);
+    }
+  }, [activeTicketId]);
+
+  // Real backend submission with mandatory server persistence confirmation
+  const handleCreateTicket = async (e) => {
     e.preventDefault();
     if (!supportSubject.trim() || !supportMessage.trim()) {
-      alert('Please enter both a subject and a description for your support request.');
+      setSupportError('Please enter both a subject and a description for your support request.');
       return;
     }
 
     setSupportSubmitting(true);
+    setSupportError('');
 
-    setTimeout(() => {
-      const newTicket = {
-        id: `TICK-${Math.floor(1000 + Math.random() * 9000)}`,
+    try {
+      const res = await createTenantSupportTicket({
         subject: supportSubject.trim(),
         category: supportCategory,
-        status: 'Open',
-        created: 'Just now',
-        updated: 'Just now',
-        description: supportMessage.trim()
-      };
+        message: supportMessage.trim(),
+        priority: supportPriority
+      }, token);
 
-      const updated = [newTicket, ...supportTickets];
-      setSupportTickets(updated);
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-      } catch (err) {
-        console.warn('Failed to persist ticket:', err);
+      if (res && res.ticket) {
+        // Backend confirmed and persisted!
+        setConfirmedTicket(res.ticket);
+        setTickets(prev => [res.ticket, ...prev.filter(t => t.id !== res.ticket.id)]);
+        setSupportSubject('');
+        setSupportMessage('');
+        setSupportPriority('medium');
+        setSupportSuccessToast(`✓ Support inquiry #${res.ticket.ticket_ref} submitted and confirmed.`);
+        setTimeout(() => setSupportSuccessToast(''), 8000);
+      } else {
+        throw new Error(res.message || 'Ticket creation failed.');
       }
-
-      setSupportSubject('');
-      setSupportMessage('');
+    } catch (err) {
+      console.error('Ticket creation error:', err);
+      // Preserve form values so user can retry safely
+      setSupportError(err.message || 'Failed to submit ticket. Please check your connection and retry.');
+    } finally {
       setSupportSubmitting(false);
-      setSupportSuccessToast(`✓ Support Request #${newTicket.id} submitted successfully! Our team will contact you.`);
-      setTimeout(() => setSupportSuccessToast(''), 5000);
-    }, 600);
+    }
   };
+
+  // Real backend tenant reply handler
+  const handleSendReply = async (e) => {
+    e.preventDefault();
+    if (!replyText.trim() || !activeTicketId) return;
+
+    setReplySubmitting(true);
+    setReplyError('');
+    try {
+      const res = await addTenantSupportTicketReply(activeTicketId, replyText.trim(), token);
+      if (res && res.message) {
+        setActiveTicketData(prev => ({
+          ...prev,
+          ticket: { ...prev.ticket, status: res.ticket_status },
+          messages: [...(prev.messages || []), res.message]
+        }));
+        setTickets(prev => prev.map(t => (
+          t.id === activeTicketId ? { ...t, status: res.ticket_status, updated_at: res.message.created_at } : t
+        )));
+        setReplyText('');
+      } else {
+        throw new Error(res?.message || 'Failed to send reply.');
+      }
+    } catch (err) {
+      setReplyError(err.message || 'Failed to send reply message.');
+    } finally {
+      setReplySubmitting(false);
+    }
+  };
+
 
   // Troubleshooting Guides Definition
   const troubleshootingGuides = [
@@ -812,7 +895,7 @@ export default function SupportView({
         {/* RIGHT COLUMN: CONTACT SUPPORT FORM, WHATSAPP CARD, TICKETS & SYSTEM STATUS */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          {/* SECTION 4 — CONTACT SUPPORT FORM */}
+          {/* SECTION 4 — REAL CONTACT SUPPORT TICKET FORM */}
           <div id="support-contact-form" style={{
             background: '#FFFFFF',
             borderRadius: '16px',
@@ -825,126 +908,269 @@ export default function SupportView({
           }}>
             <div>
               <strong style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', display: 'block' }}>
-                Need personal help?
+                Open Official Support Ticket
               </strong>
               <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                Tell us what is happening and our support team will help.
+                Create a persistent support ticket. Our team responds directly here, with optional WhatsApp escalation.
               </span>
             </div>
 
-            <form onSubmit={handleCreateTicket} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  value={supportSubject}
-                  onChange={(e) => setSupportSubject(e.target.value)}
-                  placeholder="e.g. Issue with QR standee download"
-                  required
-                  style={{
-                    width: '100%',
-                    height: '38px',
-                    borderRadius: '10px',
-                    border: '1px solid #CBD5E1',
-                    padding: '0 12px',
-                    fontSize: '0.80rem',
-                    color: '#0F172A',
-                    background: '#FAF8F5',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
+            {/* Error Message with Preserved Input */}
+            {supportError && (
+              <div style={{
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#DC2626',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                <span>{supportError}</span>
               </div>
+            )}
 
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                  Category
-                </label>
-                <select
-                  value={supportCategory}
-                  onChange={(e) => setSupportCategory(e.target.value)}
+            {/* Confirmed Ticket Notice */}
+            {confirmedTicket && (
+              <div style={{
+                padding: '14px',
+                borderRadius: '12px',
+                background: '#ECFDF5',
+                border: '1px solid #A7F3D0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#064E3B' }}>
+                  <CheckCircle2 size={18} color="#059669" />
+                  <strong style={{ fontSize: '0.82rem', fontWeight: 900 }}>
+                    Ticket #{confirmedTicket.ticket_ref} Confirmed & Persisted!
+                  </strong>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.74rem', color: '#047857', lineHeight: 1.4 }}>
+                  Subject: <em>"{confirmedTicket.subject}"</em>. Our team has received your ticket and will update you directly here in your dashboard.
+                </p>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTicketId(confirmedTicket.id)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #059669',
+                      background: '#FFFFFF',
+                      color: '#059669',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <MessageSquare size={13} />
+                    <span>View Conversation Thread</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = `*TouchQR Support Escalation*\n*Ticket Ref:* ${confirmedTicket.ticket_ref}\n*Business:* ${restoName} (${businessSlug})\n*Subject:* ${confirmedTicket.subject}\n\nI created this ticket on the dashboard and am reaching out on WhatsApp for urgent assistance.`;
+                      window.open(`https://wa.me/${cleanWhatsappNumber}?text=${encodeURIComponent(text)}`, '_blank');
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: '#16A34A',
+                      color: '#FFFFFF',
+                      fontSize: '0.72rem',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <MessageCircle size={13} />
+                    <span>Chat on WhatsApp with #{confirmedTicket.ticket_ref}</span>
+                    <ExternalLink size={11} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmedTicket(null)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#64748B',
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Submit Another
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!confirmedTicket && (
+              <form onSubmit={handleCreateTicket} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                    Subject *
+                  </label>
+                  <input
+                    type="text"
+                    value={supportSubject}
+                    onChange={(e) => setSupportSubject(e.target.value)}
+                    placeholder="e.g. Thermal receipt printer disconnect on KOT"
+                    required
+                    style={{
+                      width: '100%',
+                      height: '38px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      padding: '0 12px',
+                      fontSize: '0.80rem',
+                      color: '#0F172A',
+                      background: '#FAF8F5',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                      Category *
+                    </label>
+                    <select
+                      value={supportCategory}
+                      onChange={(e) => setSupportCategory(e.target.value)}
+                      style={{
+                        width: '100%',
+                        height: '38px',
+                        borderRadius: '10px',
+                        border: '1px solid #CBD5E1',
+                        padding: '0 10px',
+                        fontSize: '0.78rem',
+                        color: '#0F172A',
+                        background: '#FAF8F5',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <option value="orders">Orders & POS</option>
+                      <option value="menu">Menu & Dishes</option>
+                      <option value="qr">QR Standees & Spaces</option>
+                      <option value="kds">Kitchen Display (KDS)</option>
+                      <option value="billing">Billing & Mandate</option>
+                      <option value="printer">Thermal Printers & Hardware</option>
+                      <option value="analytics">Sales & Analytics</option>
+                      <option value="settings">Settings & Branding</option>
+                      <option value="other">General / Account</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                      Priority
+                    </label>
+                    <select
+                      value={supportPriority}
+                      onChange={(e) => setSupportPriority(e.target.value)}
+                      style={{
+                        width: '100%',
+                        height: '38px',
+                        borderRadius: '10px',
+                        border: '1px solid #CBD5E1',
+                        padding: '0 10px',
+                        fontSize: '0.78rem',
+                        color: '#0F172A',
+                        background: '#FAF8F5',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        fontWeight: supportPriority === 'urgent' ? 800 : 600
+                      }}
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Normal</option>
+                      <option value="high">High</option>
+                      <option value="urgent">🚨 Urgent</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                    Problem Description *
+                  </label>
+                  <textarea
+                    value={supportMessage}
+                    onChange={(e) => setSupportMessage(e.target.value)}
+                    placeholder="Describe the issue in detail, device used, or error messages seen..."
+                    rows={3}
+                    required
+                    style={{
+                      width: '100%',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      padding: '8px 12px',
+                      fontSize: '0.80rem',
+                      color: '#0F172A',
+                      background: '#FAF8F5',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={supportSubmitting}
                   style={{
-                    width: '100%',
-                    height: '38px',
+                    height: '42px',
                     borderRadius: '10px',
-                    border: '1px solid #CBD5E1',
-                    padding: '0 12px',
-                    fontSize: '0.80rem',
-                    color: '#0F172A',
-                    background: '#FAF8F5',
-                    outline: 'none',
-                    boxSizing: 'border-box'
+                    border: 'none',
+                    background: '#064E3B',
+                    color: '#FFFFFF',
+                    fontSize: '0.82rem',
+                    fontWeight: 900,
+                    cursor: supportSubmitting ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginTop: '4px',
+                    boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)',
+                    opacity: supportSubmitting ? 0.75 : 1
                   }}
                 >
-                  <option value="orders">Orders & KDS</option>
-                  <option value="menu">Menu & Pricing</option>
-                  <option value="qr">QR Standees</option>
-                  <option value="billing">Billing & Payments</option>
-                  <option value="printers">Printers & Hardware</option>
-                  <option value="other">General / Account</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                  Description
-                </label>
-                <textarea
-                  value={supportMessage}
-                  onChange={(e) => setSupportMessage(e.target.value)}
-                  placeholder="Describe what is happening in detail..."
-                  rows={3}
-                  required
-                  style={{
-                    width: '100%',
-                    borderRadius: '10px',
-                    border: '1px solid #CBD5E1',
-                    padding: '8px 12px',
-                    fontSize: '0.80rem',
-                    color: '#0F172A',
-                    background: '#FAF8F5',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={supportSubmitting}
-                style={{
-                  height: '40px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: '#064E3B',
-                  color: '#FFFFFF',
-                  fontSize: '0.80rem',
-                  fontWeight: 900,
-                  cursor: supportSubmitting ? 'default' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  marginTop: '4px',
-                  boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
-                }}
-              >
-                {supportSubmitting ? (
-                  <span>Submitting request...</span>
-                ) : (
-                  <>
-                    <span>Send Support Request</span>
-                    <Send size={13} />
-                  </>
-                )}
-              </button>
-            </form>
+                  {supportSubmitting ? (
+                    <>
+                      <RefreshCw size={15} className="spin-animate" />
+                      <span>Submitting to Server...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={15} />
+                      <span>Submit Support Ticket</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
           </div>
 
-          {/* SECTION 5 — WHATSAPP SUPPORT DIRECT CARD */}
+          {/* SECTION 5 — OPTIONAL DIRECT WHATSAPP ESCALATION CARD */}
           <div style={{
             background: '#FFFFFF',
             borderRadius: '16px',
@@ -962,10 +1188,10 @@ export default function SupportView({
               </div>
               <div style={{ minWidth: 0 }}>
                 <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
-                  Direct WhatsApp Chat
+                  TouchQR WhatsApp Desk
                 </strong>
                 <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block' }}>
-                  Available for priority merchant support
+                  Available as secondary escalation channel
                 </span>
               </div>
             </div>
@@ -989,12 +1215,12 @@ export default function SupportView({
                 flexShrink: 0
               }}
             >
-              <span>Open</span>
+              <span>Chat</span>
               <ExternalLink size={12} />
             </button>
           </div>
 
-          {/* SECTION 6 — YOUR RECENT SUPPORT REQUESTS */}
+          {/* SECTION 6 — REAL PERSISTENT SUPPORT TICKETS & HISTORY */}
           <div style={{
             background: '#FFFFFF',
             borderRadius: '16px',
@@ -1005,53 +1231,149 @@ export default function SupportView({
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <strong style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A' }}>
-              Your Support Requests
-            </strong>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <strong style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A' }}>
+                Your Support Tickets
+              </strong>
+              <button
+                type="button"
+                onClick={() => loadTickets(ticketPage)}
+                disabled={loadingTickets}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748B',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <RefreshCw size={12} className={loadingTickets ? 'spin-animate' : ''} />
+                <span>Refresh</span>
+              </button>
+            </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {supportTickets.length === 0 ? (
-                <div style={{ padding: '16px', textAlign: 'center', fontSize: '0.76rem', color: '#64748B', background: '#FAF8F5', borderRadius: '10px' }}>
-                  No support conversations yet.
+              {loadingTickets && tickets.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', fontSize: '0.76rem', color: '#64748B', background: '#FAF8F5', borderRadius: '10px' }}>
+                  Loading support tickets...
+                </div>
+              ) : tickets.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', fontSize: '0.76rem', color: '#64748B', background: '#FAF8F5', borderRadius: '10px' }}>
+                  No support tickets created yet. Use the form above to submit an inquiry.
                 </div>
               ) : (
-                supportTickets.map(ticket => (
-                  <div
-                    key={ticket.id}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      background: '#FAF8F5',
-                      border: '1px solid #EAE5DF',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '4px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
-                      <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {ticket.subject}
-                      </strong>
-                      <span style={{
-                        fontSize: '0.64rem',
-                        fontWeight: 900,
-                        padding: '1px 6px',
-                        borderRadius: '4px',
-                        background: ticket.status === 'Resolved' ? '#ECFDF5' : '#FEF3C7',
-                        color: ticket.status === 'Resolved' ? '#059669' : '#D97706',
-                        flexShrink: 0
-                      }}>
-                        {ticket.status}
-                      </span>
+                tickets.map(ticket => {
+                  const statusMap = {
+                    open: { label: 'Open', bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' },
+                    in_progress: { label: 'In Progress', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' },
+                    waiting_on_tenant: { label: 'Waiting on You', bg: '#F3E8FF', color: '#7E22CE', border: '#DDD6FE' },
+                    resolved: { label: 'Resolved', bg: '#ECFDF5', color: '#059669', border: '#A7F3D0' },
+                    closed: { label: 'Closed', bg: '#F1F5F9', color: '#64748B', border: '#CBD5E1' }
+                  };
+                  const st = statusMap[ticket.status] || statusMap.open;
+                  const isUrgent = ticket.priority === 'urgent';
+                  const isHigh = ticket.priority === 'high';
+
+                  return (
+                    <div
+                      key={ticket.id}
+                      onClick={() => setActiveTicketId(ticket.id)}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        background: '#FAF8F5',
+                        border: '1px solid #EAE5DF',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#CBD5E1'}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = '#EAE5DF'}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                          {isUrgent && <span style={{ fontSize: '0.62rem', fontWeight: 900, padding: '2px 5px', borderRadius: '4px', background: '#FEE2E2', color: '#DC2626' }}>🚨 URGENT</span>}
+                          {isHigh && <span style={{ fontSize: '0.62rem', fontWeight: 900, padding: '2px 5px', borderRadius: '4px', background: '#FFEDD5', color: '#EA580C' }}>⚡ HIGH</span>}
+                          <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {ticket.subject}
+                          </strong>
+                        </div>
+                        <span style={{
+                          fontSize: '0.64rem',
+                          fontWeight: 900,
+                          padding: '2px 7px',
+                          borderRadius: '6px',
+                          background: st.bg,
+                          color: st.color,
+                          border: `1px solid ${st.border}`,
+                          flexShrink: 0
+                        }}>
+                          {st.label}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: '#94A3B8' }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#475569' }}>
+                          #{ticket.ticket_ref}
+                        </span>
+                        <span>
+                          {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#94A3B8' }}>
-                      <span>ID: {ticket.id}</span>
-                      <span>{ticket.created}</span>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
+
+            {/* Pagination Controls */}
+            {ticketPagination.totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px solid #F1F5F9' }}>
+                <button
+                  type="button"
+                  disabled={ticketPage <= 1}
+                  onClick={() => setTicketPage(p => Math.max(1, p - 1))}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    fontSize: '0.70rem',
+                    fontWeight: 700,
+                    cursor: ticketPage <= 1 ? 'default' : 'pointer',
+                    opacity: ticketPage <= 1 ? 0.5 : 1
+                  }}
+                >
+                  Previous
+                </button>
+                <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 700 }}>
+                  Page {ticketPage} of {ticketPagination.totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={ticketPage >= ticketPagination.totalPages}
+                  onClick={() => setTicketPage(p => p + 1)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    fontSize: '0.70rem',
+                    fontWeight: 700,
+                    cursor: ticketPage >= ticketPagination.totalPages ? 'default' : 'pointer',
+                    opacity: ticketPage >= ticketPagination.totalPages ? 0.5 : 1
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
 
           {/* SECTION 7 — TOUCHQR SYSTEM STATUS */}
@@ -1180,6 +1502,311 @@ export default function SupportView({
                 >
                   {activeGuide.actionLabel} →
                 </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          TICKET CONVERSATION DRAWER & THREAD MODAL
+         ========================================================================= */}
+      {activeTicketId && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            maxWidth: '640px',
+            width: '100%',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            boxSizing: 'border-box',
+            overflow: 'hidden'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #EAE5DF',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              background: '#FAF8F5'
+            }}>
+              <div style={{ minWidth: 0, flex: 1, paddingRight: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    padding: '2px 6px',
+                    borderRadius: '6px',
+                    background: '#E2E8F0',
+                    color: '#1E293B'
+                  }}>
+                    #{activeTicketData?.ticket?.ticket_ref || '...'}
+                  </span>
+                  {activeTicketData?.ticket && (
+                    <span style={{
+                      fontSize: '0.66rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      padding: '2px 6px',
+                      borderRadius: '6px',
+                      background: activeTicketData.ticket.priority === 'urgent' ? '#FEE2E2' : '#EFF6FF',
+                      color: activeTicketData.ticket.priority === 'urgent' ? '#DC2626' : '#2563EB'
+                    }}>
+                      {activeTicketData.ticket.priority} priority
+                    </span>
+                  )}
+                  {activeTicketData?.ticket?.status && (
+                    <span style={{
+                      fontSize: '0.66rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      padding: '2px 6px',
+                      borderRadius: '6px',
+                      background: activeTicketData.ticket.status === 'resolved' ? '#ECFDF5' : (activeTicketData.ticket.status === 'closed' ? '#F1F5F9' : '#FEF3C7'),
+                      color: activeTicketData.ticket.status === 'resolved' ? '#059669' : (activeTicketData.ticket.status === 'closed' ? '#64748B' : '#D97706')
+                    }}>
+                      {activeTicketData.ticket.status.replace('_', ' ')}
+                    </span>
+                  )}
+                </div>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '0.98rem',
+                  fontWeight: 900,
+                  color: '#0F172A',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {activeTicketData?.ticket?.subject || 'Support Ticket'}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTicketId(null);
+                  setActiveTicketData(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#64748B',
+                  padding: '4px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Conversation Messages Thread */}
+            <div style={{
+              flex: 1,
+              padding: '16px 20px',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              background: '#FFFFFF'
+            }}>
+              {loadingThread ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#64748B', fontSize: '0.80rem' }}>
+                  <RefreshCw size={18} className="spin-animate" style={{ marginBottom: '8px' }} />
+                  <div>Loading message history...</div>
+                </div>
+              ) : activeTicketData?.messages?.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#64748B', fontSize: '0.80rem' }}>
+                  No messages recorded in this ticket yet.
+                </div>
+              ) : (
+                activeTicketData?.messages?.map(msg => {
+                  const isTenant = msg.sender_type === 'tenant';
+                  const isSuperAdmin = msg.sender_type === 'superadmin';
+
+                  return (
+                    <div
+                      key={msg.id}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: isTenant ? 'flex-end' : 'flex-start',
+                        width: '100%'
+                      }}
+                    >
+                      <div style={{
+                        maxWidth: '85%',
+                        padding: '12px 14px',
+                        borderRadius: isTenant ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                        background: isTenant ? '#064E3B' : '#F1F5F9',
+                        color: isTenant ? '#FFFFFF' : '#0F172A',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        fontSize: '0.80rem',
+                        lineHeight: 1.45,
+                        wordBreak: 'break-word',
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        <div style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          marginBottom: '4px',
+                          color: isTenant ? '#A7F3D0' : '#475569',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          {isTenant ? (
+                            <span>You (Restaurant Admin)</span>
+                          ) : isSuperAdmin ? (
+                            <>
+                              <ShieldCheck size={12} color="#059669" />
+                              <span>TouchQR Support Desk</span>
+                            </>
+                          ) : (
+                            <span>System Note</span>
+                          )}
+                        </div>
+                        {msg.message}
+                      </div>
+                      <span style={{ fontSize: '0.64rem', color: '#94A3B8', marginTop: '3px', padding: '0 4px' }}>
+                        {msg.created_at ? new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : ''}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Error display */}
+            {replyError && (
+              <div style={{
+                margin: '0 20px 8px 20px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                background: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#DC2626',
+                fontSize: '0.74rem',
+                fontWeight: 700
+              }}>
+                {replyError}
+              </div>
+            )}
+
+            {/* Footer / Reply Composer */}
+            <div style={{
+              padding: '14px 20px',
+              borderTop: '1px solid #EAE5DF',
+              background: '#FAF8F5'
+            }}>
+              {activeTicketData?.ticket?.status === 'closed' ? (
+                <div style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: '#F1F5F9',
+                  color: '#475569',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  textAlign: 'center'
+                }}>
+                  🔒 This support ticket has been closed. Further replies are disabled. Please submit a new ticket if you need additional help.
+                </div>
+              ) : (
+                <form onSubmit={handleSendReply} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                    <textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Type your response to support..."
+                      rows={2}
+                      required
+                      style={{
+                        flex: 1,
+                        borderRadius: '10px',
+                        border: '1px solid #CBD5E1',
+                        padding: '8px 12px',
+                        fontSize: '0.80rem',
+                        color: '#0F172A',
+                        background: '#FFFFFF',
+                        outline: 'none',
+                        resize: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={replySubmitting || !replyText.trim()}
+                      style={{
+                        height: '42px',
+                        padding: '0 16px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: '#064E3B',
+                        color: '#FFFFFF',
+                        fontSize: '0.78rem',
+                        fontWeight: 900,
+                        cursor: (replySubmitting || !replyText.trim()) ? 'default' : 'pointer',
+                        opacity: (replySubmitting || !replyText.trim()) ? 0.6 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        flexShrink: 0
+                      }}
+                    >
+                      {replySubmitting ? <RefreshCw size={14} className="spin-animate" /> : <Send size={14} />}
+                      <span>Send</span>
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                      Sending a reply will notify our support desk.
+                    </span>
+                    {activeTicketData?.ticket?.ticket_ref && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const text = `*TouchQR Support Escalation*\n*Ticket Ref:* ${activeTicketData.ticket.ticket_ref}\n*Business:* ${restoName} (${businessSlug})\n*Subject:* ${activeTicketData.ticket.subject}\n\nI am contacting on WhatsApp regarding open ticket #${activeTicketData.ticket.ticket_ref}.`;
+                          window.open(`https://wa.me/${cleanWhatsappNumber}?text=${encodeURIComponent(text)}`, '_blank');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#16A34A',
+                          fontSize: '0.70rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: 0
+                        }}
+                      >
+                        <MessageCircle size={12} />
+                        <span>Escalate on WhatsApp</span>
+                      </button>
+                    )}
+                  </div>
+                </form>
               )}
             </div>
           </div>

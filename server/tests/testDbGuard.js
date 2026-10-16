@@ -34,9 +34,9 @@ export function validateTestDatabaseUrl(testUrl) {
   }
 
   // 2. Reject if execution environment is explicitly production
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
     throw new Error(
-      'TEST_DB_SAFETY_VIOLATION: Database integration tests cannot run when NODE_ENV is set to production.'
+      'TEST_DB_SAFETY_VIOLATION: Database integration tests cannot run when NODE_ENV is set to production or VERCEL_ENV is set to production.'
     );
   }
 

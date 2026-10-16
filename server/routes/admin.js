@@ -5,11 +5,12 @@ import ExcelJS from 'exceljs';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { query, runAutoDataSummarization, saveImageToDb, saveR2ImageToDb, getImageRecordFromDb, deleteImageRecordFromDb } from '../db.js';
+import { query, runAutoDataSummarization, saveImageToDb, saveR2ImageToDb, getImageRecordFromDb, deleteImageRecordFromDb, withTransaction, logAudit } from '../db.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics, purgeOrphanedR2Objects } from '../services/r2ImageService.js';
 import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
 import { JWT_SECRET } from '../config/jwt.js';
-import { adminLoginRateLimiter } from '../middleware/rateLimiters.js';
+import { adminLoginRateLimiter, supportTicketCreateRateLimiter, supportTicketReplyRateLimiter } from '../middleware/rateLimiters.js';
+import { generateTicketReference, validateTicketInput, validateReplyInput, VALID_CATEGORIES, VALID_PRIORITIES, VALID_STATUSES } from '../services/supportTicketService.js';
 import { clearRestoResolveCache, clearMenuBundleCache } from './api.js';
 import { normalizeVerificationMode } from '../utils/presenceVerification.js';
 import {
@@ -4716,4 +4717,254 @@ router.delete('/offers/:id', authenticateToken, requireActiveSubscription, async
   }
 });
 
+// =========================================================================
+// TENANT SUPPORT TICKET ENDPOINTS
+// Note: Intentionally guarded by authenticateToken ONLY (NOT requireActiveSubscription)
+// Expired / billing-troubled accounts MUST be able to open tickets to get support.
+// =========================================================================
+
+// GET /api/admin/support/tickets - List current tenant's tickets (paginated)
+router.get('/support/tickets', authenticateToken, async (req, res) => {
+  try {
+    const tenantId = req.user?.restaurant_id;
+    if (!tenantId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Tenant identity is missing from authentication token.' });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page || 1, 10));
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || 20, 10)));
+    const offset = (page - 1) * limit;
+    const statusFilter = String(req.query.status || '').trim().toLowerCase();
+
+    let sql = 'SELECT * FROM support_tickets WHERE restaurant_id = $1';
+    const params = [tenantId];
+
+    if (statusFilter && VALID_STATUSES.includes(statusFilter)) {
+      sql += ' AND status = $2';
+      params.push(statusFilter);
+    }
+
+    // Count total
+    let countSql = 'SELECT COUNT(*) as total FROM support_tickets WHERE restaurant_id = $1';
+    const countParams = [tenantId];
+    if (statusFilter && VALID_STATUSES.includes(statusFilter)) {
+      countSql += ' AND status = $2';
+      countParams.push(statusFilter);
+    }
+    const countRes = await query(countSql, countParams);
+    const total = parseInt(countRes[0]?.total || 0, 10);
+
+    sql += ' ORDER BY updated_at DESC, id DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
+    params.push(limit, offset);
+
+    const tickets = await query(sql, params);
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    res.json({
+      tickets: tickets || [],
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages
+      }
+    });
+  } catch (err) {
+    console.error('Fetch tenant support tickets error:', err.message);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to fetch support tickets.' });
+  }
+});
+
+// POST /api/admin/support/tickets - Create new support ticket atomically
+router.post('/support/tickets', authenticateToken, supportTicketCreateRateLimiter, async (req, res) => {
+  try {
+    const tenantId = req.user?.restaurant_id;
+    if (!tenantId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Tenant identity is missing from authentication token.' });
+    }
+
+    // Validate inputs
+    const validation = validateTicketInput(req.body || {});
+    if (!validation.isValid) {
+      return res.status(400).json({
+        error: validation.code || 'VALIDATION_FAILED',
+        code: validation.code || 'VALIDATION_FAILED',
+        message: validation.errors.join(' ')
+      });
+    }
+
+    const { subject, category, message, priority } = validation.data;
+    const senderName = req.user?.username || 'Tenant Admin';
+    const senderId = req.user?.id || null;
+
+    // Atomic transaction: Insert ticket + initial conversation message
+    const createdTicket = await withTransaction(async (txQuery) => {
+      // Collision-resistant unique ticket reference generation with retry
+      let ticketRef = '';
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const candidate = generateTicketReference();
+        const check = await txQuery('SELECT id FROM support_tickets WHERE ticket_ref = $1', [candidate]);
+        const checkRows = check.rows || check;
+        if (!checkRows || checkRows.length === 0) {
+          ticketRef = candidate;
+          break;
+        }
+      }
+      if (!ticketRef) {
+        throw new Error('Failed to generate unique ticket reference. Please try again.');
+      }
+
+      // 1. Insert support_tickets
+      const insertTicketSql = `
+        INSERT INTO support_tickets (
+          restaurant_id, ticket_ref, subject, category, message, status, priority, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, 'open', $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        ) RETURNING id, restaurant_id, ticket_ref, subject, category, message, status, priority, created_at, updated_at
+      `;
+      const ticketRes = await txQuery(insertTicketSql, [tenantId, ticketRef, subject, category, message, priority]);
+      const ticketRows = ticketRes.rows || ticketRes;
+      const ticket = ticketRows[0] || (await txQuery('SELECT * FROM support_tickets WHERE ticket_ref = $1', [ticketRef]))[0];
+
+      if (!ticket || !ticket.id) {
+        throw new Error('Failed to persist support ticket record.');
+      }
+
+      // 2. Insert initial message into support_ticket_messages
+      const insertMsgSql = `
+        INSERT INTO support_ticket_messages (
+          ticket_id, sender_type, sender_id, sender_name, message, created_at
+        ) VALUES (
+          $1, 'tenant', $2, $3, $4, CURRENT_TIMESTAMP
+        ) RETURNING id, ticket_id, sender_type, sender_id, sender_name, message, created_at
+      `;
+      await txQuery(insertMsgSql, [ticket.id, senderId, senderName, message]);
+
+      return ticket;
+    });
+
+    await logAudit(tenantId, 'tenant_admin', 'SUPPORT_TICKET_CREATED', `Created ticket ${createdTicket.ticket_ref}: "${createdTicket.subject}"`);
+
+    res.status(201).json({
+      success: true,
+      ticket: createdTicket
+    });
+  } catch (err) {
+    console.error('Create support ticket error:', err.message);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to create support ticket. Please try again.' });
+  }
+});
+
+// GET /api/admin/support/tickets/:id - Get ticket details with full message thread
+router.get('/support/tickets/:id', authenticateToken, async (req, res) => {
+  try {
+    const tenantId = req.user?.restaurant_id;
+    if (!tenantId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Tenant identity is missing from authentication token.' });
+    }
+
+    const ticketId = parseInt(req.params.id, 10);
+    if (!ticketId || isNaN(ticketId)) {
+      return res.status(400).json({ error: 'INVALID_ID', message: 'Invalid ticket identifier.' });
+    }
+
+    // Strict tenant isolation: ticket MUST belong to req.user.restaurant_id
+    const ticketRes = await query('SELECT * FROM support_tickets WHERE id = $1 AND restaurant_id = $2', [ticketId, tenantId]);
+    const ticketRows = ticketRes.rows || ticketRes;
+    if (!ticketRows || ticketRows.length === 0) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Support ticket not found.' });
+    }
+    const ticket = ticketRows[0];
+
+    // Fetch canonical conversation thread
+    const msgRes = await query('SELECT * FROM support_ticket_messages WHERE ticket_id = $1 ORDER BY id ASC, created_at ASC', [ticket.id]);
+    const messages = msgRes.rows || msgRes;
+
+    res.json({
+      ticket,
+      messages: messages || []
+    });
+  } catch (err) {
+    console.error('Fetch tenant ticket details error:', err.message);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to fetch ticket details.' });
+  }
+});
+
+// POST /api/admin/support/tickets/:id/reply - Post tenant follow-up message to the thread
+router.post('/support/tickets/:id/reply', authenticateToken, supportTicketReplyRateLimiter, async (req, res) => {
+  try {
+    const tenantId = req.user?.restaurant_id;
+    if (!tenantId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Tenant identity is missing from authentication token.' });
+    }
+
+    const ticketId = parseInt(req.params.id, 10);
+    if (!ticketId || isNaN(ticketId)) {
+      return res.status(400).json({ error: 'INVALID_ID', message: 'Invalid ticket identifier.' });
+    }
+
+    // Ownership check
+    const ticketRes = await query('SELECT * FROM support_tickets WHERE id = $1 AND restaurant_id = $2', [ticketId, tenantId]);
+    const ticketRows = ticketRes.rows || ticketRes;
+    if (!ticketRows || ticketRows.length === 0) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Support ticket not found.' });
+    }
+    const ticket = ticketRows[0];
+
+    // Closed ticket guard
+    if (ticket.status === 'closed') {
+      return res.status(400).json({
+        error: 'TICKET_CLOSED',
+        code: 'TICKET_CLOSED',
+        message: 'This ticket is closed and cannot receive replies. Please open a new support ticket.'
+      });
+    }
+
+    const validation = validateReplyInput(req.body?.message);
+    if (!validation.isValid) {
+      return res.status(400).json({ error: 'VALIDATION_FAILED', message: validation.error });
+    }
+
+    const replyText = validation.data;
+    const senderName = req.user?.username || 'Tenant Admin';
+    const senderId = req.user?.id || null;
+
+    // Status transition: if waiting_on_tenant, move to in_progress; if resolved, reopen to open
+    const updatedStatus = ticket.status === 'waiting_on_tenant' ? 'in_progress' : (ticket.status === 'resolved' ? 'open' : ticket.status);
+
+    const newMsg = await withTransaction(async (txQuery) => {
+      // Insert message
+      const msgRes = await txQuery(`
+        INSERT INTO support_ticket_messages (
+          ticket_id, sender_type, sender_id, sender_name, message, created_at
+        ) VALUES (
+          $1, 'tenant', $2, $3, $4, CURRENT_TIMESTAMP
+        ) RETURNING id, ticket_id, sender_type, sender_id, sender_name, message, created_at
+      `, [ticket.id, senderId, senderName, replyText]);
+      const msgRows = msgRes.rows || msgRes;
+
+      // Update ticket updated_at and status
+      await txQuery(`
+        UPDATE support_tickets 
+        SET status = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [updatedStatus, ticket.id]);
+
+      return msgRows[0] || (await txQuery('SELECT * FROM support_ticket_messages WHERE ticket_id = $1 ORDER BY id DESC LIMIT 1', [ticket.id]))[0];
+    });
+
+    await logAudit(tenantId, 'tenant_admin', 'SUPPORT_TICKET_REPLY', `Posted reply on ticket ${ticket.ticket_ref}`);
+
+    res.status(201).json({
+      success: true,
+      message: newMsg,
+      ticket_status: updatedStatus
+    });
+  } catch (err) {
+    console.error('Post tenant reply error:', err.message);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to post reply message.' });
+  }
+});
+
 export default router;
+

@@ -515,11 +515,33 @@ export default function ReviewView({
       </div>
 
       {/* =========================================================================
-          2. TOP SUMMARY METRICS (4 Compact Metrics)
+          1.5. HONEST TRANSPARENCY & INTEGRATION NOTICE BANNER
+         ========================================================================= */}
+      <div style={{
+        background: '#EFF6FF',
+        border: '1.5px solid #BFDBFE',
+        borderRadius: '16px',
+        padding: '14px 18px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px'
+      }}>
+        <Info size={20} color="#2563EB" style={{ flexShrink: 0, marginTop: '2px' }} />
+        <div style={{ fontSize: '0.80rem', color: '#1E40AF', lineHeight: 1.5 }}>
+          <strong style={{ display: 'block', fontSize: '0.84rem', color: '#1E3A8A', marginBottom: '2px' }}>
+            Review Integration & Demonstration Data Notice
+          </strong>
+          TouchQR routes diners to your public Google Business profile via your customer menu review link. Direct live synchronization of incoming Google reviews is not currently integrated.
+          The entries below are <strong>sample demonstration templates</strong> provided to preview and test the AI Auto-Reply generator and brand voice settings before copying replies to Google. They do not represent genuine customer ratings for {restoName}.
+        </div>
+      </div>
+
+      {/* =========================================================================
+          2. TOP SUMMARY METRICS (Authoritative Integration Status)
          ========================================================================= */}
       <div className="metrics-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
         
-        {/* Metric 1: Average Rating */}
+        {/* Metric 1: Google Review Link */}
         <div style={{
           background: '#FFFFFF',
           borderRadius: '14px',
@@ -531,20 +553,22 @@ export default function ReviewView({
           boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
         }}>
           <div>
-            <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Average Rating
+            <span style={{ fontSize: '0.70rem', fontWeight: 800, color: isGoogleConnected ? '#059669' : '#D97706', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Google Review Link
             </span>
-            <div style={{ fontSize: '1.40rem', fontWeight: 900, color: '#0F172A', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span>4.7</span>
-              <Star size={18} color="#D97706" fill="#D97706" />
+            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
+              {isGoogleConnected ? 'Active' : 'Not Set'}
             </div>
+            <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+              {isGoogleConnected ? 'Diners routed to Google' : 'Configure in Setup'}
+            </span>
           </div>
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Star size={18} />
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: isGoogleConnected ? '#ECFDF5' : '#FEF3C7', color: isGoogleConnected ? '#059669' : '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Globe size={18} />
           </div>
         </div>
 
-        {/* Metric 2: Total Reviews */}
+        {/* Metric 2: Live Synced Reviews */}
         <div style={{
           background: '#FFFFFF',
           borderRadius: '14px',
@@ -557,18 +581,21 @@ export default function ReviewView({
         }}>
           <div>
             <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Total Reviews
+              Live Synced Reviews
             </span>
-            <div style={{ fontSize: '1.40rem', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
-              248
+            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
+              0
             </div>
+            <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+              Live API sync offline
+            </span>
           </div>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F1F5F9', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <MessageSquare size={18} />
           </div>
         </div>
 
-        {/* Metric 3: New This Month */}
+        {/* Metric 3: AI Auto-Reply Assistant */}
         <div style={{
           background: '#FFFFFF',
           borderRadius: '14px',
@@ -581,18 +608,21 @@ export default function ReviewView({
         }}>
           <div>
             <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              New This Month
+              AI Auto-Reply
             </span>
-            <div style={{ fontSize: '1.40rem', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
-              32
+            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#059669', marginTop: '4px' }}>
+              {aiEnabled ? 'Ready' : 'Disabled'}
             </div>
+            <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+              Gemini / smart fallback
+            </span>
           </div>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <TrendingUp size={18} />
+            <Bot size={18} />
           </div>
         </div>
 
-        {/* Metric 4: Response Rate */}
+        {/* Metric 4: Demo Review Samples */}
         <div style={{
           background: '#FFFFFF',
           borderRadius: '14px',
@@ -605,14 +635,17 @@ export default function ReviewView({
         }}>
           <div>
             <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Response Rate
+              Demo Templates
             </span>
-            <div style={{ fontSize: '1.40rem', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
-              92%
+            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
+              {reviewsList.length}
             </div>
+            <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+              Sample test reviews
+            </span>
           </div>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FAF8F5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CheckCircle2 size={18} />
+            <Sparkles size={18} />
           </div>
         </div>
       </div>
@@ -625,7 +658,7 @@ export default function ReviewView({
         {/* LEFT / MAIN COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          {/* SECTION 1 — RATING OVERVIEW CARD */}
+          {/* SECTION 1 — GOOGLE REVIEWS CONNECTION & LIVE STATUS CARD */}
           <div style={{
             background: '#FFFFFF',
             borderRadius: '16px',
@@ -636,55 +669,108 @@ export default function ReviewView({
             flexDirection: 'column',
             gap: '14px'
           }}>
-            <strong style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A' }}>
-              Rating Distribution & Summary
-            </strong>
-
-            <div className="rating-summary-layout">
-              {/* Score Left */}
-              <div className="rating-summary-score">
-                <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>
-                  4.7
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '2px', margin: '6px 0 2px' }}>
-                  {[1, 2, 3, 4, 5].map(st => (
-                    <Star key={st} size={15} color="#D97706" fill={st <= 4 ? '#D97706' : '#FDE68A'} />
-                  ))}
-                </div>
-                <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 700 }}>
-                  248 total reviews
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <strong style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', display: 'block' }}>
+                  Google Reviews Link & Status
+                </strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Direct diner review collection on Google Maps
                 </span>
               </div>
-
-              {/* Distribution Horizontal Bars */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {[
-                  { star: 5, pct: 78, count: 193 },
-                  { star: 4, pct: 14, count: 35 },
-                  { star: 3, pct: 5, count: 12 },
-                  { star: 2, pct: 2, count: 5 },
-                  { star: 1, pct: 1, count: 3 }
-                ].map(row => (
-                  <div key={row.star} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.74rem' }}>
-                    <span style={{ width: '24px', fontWeight: 800, color: '#475569' }}>{row.star} ★</span>
-                    <div style={{ flex: 1, height: '7px', borderRadius: '4px', background: '#F1F5F9', overflow: 'hidden' }}>
-                      <div style={{ width: `${row.pct}%`, height: '100%', background: row.star >= 4 ? '#059669' : row.star === 3 ? '#D97706' : '#DC2626', borderRadius: '4px' }} />
-                    </div>
-                    <span style={{ width: '32px', textAlign: 'right', fontWeight: 700, color: '#64748B', fontSize: '0.70rem' }}>
-                      {row.pct}%
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <span style={{
+                fontSize: '0.70rem',
+                fontWeight: 800,
+                padding: '3px 10px',
+                borderRadius: '20px',
+                background: isGoogleConnected ? '#ECFDF5' : '#FEF2F2',
+                color: isGoogleConnected ? '#059669' : '#DC2626',
+                border: isGoogleConnected ? '1px solid #A7F3D0' : '1px solid #FECACA'
+              }}>
+                {isGoogleConnected ? '● Review Page Connected' : '○ Not Connected'}
+              </span>
             </div>
 
-            {/* Filter Chips Bar */}
-            <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '12px', overflowX: 'auto' }}>
+            <div style={{
+              padding: '14px 16px',
+              borderRadius: '12px',
+              background: '#FAF8F5',
+              border: '1px solid #EAE5DF',
+              fontSize: '0.78rem',
+              color: '#334155',
+              lineHeight: 1.5
+            }}>
+              {isGoogleConnected ? (
+                <>
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    Diners who scan your TouchQR menu can tap the review banner to leave genuine ratings directly on your public Google page:
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                    <code style={{ fontSize: '0.74rem', background: '#FFFFFF', padding: '4px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', wordBreak: 'break-all' }}>
+                      {settingsForm.google_review_url}
+                    </code>
+                    <a
+                      href={settingsForm.google_review_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        background: '#064E3B',
+                        color: '#FFFFFF',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        flexShrink: 0
+                      }}
+                    >
+                      <span>Open Google Reviews</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    No Google Review link is connected yet. Connect your Google Business review link so diners can leave reviews after dining.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowConnectModal(true)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: '#064E3B',
+                      color: '#FFFFFF',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Globe size={13} />
+                    <span>Connect Google Review URL</span>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Filter Chips Bar for Demo Templates */}
+            <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '12px', overflowX: 'auto', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '4px' }}>
+                Test Templates:
+              </span>
               {[
-                { id: 'all', label: 'All (248)' },
-                { id: 'newest', label: 'Newest (32)' },
-                { id: 'lowest', label: 'Lowest Rated (8)' },
-                { id: 'unanswered', label: 'Needs Reply (12)' }
+                { id: 'all', label: `All Samples (${reviewsList.length})` },
+                { id: 'newest', label: '5-Star Samples' },
+                { id: 'lowest', label: 'Critical / Wait Time' },
+                { id: 'unanswered', label: 'Needs Reply' }
               ].map(f => (
                 <button
                   key={f.id}
@@ -709,12 +795,17 @@ export default function ReviewView({
             flexDirection: 'column',
             gap: '14px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A' }}>
-                Customer Feedback Feed ({filteredReviews.length})
-              </strong>
-              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                Google Verified Reviews
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+              <div>
+                <strong style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', display: 'block' }}>
+                  Demonstration Review Templates ({filteredReviews.length})
+                </strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Sample Templates for Testing AI Replies (Not Real Customer Feedback)
+                </span>
+              </div>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#D97706', background: '#FEF3C7', padding: '2px 8px', borderRadius: '6px', border: '1px solid #FDE68A' }}>
+                DEMO TEMPLATES
               </span>
             </div>
 
@@ -759,8 +850,11 @@ export default function ReviewView({
                           {rev.avatar}
                         </div>
                         <div>
-                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>{rev.author}</strong>
-                          <span style={{ fontSize: '0.68rem', color: '#64748B' }}>{rev.date} • Platform: {rev.platform}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>{rev.author}</strong>
+                            <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#D97706', background: '#FEF3C7', padding: '1px 5px', borderRadius: '4px', border: '1px solid #FDE68A' }}>SAMPLE</span>
+                          </div>
+                          <span style={{ fontSize: '0.68rem', color: '#64748B' }}>{rev.date} • Template Scenario: {rev.platform}</span>
                         </div>
                       </div>
 

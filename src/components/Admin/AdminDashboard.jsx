@@ -2550,15 +2550,16 @@ export default function AdminDashboard({
     loadData();
   };
 
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async (overrideForm = null) => {
     try {
+      const payload = (overrideForm && typeof overrideForm === 'object') ? overrideForm : settingsForm;
       const res = await fetch('/api/admin/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(settingsForm)
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
@@ -2567,8 +2568,8 @@ export default function AdminDashboard({
       }
 
       setSettingsSavedMsg(true);
-      if (settingsForm.theme_color) {
-        document.documentElement.setAttribute('data-theme', settingsForm.theme_color);
+      if (payload.theme_color) {
+        document.documentElement.setAttribute('data-theme', payload.theme_color);
       }
       await loadData();
       setTimeout(() => setSettingsSavedMsg(false), 3000);
@@ -3060,7 +3061,7 @@ export default function AdminDashboard({
             )}
 
             {/* ORDERS VIEW */}
-            {['orders', 'floor-map', 'service-requests'].includes(activeTab) && (
+            {['orders', 'floor-map', 'service-requests', 'kds'].includes(activeTab) && (
               <OrdersView
                 orders={orders}
                 activeSubTab={activeTab}
@@ -3333,6 +3334,33 @@ export default function AdminDashboard({
                   setInitialSetupDrawer(null);
                   setActiveTab(tab);
                 }}
+              />
+            )}
+
+            {/* SAFE FALLBACK FOR UNRECOGNIZED / INVALID TABS */}
+            {!['home', 'orders', 'floor-map', 'service-requests', 'kds', 'analytics', 'dishes', 'categories', 'combos', 'qr-generator', 'offers', 'customers', 'billing', 'subscription', 'review', 'notifications', 'support', 'settings'].includes(activeTab) && (
+              <HomeView
+                restaurantInfo={restaurantInfo}
+                analyticsData={analyticsData}
+                orders={orders}
+                serviceRequests={serviceRequests}
+                dishes={safeDishes}
+                categories={safeCategories}
+                combos={combos}
+                totalTablesCount={totalTablesCount}
+                settingsForm={settingsForm}
+                isAudioReady={isAudioReady}
+                subscriptionStatus={subscriptionStatus}
+                capabilities={tenantCaps}
+                onNavigateTab={(tab) => setActiveTab(tab)}
+                onOpenAddDish={() => setDishModalData('new')}
+                onOpenAddCategory={() => setCatModalData('new')}
+                onReturnToMenu={onReturnToMenu}
+                onNavigateToSetup={(drawer = null) => {
+                  setInitialSetupDrawer(drawer);
+                  setActiveTab('settings');
+                }}
+                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
               />
             )}
           </div>

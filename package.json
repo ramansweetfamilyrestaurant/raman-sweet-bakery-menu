@@ -7,7 +7,8 @@
     "dev:server": "node server/index.js",
     "dev:client": "vite",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "build": "npm install && vite build",
+    "build": "vite build",
+    "db:migrate": "node server/scripts/migrate_production_postgres.js",
     "start": "node server/index.js",
     "test": "node server/tests/run_all_tests.js",
     "test:ci": "node server/tests/run_all_tests.js --ci"
