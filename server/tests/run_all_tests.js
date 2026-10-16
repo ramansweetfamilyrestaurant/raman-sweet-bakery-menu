@@ -85,6 +85,36 @@ const suites = [
     name: 'Support Ticket System & Safeguards',
     file: 'server/tests/support_tickets_system.test.js',
     requiresDb: true
+  },
+  {
+    name: 'Honest Admin Dashboard UI & Incomplete Features',
+    file: 'server/tests/honest_admin_ui.test.js',
+    requiresDb: false
+  },
+  {
+    name: 'Super Admin Bootstrap Security & Safeguards',
+    file: 'server/tests/superadmin_bootstrap_security.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'PostgreSQL Migration Workflow & Guard',
+    file: 'server/tests/migration_workflow_guard.test.js',
+    requiresDb: false
+  },
+  {
+    name: 'Serverless Distributed Rate Limiting',
+    file: 'server/tests/serverless_rate_limiting.test.js',
+    requiresDb: false
+  },
+  {
+    name: 'Hotel Rooms & Space Management',
+    file: 'server/tests/hotel_rooms_management.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'KDS & Cinema Security Fixes',
+    file: 'server/tests/kds_and_cinema_fixes.test.js',
+    requiresDb: true
   }
 ];
 

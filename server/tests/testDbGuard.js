@@ -252,6 +252,11 @@ export function isCiTestMode() {
  * @returns {string} The verified test database connection string or path
  */
 export function checkTestDatabaseRequirement(suiteName) {
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
+    throw new Error(
+      'TEST_DB_SAFETY_VIOLATION: Database integration tests cannot run when NODE_ENV is set to production or VERCEL_ENV is set to production.'
+    );
+  }
   process.env.NODE_ENV = 'test';
   const hasDb = hasTestDatabaseConfigured();
   const isCi = isCiTestMode();
@@ -280,6 +285,11 @@ export function checkTestDatabaseRequirement(suiteName) {
  * @returns {string} The verified test database connection string or path
  */
 export function assertTestDatabaseEnv() {
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
+    throw new Error(
+      'TEST_DB_SAFETY_VIOLATION: Database integration tests cannot run when NODE_ENV is set to production or VERCEL_ENV is set to production.'
+    );
+  }
   process.env.NODE_ENV = 'test';
   return getVerifiedTestDatabaseUrl();
 }
@@ -294,6 +304,11 @@ export function assertTestDatabaseEnv() {
  * @returns {Promise<{ verified: boolean, identity: string, dbType: string }>}
  */
 export async function verifyTestDatabaseIdentity(queryFnOrClient, options = {}) {
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
+    throw new Error(
+      'TEST_DB_SAFETY_VIOLATION: Database integration tests cannot run when NODE_ENV is set to production or VERCEL_ENV is set to production.'
+    );
+  }
   const isPostgres = options.isPostgres ?? (typeof queryFnOrClient?.query === 'function' && !queryFnOrClient?.pragma);
 
   if (isPostgres) {

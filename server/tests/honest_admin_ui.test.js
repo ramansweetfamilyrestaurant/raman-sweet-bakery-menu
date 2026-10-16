@@ -63,14 +63,14 @@ test('Customer Reviews: Google Review URL points to real tenant business setting
 // ======================================================================
 // SECTION 2: Support Inquiries & Real WhatsApp Channel
 // ======================================================================
-console.log('\n--- SECTION 2: Support Inquiries & Real WhatsApp Channel ---');
+console.log('\n--- SECTION 2: Support Inquiries & Persistent Tickets ---');
 
 test('Support Inquiries: no fake pre-seeded tickets (e.g. TICK-1082)', () => {
   assert.ok(!supportViewContent.includes('TICK-1082'), 'Must not seed fake TICK-1082 ticket');
   assert.ok(supportViewContent.includes('const [tickets, setTickets] = useState([]);'), 'Initial tickets must use real tickets state and default to empty array');
 });
 
-test('Support Inquiries: provides direct WhatsApp support option', () => {
+test('Support Inquiries: provides direct WhatsApp escalation channel alongside tickets', () => {
   assert.ok(supportViewContent.includes('https://wa.me/'), 'Must construct wa.me URL for WhatsApp');
   assert.ok(supportViewContent.includes('cleanWhatsappNumber'), 'Must clean WhatsApp phone number');
   assert.ok(supportViewContent.includes('window.open('), 'Must open WhatsApp support conversation');
@@ -80,6 +80,12 @@ test('Support Inquiries: connects to real backend ticket creation with verified 
   assert.ok(supportViewContent.includes('createTenantSupportTicket'), 'Must use createTenantSupportTicket API');
   assert.ok(supportViewContent.includes('fetchTenantSupportTickets'), 'Must fetch real tickets from backend');
   assert.ok(!supportViewContent.includes('Our team will contact you within 2 hours'), 'Must not make fake callback promises without backend ticket system');
+});
+
+test('Support Inquiries: supports persistent ticket threads and customer replies', () => {
+  assert.ok(supportViewContent.includes('fetchTenantSupportTicketDetails'), 'Must fetch full conversation thread from server');
+  assert.ok(supportViewContent.includes('addTenantSupportTicketReply'), 'Must allow posting follow-up replies to thread');
+  assert.ok(supportViewContent.includes('ticket.ticket_ref'), 'Must display unique persistent ticket reference');
 });
 
 test('Support Inquiries: recent inquiries list provides honest empty state', () => {
