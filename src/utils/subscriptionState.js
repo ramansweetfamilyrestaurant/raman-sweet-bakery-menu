@@ -13,7 +13,8 @@ export const SUBSCRIPTION_STATES = Object.freeze({
   CANCELLED: 'cancelled',
   PAUSED: 'paused',
   EXPIRED: 'expired',
-  ADMIN_GRANTED: 'admin_granted'
+  ADMIN_GRANTED: 'admin_granted',
+  SUSPENDED: 'suspended'
 });
 
 /**
@@ -27,6 +28,15 @@ export function getSubscriptionUIMeta(state, meta = {}) {
   const normalized = (state || '').toLowerCase().trim();
 
   switch (normalized) {
+    case 'suspended':
+      return {
+        label: 'Account Suspended',
+        color: '#EF4444',
+        icon: '⚫',
+        description: 'This business account has been suspended by Super Admin.',
+        isInformational: false
+      };
+
     case 'initialized':
     case 'bank_approval_pending':
     case 'pending':
@@ -93,4 +103,174 @@ export function getSubscriptionUIMeta(state, meta = {}) {
         isInformational: false
       };
   }
+}
+
+/**
+ * Calculates authoritative normalized monthly recurring revenue (MRR) for a tenant.
+ *
+ * Rules:
+ * - Excludes complimentary VIP accounts (₹0 MRR).
+ * - Excludes suspended, expired, trialing, pending or non-paying accounts.
+ * - Preserves custom/negotiated pricing (e.g. ₹799, ₹299) rather than forcing catalog list prices.
+ * - Normalizes yearly/annual subscriptions by dividing by 12.
+ *
+ * @param {Object} tenant - Tenant restaurant record with subscription metadata
+ * @returns {number} Normalized MRR in INR
+ */
+export function calculateTenantMrr(tenant) {
+  if (!tenant) return 0;
+
+  // 1. Explicitly suspended tenants must never contribute to recurring MRR
+  const isSuspended = tenant.active === false || tenant.active === 0 || tenant.active === '0' || tenant.active === 'false' || tenant.subscription_status === 'suspended';
+  if (isSuspended) return 0;
+
+  // 2. Complimentary VIP tenants have ₹0 recurring revenue
+  const isVip = Boolean(
+    tenant.is_vip ||
+    tenant.is_complimentary ||
+    tenant.subscription_type === 'ADMIN_GRANTED' ||
+    tenant.mandate_status === 'admin_granted' ||
+    Number(tenant.plan_price) === 0 ||
+    Number(tenant.effective_plan_price) === 0
+  );
+  if (isVip) return 0;
+
+  // 3. Exclude non-active / non-paying states (trials, expired, cancelled, failed, awaiting charge)
+  // Only operational active paid accounts count towards recurring paid revenue
+  const status = String(tenant.subscription_status || '').toLowerCase();
+  if (status && status !== 'active') {
+    return 0;
+  }
+
+  // 4. Resolve the authoritative actual recurring price (preserving custom/negotiated pricing like ₹799, ₹299)
+  let rawAmount = 0;
+  if (tenant.recurring_amount !== undefined && tenant.recurring_amount !== null && tenant.recurring_amount !== '') {
+    rawAmount = Number(tenant.recurring_amount);
+  } else if (tenant.effective_plan_price !== undefined && tenant.effective_plan_price !== null && tenant.effective_plan_price !== '') {
+    rawAmount = Number(tenant.effective_plan_price);
+  } else if (tenant.plan_price !== undefined && tenant.plan_price !== null && tenant.plan_price !== '') {
+    rawAmount = Number(tenant.plan_price);
+  }
+
+  if (isNaN(rawAmount) || rawAmount <= 0) return 0;
+
+  // 5. Normalize billing periods (e.g. annual subscriptions / 12)
+  const cycle = String(tenant.billing_cycle || tenant.billing_frequency || '').toLowerCase();
+  if (cycle.includes('year') || cycle.includes('annual')) {
+    return Math.round((rawAmount / 12) * 100) / 100;
+  }
+
+  return rawAmount;
+}
+
+/**
+ * Authoritatively determines if a restaurant matches a given status filter.
+ * Guarantees 1:1 parity between filter count pills and rendered table rows.
+ *
+ * @param {Object} r - Restaurant record
+ * @param {string} filter - Filter key: 'all' | 'active' | 'suspended' | 'vip' | 'trial' | 'failed' | 'expired' | 'cancelled' | 'scheduled'
+ * @returns {boolean}
+ */
+export function matchesTenantStatusFilter(r, filter) {
+  if (!r) return false;
+  if (!filter || filter === 'all') return true;
+
+  const isSuspended = (r.active === false || r.active === 0 || r.active === '0' || r.active === 'false' || r.subscription_status === 'suspended');
+  if (filter === 'suspended') return isSuspended;
+  if (isSuspended) return false;
+
+  const isVip = Boolean(
+    r.is_vip ||
+    r.is_complimentary ||
+    r.subscription_type === 'ADMIN_GRANTED' ||
+    r.subscription_type === 'COMPLIMENTARY' ||
+    r.mandate_status === 'admin_granted' ||
+    r.mandate_status === 'complimentary' ||
+    (r.effective_plan_tier === 'enterprise' && Number(r.effective_plan_price) === 0)
+  );
+
+  if (filter === 'vip' || filter === 'complimentary') return isVip;
+
+  const isTrial = !isVip && (r.subscription_status === 'trialing' || r.subscription_status === 'trial' || r.subscription_type === 'TRIAL' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
+  if (filter === 'trial') return isTrial;
+
+  const isExpired = !isVip && (r.subscription_status === 'expired' || (r.plan_expires_at && new Date(r.plan_expires_at) < new Date()));
+  if (filter === 'expired') return isExpired;
+
+  const isFailed = !isVip && (r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due' || r.subscription_status === 'failed');
+  if (filter === 'failed') return isFailed;
+
+  if (filter === 'cancelled') {
+    return !isVip && (r.cancel_requested_at !== null || r.subscription_status === 'cancelled' || r.auto_renew === 0);
+  }
+
+  if (filter === 'scheduled') {
+    return !isVip && Boolean(r.scheduled_plan_key);
+  }
+
+  if (filter === 'active') {
+    return !isExpired && !isFailed;
+  }
+
+  return true;
+}
+
+/**
+ * Authoritatively formats tenant plan display labels across Directory, Cards, Subscriptions, and 360 views.
+ *
+ * Rules:
+ * 1. For a tenant with authoritative complimentary VIP access, uses 'Enterprise VIP Access' as the primary plan label.
+ * 2. Retains stored base tier only as secondary information (e.g. 'Base: BASIC' / 'Base: PRO') if different from enterprise.
+ * 3. Never displays 'BASIC' or 'PRO' as the primary effective plan label for VIP accounts.
+ * 4. Preserves ₹0 price and VIP badge.
+ * 5. Ordinary paid and trial tenants display their catalog/custom plan name and price accurately.
+ *
+ * @param {Object} tenant
+ * @returns {{ primaryLabel: string, secondaryLabel: string, badgeText: string|null, fullDisplay: string }}
+ */
+export function formatTenantPlanDisplay(tenant) {
+  if (!tenant) {
+    return {
+      primaryLabel: 'Pro Plan',
+      secondaryLabel: '₹999/mo',
+      badgeText: null,
+      fullDisplay: 'Pro Plan (₹999/mo)'
+    };
+  }
+
+  const isVip = (tenant.is_vip !== undefined || tenant.is_complimentary !== undefined)
+    ? Boolean(tenant.is_vip || tenant.is_complimentary)
+    : Boolean(
+        tenant.subscription_type === 'ADMIN_GRANTED' ||
+        tenant.subscription_type === 'COMPLIMENTARY' ||
+        tenant.subscription_type === 'VIP' ||
+        tenant.mandate_status === 'admin_granted' ||
+        tenant.mandate_status === 'complimentary'
+      );
+
+  if (isVip) {
+    const rawBase = (tenant.plan_tier || '').trim();
+    const hasBaseTier = rawBase && rawBase.toLowerCase() !== 'enterprise';
+    const baseTier = hasBaseTier ? rawBase.toUpperCase() : null;
+
+    return {
+      primaryLabel: 'Enterprise VIP Access',
+      secondaryLabel: baseTier ? `₹0/mo (Base: ${baseTier})` : '₹0/mo',
+      badgeText: '★ VIP',
+      fullDisplay: `Enterprise VIP Access (₹0/mo${baseTier ? ` • Base: ${baseTier}` : ''})`
+    };
+  }
+
+  const primaryLabel = tenant.plan_name || (tenant.plan_tier ? `${tenant.plan_tier.toUpperCase()} Plan` : 'Pro Plan');
+  const price = (tenant.effective_plan_price !== undefined && tenant.effective_plan_price !== null)
+    ? tenant.effective_plan_price
+    : (tenant.plan_price !== undefined && tenant.plan_price !== null ? tenant.plan_price : 999);
+  const secondaryLabel = `₹${price}/mo`;
+
+  return {
+    primaryLabel,
+    secondaryLabel,
+    badgeText: null,
+    fullDisplay: `${primaryLabel} (${secondaryLabel})`
+  };
 }

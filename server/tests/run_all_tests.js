@@ -120,6 +120,11 @@ const suites = [
     name: 'VIP Access Lifecycle E2E Regression',
     file: 'server/tests/vip_access_lifecycle_e2e.test.js',
     requiresDb: true
+  },
+  {
+    name: 'Super Admin VIP Data Parity & Consistency',
+    file: 'server/tests/superadmin_vip_data_parity.test.js',
+    requiresDb: true
   }
 ];
 

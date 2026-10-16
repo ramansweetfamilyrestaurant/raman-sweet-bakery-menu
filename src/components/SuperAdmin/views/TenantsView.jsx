@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { Store, Plus, RefreshCw, Eye, Sparkles } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
-import { BUSINESS_TYPE_METADATA } from '../../../utils/businessTaxonomy';
+import { BUSINESS_TYPE_METADATA, BUSINESS_TYPE_ALIASES } from '../../../utils/businessTaxonomy';
+import { matchesTenantStatusFilter, formatTenantPlanDisplay } from '../../../utils/subscriptionState';
 
 export default function TenantsView({ restaurants, searchQuery, onSelectTenant, onAddTenant, onRefresh, loading }) {
   const [statusFilter, setStatusFilter] = useState('all');
 
+  const activeCount = restaurants.filter(r => matchesTenantStatusFilter(r, 'active')).length;
+  const suspendedCount = restaurants.filter(r => matchesTenantStatusFilter(r, 'suspended')).length;
+  const vipCount = restaurants.filter(r => matchesTenantStatusFilter(r, 'vip')).length;
+  const trialCount = restaurants.filter(r => matchesTenantStatusFilter(r, 'trial')).length;
+
   const filtered = restaurants.filter(r => {
-    const isSuspended = (r.active === false || r.active === 0 || r.active === '0');
-    if (statusFilter === 'active' && isSuspended) return false;
-    if (statusFilter === 'suspended' && !isSuspended) return false;
+    if (!matchesTenantStatusFilter(r, statusFilter)) return false;
 
     if (!searchQuery || !searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
@@ -52,14 +56,28 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
               className={`sa-btn sa-btn-sm ${statusFilter === 'active' ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
               style={{ border: 'none' }}
             >
-              🟢 Active
+              🟢 Active ({activeCount})
+            </button>
+            <button
+              onClick={() => setStatusFilter('vip')}
+              className={`sa-btn sa-btn-sm ${statusFilter === 'vip' ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
+              style={{ border: 'none' }}
+            >
+              👑 VIP ({vipCount})
+            </button>
+            <button
+              onClick={() => setStatusFilter('trial')}
+              className={`sa-btn sa-btn-sm ${statusFilter === 'trial' ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
+              style={{ border: 'none' }}
+            >
+              🎁 Trial ({trialCount})
             </button>
             <button
               onClick={() => setStatusFilter('suspended')}
               className={`sa-btn sa-btn-sm ${statusFilter === 'suspended' ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
               style={{ border: 'none' }}
             >
-              🔴 Suspended
+              🔴 Suspended ({suspendedCount})
             </button>
           </div>
 
@@ -97,8 +115,9 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
               </tr>
             ) : (
               filtered.map(r => {
-                const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030);
-                const bizMeta = BUSINESS_TYPE_METADATA[r.business_type] || { icon: '🏢', label: r.business_type || 'Restaurant' };
+                const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030) || r.is_vip || r.is_complimentary;
+                const canonicalType = BUSINESS_TYPE_ALIASES[r.business_type] || r.business_type;
+                const bizMeta = BUSINESS_TYPE_METADATA[canonicalType] || { icon: '🏢', label: canonicalType || 'Restaurant' };
 
                 return (
                   <tr key={r.id}>
@@ -147,13 +166,23 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
                       </div>
                     </td>
                     <td>
-                      <span style={{ fontWeight: 800, color: 'var(--sa-success)' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
-                      <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
-                        {(isLifetime || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
-                      </span>
+                      {(() => {
+                        const planInfo = formatTenantPlanDisplay(r);
+                        return (
+                          <>
+                            <span style={{ fontWeight: 800, color: r.is_vip ? '#7E22CE' : 'var(--sa-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              {planInfo.primaryLabel}
+                              {r.is_vip && <span style={{ color: '#a855f7', fontSize: '0.75rem', fontWeight: 900 }}> ★ VIP</span>}
+                            </span>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
+                              {planInfo.secondaryLabel}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </td>
                     <td>
-                      <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'expired')} type={r.subscription_type} />
+                      <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'suspended')} type={r.subscription_type} active={r.active} />
                     </td>
                     <td style={{ fontWeight: 700 }}>
                       {isLifetime ? '♾️ Lifetime' : r.access_until ? new Date(r.access_until).toLocaleDateString('en-IN') : 'N/A'}
@@ -175,8 +204,10 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
       {/* Ultra-Compact Mobile Cards View (<= 767px) */}
       <div className="sa-mobile-card-list">
         {filtered.map(r => {
-          const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030);
-          const bizMeta = BUSINESS_TYPE_METADATA[r.business_type] || { icon: '🏢', label: r.business_type || 'Restaurant' };
+          const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030) || r.is_vip || r.is_complimentary;
+          const canonicalType = BUSINESS_TYPE_ALIASES[r.business_type] || r.business_type;
+          const bizMeta = BUSINESS_TYPE_METADATA[canonicalType] || { icon: '🏢', label: canonicalType || 'Restaurant' };
+          const planInfo = formatTenantPlanDisplay(r);
 
           return (
             <div key={r.id} className="sa-mobile-card" onClick={() => onSelectTenant(r)} style={{ cursor: 'pointer', padding: '14px' }}>
@@ -190,11 +221,14 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
                     </span>
                   </div>
                 </div>
-                <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'expired')} type={r.subscription_type} />
+                <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'suspended')} type={r.subscription_type} active={r.active} />
               </div>
 
               <div style={{ fontSize: '0.8rem', color: 'var(--sa-text-muted)', margin: '6px 0' }}>
-                <strong style={{ color: 'var(--sa-text-main)' }}>{(r.plan_tier || 'pro').toUpperCase()}</strong> · {(isLifetime || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
+                <strong style={{ color: r.is_vip ? '#7E22CE' : 'var(--sa-text-main)' }}>
+                  {planInfo.primaryLabel}
+                  {r.is_vip && <span style={{ marginLeft: 4, color: '#a855f7' }}> ★ VIP</span>}
+                </strong> · {planInfo.secondaryLabel}
                 <span style={{ marginLeft: '10px' }}>· {r.dish_count || 0} dishes</span>
               </div>
 

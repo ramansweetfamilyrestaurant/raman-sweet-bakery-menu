@@ -82,6 +82,7 @@ export async function superAdminLogin(username, password) {
 export async function fetchSuperAdminRestaurants(token) {
   const res = await fetch(`${API_BASE}/superadmin/restaurants`, {
     headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
   });
   return handleResponse(res, 'Failed to fetch tenant restaurants');
 }

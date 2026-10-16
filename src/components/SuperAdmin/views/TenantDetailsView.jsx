@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import Drawer from '../components/Drawer';
 import StatusBadge from '../components/StatusBadge';
-import { BUSINESS_TYPE_METADATA } from '../../../utils/businessTaxonomy';
+import { BUSINESS_TYPE_METADATA, BUSINESS_TYPE_ALIASES } from '../../../utils/businessTaxonomy';
+import { formatTenantPlanDisplay } from '../../../utils/subscriptionState';
 import '../styles/SuperAdmin.css';
 
 const getRestaurantLogoUrl = (logo) => {
@@ -41,37 +42,45 @@ export default function TenantDetailsView({
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   useEffect(() => {
+    let isCurrent = true;
     if (isOpen && resto?.id) {
-      fetchTenant360(resto.id);
+      setLoading(true);
+      setFetchErr('');
+      const authToken = token || localStorage.getItem('saas_super_token') || localStorage.getItem('touchqr_superadmin_token') || sessionStorage.getItem('saas_super_token');
+      fetch(`/api/superadmin/restaurants/${resto.id}/360`, {
+        cache: 'no-store',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      })
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`Failed to load 360 data (Status ${res.status})`);
+          const data = await res.json();
+          if (isCurrent) {
+            setT360Data(data);
+          }
+        })
+        .catch((err) => {
+          if (isCurrent) {
+            console.warn('Shop 360 fetch warning, falling back to local props:', err.message);
+            setFetchErr(err.message);
+          }
+        })
+        .finally(() => {
+          if (isCurrent) {
+            setLoading(false);
+          }
+        });
     } else {
       setT360Data(null);
       setActiveTab('overview');
       setDeleteConfirm(false);
-    }
-  }, [isOpen, resto?.id]);
-
-  const fetchTenant360 = async (tenantId) => {
-    setLoading(true);
-    setFetchErr('');
-    try {
-      const authToken = token || localStorage.getItem('saas_super_token') || localStorage.getItem('touchqr_superadmin_token') || sessionStorage.getItem('saas_super_token');
-      const res = await fetch(`/api/superadmin/restaurants/${tenantId}/360`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
-      if (!res.ok) {
-        throw new Error(`Failed to load 360 data (Status ${res.status})`);
-      }
-      const data = await res.json();
-      setT360Data(data);
-    } catch (err) {
-      console.warn('Shop 360 fetch warning, falling back to local props:', err.message);
-      setFetchErr(err.message);
-    } finally {
       setLoading(false);
     }
-  };
+    return () => {
+      isCurrent = false;
+    };
+  }, [isOpen, resto?.id, token]);
 
   const copyToClipboard = (text, key) => {
     if (!text) return;
@@ -82,25 +91,37 @@ export default function TenantDetailsView({
 
   if (!resto) return null;
 
-  // Resolved merged objects (prefer real-time 360 data, fallback to list item)
   const tenant = t360Data?.tenant || resto;
-  const bizMeta = BUSINESS_TYPE_METADATA[tenant.business_type] || { icon: '🏢', label: tenant.business_type || 'Restaurant', description: 'TouchQR Digital Menu Venue' };
+  const canonicalBizType = BUSINESS_TYPE_ALIASES[tenant.business_type] || tenant.business_type;
+  const bizMeta = BUSINESS_TYPE_METADATA[canonicalBizType] || { icon: '🏢', label: canonicalBizType || 'Restaurant', description: 'TouchQR Digital Menu Venue' };
   const owner = t360Data?.owner || {
     owner_name: resto.owner_name,
     phone: resto.phone,
     owner_email: resto.owner_email,
     username: resto.owner_username || 'admin'
   };
+  const isVipFallback = Boolean(resto.is_vip || resto.is_complimentary || resto.subscription_type === 'ADMIN_GRANTED' || resto.mandate_status === 'admin_granted' || Number(resto.plan_price) === 0);
+  const isSuspendedFallback = (resto.active === false || resto.active === 0 || resto.active === '0' || resto.active === 'false');
   const sub = t360Data?.subscription || {
-    plan_tier: resto.plan_tier || 'pro',
-    plan_name: `${(resto.plan_tier || 'pro').toUpperCase()} Plan`,
-    plan_price: (resto.plan_price !== undefined && resto.plan_price !== null) ? Number(resto.plan_price) : 999,
-    status: resto.subscription_status || (resto.active !== false ? 'active' : 'expired'),
-    subscription_type: resto.subscription_type || 'PAID',
+    plan_tier: isVipFallback ? 'enterprise' : (resto.effective_plan_tier || resto.plan_tier || 'pro'),
+    plan_name: isVipFallback ? 'Enterprise VIP Access' : (resto.plan_name || `${(resto.plan_tier || 'pro').toUpperCase()} Plan`),
+    plan_price: isVipFallback ? 0 : ((resto.effective_plan_price !== undefined && resto.effective_plan_price !== null) ? Number(resto.effective_plan_price) : ((resto.plan_price !== undefined && resto.plan_price !== null) ? Number(resto.plan_price) : 999)),
+    status: isSuspendedFallback ? 'suspended' : (resto.subscription_status || (resto.active !== false ? 'active' : 'expired')),
+    subscription_type: isVipFallback ? 'ADMIN_GRANTED' : (resto.subscription_type || 'PAID'),
     auto_renew: resto.auto_renew !== 0 && resto.auto_renew !== false,
     access_until: resto.access_until || resto.plan_expires_at,
-    is_complimentary: resto.subscription_type === 'ADMIN_GRANTED' || resto.mandate_status === 'admin_granted'
+    is_complimentary: isVipFallback,
+    is_vip: isVipFallback
   };
+  const isVipAuthoritative = Boolean(sub.is_vip || sub.is_complimentary || isVipFallback);
+  const planInfo = formatTenantPlanDisplay({
+    ...tenant,
+    ...sub,
+    is_vip: isVipAuthoritative,
+    is_complimentary: isVipAuthoritative,
+    plan_name: sub.plan_name,
+    plan_tier: tenant.plan_tier || sub.plan_tier
+  });
   const billing = t360Data?.billing || {
     total_successful_payments: 0,
     total_successful_amount: 0,
@@ -250,7 +271,7 @@ export default function TenantDetailsView({
               <Crown size={14} color="#0A2315" /> 1-Click Login (Owner)
             </button>
             <span style={{ fontSize: '0.68rem', color: '#A7F3D0', fontWeight: 700 }}>
-              👑 {sub.plan_tier?.toUpperCase()} PLAN {isLifetime ? '• COMPLIMENTARY' : `• ₹${sub.plan_price}/mo`}
+              👑 {planInfo.primaryLabel} {isVipAuthoritative || isLifetime ? '• COMPLIMENTARY' : `• ₹${sub.plan_price}/mo`}
             </span>
           </div>
         </div>
@@ -263,8 +284,8 @@ export default function TenantDetailsView({
         }}>
           <div style={{ background: 'rgba(255,255,255,0.07)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ fontSize: '0.65rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>SUBSCRIPTION STATUS</div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 900, color: sub.status === 'active' ? '#34D399' : '#FBBF24', textTransform: 'uppercase', marginTop: '2px' }}>
-              {sub.status || 'ACTIVE'}
+            <div style={{ fontSize: '0.86rem', fontWeight: 900, color: (tenant.active === false || sub.status === 'suspended') ? '#EF4444' : (sub.status === 'active' ? '#34D399' : '#FBBF24'), textTransform: 'uppercase', marginTop: '2px' }}>
+              {(tenant.active === false || sub.status === 'suspended') ? 'SUSPENDED' : (sub.status || 'ACTIVE')}
             </div>
           </div>
 
@@ -481,7 +502,11 @@ export default function TenantDetailsView({
             <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>FACILITY SPACES</span>
               <strong style={{ color: 'var(--sa-text-main)', fontSize: '0.88rem', marginTop: '2px', display: 'block' }}>
-                🪑 {usage.tables.current} Tables • 🚪 {usage.cabins} Cabins • 🏨 {usage.rooms} Rooms
+                {tenant.service_model === 'hotel'
+                  ? `🏨 ${usage.rooms?.current ?? (typeof usage.rooms === 'number' ? usage.rooms : Number(tenant.total_rooms || 0))} Rooms • 🪑 ${usage.tables?.current ?? (typeof usage.tables === 'number' ? usage.tables : Number(tenant.total_tables || 0))} Dining Tables`
+                  : tenant.service_model === 'cinema'
+                  ? `🎬 ${usage.seats?.current ?? (typeof usage.seats === 'number' ? usage.seats : Number(tenant.total_tables || 0))} Auditorium Seats`
+                  : `🪑 ${usage.tables?.current ?? (typeof usage.tables === 'number' ? usage.tables : Number(tenant.total_tables || 0))} Tables • 🚪 ${usage.cabins?.current ?? (typeof usage.cabins === 'number' ? usage.cabins : Number(tenant.total_cabins || 0))} Cabins`}
               </strong>
             </div>
           </div>
@@ -584,7 +609,17 @@ export default function TenantDetailsView({
           <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '16px', border: '1px solid var(--sa-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
               <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Current SaaS Plan:</span>
-              <strong style={{ color: 'var(--sa-primary)', fontSize: '0.94rem' }}>{sub.plan_name || sub.plan_tier?.toUpperCase()}</strong>
+              <div style={{ textAlign: 'right' }}>
+                <strong style={{ color: isVipAuthoritative ? '#7E22CE' : 'var(--sa-primary)', fontSize: '0.94rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+                  {planInfo.primaryLabel}
+                  {isVipAuthoritative && <span style={{ color: '#a855f7', fontSize: '0.8rem', fontWeight: 900 }}>★ VIP</span>}
+                </strong>
+                {isVipAuthoritative && tenant.plan_tier && tenant.plan_tier.toLowerCase() !== 'enterprise' && (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', display: 'block' }}>
+                    Base Tier: {tenant.plan_tier.toUpperCase()}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
@@ -751,10 +786,12 @@ export default function TenantDetailsView({
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Utensils size={14} color="#059669" /> Menu Dishes Hosted
                 </span>
-                <span style={{ color: 'var(--sa-primary)' }}>{usage.dishes.current} / {usage.dishes.limit} items ({usage.dishes.percentage}%)</span>
+                <span style={{ color: 'var(--sa-primary)' }}>
+                  {usage.dishes.current} / {usage.dishes.limit >= 9999 ? 'Unlimited' : `${usage.dishes.limit} items`} {usage.dishes.limit >= 9999 ? '(VIP)' : `(${usage.dishes.percentage}%)`}
+                </span>
               </div>
               <div style={{ width: '100%', height: '8px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${usage.dishes.percentage}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #059669)', borderRadius: '4px' }} />
+                <div style={{ width: `${usage.dishes.limit >= 9999 ? 100 : usage.dishes.percentage}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #059669)', borderRadius: '4px' }} />
               </div>
             </div>
 
@@ -764,42 +801,113 @@ export default function TenantDetailsView({
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Layers size={14} color="#2563EB" /> Menu Categories
                 </span>
-                <span style={{ color: '#2563EB' }}>{usage.categories.current} / {usage.categories.limit} ({usage.categories.percentage}%)</span>
+                <span style={{ color: '#2563EB' }}>
+                  {usage.categories.current} / {usage.categories.limit >= 9999 ? 'Unlimited' : usage.categories.limit} {usage.categories.limit >= 9999 ? '(VIP)' : `(${usage.categories.percentage}%)`}
+                </span>
               </div>
               <div style={{ width: '100%', height: '8px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${usage.categories.percentage}%`, height: '100%', background: 'linear-gradient(90deg, #3B82F6, #2563EB)', borderRadius: '4px' }} />
+                <div style={{ width: `${usage.categories.limit >= 9999 ? 100 : usage.categories.percentage}%`, height: '100%', background: 'linear-gradient(90deg, #3B82F6, #2563EB)', borderRadius: '4px' }} />
               </div>
             </div>
 
-            {/* Tables Bar */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 800, marginBottom: '6px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Store size={14} color="#D97706" /> Dine-In Tables
-                </span>
-                <span style={{ color: '#D97706' }}>{usage.tables.current} / {usage.tables.limit} ({usage.tables.percentage}%)</span>
-              </div>
-              <div style={{ width: '100%', height: '8px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${usage.tables.percentage}%`, height: '100%', background: 'linear-gradient(90deg, #F59E0B, #D97706)', borderRadius: '4px' }} />
-              </div>
-            </div>
+            {/* Space Quota Bar (Hotel Rooms / Cinema Seats / Dining Tables) */}
+            {(() => {
+              const isHotel = tenant.service_model === 'hotel' || tenant.business_type === 'hotel_resort' || usage.primarySpace === 'rooms';
+              const isCinema = tenant.service_model === 'cinema' || tenant.business_type === 'cinema_theatre' || usage.primarySpace === 'seats';
+              const spaceObj = isHotel ? (usage.rooms || usage.tables) : isCinema ? (usage.seats || usage.tables) : usage.tables;
+              const spaceLabel = isHotel ? 'Hotel Rooms' : isCinema ? 'Auditorium Seats' : 'Dine-In Tables';
+              const spaceColor = isHotel ? '#0284C7' : isCinema ? '#7C3AED' : '#D97706';
+              const currentCount = spaceObj?.current ?? (isHotel ? Number(tenant.total_rooms || 0) : Number(tenant.total_tables || 0));
+              const limitVal = spaceObj?.limit ?? 9999;
+              const percentage = limitVal >= 9999 ? 100 : (spaceObj?.percentage || Math.min(100, Math.round((currentCount / limitVal) * 100)));
+
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 800, marginBottom: '6px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Store size={14} color={spaceColor} /> {spaceLabel}
+                    </span>
+                    <span style={{ color: spaceColor }}>
+                      {currentCount} / {limitVal >= 9999 ? 'Unlimited' : limitVal} {limitVal >= 9999 ? '(VIP)' : `(${percentage}%)`}
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${percentage}%`, height: '100%', background: `linear-gradient(90deg, ${spaceColor}, ${spaceColor})`, borderRadius: '4px' }} />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Feature Entitlements Matrix */}
           <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '16px', border: '1px solid var(--sa-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '12px' }}>
-              👑 Authoritative Plan Feature Matrix
-            </span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', fontSize: '0.80rem' }}>
-              {Object.entries(usage.entitlements || {}).map(([key, enabled]) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8FAFC', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                  {enabled ? <CheckCircle size={15} color="#16A34A" /> : <XCircle size={15} color="#DC2626" />}
-                  <span style={{ textTransform: 'capitalize', color: enabled ? 'var(--sa-text-main)' : 'var(--sa-text-muted)', fontWeight: 700 }}>
-                    {key.replace(/_enabled/g, '').replace(/_/g, ' ')}
-                  </span>
-                </div>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                👑 Authoritative Plan Feature Matrix
+              </span>
+              <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 700 }}>
+                {bizMeta.label.replace(/\s*\(.*\)/, '')} Profile
+              </span>
             </div>
+
+            {usage.feature_matrix ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '10px', fontSize: '0.80rem' }}>
+                {Object.entries(usage.feature_matrix).map(([key, item]) => {
+                  const isAvailable = item.status === 'AVAILABLE';
+                  const isUnsupported = item.status === 'UNSUPPORTED';
+                  return (
+                    <div key={key} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      gap: '8px', background: isUnsupported ? '#F8FAFC' : (isAvailable ? '#F0FDF4' : '#FEF2F2'),
+                      padding: '8px 12px', borderRadius: '10px',
+                      border: isUnsupported ? '1px dashed #CBD5E1' : (isAvailable ? '1px solid #BBF7D0' : '1px solid #FECACA'),
+                      opacity: isUnsupported ? 0.75 : 1
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        {isAvailable ? (
+                          <CheckCircle size={15} color="#16A34A" />
+                        ) : isUnsupported ? (
+                          <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>⚪</span>
+                        ) : (
+                          <XCircle size={15} color="#DC2626" />
+                        )}
+                        <span style={{
+                          textTransform: 'none',
+                          color: isAvailable ? '#15803D' : (isUnsupported ? '#64748B' : '#991B1B'),
+                          fontWeight: 700,
+                          fontSize: '0.78rem',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {item.label || key.replace(/_enabled/g, '').replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      {isUnsupported && (
+                        <span style={{
+                          fontSize: '0.60rem', fontWeight: 800, padding: '2px 5px',
+                          borderRadius: '4px', background: '#E2E8F0', color: '#475569',
+                          whiteSpace: 'nowrap'
+                        }} title={item.inapplicable_reason}>
+                          N/A
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', fontSize: '0.80rem' }}>
+                {Object.entries(usage.entitlements || {}).map(([key, enabled]) => (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8FAFC', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                    {enabled ? <CheckCircle size={15} color="#16A34A" /> : <XCircle size={15} color="#DC2626" />}
+                    <span style={{ textTransform: 'capitalize', color: enabled ? 'var(--sa-text-main)' : 'var(--sa-text-muted)', fontWeight: 700 }}>
+                      {key.replace(/_enabled/g, '').replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

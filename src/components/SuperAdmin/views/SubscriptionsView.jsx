@@ -1,21 +1,26 @@
 import React, { useState } from 'react';
 import { CreditCard, ArrowDown } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
-import { BUSINESS_TYPE_METADATA } from '../../../utils/businessTaxonomy';
+import { BUSINESS_TYPE_METADATA, BUSINESS_TYPE_ALIASES } from '../../../utils/businessTaxonomy';
+import { matchesTenantStatusFilter, formatTenantPlanDisplay } from '../../../utils/subscriptionState';
 
 export default function SubscriptionsView({ restaurants, onSelectTenant }) {
   const [filter, setFilter] = useState('all');
 
-  const filteredSubs = restaurants.filter(r => {
-    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0);
-    if (filter === 'active') return r.active !== false && !isVip;
-    if (filter === 'trial') return r.subscription_status === 'trialing';
-    if (filter === 'failed') return r.subscription_status === 'payment_failed';
-    if (filter === 'cancelled') return r.cancel_requested_at !== null;
-    if (filter === 'scheduled') return r.scheduled_plan_key !== null;
-    if (filter === 'complimentary') return isVip;
-    return true;
-  });
+  const isVipTenant = (r) => matchesTenantStatusFilter(r, 'vip');
+  const matchesSubFilter = (r, f) => matchesTenantStatusFilter(r, f);
+
+  const filteredSubs = restaurants.filter(r => matchesSubFilter(r, filter));
+
+  const filterTabs = [
+    { id: 'all', label: `All Subscriptions (${restaurants.length})` },
+    { id: 'active', label: `🟢 Active Paid (${restaurants.filter(r => matchesSubFilter(r, 'active')).length})` },
+    { id: 'trial', label: `⏳ Free Trial (${restaurants.filter(r => matchesSubFilter(r, 'trial')).length})` },
+    { id: 'failed', label: `⚠️ Payment Failed (${restaurants.filter(r => matchesSubFilter(r, 'failed')).length})` },
+    { id: 'cancelled', label: `⏸️ Cancellations (${restaurants.filter(r => matchesSubFilter(r, 'cancelled')).length})` },
+    { id: 'scheduled', label: `📋 Plan Changes (${restaurants.filter(r => matchesSubFilter(r, 'scheduled')).length})` },
+    { id: 'complimentary', label: `🎁 Complimentary (${restaurants.filter(r => matchesSubFilter(r, 'complimentary')).length})` },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -32,15 +37,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
 
       {/* Horizontally Scrollable Filter Strip */}
       <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', whiteSpace: 'nowrap', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-        {[
-          { id: 'all', label: 'All Subscriptions' },
-          { id: 'active', label: '🟢 Active Paid' },
-          { id: 'trial', label: '⏳ Free Trial' },
-          { id: 'failed', label: '⚠️ Payment Failed' },
-          { id: 'cancelled', label: '⏸️ Cancellations' },
-          { id: 'scheduled', label: '📋 Plan Changes' },
-          { id: 'complimentary', label: '🎁 Complimentary' },
-        ].map(tab => (
+        {filterTabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setFilter(tab.id)}
@@ -83,7 +80,8 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                         <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)' }}>/{r.slug}</span>
                         {(() => {
-                          const bizMeta = BUSINESS_TYPE_METADATA[r.business_type] || { icon: '🏢', label: r.business_type || 'Restaurant' };
+                          const canonicalType = BUSINESS_TYPE_ALIASES[r.business_type] || r.business_type;
+                          const bizMeta = BUSINESS_TYPE_METADATA[canonicalType] || { icon: '🏢', label: canonicalType || 'Restaurant' };
                           return (
                             <span style={{
                               fontSize: '0.66rem',
@@ -101,13 +99,23 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                       </div>
                     </td>
                     <td>
-                      <span style={{ fontWeight: 800, color: 'var(--sa-success)' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block' }}>
-                        {(isLifetime || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
-                      </span>
+                      {(() => {
+                        const planInfo = formatTenantPlanDisplay(r);
+                        return (
+                          <>
+                            <span style={{ fontWeight: 800, color: isVipTenant(r) ? '#7E22CE' : 'var(--sa-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              {planInfo.primaryLabel}
+                              {isVipTenant(r) && <span style={{ color: '#a855f7', fontSize: '0.75rem', fontWeight: 900 }}> ★ VIP</span>}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block' }}>
+                              {planInfo.secondaryLabel}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </td>
                     <td>
-                      <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'expired')} type={r.subscription_type} />
+                      <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'suspended')} type={r.subscription_type} active={r.active} />
                     </td>
                     <td style={{ fontWeight: 800, color: (r.auto_renew === 0 || r.auto_renew === false) ? 'var(--sa-danger)' : 'var(--sa-success)' }}>
                       {(r.auto_renew === 0 || r.auto_renew === false) ? '❌ OFF' : '✅ ON'}
@@ -131,22 +139,27 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
       {/* Mobile Card List */}
       <div className="sa-mobile-card-list">
         {filteredSubs.map(r => {
-          const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030);
+          const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030) || r.is_vip || r.is_complimentary;
+          const planInfo = formatTenantPlanDisplay(r);
 
           return (
             <div key={r.id} className="sa-mobile-card" onClick={() => onSelectTenant(r)} style={{ cursor: 'pointer', padding: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <strong style={{ fontSize: '0.95rem' }}>{r.name}</strong>
-                <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'expired')} type={r.subscription_type} />
+                <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'suspended')} type={r.subscription_type} active={r.active} />
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--sa-text-muted)', marginBottom: '8px' }}>
-                Plan: <strong style={{ color: 'var(--sa-text-main)' }}>{(r.plan_tier || 'pro').toUpperCase()} ({(isLifetime || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`})</strong>
+                Plan: <strong style={{ color: isVipTenant(r) ? '#7E22CE' : 'var(--sa-text-main)' }}>
+                  {planInfo.primaryLabel}
+                  {isVipTenant(r) && <span style={{ marginLeft: 4, color: '#a855f7' }}> ★ VIP</span>}
+                  {' '}({planInfo.secondaryLabel.replace(' (', ' • ').replace(')', '')})
+                </strong>
               </div>
 
               {/* Scheduled Plan Change Block */}
               {r.scheduled_plan_key && (
                 <div style={{ background: 'var(--sa-info-bg)', border: '1px solid var(--sa-info-border)', borderRadius: 'var(--sa-radius-sm)', padding: '8px', fontSize: '0.75rem', margin: '8px 0' }}>
-                  <div style={{ color: '#1E40AF', fontWeight: 800 }}>CURRENT: {(r.plan_tier || 'pro').toUpperCase()} ({(isLifetime || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`})</div>
+                  <div style={{ color: '#1E40AF', fontWeight: 800 }}>CURRENT: {planInfo.primaryLabel} ({isVipTenant(r) ? '₹0/mo' : `₹${r.effective_plan_price || r.plan_price || 999}/mo`})</div>
                   <div style={{ textAlign: 'center', color: '#2563EB', margin: '2px 0' }}><ArrowDown size={12} /></div>
                   <div style={{ color: '#1E40AF', fontWeight: 800 }}>SCHEDULED: {r.scheduled_plan_key.toUpperCase()}</div>
                   <div style={{ fontSize: '0.7rem', color: '#3B82F6', marginTop: '2px' }}>

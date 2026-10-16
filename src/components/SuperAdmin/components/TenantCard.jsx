@@ -1,10 +1,13 @@
 import React from 'react';
 import StatusBadge from './StatusBadge';
 import { Eye, Edit3, Trash2, ExternalLink } from 'lucide-react';
-import { BUSINESS_TYPE_METADATA } from '../../../utils/businessTaxonomy';
+import { BUSINESS_TYPE_METADATA, BUSINESS_TYPE_ALIASES } from '../../../utils/businessTaxonomy';
+import { formatTenantPlanDisplay } from '../../../utils/subscriptionState';
 
 export default function TenantCard({ resto, onOpen360, onEdit, onDelete, onImpersonate }) {
-  const bizMeta = BUSINESS_TYPE_METADATA[resto.business_type] || { icon: '🏢', label: resto.business_type || 'Restaurant' };
+  const canonicalType = BUSINESS_TYPE_ALIASES[resto.business_type] || resto.business_type;
+  const bizMeta = BUSINESS_TYPE_METADATA[canonicalType] || { icon: '🏢', label: canonicalType || 'Restaurant' };
+  const planInfo = formatTenantPlanDisplay(resto);
 
   return (
     <div className="sa-stat-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -13,7 +16,7 @@ export default function TenantCard({ resto, onOpen360, onEdit, onDelete, onImper
           <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>{resto.name}</h3>
           <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)' }}>/{resto.slug || resto.subdomain}</span>
         </div>
-        <StatusBadge status={resto.subscription_status} type={resto.subscription_type} />
+        <StatusBadge status={resto.subscription_status} type={resto.subscription_type} active={resto.active} />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -35,7 +38,13 @@ export default function TenantCard({ resto, onOpen360, onEdit, onDelete, onImper
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem', color: 'var(--sa-text-muted)' }}>
-        <div><strong>Plan:</strong> {(resto.plan_name || resto.plan_tier || 'Free Trial').toUpperCase()}</div>
+        <div>
+          <strong>Plan:</strong> {planInfo.primaryLabel}
+          {resto.is_vip && <span style={{ marginLeft: 6, color: '#a855f7', fontWeight: 800 }}>★ VIP</span>}
+          <span style={{ marginLeft: 6, color: 'var(--sa-text-muted)' }}>
+            ({planInfo.secondaryLabel.replace(' (', ' • ').replace(')', '')})
+          </span>
+        </div>
         <div><strong>Owner:</strong> {resto.owner_email || resto.email || resto.phone || 'N/A'}</div>
       </div>
 

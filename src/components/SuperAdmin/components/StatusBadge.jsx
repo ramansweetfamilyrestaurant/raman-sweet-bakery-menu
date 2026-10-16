@@ -1,14 +1,19 @@
 import React from 'react';
 
-export default function StatusBadge({ status, type }) {
+export default function StatusBadge({ status, type, active }) {
   let badgeClass = 'sa-badge-info';
   let dotType = 'active';
   let label = status || 'UNKNOWN';
 
   const s = String(status || '').toLowerCase();
   const t = String(type || '').toUpperCase();
+  const isExplicitlySuspended = s === 'suspended' || active === false || active === 0 || active === '0' || active === 'false';
 
-  if (t === 'ADMIN_GRANTED' || s === 'admin_granted' || s === 'vip' || t === 'COMPLIMENTARY' || s === 'complimentary') {
+  if (isExplicitlySuspended) {
+    badgeClass = 'sa-badge-muted';
+    dotType = 'muted';
+    label = 'SUSPENDED';
+  } else if (t === 'ADMIN_GRANTED' || s === 'admin_granted' || s === 'vip' || t === 'COMPLIMENTARY' || s === 'complimentary') {
     badgeClass = 'sa-badge-purple';
     dotType = 'vip';
     label = 'VIP ACCESS';
@@ -32,10 +37,6 @@ export default function StatusBadge({ status, type }) {
     badgeClass = 'sa-badge-danger';
     dotType = 'danger';
     label = 'EXPIRED';
-  } else if (s === 'suspended') {
-    badgeClass = 'sa-badge-muted';
-    dotType = 'muted';
-    label = 'SUSPENDED';
   }
 
   return (

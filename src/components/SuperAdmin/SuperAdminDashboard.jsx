@@ -4,6 +4,7 @@ import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaur
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
 import { BUSINESS_TYPES, BUSINESS_TYPE_METADATA, resolveBusinessProfile, resolveServiceModelForBusinessType } from '../../utils/businessTaxonomy';
+import { calculateTenantMrr, formatTenantPlanDisplay } from '../../utils/subscriptionState';
 import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
 import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
 import AddBusinessModal from './modals/AddBusinessModal';
@@ -407,7 +408,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     try {
       const nextActive = !currentActive;
       await toggleTenantRestaurantActive(id, nextActive, token);
-      setRestaurants(restaurants.map(r => r.id === id ? { ...r, active: nextActive } : r));
+      setRestaurants(restaurants.map(r => r.id === id ? { ...r, active: nextActive, subscription_status: nextActive ? (r.underlying_subscription_status || 'active') : 'suspended' } : r));
+      if (selectedTenant360?.id === id) {
+        setSelectedTenant360(prev => prev ? { ...prev, active: nextActive, subscription_status: nextActive ? (prev.underlying_subscription_status || 'active') : 'suspended' } : null);
+      }
+      loadData();
     } catch (err) {
       alert(err.message || 'Failed to update subscription status');
     }
@@ -513,16 +518,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
   // Helper to determine canonical tenant lifecycle status
   const getTenantStatus = (r) => {
-    const isSuspended = (r.active === false || r.active === 0 || r.active === '0');
+    const isSuspended = (r.active === false || r.active === 0 || r.active === '0' || r.active === 'false' || r.subscription_status === 'suspended');
     if (isSuspended) return 'suspended';
-    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
+    const isVip = Boolean(r.is_vip || r.is_complimentary || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0 || Number(r.effective_plan_price) === 0);
     if (isVip) return 'vip';
     const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null || r.subscription_status === 'auto_renew_off');
     if (isAutoRenewOff) return 'autorenew_off';
     const daysLeft = getDaysRemaining(r.plan_expires_at);
     const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
     if (isExpired) return 'expired';
-    const isFailed = (r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due');
+    const isFailed = (r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due' || r.subscription_status === 'failed');
     if (isFailed) return 'failed';
 
     // Awaiting First Recurring Payment (Paid plan mandate authorized on Cashfree, pre-first debit)
@@ -533,22 +538,27 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     );
     if (isAwaitingCharge) return 'awaiting_charge';
 
-    const isTrial = (r.subscription_status === 'trialing' || r.subscription_type === 'TRIAL' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
+    const isTrial = (r.subscription_status === 'trialing' || r.subscription_status === 'trial' || r.subscription_type === 'TRIAL' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
     if (isTrial) return 'trial';
     return 'active';
+  };
+
+  const matchesStatusFilter = (r, filter) => {
+    if (!filter || filter === 'all') return true;
+    return getTenantStatus(r) === filter;
   };
 
   // Synchronized Filter Pills Configuration
   const getDirectoryFilterPills = () => [
     { id: 'all', label: 'All', count: restaurants.length },
-    { id: 'active', label: '🟢 Active', count: restaurants.filter(r => getTenantStatus(r) === 'active').length },
-    { id: 'awaiting_charge', label: '🟣 Awaiting Charge', count: restaurants.filter(r => getTenantStatus(r) === 'awaiting_charge').length },
-    { id: 'trial', label: '🎁 Trial', count: restaurants.filter(r => getTenantStatus(r) === 'trial').length },
-    { id: 'failed', label: '🟡 Past Due', count: restaurants.filter(r => getTenantStatus(r) === 'failed').length },
-    { id: 'autorenew_off', label: '🟠 Renew Off', count: restaurants.filter(r => getTenantStatus(r) === 'autorenew_off').length },
-    { id: 'expired', label: '🔴 Expired', count: restaurants.filter(r => getTenantStatus(r) === 'expired').length },
-    { id: 'vip', label: '👑 VIP', count: restaurants.filter(r => getTenantStatus(r) === 'vip').length },
-    { id: 'suspended', label: '⚫ Suspended', count: restaurants.filter(r => getTenantStatus(r) === 'suspended').length },
+    { id: 'active', label: '🟢 Active', count: restaurants.filter(r => matchesStatusFilter(r, 'active')).length },
+    { id: 'awaiting_charge', label: '🟣 Awaiting Charge', count: restaurants.filter(r => matchesStatusFilter(r, 'awaiting_charge')).length },
+    { id: 'trial', label: '🎁 Trial', count: restaurants.filter(r => matchesStatusFilter(r, 'trial')).length },
+    { id: 'failed', label: '🟡 Past Due', count: restaurants.filter(r => matchesStatusFilter(r, 'failed')).length },
+    { id: 'autorenew_off', label: '🟠 Renew Off', count: restaurants.filter(r => matchesStatusFilter(r, 'autorenew_off')).length },
+    { id: 'expired', label: '🔴 Expired', count: restaurants.filter(r => matchesStatusFilter(r, 'expired')).length },
+    { id: 'vip', label: '👑 VIP', count: restaurants.filter(r => matchesStatusFilter(r, 'vip')).length },
+    { id: 'suspended', label: '⚫ Suspended', count: restaurants.filter(r => matchesStatusFilter(r, 'suspended')).length },
   ];
 
   // Helper to render semantic status badge
@@ -614,10 +624,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   // Filtered and Sorted restaurants list
   const filteredAndSortedRestaurants = restaurants
     .filter(r => {
-      const status = getTenantStatus(r);
-      if (statusFilter === 'active') {
-        if (status !== 'active' && status !== 'vip') return false;
-      } else if (statusFilter !== 'all' && status !== statusFilter) {
+      if (!matchesStatusFilter(r, statusFilter)) {
         return false;
       }
 
@@ -647,26 +654,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       return (b.id || 0) - (a.id || 0);
     });
 
-  const getCatalogPlanPrice = (planTier) => {
-    const found = (plansList || []).find(p => (p.key || '').toLowerCase() === (planTier || '').toLowerCase());
-    if (found && found.price !== undefined && found.price !== null) {
-      return parseFloat(found.price);
-    }
-    const catalogFallback = { basic: 499, pro: 999, enterprise: 1999, vip_ultra_plan: 2499 };
-    return catalogFallback[(planTier || '').toLowerCase()] || 999;
-  };
-
-  const totalPending = restaurants.filter(r => r.active === false || r.active === 0 || r.active === '0').length;
-  const totalActive = restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length;
+  const totalPending = restaurants.filter(r => r.active === false || r.active === 0 || r.active === '0' || r.active === 'false').length;
+  const totalActive = restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0' && r.active !== 'false').length;
   const totalDishes = restaurants.reduce((acc, r) => acc + (r.dish_count || 0), 0);
   const totalScans = restaurants.reduce((acc, r) => acc + (r.scan_count || 0), 0);
-  const paidTenants = restaurants.filter(r => {
-    const s = getTenantStatus(r);
-    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0);
-    return s === 'active' && !isVip;
-  });
-  const paidMrr = paidTenants.reduce((acc, r) => acc + getCatalogPlanPrice(r.plan_tier), 0);
-  const potentialMrr = restaurants.filter(r => r.active !== false && r.subscription_type !== 'ADMIN_GRANTED' && r.mandate_status !== 'admin_granted').reduce((acc, r) => acc + getCatalogPlanPrice(r.plan_tier), 0);
+  const paidMrr = restaurants.reduce((acc, r) => acc + calculateTenantMrr(r), 0);
+  const paidTenants = restaurants.filter(r => calculateTenantMrr(r) > 0);
+  const potentialMrr = restaurants
+    .filter(r => r.active !== false && r.active !== 0 && r.active !== '0' && r.active !== 'false' && !r.is_vip && !r.is_complimentary && r.subscription_type !== 'ADMIN_GRANTED' && r.mandate_status !== 'admin_granted' && Number(r.plan_price) !== 0)
+    .reduce((acc, r) => acc + (Number(r.recurring_amount) || Number(r.effective_plan_price) || Number(r.plan_price) || 0), 0);
 
   // Render Directory Controls & Clean Tenant Cards Grid / Table
   const renderDirectorySection = () => (
@@ -912,10 +908,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       </div>
                     </td>
                     <td>
-                      <span style={{ fontWeight: 800, color: 'var(--sa-primary)', fontSize: '0.78rem' }}>{(r.plan_tier || 'pro').toUpperCase()}</span>
-                      <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
-                        {(isVip || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
-                      </span>
+                      {(() => {
+                        const planInfo = formatTenantPlanDisplay(r);
+                        return (
+                          <>
+                            <span style={{ fontWeight: 800, color: isVip ? '#7E22CE' : 'var(--sa-primary)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              {planInfo.primaryLabel}
+                              {isVip && <span style={{ color: '#a855f7', fontWeight: 900 }}>★ VIP</span>}
+                            </span>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
+                              {planInfo.secondaryLabel}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </td>
                     <td>
                       <StatusBadge status={r.subscription_status} type={r.subscription_type} />
@@ -1019,7 +1025,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   {/* 2. SaaS Badges Row */}
                   <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '8px' }}>
                     <span style={{ background: isVip ? '#F3E8FF' : '#FEF3C7', color: isVip ? '#7E22CE' : '#B45309', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 900 }}>
-                      👑 {(r.plan_tier || 'pro').toUpperCase()} ({isVip ? '₹0/mo (VIP)' : (Number(r.plan_price) === 0 ? '₹0/mo (Free)' : `₹${r.plan_price || 999}/mo`)})
+                      👑 {formatTenantPlanDisplay(r).fullDisplay}
                     </span>
 
                     <span style={{ background: '#F1F5F9', color: '#334155', border: '1px solid #CBD5E1', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
@@ -2093,12 +2099,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                               </div>
                             </td>
                             <td>
-                              <span style={{ fontWeight: 800, color: 'var(--sa-primary)', fontSize: '0.78rem' }}>
-                                {(r.plan_tier || 'pro').toUpperCase()}
-                              </span>
-                              <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
-                                {(isVip || Number(r.plan_price) === 0) ? '₹0/mo (VIP)' : `₹${r.plan_price || 999}/mo`}
-                              </span>
+                              {(() => {
+                                const planInfo = formatTenantPlanDisplay(r);
+                                return (
+                                  <>
+                                    <span style={{ fontWeight: 800, color: isVip ? '#7E22CE' : 'var(--sa-primary)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      {planInfo.primaryLabel}
+                                      {isVip && <span style={{ color: '#a855f7', fontWeight: 900 }}>★ VIP</span>}
+                                    </span>
+                                    <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
+                                      {planInfo.secondaryLabel}
+                                    </span>
+                                  </>
+                                );
+                              })()}
                               {r.scheduled_plan_key && (
                                 <span style={{ background: '#EFF6FF', color: '#1E40AF', padding: '1px 5px', borderRadius: '4px', fontSize: '0.62rem', fontWeight: 800, display: 'inline-block', marginTop: '2px' }}>
                                   📋 Scheduled: {r.scheduled_plan_key.toUpperCase()}
@@ -3485,6 +3499,17 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         onConfirmGrant={async (restoId, grantData) => {
           const res = await grantFreeAccess(restoId, grantData, token);
           await loadData();
+          if (selectedTenant360?.id === restoId) {
+            setSelectedTenant360(prev => prev ? {
+              ...prev,
+              is_vip: true,
+              is_complimentary: true,
+              plan_name: 'Enterprise VIP Access',
+              effective_plan_tier: 'enterprise',
+              plan_price: 0,
+              effective_plan_price: 0
+            } : null);
+          }
           return res;
         }}
       />
@@ -3708,6 +3733,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         onConfirmRevoke={async (restoId) => {
           const res = await revokeFreeAccess(restoId, token);
           await loadData();
+          if (selectedTenant360?.id === restoId) {
+            setSelectedTenant360(prev => prev ? {
+              ...prev,
+              is_vip: false,
+              is_complimentary: false,
+              plan_name: `${(prev.plan_tier || 'pro').toUpperCase()} Plan`,
+              effective_plan_price: prev.plan_price || 999
+            } : null);
+          }
           return res;
         }}
       />

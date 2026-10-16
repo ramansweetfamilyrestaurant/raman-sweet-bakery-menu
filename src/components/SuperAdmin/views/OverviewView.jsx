@@ -2,50 +2,17 @@ import React, { useState } from 'react';
 import { Store, CheckCircle, Clock, AlertTriangle, DollarSign, ArrowRight, ShieldAlert, Sparkles } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import { resolveBusinessProfile } from '../../../utils/businessTaxonomy';
+import { calculateTenantMrr, matchesTenantStatusFilter } from '../../../utils/subscriptionState';
 
 export default function OverviewView({ restaurants, pendingRegistrations = [], onSelectTenant, onNavigate }) {
   const [showAllRegistrations, setShowAllRegistrations] = useState(false);
 
-  const getCatalogPlanPrice = (planTier) => {
-    const catalogFallback = { basic: 499, pro: 999, enterprise: 1999, vip_ultra_plan: 2499 };
-    return catalogFallback[(planTier || '').toLowerCase()] || 999;
-  };
-
-  const getTenantStatus = (r) => {
-    const isSuspended = (r.active === false || r.active === 0 || r.active === '0');
-    if (isSuspended) return 'suspended';
-    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
-    if (isVip) return 'vip';
-    const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null || r.subscription_status === 'auto_renew_off');
-    if (isAutoRenewOff) return 'autorenew_off';
-    const isExpired = r.subscription_status === 'expired' || (r.plan_expires_at && new Date(r.plan_expires_at) < new Date());
-    if (isExpired) return 'expired';
-    const isFailed = (r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due');
-    if (isFailed) return 'failed';
-
-    const isAwaitingCharge = (
-      (r.subscription_status === 'awaiting_charge' || r.subscription_status === 'authorized' || r.subscription_status === 'pending_payment' || (r.subscription_status === 'trialing' && !r.trial_ends_at && !r.trial_end)) &&
-      r.subscription_type !== 'TRIAL' && 
-      (r.mandate_status === 'active' || r.mandate_id)
-    );
-    if (isAwaitingCharge) return 'awaiting_charge';
-
-    const isTrial = (r.subscription_status === 'trialing' || r.subscription_type === 'TRIAL' || (r.trial_ends_at && new Date(r.trial_ends_at) > new Date()));
-    if (isTrial) return 'trial';
-    return 'active';
-  };
-
   const totalTenants = restaurants.length;
-  const activeCount = restaurants.filter(r => r.active !== false && r.active !== 0 && r.active !== '0').length;
-  const trialCount = restaurants.filter(r => getTenantStatus(r) === 'trial').length;
-  const pastDueCount = restaurants.filter(r => getTenantStatus(r) === 'failed').length;
+  const activeCount = restaurants.filter(r => matchesTenantStatusFilter(r, 'active')).length;
+  const trialCount = restaurants.filter(r => matchesTenantStatusFilter(r, 'trial')).length;
+  const pastDueCount = restaurants.filter(r => matchesTenantStatusFilter(r, 'failed')).length;
 
-  const paidTenants = restaurants.filter(r => {
-    const s = getTenantStatus(r);
-    const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0);
-    return s === 'active' && !isVip;
-  });
-  const paidMrr = paidTenants.reduce((sum, r) => sum + getCatalogPlanPrice(r.plan_tier), 0);
+  const paidMrr = restaurants.reduce((sum, r) => sum + calculateTenantMrr(r), 0);
 
   // Grouped Attention Items
   const pendingCancellations = restaurants.filter(r => r.cancel_requested_at);

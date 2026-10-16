@@ -197,13 +197,34 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
 /**
  * Determines feature state (AVAILABLE, LOCKED, UNSUPPORTED, etc.)
  */
-export function getFeatureState(featureKey, capabilities = {}, businessType = 'restaurant') {
-  // Business type constraints
-  if (featureKey === 'cinema_management') {
-    if (businessType !== 'cinema_theatre') {
+export function getFeatureState(featureKey, capabilities = {}, businessType = 'restaurant', serviceModel = null) {
+  const isHotel = serviceModel === 'hotel' || businessType === 'hotel_resort';
+  const isCinema = serviceModel === 'cinema' || businessType === 'cinema_theatre';
+  const isBakeryOrSweet = businessType === 'bakery_confectionery' || businessType === 'sweet_shop';
+  const isCatering = businessType === 'catering';
+
+  if (featureKey === 'cinema_management' || featureKey === 'cinema_ordering_enabled') {
+    if (!isCinema) {
       return FEATURE_STATES.UNSUPPORTED;
     }
-    return FEATURE_STATES.AVAILABLE;
+  }
+
+  if (featureKey === 'room_ordering_enabled') {
+    if (!isHotel) {
+      return FEATURE_STATES.UNSUPPORTED;
+    }
+  }
+
+  if (featureKey === 'kds_enabled') {
+    if (isCinema || isCatering || isBakeryOrSweet) {
+      return FEATURE_STATES.UNSUPPORTED;
+    }
+  }
+
+  if (featureKey === 'bluetooth_kot_enabled' || featureKey === 'dual_printer_enabled') {
+    if (isCinema || isCatering) {
+      return FEATURE_STATES.UNSUPPORTED;
+    }
   }
 
   const isEnabled = Boolean(capabilities[featureKey]);

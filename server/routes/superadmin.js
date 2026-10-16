@@ -7,7 +7,7 @@ import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2Im
 import { createCashfreeSubscriptionSession, getCashfreeConfigAsync } from '../services/cashfree.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import { superAdminLoginRateLimiter, supportTicketReplyRateLimiter } from '../middleware/rateLimiters.js';
-import { resolveCanonicalSubscriptionState } from '../services/subscriptionState.js';
+import { resolveCanonicalSubscriptionState, isAuthoritativeComplimentaryTenant, resolveAuthoritativeEntitlements } from '../services/subscriptionState.js';
 import { resolveBusinessCategoryFromType, resolveBusinessProfile } from '../config/businessTaxonomy.js';
 import { validateReplyInput, validateStatusTransition, VALID_STATUSES, VALID_PRIORITIES, VALID_CATEGORIES, normalizeCategory } from '../services/supportTicketService.js';
 
@@ -23,6 +23,61 @@ function getAppBaseUrl(req) {
     }
   }
   return 'https://touchqr.in';
+}
+
+function projectTenantSummary(r, sub, countMap, adminMap, planMap) {
+  const isSuspended = r.active === false || r.active === 0 || r.active === '0' || r.active === 'false';
+  const isVip = isAuthoritativeComplimentaryTenant(r, sub);
+  const canonicalState = resolveCanonicalSubscriptionState({ resto: r, sub, now: new Date() });
+  const tierKey = (r.plan_tier || 'pro').toLowerCase().trim();
+  const matchedPlan = planMap ? planMap[tierKey] : null;
+  const profile = resolveBusinessProfile(r || {});
+
+  const effectivePlanName = isVip
+    ? 'Enterprise VIP Access'
+    : (matchedPlan?.name || (r.plan_name || `${(r.plan_tier || 'pro').toUpperCase()} Plan`));
+
+  const rawPrice = (r.plan_price !== undefined && r.plan_price !== null && r.plan_price !== '')
+    ? Number(r.plan_price)
+    : (sub && sub.amount !== undefined && sub.amount !== null && sub.amount !== ''
+        ? Number(sub.amount)
+        : (matchedPlan ? Number(matchedPlan.price) : 999));
+
+  const effectivePlanPrice = isVip ? 0 : (isNaN(rawPrice) ? 999 : rawPrice);
+  const effectivePlanTier = isVip ? 'enterprise' : tierKey;
+  const effectiveStatus = isSuspended ? 'suspended' : canonicalState.status;
+  const effectiveAccessUntil = isVip
+    ? (r.plan_expires_at || sub?.current_period_end || 'Lifetime')
+    : (canonicalState.accessUntil || sub?.current_period_end || r.trial_ends_at || r.plan_expires_at || null);
+
+  const { qr_secret, ...safeR } = r;
+
+  return {
+    ...safeR,
+    business_type: profile.business_type,
+    service_model: profile.service_model,
+    business_category: profile.business_category || resolveBusinessCategoryFromType(profile.business_type),
+    food_type: profile.food_type,
+    is_pure_veg: profile.is_pure_veg,
+    active: !isSuspended,
+    dish_count: countMap[r.id] || 0,
+    owner_username: adminMap[r.id] || 'N/A',
+    plan_name: effectivePlanName,
+    is_complimentary: isVip,
+    is_vip: isVip,
+    effective_plan_tier: effectivePlanTier,
+    effective_plan_price: effectivePlanPrice,
+    subscription_status: effectiveStatus,
+    underlying_subscription_status: sub?.status || canonicalState.status,
+    access_until: effectiveAccessUntil,
+    billing_cycle: sub?.billing_cycle || 'monthly',
+    recurring_amount: isVip ? 0 : effectivePlanPrice,
+    cancel_requested_at: sub?.cancel_requested_at || null,
+    auto_renew: sub?.auto_renew !== undefined ? Number(sub.auto_renew) : (r.auto_debit_enabled ? Number(r.auto_debit_enabled) : 1),
+    scheduled_plan_key: sub?.scheduled_plan_key || null,
+    plan_change_effective_at: sub?.plan_change_effective_at || null,
+    cancellation_reason: sub?.cancellation_reason || null
+  };
 }
 
 let sharpModule = null;
@@ -121,11 +176,12 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
       restoSql += ` LIMIT $${sqlParams.length + 1} OFFSET $${sqlParams.length + 2}`;
       sqlParams.push(limit, offset);
 
-      const [restaurants, dishesCount, adminsList, subsList] = await Promise.all([
+      const [restaurants, dishesCount, adminsList, subsList, saasPlans] = await Promise.all([
         query(restoSql, sqlParams),
         query('SELECT restaurant_id, COUNT(*) as count FROM dishes GROUP BY restaurant_id'),
         query("SELECT id, restaurant_id, username FROM admins WHERE role = 'restaurant_admin'"),
-        query('SELECT * FROM subscriptions ORDER BY id DESC').catch(() => [])
+        query('SELECT * FROM subscriptions ORDER BY id DESC').catch(() => []),
+        query('SELECT * FROM saas_plans ORDER BY price ASC').catch(() => [])
       ]);
 
       const countMap = {};
@@ -134,23 +190,10 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
       adminsList.forEach(a => { adminMap[a.restaurant_id] = a.username; });
       const subMap = {};
       (subsList || []).forEach(s => { if (!subMap[s.restaurant_id]) subMap[s.restaurant_id] = s; });
+      const planMap = {};
+      (saasPlans || []).forEach(p => { planMap[(p.key || '').toLowerCase()] = p; });
 
-      const result = restaurants.map(r => {
-        const sub = subMap[r.id];
-        const { qr_secret, ...safeR } = r;
-        return {
-          ...safeR,
-          dish_count: countMap[r.id] || 0,
-          owner_username: adminMap[r.id] || 'N/A',
-          subscription_status: sub?.status || (r.trial_ends_at ? 'trialing' : 'active'),
-          cancel_requested_at: sub?.cancel_requested_at || null,
-          auto_renew: sub?.auto_renew !== undefined ? Number(sub.auto_renew) : 1,
-          scheduled_plan_key: sub?.scheduled_plan_key || null,
-          plan_change_effective_at: sub?.plan_change_effective_at || null,
-          cancellation_reason: sub?.cancellation_reason || null,
-          access_until: sub?.current_period_end || r.trial_ends_at || r.plan_expires_at || null
-        };
-      });
+      const result = restaurants.map(r => projectTenantSummary(r, subMap[r.id], countMap, adminMap, planMap));
 
       return res.json({
         data: result,
@@ -164,11 +207,12 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
     }
 
     // Default backward-compatible unpaginated list
-    const [restaurants, dishesCount, adminsList, subsList] = await Promise.all([
+    const [restaurants, dishesCount, adminsList, subsList, saasPlans] = await Promise.all([
       query('SELECT * FROM restaurants ORDER BY id DESC'),
       query('SELECT restaurant_id, COUNT(*) as count FROM dishes GROUP BY restaurant_id'),
       query("SELECT id, restaurant_id, username FROM admins WHERE role = 'restaurant_admin'"),
-      query('SELECT * FROM subscriptions ORDER BY id DESC').catch(() => [])
+      query('SELECT * FROM subscriptions ORDER BY id DESC').catch(() => []),
+      query('SELECT * FROM saas_plans ORDER BY price ASC').catch(() => [])
     ]);
 
     const countMap = {};
@@ -177,23 +221,10 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
     adminsList.forEach(a => { adminMap[a.restaurant_id] = a.username; });
     const subMap = {};
     (subsList || []).forEach(s => { if (!subMap[s.restaurant_id]) subMap[s.restaurant_id] = s; });
+    const planMap = {};
+    (saasPlans || []).forEach(p => { planMap[(p.key || '').toLowerCase()] = p; });
 
-    const result = restaurants.map(r => {
-      const sub = subMap[r.id];
-      const { qr_secret, ...safeR } = r;
-      return {
-        ...safeR,
-        dish_count: countMap[r.id] || 0,
-        owner_username: adminMap[r.id] || 'N/A',
-        subscription_status: sub?.status || (r.trial_ends_at ? 'trialing' : 'active'),
-        cancel_requested_at: sub?.cancel_requested_at || null,
-        auto_renew: sub?.auto_renew !== undefined ? Number(sub.auto_renew) : 1,
-        scheduled_plan_key: sub?.scheduled_plan_key || null,
-        plan_change_effective_at: sub?.plan_change_effective_at || null,
-        cancellation_reason: sub?.cancellation_reason || null,
-        access_until: sub?.current_period_end || r.trial_ends_at || r.plan_expires_at || null
-      };
-    });
+    const result = restaurants.map(r => projectTenantSummary(r, subMap[r.id], countMap, adminMap, planMap));
 
     res.json(result);
   } catch (err) {
@@ -249,6 +280,11 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
       category_limit: 50,
       table_limit: 100
     };
+
+    // 4b. Resolve canonical business profile and authoritative entitlements
+    const profile = resolveBusinessProfile(resto || {});
+    const entitlements = resolveAuthoritativeEntitlements({ resto, sub, saasPlan });
+    const isSuspended = resto.active === false || resto.active === 0 || resto.active === '0' || resto.active === 'false';
 
     // 5. Fetch Usage Counts
     const [dishCountRow, catCountRow, orderCountRow] = await Promise.all([
@@ -308,16 +344,21 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
         address: resto.address || '',
         fssai_lic_no: resto.fssai_lic_no || '',
         theme_color: resto.theme_color || 'gold',
-        business_type: resto.business_type || 'restaurant',
-        food_type: resto.food_type || 'both',
-        service_model: resto.service_model || 'dine_in',
-        active: resto.active !== false && resto.active !== 0 && resto.active !== '0',
+        business_type: profile.business_type,
+        food_type: profile.food_type,
+        service_model: profile.service_model,
+        is_pure_veg: profile.is_pure_veg,
+        active: !isSuspended,
         created_at: resto.created_at || null,
         onboarding_completed: resto.onboarding_completed !== false,
         location_initialized: Boolean(resto.location_initialized),
         custom_domain: resto.custom_domain || null,
-        business_category: resto.business_category || 'dine_in',
-        scan_count: resto.scan_count || 0
+        business_category: profile.business_category || resolveBusinessCategoryFromType(profile.business_type),
+        scan_count: resto.scan_count || 0,
+        total_tables: Number(resto.total_tables || 0),
+        total_rooms: Number(resto.total_rooms || 0),
+        total_cabins: Number(resto.total_cabins || 0),
+        total_vip: Number(resto.total_vip || 0)
       },
       owner: {
         owner_name: resto.owner_name || null,
@@ -328,14 +369,18 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
       },
       subscription: {
         plan_tier: resto.plan_tier || 'pro',
-        plan_name: canonicalState.isComplimentary ? 'Enterprise VIP Access' : (saasPlan.name || `${resto.plan_tier} Plan`),
-        plan_price: canonicalState.isComplimentary ? 0 : parseFloat(resto.plan_price !== undefined && resto.plan_price !== null ? resto.plan_price : (saasPlan.price || 999)),
+        effective_plan_tier: entitlements.plan_tier,
+        plan_name: entitlements.plan_name,
+        plan_price: entitlements.plan_price,
+        effective_plan_price: entitlements.plan_price,
         subscription_type: sub?.status === 'admin_granted' || resto.mandate_status === 'admin_granted' ? 'ADMIN_GRANTED' : (sub?.gateway === 'cashfree' ? 'CASHFREE_MANDATE' : (resto.subscription_type || 'PAID')),
-        status: canonicalState.status,
+        status: isSuspended ? 'suspended' : canonicalState.status,
+        underlying_subscription_status: sub?.status || resto.mandate_status || 'none',
         canonical_active: canonicalState.active,
         is_complimentary: canonicalState.isComplimentary,
+        is_vip: canonicalState.isComplimentary,
         in_grace_period: canonicalState.inGracePeriod,
-        badge: canonicalState.badge,
+        badge: isSuspended ? { label: 'Account Suspended', color: '#EF4444', icon: '⚫' } : canonicalState.badge,
         trial_start: sub?.trial_start || resto.trial_started_at || null,
         trial_end: sub?.trial_end || resto.trial_ends_at || null,
         current_period_start: sub?.current_period_start || null,
@@ -371,35 +416,38 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
       usage: {
         dishes: {
           current: dishCount,
-          limit: saasPlan.max_dishes || saasPlan.dish_limit || 500,
-          percentage: (saasPlan.max_dishes || saasPlan.dish_limit) ? Math.min(100, Math.round((dishCount / (saasPlan.max_dishes || saasPlan.dish_limit)) * 100)) : 0
+          limit: entitlements.quotas.dishes,
+          percentage: (entitlements.quotas.dishes && entitlements.quotas.dishes < 9999) ? Math.min(100, Math.round((dishCount / entitlements.quotas.dishes) * 100)) : 0
         },
         categories: {
           current: categoryCount,
-          limit: saasPlan.max_categories || saasPlan.category_limit || 50,
-          percentage: (saasPlan.max_categories || saasPlan.category_limit) ? Math.min(100, Math.round((categoryCount / (saasPlan.max_categories || saasPlan.category_limit)) * 100)) : 0
+          limit: entitlements.quotas.categories,
+          percentage: (entitlements.quotas.categories && entitlements.quotas.categories < 9999) ? Math.min(100, Math.round((categoryCount / entitlements.quotas.categories) * 100)) : 0
         },
         tables: {
           current: Number(resto.total_tables || 0),
-          limit: saasPlan.max_tables || saasPlan.table_limit || 100,
-          percentage: (saasPlan.max_tables || saasPlan.table_limit) ? Math.min(100, Math.round((Number(resto.total_tables || 0) / (saasPlan.max_tables || saasPlan.table_limit)) * 100)) : 0
+          limit: entitlements.quotas.tables,
+          percentage: (entitlements.quotas.tables && entitlements.quotas.tables < 9999) ? Math.min(100, Math.round((Number(resto.total_tables || 0) / entitlements.quotas.tables) * 100)) : 0
         },
+        rooms: {
+          current: Number(resto.total_rooms || 0),
+          limit: entitlements.quotas.rooms,
+          percentage: (entitlements.quotas.rooms && entitlements.quotas.rooms < 9999) ? Math.min(100, Math.round((Number(resto.total_rooms || 0) / entitlements.quotas.rooms) * 100)) : 0
+        },
+        seats: {
+          current: Number(resto.total_tables || 0),
+          limit: entitlements.quotas.seats,
+          percentage: (entitlements.quotas.seats && entitlements.quotas.seats < 9999) ? Math.min(100, Math.round((Number(resto.total_tables || 0) / entitlements.quotas.seats) * 100)) : 0
+        },
+        primarySpace: profile.service_model === 'hotel' ? 'rooms' : profile.service_model === 'cinema' ? 'seats' : 'tables',
+        space_type: profile.service_model === 'hotel' ? 'rooms' : profile.service_model === 'cinema' ? 'seats' : 'tables',
+        space_label: profile.service_model === 'hotel' ? 'Hotel Rooms' : profile.service_model === 'cinema' ? 'Auditorium Seats' : 'Dining Tables',
         cabins: Number(resto.total_cabins || 0),
-        rooms: Number(resto.total_rooms || 0),
         vip_tables: Number(resto.total_vip || 0),
         orders: orderCount,
         scan_count: resto.scan_count || 0,
-        entitlements: {
-          kds_enabled: saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1',
-          whatsapp_ordering_enabled: saasPlan.whatsapp_ordering_enabled === 1 || saasPlan.whatsapp_ordering_enabled === true || saasPlan.whatsapp_ordering_enabled === '1',
-          direct_ordering_enabled: saasPlan.direct_ordering_enabled === 1 || saasPlan.direct_ordering_enabled === true || saasPlan.direct_ordering_enabled === '1',
-          google_reviews_enabled: saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1',
-          custom_domain_enabled: saasPlan.custom_domain_enabled === 1 || saasPlan.custom_domain_enabled === true || saasPlan.custom_domain_enabled === '1',
-          gst_invoice_enabled: saasPlan.gst_invoice_enabled === 1 || saasPlan.gst_invoice_enabled === true || saasPlan.gst_invoice_enabled === '1',
-          dual_printer_enabled: saasPlan.dual_printer_enabled === 1 || saasPlan.dual_printer_enabled === true || saasPlan.dual_printer_enabled === '1',
-          watermark_removal_enabled: saasPlan.watermark_removal_enabled === 1 || saasPlan.watermark_removal_enabled === true || saasPlan.watermark_removal_enabled === '1',
-          analytics_export_enabled: saasPlan.analytics_export_enabled === 1 || saasPlan.analytics_export_enabled === true || saasPlan.analytics_export_enabled === '1'
-        }
+        entitlements: entitlements.capabilities,
+        feature_matrix: entitlements.feature_matrix
       },
       activity: auditRows.map(a => ({
         id: a.id,
@@ -409,7 +457,7 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
         timestamp: a.created_at
       })),
       security: {
-        account_status: resto.active !== false && resto.active !== 0 && resto.active !== '0' ? 'ACTIVE' : 'SUSPENDED',
+        account_status: !isSuspended ? 'ACTIVE' : 'SUSPENDED',
         impersonation_allowed: true,
         mandate_active: resto.mandate_status === 'active' || (sub && sub.status === 'active'),
         auto_renew_enabled: sub?.auto_renew !== undefined ? (sub.auto_renew === 1 || sub.auto_renew === true || sub.auto_renew === '1') : (resto.auto_debit_enabled === 1),
@@ -824,10 +872,17 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       cleanDomain = (custom_domain || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
     }
 
+    let cleanBusinessType = undefined;
     let cleanCategory = undefined;
     if (business_type !== undefined || business_category !== undefined || service_model !== undefined) {
-      const rawCat = business_type || business_category || service_model;
-      cleanCategory = resolveBusinessCategoryFromType(rawCat);
+      const resolved = resolveBusinessProfile({
+        business_type: business_type !== undefined ? business_type : currentResto.business_type,
+        service_model: service_model !== undefined ? service_model : (currentResto.service_model || currentResto.business_category),
+        food_type: currentResto.food_type,
+        resto_type: currentResto.resto_type
+      });
+      cleanBusinessType = resolved.business_type;
+      cleanCategory = resolved.service_model;
     }
 
     let cleanOwnerEmail = undefined;
@@ -885,7 +940,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       cleanOwnerEmail !== undefined,
       cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
       cleanCategory !== undefined ? cleanCategory : null,
-      business_type !== undefined ? business_type : null,
+      cleanBusinessType !== undefined ? cleanBusinessType : null,
       id
     ]);
 
