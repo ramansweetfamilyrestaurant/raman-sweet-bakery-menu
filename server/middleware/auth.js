@@ -37,7 +37,7 @@ export async function checkSubscriptionStatus(restaurantId) {
     // Explicit Super Admin Suspension check - MUST override all trial & granted access!
     const isExplicitlyActive = resto.active === 1 || resto.active === true || resto.active === '1' || resto.active === undefined || resto.active === null;
     if (!isExplicitlyActive || resto.active === false || resto.active === 0 || resto.active === 'false') {
-      const res = { status: 'suspended', active: false, resto, sub: null };
+      const res = { status: 'suspended', active: false, resto, sub: null, isComplimentary: false };
       subStatusCache.set(rId, { payload: res, timestamp: Date.now() });
       return res;
     }

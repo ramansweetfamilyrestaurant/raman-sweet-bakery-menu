@@ -115,6 +115,11 @@ const suites = [
     name: 'KDS & Cinema Security Fixes',
     file: 'server/tests/kds_and_cinema_fixes.test.js',
     requiresDb: true
+  },
+  {
+    name: 'VIP Access Lifecycle E2E Regression',
+    file: 'server/tests/vip_access_lifecycle_e2e.test.js',
+    requiresDb: true
   }
 ];
 

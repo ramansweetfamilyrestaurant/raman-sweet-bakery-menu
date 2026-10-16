@@ -128,11 +128,27 @@ export default function BillingView({
     'pro'
   ).toLowerCase();
 
-  const currentPlanPrice = Number(
-    subData?.plan_price || 
-    restaurantInfo?.plan_price || 
-    (currentPlanTier === 'enterprise' ? 1999 : currentPlanTier === 'basic' ? 499 : 999)
+  const isComplimentary = Boolean(
+    restaurantInfo?.subscription_type === 'ADMIN_GRANTED' ||
+    restaurantInfo?.mandate_status === 'admin_granted' ||
+    restaurantInfo?.is_complimentary ||
+    restaurantInfo?.is_vip ||
+    subData?.subscription_type === 'ADMIN_GRANTED' ||
+    subData?.mandate_status === 'admin_granted' ||
+    subData?.is_complimentary ||
+    subData?.is_vip ||
+    currentPlanTier === 'vip' ||
+    currentPlanTier === 'vip_ultra' ||
+    currentPlanTier === 'vip_ultra_plan'
   );
+
+  const currentPlanPrice = isComplimentary
+    ? 0
+    : Number(
+        subData?.plan_price ??
+        restaurantInfo?.plan_price ??
+        (currentPlanTier === 'enterprise' ? 1999 : currentPlanTier === 'basic' ? 499 : 999)
+      );
 
   // Parse lifecycle dates
   const parseSafeDate = (d) => {
@@ -159,7 +175,6 @@ export default function BillingView({
   // Subscription Status Calculation (Factual Mapping)
   const rawStatus = (subData?.status || restaurantInfo?.subscription_status || 'active').toLowerCase();
   const isMandateActive = subData?.mandate_status === 'active' || Boolean(restaurantInfo?.mandate_id);
-  const isComplimentary = restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || subData?.mandate_status === 'admin_granted';
   const autoRenewEnabled = subData?.auto_renew !== 0 && !subData?.cancel_requested_at;
 
   const statusConfig = useMemo(() => {
@@ -640,18 +655,18 @@ export default function BillingView({
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
                     <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-                      {currentPlanTier === 'enterprise' ? 'Enterprise VIP Plan' : currentPlanTier === 'basic' ? 'Basic Starter Plan' : 'Pro Luxury Plan'}
+                      {isComplimentary ? 'Enterprise VIP Access' : (subData?.plan_name || (currentPlanTier === 'enterprise' ? 'Enterprise VIP Plan' : currentPlanTier === 'basic' ? 'Basic Starter Plan' : 'Pro Luxury Plan'))}
                     </h2>
                     <span style={{
                       fontSize: '0.68rem',
                       fontWeight: 900,
-                      color: currentPlanTier === 'enterprise' ? '#7E22CE' : (currentPlanTier === 'basic' ? '#0284C7' : '#B45309'),
-                      background: currentPlanTier === 'enterprise' ? '#FAF5FF' : (currentPlanTier === 'basic' ? '#F0F9FF' : '#FEF3C7'),
-                      border: `1px solid ${currentPlanTier === 'enterprise' ? '#E9D5FF' : (currentPlanTier === 'basic' ? '#BAE6FD' : '#FDE68A')}`,
+                      color: isComplimentary ? '#7E22CE' : (currentPlanTier === 'enterprise' ? '#7E22CE' : (currentPlanTier === 'basic' ? '#0284C7' : '#B45309')),
+                      background: isComplimentary ? '#FAF5FF' : (currentPlanTier === 'enterprise' ? '#FAF5FF' : (currentPlanTier === 'basic' ? '#F0F9FF' : '#FEF3C7')),
+                      border: `1px solid ${isComplimentary ? '#E9D5FF' : (currentPlanTier === 'enterprise' ? '#E9D5FF' : (currentPlanTier === 'basic' ? '#BAE6FD' : '#FDE68A'))}`,
                       padding: '2px 8px',
                       borderRadius: '6px'
                     }}>
-                      {currentPlanTier === 'enterprise' ? '🚀 ENTERPRISE' : currentPlanTier === 'basic' ? '⚡ BASIC' : '👑 PRO'}
+                      {isComplimentary ? '🎁 VIP ACCESS' : (currentPlanTier === 'enterprise' ? '🚀 ENTERPRISE' : currentPlanTier === 'basic' ? '⚡ BASIC' : '👑 PRO')}
                     </span>
                   </div>
                 </div>
@@ -659,11 +674,11 @@ export default function BillingView({
                 {/* Price Display */}
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#064E3B', lineHeight: 1 }}>
-                    ₹{formatPriceNumber(currentPlanPrice)}
-                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748B' }}> / month</span>
+                    {isComplimentary ? '₹0 (Complimentary)' : `₹${formatPriceNumber(currentPlanPrice)}`}
+                    {!isComplimentary && <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748B' }}> / month</span>}
                   </div>
-                  <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '3px' }}>
-                    + 18% GST (Tax Invoice Included)
+                  <span style={{ fontSize: '0.68rem', color: isComplimentary ? '#7E22CE' : '#64748B', display: 'block', marginTop: '3px', fontWeight: isComplimentary ? 700 : 400 }}>
+                    {isComplimentary ? '🛡️ Super Admin Granted Access' : '+ 18% GST (Tax Invoice Included)'}
                   </span>
                 </div>
               </div>

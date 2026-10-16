@@ -189,12 +189,17 @@ export default function HomeView({
     restaurantInfo?.mandate_status === 'admin_granted' ||
     subscriptionStatus?.mandate_status === 'admin_granted' ||
     subscriptionStatus?.subscription_type === 'ADMIN_GRANTED' ||
+    subscriptionStatus?.is_complimentary ||
+    restaurantInfo?.is_complimentary ||
     capabilities?.is_complimentary ||
     capabilities?.is_vip ||
+    subscriptionStatus?.is_vip ||
     restaurantInfo?.is_vip === 1 ||
     restaurantInfo?.is_vip === true ||
     restaurantInfo?.is_vip === '1' ||
-    restaurantInfo?.plan_tier === 'vip'
+    restaurantInfo?.plan_tier === 'vip' ||
+    restaurantInfo?.plan_tier === 'vip_ultra' ||
+    restaurantInfo?.plan_tier === 'vip_ultra_plan'
   );
 
   const formatTierDisplay = (tier) => {

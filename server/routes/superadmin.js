@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb, purgeLocalR2DiskCache, withTransaction } from '../db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, clearSubStatusCache } from '../middleware/auth.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
 import { createCashfreeSubscriptionSession, getCashfreeConfigAsync } from '../services/cashfree.js';
 import { JWT_SECRET } from '../config/jwt.js';
@@ -328,8 +328,8 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
       },
       subscription: {
         plan_tier: resto.plan_tier || 'pro',
-        plan_name: saasPlan.name || `${resto.plan_tier} Plan`,
-        plan_price: parseFloat(resto.plan_price || saasPlan.price || 999),
+        plan_name: canonicalState.isComplimentary ? 'Enterprise VIP Access' : (saasPlan.name || `${resto.plan_tier} Plan`),
+        plan_price: canonicalState.isComplimentary ? 0 : parseFloat(resto.plan_price !== undefined && resto.plan_price !== null ? resto.plan_price : (saasPlan.price || 999)),
         subscription_type: sub?.status === 'admin_granted' || resto.mandate_status === 'admin_granted' ? 'ADMIN_GRANTED' : (sub?.gateway === 'cashfree' ? 'CASHFREE_MANDATE' : (resto.subscription_type || 'PAID')),
         status: canonicalState.status,
         canonical_active: canonicalState.active,
@@ -525,8 +525,8 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       // 1. Create Restaurant Entry
       const restoRes = await txQuery(`
         INSERT INTO restaurants (
-          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, owner_email, gstin_number, subscription_type
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id
+          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, owner_email, gstin_number, subscription_type, mandate_status, auto_debit_enabled
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id
       `, [
         name,
         cleanSlug,
@@ -546,7 +546,9 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
         true,
         owner_email || null,
         gstin_number || null,
-        isVip ? 'ADMIN_GRANTED' : (isTrial ? 'TRIAL' : 'PAID')
+        isVip ? 'ADMIN_GRANTED' : (isTrial ? 'TRIAL' : 'PAID'),
+        isVip ? 'admin_granted' : 'pending',
+        isVip ? 0 : 1
       ]);
 
       const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
@@ -556,15 +558,17 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       await txQuery(`
         INSERT INTO subscriptions (
           restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle,
-          current_period_start, current_period_end, subscription_type
-        ) VALUES ($1, $2, 'none', $3, $4, 'INR', 'monthly', CURRENT_TIMESTAMP, $5, $6)
+          current_period_start, current_period_end, subscription_type, auto_renew
+        ) VALUES ($1, $2, $3, $4, $5, 'INR', 'monthly', CURRENT_TIMESTAMP, $6, $7, $8)
       `, [
         newRestoId, 
-        matchedPlan?.id || null, 
+        matchedPlan?.id || null,
+        isVip ? 'admin_granted' : 'none',
         subStatus, 
         effectivePlanPrice, 
         expiryDate,
-        isVip ? 'ADMIN_GRANTED' : (isTrial ? 'TRIAL' : 'PAID')
+        isVip ? 'ADMIN_GRANTED' : (isTrial ? 'TRIAL' : 'PAID'),
+        isVip ? 0 : 1
       ]);
 
       // 3. Create Owner Admin User
@@ -581,6 +585,8 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
 
       return { id: newRestoId, slug: cleanSlug };
     });
+
+    clearSubStatusCache(createdTenant.id);
 
     res.json({
       success: true,
@@ -739,6 +745,7 @@ router.patch('/restaurants/:id/toggle', authenticateToken, requireSuperAdmin, as
     const activeBool = active === true || active === 1 || active === 'true';
 
     await query('UPDATE restaurants SET active = $1 WHERE id = $2', [activeBool, id]);
+    clearSubStatusCache(id);
     await logAudit(id, 'superadmin', activeBool ? 'Activate Tenant' : 'Suspend Tenant', `Tenant ID ${id} active status set to ${activeBool}`);
     res.json({ success: true, active: activeBool });
   } catch (err) {
@@ -864,9 +871,9 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       phone !== undefined ? phone : (currentResto.phone || ''),
       address !== undefined ? address : (currentResto.address || ''),
       fssai_lic_no !== undefined ? fssai_lic_no : (currentResto.fssai_lic_no || ''),
-      plan_tier || 'pro',
-      plan_price ? parseFloat(plan_price) : 999,
-      plan_expires_at || null,
+      plan_tier !== undefined && plan_tier !== null && plan_tier !== '' ? plan_tier : (currentResto.plan_tier || 'pro'),
+      plan_price !== undefined && plan_price !== null && plan_price !== '' ? parseFloat(plan_price) : (currentResto.plan_price !== undefined && currentResto.plan_price !== null ? parseFloat(currentResto.plan_price) : (currentResto.subscription_type === 'ADMIN_GRANTED' ? 0 : 999)),
+      plan_expires_at !== undefined ? (plan_expires_at || null) : (currentResto.plan_expires_at || null),
       whatsapp_number || phone || '',
       whatsapp_enabled !== false && whatsapp_enabled !== 0 && whatsapp_enabled !== 'false' ? 1 : 0,
       direct_ordering_enabled !== false && direct_ordering_enabled !== 0 && direct_ordering_enabled !== 'false' ? 1 : 0,
@@ -881,6 +888,9 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       business_type !== undefined ? business_type : null,
       id
     ]);
+
+    // Invalidate subscription status cache for immediate consistency
+    clearSubStatusCache(id);
 
     // Update owner admin user if username or password provided
     if (owner_username) {
@@ -1022,6 +1032,8 @@ router.post('/restaurants/:id/grant-free-access', authenticateToken, requireSupe
       `Granted free ${targetPlan.name} access until ${new Date(expiryDate).toLocaleDateString('en-IN')} (${noteText}) | Snapshot: ${JSON.stringify(previousSnapshot)}`
     );
 
+    clearSubStatusCache(id);
+
     res.json({
       success: true,
       subscription_type: 'ADMIN_GRANTED',
@@ -1054,6 +1066,8 @@ router.post('/restaurants/:id/revoke-free-access', authenticateToken, requireSup
 
     await query("UPDATE restaurants SET active = false, mandate_status = 'cancelled', subscription_type = 'PAID', auto_debit_enabled = 0 WHERE id = $1", [id]);
     await query("UPDATE subscriptions SET status = 'cancelled', updated_at = $1 WHERE restaurant_id = $2 AND status = 'active'", [nowISO, id]);
+
+    clearSubStatusCache(id);
 
     const revokeMetadata = {
       previous_plan_tier: currentResto.plan_tier || 'pro',

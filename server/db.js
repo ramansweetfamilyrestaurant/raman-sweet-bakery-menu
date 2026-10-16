@@ -567,6 +567,7 @@ async function createTables(options = {}) {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_category VARCHAR(50) DEFAULT 'dine_in';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(50) DEFAULT 'pro';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_price NUMERIC DEFAULT 999;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS plan_expires_at VARCHAR(100);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS whatsapp_enabled INT DEFAULT 1;`,
@@ -655,6 +656,7 @@ async function createTables(options = {}) {
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS multi_language_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS watermark_removal_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS custom_domain_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(50);`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'cash';`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0;`,
@@ -1328,6 +1330,7 @@ async function createTables(options = {}) {
       if (!restoCols.some(c => c.name === 'max_distance_meters')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN max_distance_meters INTEGER DEFAULT 100");
       if (!restoCols.some(c => c.name === 'gst_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN gst_enabled INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'gstin_number')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN gstin_number TEXT");
+      if (!restoCols.some(c => c.name === 'custom_domain')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN custom_domain TEXT DEFAULT ''");
       if (!restoCols.some(c => c.name === 'total_tables')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN total_tables INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'total_cabins')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN total_cabins INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'total_rooms')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN total_rooms INTEGER DEFAULT 0");

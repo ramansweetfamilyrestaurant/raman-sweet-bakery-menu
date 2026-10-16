@@ -17,6 +17,45 @@ export const SUBSCRIPTION_STATES = Object.freeze({
 });
 
 /**
+ * Authoritatively determines if a restaurant tenant has complimentary VIP / Admin-granted access.
+ * Derives strictly from trusted database records (restaurants table, subscriptions table).
+ * Handles both canonical and legacy historical records safely.
+ *
+ * @param {Object} resto - Restaurant record from DB
+ * @param {Object|null} [sub] - Optional subscription record from DB
+ * @returns {boolean}
+ */
+export function isAuthoritativeComplimentaryTenant(resto, sub = null) {
+  if (!resto) return false;
+
+  const subType = String(resto.subscription_type || '').toUpperCase().trim();
+  const mandate = String(resto.mandate_status || '').toLowerCase().trim();
+  const planTier = String(resto.plan_tier || '').toLowerCase().trim();
+  const subRecType = sub ? String(sub.subscription_type || '').toUpperCase().trim() : '';
+  const subGateway = sub ? String(sub.gateway || '').toLowerCase().trim() : '';
+
+  // Canonical admin-granted markers in restaurants table
+  if (subType === 'ADMIN_GRANTED' || subType === 'COMPLIMENTARY' || subType === 'VIP') {
+    return true;
+  }
+  if (mandate === 'admin_granted' || mandate === 'complimentary') {
+    return true;
+  }
+
+  // Canonical admin-granted markers in subscriptions table
+  if (subRecType === 'ADMIN_GRANTED' || subGateway === 'admin_granted') {
+    return true;
+  }
+
+  // Legacy edge-case: plan_tier was set to vip/vip_ultra/vip_ultra_plan with ₹0 price and not on an active paid mandate
+  if ((planTier === 'vip' || planTier === 'vip_ultra' || planTier === 'vip_ultra_plan') && Number(resto.plan_price || 0) === 0 && mandate !== 'active') {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Resolves the canonical subscription state and access decision for a tenant.
  *
  * @param {Object} params
@@ -45,7 +84,7 @@ export function resolveCanonicalSubscriptionState({ resto, sub, now = new Date()
   }
 
   // 1. Super Admin 100% Complimentary Lifetime Access
-  if (resto.mandate_status === 'admin_granted' || resto.subscription_type === 'ADMIN_GRANTED') {
+  if (isAuthoritativeComplimentaryTenant(resto, sub)) {
     return {
       status: SUBSCRIPTION_STATES.ACTIVE,
       active: true,

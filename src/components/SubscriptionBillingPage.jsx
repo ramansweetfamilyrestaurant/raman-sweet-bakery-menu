@@ -121,10 +121,16 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             setCurrentResto({
               name: data.restaurant_name || localStorage.getItem('touchqr_admin_user') || 'Your Restaurant',
               plan_tier: data.plan_tier || 'pro',
+              plan_name: data.plan_name || 'Enterprise VIP Access',
+              plan_price: data.plan_price !== undefined ? data.plan_price : 0,
+              subscription_type: data.subscription_type,
               mandate_status: data.mandate_status || 'pending',
+              is_complimentary: data.is_complimentary,
+              is_vip: data.is_vip,
               auto_debit_enabled: data.auto_debit_enabled,
               trial_started_at: data.trial_started_at,
-              trial_ends_at: data.trial_ends_at || data.plan_expires_at
+              trial_ends_at: data.trial_ends_at || data.plan_expires_at,
+              plan_expires_at: data.plan_expires_at
             });
             if (data.default_trial_days) {
               setTrialSettingDays(Math.max(1, parseInt(data.default_trial_days, 10) || 16));
@@ -748,7 +754,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         )}
 
         {/* Action Buttons */}
-        {activeResto?.subscription_type === 'ADMIN_GRANTED' || activeResto?.mandate_status === 'admin_granted' ? (
+        {activeResto?.subscription_type === 'ADMIN_GRANTED' || activeResto?.mandate_status === 'admin_granted' || activeResto?.is_complimentary || activeResto?.is_vip ? (
           <div>
             <div style={{
               background: 'rgba(59, 130, 246, 0.2)',
@@ -765,7 +771,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
                 <Sparkles size={20} />
                 <span>🎁 Complimentary Access Active</span>
               </div>
-              <div>Plan: <strong>{(activeResto?.plan_tier || 'pro').toUpperCase()}</strong></div>
+              <div>Plan: <strong>{activeResto?.plan_name ? activeResto.plan_name.toUpperCase() : 'ENTERPRISE VIP ACCESS'}</strong></div>
               <div>Current Charge: <strong>₹0 / month (Free Access)</strong></div>
               <div>Valid Until: <strong>{activeResto?.plan_expires_at ? (new Date(activeResto.plan_expires_at).getFullYear() > 2030 ? '♾️ Lifetime Access' : new Date(activeResto.plan_expires_at).toLocaleDateString('en-IN')) : '♾️ Lifetime Access'}</strong></div>
               <div style={{ fontSize: '0.75rem', marginTop: '6px', color: '#CBD5E1' }}>

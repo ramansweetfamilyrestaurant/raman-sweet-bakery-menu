@@ -93,18 +93,48 @@ export const FEATURE_METADATA = Object.freeze({
  * Resolves full tenant plan capabilities from live restaurantInfo.
  */
 export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}, subscriptionStatus = {}) {
-  const rawTier = restaurantInfo?.plan_tier || subscriptionStatus?.plan_tier || settingsForm?.plan_tier || '';
+  const actualResto = restaurantInfo?.restaurant || restaurantInfo || {};
+  const actualSub = restaurantInfo?.subscription || subscriptionStatus || {};
+  const actualSettings = settingsForm || {};
+
+  const rawTier = actualResto?.plan_tier || actualSub?.plan_tier || actualSettings?.plan_tier || '';
   const planTier = (rawTier || 'pro').toLowerCase();
-  const perms = restaurantInfo?.permissions || subscriptionStatus?.permissions || {};
-  const isComplimentary = restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || 
-                          restaurantInfo?.mandate_status === 'admin_granted' ||
-                          subscriptionStatus?.subscription_type === 'ADMIN_GRANTED' ||
-                          subscriptionStatus?.mandate_status === 'admin_granted' ||
-                          settingsForm?.subscription_type === 'ADMIN_GRANTED' ||
-                          restaurantInfo?.is_vip === 1 ||
-                          restaurantInfo?.is_vip === true ||
-                          restaurantInfo?.is_vip === '1' ||
-                          planTier === 'vip';
+  const perms = actualResto?.permissions || actualSub?.permissions || {};
+  const rawPrice = actualResto?.plan_price !== undefined && actualResto?.plan_price !== null && actualResto?.plan_price !== ''
+    ? actualResto.plan_price
+    : (actualSub?.plan_price !== undefined && actualSub?.plan_price !== null && actualSub?.plan_price !== ''
+        ? actualSub.plan_price
+        : (actualSettings?.plan_price !== undefined && actualSettings?.plan_price !== null && actualSettings?.plan_price !== ''
+            ? actualSettings.plan_price
+            : null));
+
+  const priceNum = rawPrice !== null ? Number(rawPrice) : null;
+  const isZeroPrice = priceNum === 0 || priceNum === null || isNaN(priceNum);
+
+  const hasLegacyVipAlias = (
+    planTier === 'vip' || planTier === 'vip_ultra' || planTier === 'vip_ultra_plan'
+  ) && isZeroPrice;
+
+  const isComplimentary = Boolean(
+    actualResto?.subscription_type === 'ADMIN_GRANTED' ||
+    actualResto?.mandate_status === 'admin_granted' ||
+    actualSub?.subscription_type === 'ADMIN_GRANTED' ||
+    actualSub?.mandate_status === 'admin_granted' ||
+    actualSettings?.subscription_type === 'ADMIN_GRANTED' ||
+    actualResto?.is_complimentary === true ||
+    actualResto?.is_complimentary === 1 ||
+    actualResto?.is_complimentary === '1' ||
+    actualSub?.is_complimentary === true ||
+    actualSub?.is_complimentary === 1 ||
+    actualSub?.is_complimentary === '1' ||
+    actualResto?.is_vip === 1 ||
+    actualResto?.is_vip === true ||
+    actualResto?.is_vip === '1' ||
+    actualSub?.is_vip === true ||
+    actualSub?.is_vip === 1 ||
+    actualSub?.is_vip === '1' ||
+    hasLegacyVipAlias
+  );
 
   const isBoolTrue = (val, fallback = false) => {
     if (val === undefined || val === null) return fallback;
@@ -126,49 +156,41 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
     ? 'Enterprise VIP Access'
     : (rawTier ? formatTierLabel(rawTier) : 'Pro Plan');
 
-  const rawPrice = restaurantInfo?.plan_price !== undefined && restaurantInfo?.plan_price !== null && restaurantInfo?.plan_price !== ''
-    ? restaurantInfo.plan_price
-    : (subscriptionStatus?.plan_price !== undefined && subscriptionStatus?.plan_price !== null && subscriptionStatus?.plan_price !== ''
-        ? subscriptionStatus.plan_price
-        : (settingsForm?.plan_price !== undefined && settingsForm?.plan_price !== null && settingsForm?.plan_price !== ''
-            ? settingsForm.plan_price
-            : null));
-
   const planPrice = isComplimentary ? 0 : (rawPrice !== null ? getNum(rawPrice, 999) : 999);
-  const rawSubStatus = subscriptionStatus?.status || restaurantInfo?.subscription_status || 'active';
+  const rawSubStatus = actualSub?.status || actualResto?.subscription_status || 'active';
   const subStatus = isComplimentary ? 'active' : rawSubStatus;
 
   return {
     plan_tier: planTier,
-    plan_name: restaurantInfo?.plan_name || subscriptionStatus?.plan_name || defaultPlanName,
+    plan_name: isComplimentary ? 'Enterprise VIP Access' : (actualResto?.plan_name || actualSub?.plan_name || defaultPlanName),
     plan_price: planPrice,
     subscription_status: subStatus,
     is_complimentary: isComplimentary,
-    is_vip: isComplimentary || planTier === 'vip',
-    business_type: restaurantInfo?.business_type || 'restaurant',
-    service_model: restaurantInfo?.service_model || 'dine_in',
+    is_vip: isComplimentary || hasLegacyVipAlias,
+    business_type: actualResto?.business_type || 'restaurant',
+    service_model: actualResto?.service_model || 'dine_in',
 
     // Features
-    direct_ordering_enabled: isBoolTrue(restaurantInfo?.direct_ordering_enabled ?? perms?.direct_ordering_enabled, true),
-    whatsapp_ordering_enabled: isBoolTrue(restaurantInfo?.whatsapp_ordering_enabled ?? perms?.whatsapp_ordering_enabled, true),
-    kds_enabled: isBoolTrue(restaurantInfo?.kds_enabled ?? perms?.kds_enabled, true),
-    bluetooth_kot_enabled: isBoolTrue(restaurantInfo?.bluetooth_kot_enabled ?? perms?.bluetooth_kot_enabled, false),
-    dual_printer_enabled: isBoolTrue(restaurantInfo?.dual_printer_enabled ?? perms?.dual_printer_enabled, isComplimentary || planTier === 'vip'),
-    gst_invoice_enabled: isBoolTrue(restaurantInfo?.gst_invoice_enabled ?? perms?.gst_invoice_enabled, true),
-    analytics_export_enabled: isBoolTrue(restaurantInfo?.analytics_export_enabled ?? perms?.analytics_export_enabled, true),
-    modifiers_enabled: isBoolTrue(restaurantInfo?.modifiers_enabled ?? perms?.modifiers_enabled, true),
-    google_reviews_enabled: isBoolTrue(restaurantInfo?.google_reviews_enabled ?? perms?.google_reviews_enabled, true),
-    ai_review_enabled: isBoolTrue(restaurantInfo?.ai_review_enabled ?? perms?.ai_review_enabled, true),
-    watermark_removal_enabled: isBoolTrue(restaurantInfo?.watermark_removal_enabled ?? perms?.watermark_removal_enabled, true),
-    presence_verification_enabled: isBoolTrue(restaurantInfo?.presence_verification_enabled ?? perms?.presence_verification_enabled, true),
-    allowed_themes: restaurantInfo?.allowed_themes || 'ALL',
+    direct_ordering_enabled: isBoolTrue(actualResto?.direct_ordering_enabled ?? perms?.direct_ordering_enabled, true),
+    whatsapp_ordering_enabled: isBoolTrue(actualResto?.whatsapp_ordering_enabled ?? perms?.whatsapp_ordering_enabled, true),
+    kds_enabled: isBoolTrue(actualResto?.kds_enabled ?? perms?.kds_enabled, true),
+    bluetooth_kot_enabled: isBoolTrue(actualResto?.bluetooth_kot_enabled ?? perms?.bluetooth_kot_enabled, false),
+    dual_printer_enabled: isBoolTrue(actualResto?.dual_printer_enabled ?? perms?.dual_printer_enabled, isComplimentary || planTier === 'vip' || planTier === 'vip_ultra' || planTier === 'vip_ultra_plan'),
+    gst_invoice_enabled: isBoolTrue(actualResto?.gst_invoice_enabled ?? perms?.gst_invoice_enabled, true),
+    analytics_export_enabled: isBoolTrue(actualResto?.analytics_export_enabled ?? perms?.analytics_export_enabled, true),
+    modifiers_enabled: isBoolTrue(actualResto?.modifiers_enabled ?? perms?.modifiers_enabled, true),
+    google_reviews_enabled: isBoolTrue(actualResto?.google_reviews_enabled ?? perms?.google_reviews_enabled, true),
+    ai_review_enabled: isBoolTrue(actualResto?.ai_review_enabled ?? perms?.ai_review_enabled, true),
+    watermark_removal_enabled: isBoolTrue(actualResto?.watermark_removal_enabled ?? perms?.watermark_removal_enabled, true),
+    presence_verification_enabled: isBoolTrue(actualResto?.presence_verification_enabled ?? perms?.presence_verification_enabled, true),
+    allowed_themes: isComplimentary ? 'ALL' : (actualResto?.allowed_themes || perms?.allowed_themes || 'ALL'),
 
     // Quotas
-    max_dishes: getNum(restaurantInfo?.max_dishes, 9999),
-    max_categories: getNum(restaurantInfo?.max_categories, 9999),
-    max_combos: getNum(restaurantInfo?.max_combos, 9999),
-    max_tables: getNum(restaurantInfo?.max_tables, 9999),
-    order_retention_days: getNum(restaurantInfo?.order_retention_days, 365)
+    max_dishes: isComplimentary ? 9999 : getNum(actualResto?.max_dishes ?? perms?.max_dishes, 9999),
+    max_categories: isComplimentary ? 9999 : getNum(actualResto?.max_categories ?? perms?.max_categories, 9999),
+    max_combos: isComplimentary ? 9999 : getNum(actualResto?.max_combos ?? perms?.max_combos, 9999),
+    max_tables: isComplimentary ? 9999 : getNum(actualResto?.max_tables ?? perms?.max_tables, 9999),
+    order_retention_days: getNum(actualResto?.order_retention_days ?? perms?.order_retention_days, 365)
   };
 }
 
