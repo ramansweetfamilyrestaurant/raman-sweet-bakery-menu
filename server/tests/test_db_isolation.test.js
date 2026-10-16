@@ -133,6 +133,25 @@ async function runIsolationTests() {
     });
 
     // ----------------------------------------------------
+    // TEST 6B: Running with VERCEL_ENV=production is rejected
+    // ----------------------------------------------------
+    await test('6B. Running tests when VERCEL_ENV=production is rejected', async () => {
+      process.env.NODE_ENV = 'test';
+      process.env.VERCEL_ENV = 'production';
+      assert.throws(
+        () => {
+          validateTestDatabaseUrl('sqlite:menu_test.db');
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('VERCEL_ENV is set to production'));
+          return true;
+        }
+      );
+      delete process.env.VERCEL_ENV;
+    });
+
+    // ----------------------------------------------------
     // TEST 7: Valid dedicated SQLite test database passes validation
     // ----------------------------------------------------
     await test('7. Valid designated SQLite test database passes validation', async () => {

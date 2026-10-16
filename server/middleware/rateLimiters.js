@@ -212,35 +212,66 @@ export const kdsPinRateLimiter = rateLimit({
 });
 
 /**
+ * Guard middleware that enforces distributed rate limiting configuration in production.
+ * In production/serverless, memory-backed rate limiting does not scale across instances;
+ * if REDIS_URL is absent, it fails closed with an explicit 503 configuration error.
+ * In local development and automated testing, it passes through to allow local MemoryStore.
+ */
+export function enforceDistributedRateLimitGuard(scope = 'support_ticket') {
+  return (req, res, next) => {
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+    if (isProduction && !process.env.REDIS_URL) {
+      console.error(`❌ [DISTRIBUTED RATE LIMIT ERROR] Scope '${scope}' requires REDIS_URL in production for multi-instance serverless rate limiting.`);
+      return res.status(503).json({
+        error: 'RATE_LIMITER_CONFIGURATION_ERROR',
+        code: 'RATE_LIMITER_CONFIGURATION_ERROR',
+        message: 'Service temporarily unavailable: Distributed rate limiting shared store is not configured for production.'
+      });
+    }
+    next();
+  };
+}
+
+const isProductionEnv = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+/**
  * 9. Support Ticket Creation Rate Limiter
  * Protection against automated ticket creation spam
  * Limit: 15 requests per IP per 5 minutes (elevated in test mode)
  */
-export const supportTicketCreateRateLimiter = rateLimit({
+const innerTicketCreateLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
   max: process.env.NODE_ENV === 'test' ? 1000 : 15,
   standardHeaders: true,
   legacyHeaders: false,
-  passOnStoreError: true,
+  passOnStoreError: !isProductionEnv,
   store: getRateLimitStore('tkt_create:'),
   message: { error: 'TOO_MANY_TICKETS', message: 'Too many support ticket submissions. Please wait a few minutes before submitting another request.' },
   handler: createRateLimitHandler({ error: 'TOO_MANY_TICKETS', message: 'Too many support ticket submissions. Please wait a few minutes before submitting another request.' })
 });
+
+export const supportTicketCreateRateLimiter = [
+  enforceDistributedRateLimitGuard('tkt_create'),
+  innerTicketCreateLimiter
+];
 
 /**
  * 10. Support Ticket Message Reply Rate Limiter
  * Protection against ticket thread reply flooding
  * Limit: 30 replies per IP per 5 minutes (elevated in test mode)
  */
-export const supportTicketReplyRateLimiter = rateLimit({
+const innerTicketReplyLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
   max: process.env.NODE_ENV === 'test' ? 1000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
-  passOnStoreError: true,
+  passOnStoreError: !isProductionEnv,
   store: getRateLimitStore('tkt_reply:'),
   message: { error: 'TOO_MANY_REPLIES', message: 'Too many messages sent. Please wait a moment before sending another reply.' },
   handler: createRateLimitHandler({ error: 'TOO_MANY_REPLIES', message: 'Too many messages sent. Please wait a moment before sending another reply.' })
 });
 
-
+export const supportTicketReplyRateLimiter = [
+  enforceDistributedRateLimitGuard('tkt_reply'),
+  innerTicketReplyLimiter
+];

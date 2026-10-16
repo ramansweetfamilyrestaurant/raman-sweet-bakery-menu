@@ -102,7 +102,9 @@ async function initDb(options = {}) {
         throw new Error(`Database initialization failed: payment uniqueness protection is absent (${paymentIndexMigrationError || 'unverified'})`);
       }
       isDbInitialized = true;
-      await seedData(options).catch(() => {});
+      if (!options.skipSeed) {
+        await seedData(options).catch(() => {});
+      }
     } else {
       isDbInitialized = true;
     }
@@ -151,7 +153,9 @@ async function initDb(options = {}) {
       throw new Error(`Database initialization failed: payment uniqueness protection is absent (${paymentIndexMigrationError || 'unverified'})`);
     }
     isDbInitialized = true;
-    await seedData(options).catch(() => {});
+    if (!options.skipSeed) {
+      await seedData(options).catch(() => {});
+    }
   } else {
     isDbInitialized = true;
   }
@@ -1638,6 +1642,9 @@ async function createTables(options = {}) {
 }
 
 async function seedData(options = {}) {
+  if (options.skipSeed === true) {
+    return;
+  }
   const requestedDemoSeed = Boolean(
     options.seedDemoTenant === true ||
     process.env.ENABLE_DEMO_TENANT_SEED === 'true'
@@ -1806,13 +1813,27 @@ async function seedData(options = {}) {
   }
 
   // Ensure Master Super Admin user exists (Platform Administrator, not a restaurant tenant)
+  const isProductionEnv = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production' || !!process.env.VERCEL;
   const superCheck = await query('SELECT COUNT(*) as count FROM admins WHERE username = $1 OR role = $2', ['superadmin', 'superadmin']);
   const superCount = parseInt(superCheck[0]?.count || 0, 10);
   if (superCount === 0) {
-    const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash('superadmin123', salt);
-    await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [null, 'superadmin', hash, 'superadmin']);
-    console.log('👑 Created Master Super Admin account: superadmin / superadmin123');
+    if (isProductionEnv) {
+      const bootstrapPassword = process.env.SUPERADMIN_BOOTSTRAP_PASSWORD || process.env.INITIAL_SUPERADMIN_PASSWORD;
+      if (bootstrapPassword && bootstrapPassword.trim().length >= 8) {
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(bootstrapPassword.trim(), salt);
+        const adminUsername = (process.env.SUPERADMIN_BOOTSTRAP_USERNAME || 'superadmin').trim();
+        await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [null, adminUsername, hash, 'superadmin']);
+        console.log(`👑 Initial Super Admin account provisioned securely via bootstrap secret (username: ${adminUsername})`);
+      } else {
+        console.log('🔒 Production mode: hardcoded default Super Admin credentials seeding skipped. Use secure bootstrap utility to initialize.');
+      }
+    } else {
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash('superadmin123', salt);
+      await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [null, 'superadmin', hash, 'superadmin']);
+      console.log('👑 Created Master Super Admin account: superadmin / superadmin123');
+    }
   }
 
   // Demo menu and sample combos: ONLY when demo tenant was explicitly seeded and primaryRestoId is present
@@ -2477,8 +2498,32 @@ async function resetDbForTesting() {
   dbType = 'sqlite';
 }
 
+async function bootstrapSuperAdminUser({ username = 'superadmin', password } = {}) {
+  if (!password || typeof password !== 'string' || password.trim().length < 8) {
+    throw new Error('BOOTSTRAP_ERROR: A secure password of at least 8 characters is required to bootstrap a Super Admin.');
+  }
+
+  const cleanUsername = String(username || 'superadmin').trim();
+  if (!cleanUsername) {
+    throw new Error('BOOTSTRAP_ERROR: Valid username is required.');
+  }
+
+  // Refuse to overwrite if any superadmin or matching username already exists
+  const existing = await query('SELECT id, username, role FROM admins WHERE role = $1 OR username = $2', ['superadmin', cleanUsername]);
+  const rows = existing.rows || existing;
+  if (rows && rows.length > 0) {
+    throw new Error(`BOOTSTRAP_REFUSED: A Super Admin account ('${rows[0].username}') already exists. Overwriting existing Super Admin credentials is prohibited.`);
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const hash = await bcrypt.hash(password.trim(), salt);
+  await query('INSERT INTO admins (restaurant_id, username, password_hash, role) VALUES ($1, $2, $3, $4)', [null, cleanUsername, hash, 'superadmin']);
+
+  return { success: true, username: cleanUsername };
+}
+
 function getRawDb() {
   return { pgPool, sqliteDb };
 }
 
-export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting, getPaymentIndexStatus, getRawDb, isDemoSeedPermitted };
+export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting, getPaymentIndexStatus, getRawDb, isDemoSeedPermitted, bootstrapSuperAdminUser, seedData };

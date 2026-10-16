@@ -9,6 +9,8 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "build": "vite build",
     "db:migrate": "node server/scripts/migrate_production_postgres.js",
+    "db:migrate:dry-run": "node server/scripts/migrate_production_postgres.js --dry-run",
+    "bootstrap:superadmin": "node server/scripts/bootstrap_superadmin.js",
     "start": "node server/index.js",
     "test": "node server/tests/run_all_tests.js",
     "test:ci": "node server/tests/run_all_tests.js --ci"
