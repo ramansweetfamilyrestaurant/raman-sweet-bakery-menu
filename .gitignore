@@ -39,3 +39,7 @@ server/enable_kds_enterprise.cjs
 
 # Uploads & Cache
 public/uploads/
+
+# Local Shell Helpers
+*.sh
+

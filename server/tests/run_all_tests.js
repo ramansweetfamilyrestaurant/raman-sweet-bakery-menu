@@ -150,6 +150,26 @@ const suites = [
     name: 'Audit Logs Index Migration Guard & Performance Optimization',
     file: 'server/tests/audit_logs_index_migration_guard.test.js',
     requiresDb: false
+  },
+  {
+    name: 'Audit Log Storage & Archival Comprehensive Architecture',
+    file: 'server/tests/audit_log_archival_comprehensive.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'Archival Operator CLI Isolation & Zero-Pruning Guard',
+    file: 'server/tests/archive_audit_logs_cli.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'Super Admin Audit Archives HTTP Request/Response Security',
+    file: 'server/tests/superadmin_audit_archives_http.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'Audit Log Archival Migration Infrastructure & Invariants',
+    file: 'server/tests/audit_log_archival_migration.test.js',
+    requiresDb: true
   }
 ];
 

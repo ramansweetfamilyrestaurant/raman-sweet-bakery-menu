@@ -3,9 +3,10 @@ import {
   FileText, Shield, Key, Store, CreditCard, Sparkles, Settings, 
   Search, RefreshCw, Download, ExternalLink, ChevronDown, ChevronUp, 
   X, Copy, Check, Clock, User, ArrowUpRight, Activity, Filter, AlertTriangle,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar, Archive
 } from 'lucide-react';
 import '../styles/SuperAdmin.css';
+import AuditArchivesView from './AuditArchivesView.jsx';
 import {
   getCategory,
   getActorDetails,
@@ -36,6 +37,7 @@ export default function AuditLogsView({
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [viewMode, setViewMode] = useState('live'); // 'live' | 'archives'
 
   // Metrics counts: uses platform-wide serverStats if provided, or computes on current stream
   const stats = useMemo(() => {
@@ -418,6 +420,14 @@ export default function AuditLogsView({
     );
   };
 
+  if (viewMode === 'archives') {
+    return (
+      <div className="sa-audit-container">
+        <AuditArchivesView onBackToLive={() => setViewMode('live')} />
+      </div>
+    );
+  }
+
   return (
     <div className="sa-audit-container">
       
@@ -456,6 +466,20 @@ export default function AuditLogsView({
 
           {/* Quick Triggers */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
+            <button
+              type="button"
+              onClick={() => setViewMode('archives')}
+              className="sa-btn"
+              style={{
+                background: 'rgba(212, 175, 55, 0.15)', color: '#DFBA67', border: '1px solid #D4AF37',
+                fontSize: '0.74rem', fontWeight: 900, padding: '7px 12px', borderRadius: '10px', whiteSpace: 'nowrap',
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px'
+              }}
+              title="Inspect Cloudflare R2 Cold Storage Archive Vault"
+            >
+              <Archive size={13} color="#DFBA67" /> Cold Vault
+            </button>
+
             <button
               type="button"
               onClick={handleExportCSV}

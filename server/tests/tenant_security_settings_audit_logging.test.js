@@ -92,15 +92,18 @@ async function run() {
     await query(`
       INSERT INTO restaurants (id, name, slug, plan_tier, active, owner_name, owner_email, subscription_type, plan_expires_at, qr_secret)
       VALUES 
-        (901, 'Spice Bistro', 'spice-bistro', 'enterprise', 1, 'Owner NineOne', 'owner901@example.com', 'COMPLIMENTARY', '2099-12-31', 'initial_secret_901'),
-        (902, 'Royal Lounge', 'royal-lounge', 'enterprise', 1, 'Owner NineTwo', 'owner902@example.com', 'COMPLIMENTARY', '2099-12-31', 'initial_secret_902')
+        (901, 'Spice Bistro', 'spice-bistro', 'enterprise', true, 'Owner NineOne', 'owner901@example.com', 'COMPLIMENTARY', '2099-12-31', 'initial_secret_901'),
+        (902, 'Royal Lounge', 'royal-lounge', 'enterprise', true, 'Owner NineTwo', 'owner902@example.com', 'COMPLIMENTARY', '2099-12-31', 'initial_secret_902')
     `);
 
     // Ensure SaaS plans exist so quota checks pass
-    await query(`
-      INSERT OR IGNORE INTO saas_plans (key, name, max_categories, max_dishes, max_combos, max_tables, dual_printer_enabled, gst_invoice_enabled)
-      VALUES ('enterprise', 'Enterprise Plan', 9999, 9999, 9999, 9999, 1, 1)
-    `);
+    const existingPlan = await query('SELECT id FROM saas_plans WHERE key = $1', ['enterprise']);
+    if (!existingPlan || existingPlan.length === 0) {
+      await query(`
+        INSERT INTO saas_plans (key, name, max_categories, max_dishes, max_combos, max_tables, dual_printer_enabled, gst_invoice_enabled)
+        VALUES ('enterprise', 'Enterprise Plan', 9999, 9999, 9999, 9999, 1, 1)
+      `);
+    }
 
     const salt = await bcrypt.genSalt(10);
     const passHash1 = await bcrypt.hash('secretpass123', salt);
@@ -342,7 +345,7 @@ async function run() {
       });
       assert.strictEqual(res.status, 401);
 
-      const logs = await query("SELECT * FROM audit_logs WHERE action = 'SECURITY_LOGIN_FAILED' ORDER BY id DESC LIMIT 1");
+      const logs = await query("SELECT * FROM audit_logs WHERE restaurant_id = 902 AND action = 'SECURITY_LOGIN_FAILED' ORDER BY id DESC LIMIT 1");
       assert.strictEqual(logs.length, 1, 'Must write SECURITY_LOGIN_FAILED log');
       assert.strictEqual(logs[0].restaurant_id, 902, 'Should associate with target restaurant');
       assert.strictEqual(logs[0].details.includes('definitely_wrong_password_999'), false, 'Attempted password must NEVER be logged');

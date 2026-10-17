@@ -494,7 +494,72 @@ async function createTables(options = {}) {
         sender_name VARCHAR(100) NOT NULL,
         message TEXT NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );`
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS audit_log_archives (
+        id SERIAL PRIMARY KEY,
+        archive_uid VARCHAR(64) NOT NULL UNIQUE,
+        idempotency_key VARCHAR(64) NOT NULL UNIQUE,
+        archive_key VARCHAR(500) NOT NULL UNIQUE,
+        bucket_name VARCHAR(255) NOT NULL,
+        track VARCHAR(20) NOT NULL DEFAULT 'operational',
+        start_date TIMESTAMP NOT NULL,
+        end_date TIMESTAMP NOT NULL,
+        min_id INT NOT NULL,
+        max_id INT NOT NULL,
+        total_records INT NOT NULL,
+        pruned_records INT NOT NULL DEFAULT 0,
+        file_size_bytes BIGINT NOT NULL,
+        file_sha256 VARCHAR(64) NOT NULL,
+        content_sha256 VARCHAR(64) NOT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'STAGED',
+        last_committed_batch INT NOT NULL DEFAULT 0,
+        total_batches INT NOT NULL DEFAULT 1,
+        attempt_count INT NOT NULL DEFAULT 1,
+        last_error TEXT,
+        verified_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS audit_log_archive_batches (
+        id SERIAL PRIMARY KEY,
+        archive_id INT NOT NULL REFERENCES audit_log_archives(id) ON DELETE CASCADE,
+        batch_index INT NOT NULL,
+        batch_size INT NOT NULL,
+        target_ids INT[] NOT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+        committed_at TIMESTAMP,
+        UNIQUE(archive_id, batch_index)
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS audit_log_archive_tombstones (
+        id SERIAL PRIMARY KEY,
+        object_key VARCHAR(500) NOT NULL,
+        bucket_name VARCHAR(255) NOT NULL,
+        reason VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS audit_logs_archive_staging (
+        id INT PRIMARY KEY,
+        restaurant_id INT,
+        actor_role VARCHAR(50),
+        action VARCHAR(100),
+        details TEXT,
+        created_at TIMESTAMP,
+        restored_from_archive_id INT,
+        restored_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE INDEX IF NOT EXISTS idx_audit_log_archives_status ON audit_log_archives (status);`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_log_archives_track_created ON audit_log_archives (track, created_at DESC);`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_log_archives_created_at ON audit_log_archives (created_at DESC);`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_log_archive_batches_arch_status ON audit_log_archive_batches (archive_id, status);`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_log_archive_tombstones_created ON audit_log_archive_tombstones (created_at DESC);`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_logs_archive_staging_restored_from ON audit_logs_archive_staging (restored_from_archive_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_logs_archive_staging_resto_created ON audit_logs_archive_staging (restaurant_id, created_at DESC);`
     ];
 
     for (const q of pgTables) {
@@ -2014,6 +2079,18 @@ async function logAudit(restaurantId, actorRole, action, details) {
       [restaurantId || null, actorRole, action, details]
     );
   } catch (e) {
+    if (e.code === '23505' && String(e.constraint).includes('audit_logs_pkey') && pgPool) {
+      try {
+        await query("SELECT setval('audit_logs_id_seq', (SELECT COALESCE(MAX(id), 1) + 1 FROM audit_logs))");
+        await query(
+          'INSERT INTO audit_logs (restaurant_id, actor_role, action, details) VALUES ($1, $2, $3, $4)',
+          [restaurantId || null, actorRole, action, details]
+        );
+        return;
+      } catch (retryErr) {
+        console.error('Audit log sequence recovery retry error:', retryErr.message);
+      }
+    }
     console.error('Audit log error:', e.message);
   }
 }

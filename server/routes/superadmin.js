@@ -11,6 +11,7 @@ import { resolveCanonicalSubscriptionState, isAuthoritativeComplimentaryTenant, 
 import { resolveBusinessCategoryFromType, resolveBusinessProfile } from '../config/businessTaxonomy.js';
 import { validateReplyInput, validateStatusTransition, VALID_STATUSES, VALID_PRIORITIES, VALID_CATEGORIES, normalizeCategory } from '../services/supportTicketService.js';
 import { fetchPlatformAuditLogs } from '../services/auditLogService.js';
+import auditArchivesRouter from './auditArchives.js';
 
 function getAppBaseUrl(req) {
   if (process.env.APP_BASE_URL && !process.env.APP_BASE_URL.includes('onrender.com')) {
@@ -1581,6 +1582,9 @@ router.get('/audit-logs', authenticateToken, requireSuperAdmin, async (req, res)
     res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 });
+
+// Mount Super Admin Cold Storage Archive Vault Routes
+router.use('/audit-logs/archives', auditArchivesRouter);
 
 // GET Comprehensive Real-Time Database Health & System Telemetry
 router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req, res) => {

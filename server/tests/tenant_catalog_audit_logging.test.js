@@ -81,15 +81,18 @@ async function run() {
     await query(`
       INSERT INTO restaurants (id, name, slug, plan_tier, active, owner_name, owner_email, subscription_type, plan_expires_at)
       VALUES 
-        (801, 'Spice Garden', 'spice-garden', 'enterprise', 1, 'Owner One', 'owner1@example.com', 'COMPLIMENTARY', '2099-12-31'),
-        (802, 'Sweet Treats', 'sweet-treats', 'enterprise', 1, 'Owner Two', 'owner2@example.com', 'COMPLIMENTARY', '2099-12-31')
+        (801, 'Spice Garden', 'spice-garden', 'enterprise', true, 'Owner One', 'owner1@example.com', 'COMPLIMENTARY', '2099-12-31'),
+        (802, 'Sweet Treats', 'sweet-treats', 'enterprise', true, 'Owner Two', 'owner2@example.com', 'COMPLIMENTARY', '2099-12-31')
     `);
 
     // Ensure SaaS plans exist so quota checks pass
-    await query(`
-      INSERT OR IGNORE INTO saas_plans (key, name, max_categories, max_dishes, max_combos)
-      VALUES ('enterprise', 'Enterprise Plan', 9999, 9999, 9999)
-    `);
+    const existingPlan = await query('SELECT id FROM saas_plans WHERE key = $1', ['enterprise']);
+    if (!existingPlan || existingPlan.length === 0) {
+      await query(`
+        INSERT INTO saas_plans (key, name, max_categories, max_dishes, max_combos)
+        VALUES ('enterprise', 'Enterprise Plan', 9999, 9999, 9999)
+      `);
+    }
 
     // Generate tokens
     const token801 = jwt.sign(
@@ -451,7 +454,7 @@ async function run() {
 
     await test('Cross-tenant combo toggle is rejected (404) and creates NO audit log', async () => {
       // Tenant 801 creates a combo
-      const comboRes = await query("INSERT INTO combos (restaurant_id, name, price, items, available) VALUES (801, 'Target Toggle Combo', 199, '[]', 1) RETURNING id");
+      const comboRes = await query("INSERT INTO combos (restaurant_id, name, price, items, available) VALUES (801, 'Target Toggle Combo', 199, '[]', true) RETURNING id");
       const targetComboId = comboRes[0]?.id || comboRes.lastInsertRowid;
 
       const beforeLogs802 = await query("SELECT COUNT(*)::int as count FROM audit_logs WHERE restaurant_id = 802");
