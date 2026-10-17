@@ -31,8 +31,13 @@ import {
   resolveAuthoritativeEntitlements,
   calculateTenantMrr,
   formatTenantPlanDisplay,
-  SUBSCRIPTION_STATES
+  SUBSCRIPTION_STATES,
+  resolveTenantSubscriptions
 } from '../services/subscriptionState.js';
+import {
+  isLifetimeVipTenant,
+  isVipTenant
+} from '../../src/utils/subscriptionState.js';
 
 const TEST_DB_PATH = path.resolve('menu_test_superadmin_parity.db');
 if (!process.env.TEST_DATABASE_URL) {
@@ -218,6 +223,41 @@ async function runSuite() {
       INSERT INTO subscriptions (restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle, subscription_type, current_period_end)
       VALUES ($1, 3, 'admin_granted', 'active', 0, 'INR', 'monthly', 'ADMIN_GRANTED', $2)
     `, [restoI.id, futureDate]);
+
+    // Tenant J: Multi-subscription tenant mimicking Tenant 1 (Raman Sweet Bakery)
+    // Has Sub 1 (cancelled ₹999), Sub 2 (active VIP grant ₹0, exp 2036), Sub 3 (pending checkout ₹2499)
+    await query(`
+      INSERT INTO restaurants (name, slug, business_type, service_model, business_category, resto_type, plan_tier, plan_price, subscription_type, mandate_status, active, plan_expires_at)
+      VALUES ('MultiSub Bakery', 'test-parity-multisub-bakery', 'bakery_confectionery', 'dine_in', 'dine_in', 'bakery', 'enterprise', 0, 'ADMIN_GRANTED', 'pending', true, '2036-10-06T13:53:16.010Z')
+    `);
+    const [restoJ] = await query("SELECT * FROM restaurants WHERE slug = 'test-parity-multisub-bakery'");
+    // Sub 1: Older cancelled cashfree subscription
+    await query(`
+      INSERT INTO subscriptions (restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle, subscription_type, current_period_end)
+      VALUES ($1, 2, 'cashfree', 'cancelled', 999, 'INR', 'monthly', 'PAID', $2)
+    `, [restoJ.id, new Date(now.getTime() - 200 * 86400 * 1000).toISOString()]);
+    // Sub 2: Active admin_granted VIP subscription expiring 2036
+    await query(`
+      INSERT INTO subscriptions (restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle, subscription_type, current_period_end)
+      VALUES ($1, 3, 'admin_granted', 'active', 0, 'INR', 'monthly', 'ADMIN_GRANTED', '2036-10-06 13:53:16.01')
+    `, [restoJ.id]);
+    // Sub 3: Newer pending Cashfree checkout attempt (higher ID)
+    await query(`
+      INSERT INTO subscriptions (restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle, subscription_type, current_period_end)
+      VALUES ($1, 3, 'cashfree', 'pending', 2499, 'INR', 'monthly', 'PAID', $2)
+    `, [restoJ.id, futureDate]);
+
+    // Tenant K: Finite VIP tenant mimicking Tenant 52 (TouchQR Demo)
+    // Has 1-year VIP grant expiring 2026-10-21
+    await query(`
+      INSERT INTO restaurants (name, slug, business_type, plan_tier, plan_price, subscription_type, mandate_status, active, plan_expires_at)
+      VALUES ('Finite VIP Demo', 'test-parity-finite-vip', 'restaurant', 'pro', 0, 'ADMIN_GRANTED', 'admin_granted', true, '2026-10-21T10:40:07.314Z')
+    `);
+    const [restoK] = await query("SELECT * FROM restaurants WHERE slug = 'test-parity-finite-vip'");
+    await query(`
+      INSERT INTO subscriptions (restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle, subscription_type, current_period_end)
+      VALUES ($1, 2, 'admin_granted', 'active', 0, 'INR', 'monthly', 'ADMIN_GRANTED', '2026-10-21 10:40:07.314')
+    `, [restoK.id]);
 
     // =====================================================================================================
     // TEST 1: Basic base-tier tenant with valid VIP access gets Enterprise VIP Access, ₹0, is_vip: true
@@ -745,6 +785,212 @@ async function runSuite() {
       assert.strictEqual(trialBakeryDisplay.secondaryLabel, '₹499/mo');
       assert.strictEqual(trialBakeryDisplay.badgeText, null);
       assert(trialBakeryDisplay.primaryLabel !== 'Enterprise VIP Access', 'Trial tenant must not be VIP');
+    });
+
+    // =====================================================================================================
+    // TEST 19: Multi-subscription resolution prevents abandoned checkout (#239) from overriding active VIP (#51)
+    // =====================================================================================================
+    await test('19. Multi-subscription resolution selects active VIP subscription over higher-id pending checkout attempt', async () => {
+      const res = await fetch(`${baseUrl}/restaurants?search=test-parity-multisub-bakery`, {
+        headers: { Authorization: `Bearer ${superAdminToken}` }
+      });
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data.data || data.restaurants || []);
+      const tenant = list.find(r => r.slug === 'test-parity-multisub-bakery');
+
+      assert(tenant, 'MultiSub tenant must be present in restaurants list');
+      assert.strictEqual(tenant.subscription_status, 'active', 'Status must be active VIP, NOT pending checkout');
+      assert.strictEqual(tenant.subscription_type, 'ADMIN_GRANTED', 'Type must be ADMIN_GRANTED, NOT PAID');
+      assert.strictEqual(tenant.effective_plan_price, 0, 'Effective price must be 0');
+      assert.strictEqual(tenant.plan_name, 'Enterprise VIP Access', 'Plan name must be Enterprise VIP Access');
+      assert.strictEqual(tenant.is_vip, true, 'is_vip must be true');
+      assert.strictEqual(tenant.is_complimentary, true, 'is_complimentary must be true');
+      assert.strictEqual(tenant.has_underlying_paid_subscription, false, 'Abandoned pending checkout must not be treated as underlying paid sub');
+    });
+
+    // =====================================================================================================
+    // TEST 20: Tenant 360 Parity for MultiSub Tenant (Active VIP + Preserved History)
+    // =====================================================================================================
+    await test('20. Tenant 360 endpoint returns authoritative VIP subscription and excludes pending checkouts from underlying paid sub', async () => {
+      const res = await fetch(`${baseUrl}/restaurants/${restoJ.id}/360`, {
+        headers: { Authorization: `Bearer ${superAdminToken}` }
+      });
+      assert.strictEqual(res.status, 200);
+      const t360 = await res.json();
+
+      assert.strictEqual(t360.subscription.status, 'active', '360 subscription status must be active');
+      assert.strictEqual(t360.subscription.subscription_type, 'ADMIN_GRANTED');
+      assert.strictEqual(t360.subscription.plan_price, 0);
+      assert.strictEqual(t360.subscription.is_lifetime, true, '2036-10-06 expiry must resolve to is_lifetime: true');
+      assert.strictEqual(t360.subscription.access_until, 'Lifetime', 'access_until must project "Lifetime" for 2036 date');
+      assert.strictEqual(t360.subscription.has_underlying_paid_subscription, false, 'Must not claim underlying paid sub from pending checkout');
+    });
+
+    // =====================================================================================================
+    // TEST 21: Finite VIP Tenant (Tenant 52 Parity - Exact Expiry vs Lifetime)
+    // =====================================================================================================
+    await test('21. Finite VIP grant (expiring <= 2030) preserves exact expiry date and is not misrepresented as Lifetime', async () => {
+      const res = await fetch(`${baseUrl}/restaurants/${restoK.id}/360`, {
+        headers: { Authorization: `Bearer ${superAdminToken}` }
+      });
+      assert.strictEqual(res.status, 200);
+      const t360 = await res.json();
+
+      assert.strictEqual(t360.subscription.status, 'active');
+      assert.strictEqual(t360.subscription.is_vip, true);
+      assert.strictEqual(t360.subscription.is_lifetime, false, 'Finite 2026 expiry must NOT be marked lifetime');
+      assert(t360.subscription.access_until.includes('2026-10-21'), 'access_until must retain exact 2026 date');
+
+      // Presentation formatting check
+      const display = formatTenantPlanDisplay({ ...t360.tenant, ...t360.subscription });
+      assert.strictEqual(display.primaryLabel, 'Enterprise VIP Access');
+      assert.strictEqual(display.secondaryLabel, '₹0/mo (Base: PRO)');
+      assert.strictEqual(display.badgeText, '★ VIP');
+    });
+
+    // =====================================================================================================
+    // TEST 22: Billing Page Frontend Parity & Monthly Fee ₹0 Guarantee for VIPs
+    // =====================================================================================================
+    await test('22. Billing page helper functions guarantee ₹0 recurring fee and correct Lifetime vs Finite resolution', async () => {
+      // 1. Lifetime VIP detection
+      assert.strictEqual(isLifetimeVipTenant(restoJ), true, 'Tenant J (2036 expiry) must be lifetime VIP');
+      assert.strictEqual(isLifetimeVipTenant(restoK), false, 'Tenant K (2026 expiry) must NOT be lifetime VIP');
+      assert.strictEqual(isLifetimeVipTenant({ ...restoJ, access_until: 'Lifetime' }), true);
+      assert.strictEqual(isLifetimeVipTenant({ ...restoJ, access_until: null }), true, 'VIP with null expiry is lifetime');
+      assert.strictEqual(isLifetimeVipTenant(restoD), false, 'Paid tenant must not be lifetime VIP');
+
+      // 2. VIP status resolution
+      assert.strictEqual(isVipTenant(restoJ), true);
+      assert.strictEqual(isVipTenant(restoK), true);
+      assert.strictEqual(isVipTenant(restoD), false);
+
+      // 3. Monthly recurring fee rule in TenantDetailsView:
+      // (isVipAuthoritative || isLifetime || Number(sub.plan_price) === 0) ? '₹0 / Complimentary' : `₹${sub.plan_price} / month`
+      const getFeeDisplay = (sub, isVipAuth, isLt) => {
+        return (isVipAuth || isLt || Number(sub.plan_price) === 0) ? '₹0 / Complimentary' : `₹${sub.plan_price} / month`;
+      };
+
+      assert.strictEqual(getFeeDisplay({ plan_price: 1999 }, true, true), '₹0 / Complimentary', 'Lifetime VIP must show ₹0');
+      assert.strictEqual(getFeeDisplay({ plan_price: 999 }, true, false), '₹0 / Complimentary', 'Finite VIP must show ₹0');
+      assert.strictEqual(getFeeDisplay({ plan_price: 799 }, false, false), '₹799 / month', 'Paid tenant must show regular fee');
+
+      // 4. Zero MRR contribution for both VIP tenants
+      assert.strictEqual(calculateTenantMrr(restoJ), 0, 'MultiSub VIP must have ₹0 MRR');
+      assert.strictEqual(calculateTenantMrr(restoK), 0, 'Finite VIP must have ₹0 MRR');
+    });
+
+    // =====================================================================================================
+    // TEST 23: Multi-Subscription: Active VIP #51 + Pending Cashfree #239 + Cancelled Historical #29
+    // =====================================================================================================
+    await test('23. Active VIP #51 + Pending Cashfree #239 + Cancelled #29 resolves to VIP with zero underlying paid claim', async () => {
+      const subs = [
+        { id: 239, gateway: 'cashfree', subscription_type: 'PAID', status: 'pending', amount: 2499 },
+        { id: 51, gateway: 'admin_granted', subscription_type: 'ADMIN_GRANTED', status: 'active', amount: 0, current_period_end: '2036-10-06 13:53:16.01' },
+        { id: 29, gateway: 'admin_granted', subscription_type: 'ADMIN_GRANTED', status: 'cancelled', current_period_end: '2024-01-01 00:00:00' }
+      ];
+      const resto = { id: 1, name: 'Tenant 1', subscription_type: 'ADMIN_GRANTED', mandate_status: 'pending', is_vip: true, plan_expires_at: '2036-10-06T13:53:16.010Z' };
+      const { effectiveSub, paidSub, vipSub } = resolveTenantSubscriptions(subs, resto);
+
+      assert.strictEqual(effectiveSub.id, 51, 'Effective sub must be active VIP #51');
+      assert.strictEqual(paidSub, null, 'Neither pending #239 nor expired cancelled #29 can be paidSub');
+      assert.strictEqual(vipSub.id, 51, 'VIP sub must be #51');
+
+      const canonical = resolveCanonicalSubscriptionState({ resto, sub: effectiveSub });
+      assert.strictEqual(canonical.active, true);
+      assert.strictEqual(canonical.status, 'active');
+      assert.strictEqual(canonical.isComplimentary, true);
+      assert.strictEqual(canonical.accessUntil, 'Lifetime');
+
+      const planInfo = formatTenantPlanDisplay({ ...resto, is_vip: true });
+      assert.strictEqual(planInfo.primaryLabel, 'Enterprise VIP Access');
+      assert.strictEqual(planInfo.secondaryLabel, '₹0/mo');
+    });
+
+    // =====================================================================================================
+    // TEST 24: Expired Cancelled History (e.g. Sub #29 style): Never exposed as active paid subscription
+    // =====================================================================================================
+    await test('24. Expired cancelled historical subscription is never exposed as active or underlying paid sub', async () => {
+      const subs = [
+        { id: 29, gateway: 'cashfree', subscription_type: 'PAID', status: 'cancelled', cancel_requested_at: '2023-01-01', current_period_end: '2023-01-31 00:00:00' },
+        { id: 15, gateway: 'cashfree', subscription_type: 'PAID', status: 'expired', current_period_end: '2022-12-01 00:00:00' }
+      ];
+      const resto = { id: 10, name: 'Expired Tenant', subscription_type: 'PAID', mandate_status: 'cancelled', active: true };
+      const { effectiveSub, paidSub } = resolveTenantSubscriptions(subs, resto);
+
+      assert.strictEqual(paidSub, null, 'Expired cancelled sub must NOT be paidSub');
+      assert.strictEqual(effectiveSub.id, 29, 'effectiveSub falls back to historical record for audit');
+
+      const canonical = resolveCanonicalSubscriptionState({ resto, sub: effectiveSub });
+      assert.strictEqual(canonical.active, false, 'Expired cancelled subscription cannot grant active access');
+      assert(['expired', 'cancelled'].includes(canonical.status), 'Status must resolve to inactive (expired or cancelled)');
+      assert.strictEqual(canonical.isComplimentary, false);
+      assert.strictEqual(calculateTenantMrr({ ...resto, effective_plan_price: 999, subscription_status: canonical.status }), 0, 'Expired tenant contributes ₹0 MRR');
+    });
+
+    // =====================================================================================================
+    // TEST 25: Failed Subscription: Properly identified as failed, zero active paid claim
+    // =====================================================================================================
+    await test('25. Payment failed subscription is inactive without active plan and excluded from paidSub', async () => {
+      const subs = [
+        { id: 45, gateway: 'cashfree', subscription_type: 'PAID', status: 'payment_failed', amount: 999, current_period_end: '2023-05-01 00:00:00' }
+      ];
+      const resto = { id: 11, name: 'Failed Tenant', subscription_type: 'PAID', mandate_status: 'failed', active: true };
+      const { effectiveSub, paidSub } = resolveTenantSubscriptions(subs, resto);
+
+      assert.strictEqual(paidSub, null, 'Failed subscription must NOT be paidSub');
+      assert.strictEqual(effectiveSub.id, 45);
+
+      const canonical = resolveCanonicalSubscriptionState({ resto, sub: effectiveSub });
+      assert.strictEqual(canonical.active, false, 'Failed subscription without active plan is inactive');
+      assert.strictEqual(canonical.status, 'payment_failed', 'Status must be payment_failed');
+      assert.strictEqual(canonical.isComplimentary, false);
+      assert.strictEqual(calculateTenantMrr({ ...resto, effective_plan_price: 999, subscription_status: canonical.status }), 0, 'Failed tenant contributes ₹0 MRR');
+    });
+
+    // =====================================================================================================
+    // TEST 26: Valid Active Paid Subscription: Correctly identified as active paid sub with auto-renew & fee
+    // =====================================================================================================
+    await test('26. Valid active paid subscription correctly identified as active paidSub and contributes to MRR', async () => {
+      const futureEnd = new Date(Date.now() + 25 * 86400 * 1000).toISOString();
+      const subs = [
+        { id: 88, gateway: 'cashfree', subscription_type: 'PAID', status: 'active', amount: 999, auto_renew: 1, current_period_end: futureEnd },
+        { id: 70, gateway: 'cashfree', subscription_type: 'PAID', status: 'cancelled', current_period_end: '2024-01-01 00:00:00' }
+      ];
+      const resto = { id: 12, name: 'Active Paid Tenant', subscription_type: 'PAID', mandate_status: 'active', active: true, plan_price: 999 };
+      const { effectiveSub, paidSub } = resolveTenantSubscriptions(subs, resto);
+
+      assert(paidSub, 'paidSub must exist for active paid subscription');
+      assert.strictEqual(paidSub.id, 88);
+      assert.strictEqual(effectiveSub.id, 88);
+
+      const canonical = resolveCanonicalSubscriptionState({ resto, sub: effectiveSub });
+      assert.strictEqual(canonical.active, true, 'Active paid subscription is active');
+      assert.strictEqual(canonical.status, 'active');
+      assert.strictEqual(canonical.isComplimentary, false);
+      assert.strictEqual(calculateTenantMrr({ ...resto, effective_plan_price: 999, subscription_status: 'active' }), 999, 'Active paid tenant contributes ₹999 to MRR');
+    });
+
+    // =====================================================================================================
+    // TEST 27: Valid Unexpired Cancelled Subscription: Preserves active access until period end
+    // =====================================================================================================
+    await test('27. Valid unexpired cancelled subscription preserves active access until period end with auto-renew OFF', async () => {
+      const futureEnd = new Date(Date.now() + 15 * 86400 * 1000).toISOString();
+      const subs = [
+        { id: 95, gateway: 'cashfree', subscription_type: 'PAID', status: 'cancelled', cancel_requested_at: new Date().toISOString(), amount: 999, auto_renew: 0, current_period_end: futureEnd }
+      ];
+      const resto = { id: 13, name: 'Unexpired Cancelled Tenant', subscription_type: 'PAID', mandate_status: 'active', active: true, plan_price: 999 };
+      const { effectiveSub, paidSub } = resolveTenantSubscriptions(subs, resto);
+
+      assert(paidSub, 'Unexpired cancelled sub is recognized as paidSub during its paid window');
+      assert.strictEqual(paidSub.id, 95);
+      assert.strictEqual(effectiveSub.id, 95);
+
+      const canonical = resolveCanonicalSubscriptionState({ resto, sub: effectiveSub });
+      assert.strictEqual(canonical.active, true, 'Unexpired cancelled subscription remains active until period end');
+      assert.strictEqual(canonical.status, 'cancelled');
+      assert.strictEqual(canonical.badge.label, 'Auto-Renew Off (Active until period end)');
+      assert.strictEqual(canonical.isComplimentary, false);
     });
 
   } finally {

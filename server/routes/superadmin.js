@@ -7,7 +7,7 @@ import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2Im
 import { createCashfreeSubscriptionSession, getCashfreeConfigAsync } from '../services/cashfree.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import { superAdminLoginRateLimiter, supportTicketReplyRateLimiter } from '../middleware/rateLimiters.js';
-import { resolveCanonicalSubscriptionState, isAuthoritativeComplimentaryTenant, resolveAuthoritativeEntitlements } from '../services/subscriptionState.js';
+import { resolveCanonicalSubscriptionState, isAuthoritativeComplimentaryTenant, resolveAuthoritativeEntitlements, resolveTenantSubscriptions } from '../services/subscriptionState.js';
 import { resolveBusinessCategoryFromType, resolveBusinessProfile } from '../config/businessTaxonomy.js';
 import { validateReplyInput, validateStatusTransition, VALID_STATUSES, VALID_PRIORITIES, VALID_CATEGORIES, normalizeCategory } from '../services/supportTicketService.js';
 
@@ -54,7 +54,8 @@ function projectTenantSummary(r, sub, countMap, adminMap, planMap, paidSub = nul
   const vipExpiry = (r.plan_expires_at !== undefined && r.plan_expires_at !== null && String(r.plan_expires_at).trim() !== '')
     ? r.plan_expires_at
     : (isVipSub ? (effectiveSub.current_period_end || null) : null);
-  const isLifetime = isVip && (!vipExpiry || String(vipExpiry).toLowerCase() === 'lifetime');
+  const parsedYear = vipExpiry && !isNaN(new Date(vipExpiry).getFullYear()) ? new Date(vipExpiry).getFullYear() : null;
+  const isLifetime = isVip && (!vipExpiry || String(vipExpiry).toLowerCase() === 'lifetime' || (parsedYear !== null && parsedYear > 2030));
 
   const effectiveAccessUntil = isVip
     ? (isLifetime ? 'Lifetime' : vipExpiry)
@@ -68,7 +69,12 @@ function projectTenantSummary(r, sub, countMap, adminMap, planMap, paidSub = nul
     : (effectiveSub?.auto_renew !== undefined ? Number(effectiveSub.auto_renew) : (r.auto_debit_enabled ? Number(r.auto_debit_enabled) : 0));
 
   const effectiveAutoRenew = isVip ? 0 : underlyingAutoRenew;
-  const hasUnderlyingPaidSub = Boolean(underlyingPaidSub && (underlyingPaidSub.status === 'active' || underlyingPaidSub.status === 'cancelled'));
+  const hasUnderlyingPaidSub = Boolean(
+    underlyingPaidSub && (
+      underlyingPaidSub.status === 'active' ||
+      (underlyingPaidSub.status === 'cancelled' && underlyingPaidSub.current_period_end && new Date(underlyingPaidSub.current_period_end) >= new Date())
+    ) && underlyingPaidSub.status !== 'pending'
+  );
 
   return {
     ...safeR,
@@ -86,7 +92,7 @@ function projectTenantSummary(r, sub, countMap, adminMap, planMap, paidSub = nul
     effective_plan_tier: effectivePlanTier,
     effective_plan_price: effectivePlanPrice,
     subscription_status: effectiveStatus,
-    underlying_subscription_status: underlyingPaidSub ? underlyingPaidSub.status : (sub?.status || canonicalState.status),
+    underlying_subscription_status: hasUnderlyingPaidSub ? underlyingPaidSub.status : (isVip ? 'none' : (underlyingPaidSub ? underlyingPaidSub.status : (sub?.status || canonicalState.status))),
     access_until: effectiveAccessUntil,
     billing_cycle: sub?.billing_cycle || 'monthly',
     recurring_amount: isVip ? 0 : effectivePlanPrice,
@@ -208,18 +214,18 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
       dishesCount.forEach(row => { countMap[row.restaurant_id] = parseInt(row.count || 0, 10); });
       const adminMap = {};
       adminsList.forEach(a => { adminMap[a.restaurant_id] = a.username; });
-      const subMap = {};
-      const paidSubMap = {};
+      const subsByResto = {};
       (subsList || []).forEach(s => {
-        if (!subMap[s.restaurant_id]) subMap[s.restaurant_id] = s;
-        if (!paidSubMap[s.restaurant_id] && s.subscription_type === 'PAID' && s.gateway !== 'admin_granted') {
-          paidSubMap[s.restaurant_id] = s;
-        }
+        if (!subsByResto[s.restaurant_id]) subsByResto[s.restaurant_id] = [];
+        subsByResto[s.restaurant_id].push(s);
       });
       const planMap = {};
       (saasPlans || []).forEach(p => { planMap[(p.key || '').toLowerCase()] = p; });
 
-      const result = restaurants.map(r => projectTenantSummary(r, subMap[r.id], countMap, adminMap, planMap, paidSubMap[r.id]));
+      const result = restaurants.map(r => {
+        const { effectiveSub, paidSub } = resolveTenantSubscriptions(subsByResto[r.id] || [], r);
+        return projectTenantSummary(r, effectiveSub, countMap, adminMap, planMap, paidSub);
+      });
 
       return res.json({
         data: result,
@@ -245,18 +251,18 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
     dishesCount.forEach(row => { countMap[row.restaurant_id] = parseInt(row.count || 0, 10); });
     const adminMap = {};
     adminsList.forEach(a => { adminMap[a.restaurant_id] = a.username; });
-    const subMap = {};
-    const paidSubMap = {};
+    const subsByResto = {};
     (subsList || []).forEach(s => {
-      if (!subMap[s.restaurant_id]) subMap[s.restaurant_id] = s;
-      if (!paidSubMap[s.restaurant_id] && s.subscription_type === 'PAID' && s.gateway !== 'admin_granted') {
-        paidSubMap[s.restaurant_id] = s;
-      }
+      if (!subsByResto[s.restaurant_id]) subsByResto[s.restaurant_id] = [];
+      subsByResto[s.restaurant_id].push(s);
     });
     const planMap = {};
     (saasPlans || []).forEach(p => { planMap[(p.key || '').toLowerCase()] = p; });
 
-    const result = restaurants.map(r => projectTenantSummary(r, subMap[r.id], countMap, adminMap, planMap, paidSubMap[r.id]));
+    const result = restaurants.map(r => {
+      const { effectiveSub, paidSub } = resolveTenantSubscriptions(subsByResto[r.id] || [], r);
+      return projectTenantSummary(r, effectiveSub, countMap, adminMap, planMap, paidSub);
+    });
 
     res.json(result);
   } catch (err) {
@@ -296,14 +302,10 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
     const adminRows = await query("SELECT id, username, role, created_at FROM admins WHERE restaurant_id = $1 AND role = 'restaurant_admin' ORDER BY id ASC LIMIT 1", [restoId]);
     const adminUser = adminRows[0] || null;
 
-    // 3. Fetch Subscription & Canonical Status
-    const subRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [restoId]);
-    const sub = subRows[0] || null;
-    const paidSubRows = await query("SELECT * FROM subscriptions WHERE restaurant_id = $1 AND subscription_type = 'PAID' AND gateway != 'admin_granted' ORDER BY id DESC LIMIT 1", [restoId]);
-    const paidSub = paidSubRows[0] || null;
-    const effectiveSub = (sub && (sub.subscription_type === 'ADMIN_GRANTED' || sub.gateway === 'admin_granted') && sub.status !== 'active' && paidSub && paidSub.status === 'active')
-      ? paidSub
-      : sub;
+    // 3. Fetch Subscription & Canonical Status (Multi-Subscription Resolution)
+    const allSubRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC', [restoId]);
+    const { effectiveSub, paidSub } = resolveTenantSubscriptions(allSubRows || [], resto);
+    const sub = effectiveSub;
     const canonicalState = resolveCanonicalSubscriptionState({ resto, sub: effectiveSub, now: new Date() });
 
     // 4. Fetch Authoritative SaaS Plan for this tenant's tier
@@ -395,7 +397,10 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
         total_tables: Number(resto.total_tables || 0),
         total_rooms: Number(resto.total_rooms || 0),
         total_cabins: Number(resto.total_cabins || 0),
-        total_vip: Number(resto.total_vip || 0)
+        total_vip: Number(resto.total_vip || 0),
+        plan_tier: resto.plan_tier || 'pro',
+        is_vip: canonicalState.isComplimentary,
+        is_complimentary: canonicalState.isComplimentary
       },
       owner: {
         owner_name: resto.owner_name || null,
@@ -412,10 +417,11 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
         effective_plan_price: entitlements.plan_price,
         subscription_type: canonicalState.isComplimentary ? 'ADMIN_GRANTED' : (resto.subscription_type === 'ADMIN_GRANTED' ? 'PAID' : (sub?.gateway === 'cashfree' ? 'CASHFREE_MANDATE' : (resto.subscription_type || 'PAID'))),
         status: isSuspended ? 'suspended' : canonicalState.status,
-        underlying_subscription_status: paidSub ? paidSub.status : (sub?.status || resto.mandate_status || 'none'),
+        underlying_subscription_status: paidSub ? paidSub.status : (canonicalState.isComplimentary ? 'none' : (sub?.status || resto.mandate_status || 'none')),
         canonical_active: canonicalState.active,
         is_complimentary: canonicalState.isComplimentary,
         is_vip: canonicalState.isComplimentary,
+        is_lifetime: Boolean(canonicalState.isComplimentary && canonicalState.accessUntil === 'Lifetime'),
         in_grace_period: canonicalState.inGracePeriod,
         badge: isSuspended ? { label: 'Account Suspended', color: '#EF4444', icon: '⚫' } : canonicalState.badge,
         trial_start: sub?.trial_start || resto.trial_started_at || null,
@@ -425,8 +431,13 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
         access_until: canonicalState.accessUntil,
         auto_renew: canonicalState.isComplimentary ? false : (paidSub && paidSub.status === 'active' ? (paidSub.auto_renew !== undefined ? (paidSub.auto_renew === 1 || paidSub.auto_renew === true || paidSub.auto_renew === '1') : true) : (effectiveSub?.auto_renew !== undefined ? (effectiveSub.auto_renew === 1 || effectiveSub.auto_renew === true || effectiveSub.auto_renew === '1') : (resto.auto_debit_enabled === 1))),
         underlying_auto_renew: paidSub ? (paidSub.auto_renew !== undefined ? (paidSub.auto_renew === 1 || paidSub.auto_renew === true || paidSub.auto_renew === '1') : true) : (effectiveSub?.auto_renew !== undefined ? (effectiveSub.auto_renew === 1 || effectiveSub.auto_renew === true || effectiveSub.auto_renew === '1') : (resto.auto_debit_enabled === 1)),
-        has_underlying_paid_subscription: Boolean(paidSub && (paidSub.status === 'active' || paidSub.status === 'cancelled')),
-        underlying_subscription: paidSub ? {
+        has_underlying_paid_subscription: Boolean(
+          paidSub && (
+            paidSub.status === 'active' ||
+            (paidSub.status === 'cancelled' && paidSub.current_period_end && new Date(paidSub.current_period_end) >= new Date())
+          ) && paidSub.status !== 'pending'
+        ),
+        underlying_subscription: (paidSub && (paidSub.status === 'active' || (paidSub.status === 'cancelled' && paidSub.current_period_end && new Date(paidSub.current_period_end) >= new Date())) && paidSub.status !== 'pending') ? {
           id: paidSub.id,
           plan_id: paidSub.plan_id,
           status: paidSub.status,
@@ -1078,8 +1089,9 @@ router.post('/restaurants/:id/grant-free-access', authenticateToken, requireSupe
       return res.status(404).json({ error: 'Restaurant tenant not found' });
     }
     const currentResto = restoRows[0];
-    const currentSubRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1', [id]);
-    const currentSub = currentSubRows[0];
+    const currentSubRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC', [id]);
+    const { effectiveSub, vipSub } = resolveTenantSubscriptions(currentSubRows || [], currentResto);
+    const currentSub = vipSub || effectiveSub;
 
     const previousSnapshot = {
       previous_plan_tier: currentResto?.plan_tier || 'pro',
@@ -1171,7 +1183,7 @@ router.post('/restaurants/:id/revoke-free-access', authenticateToken, requireSup
         AND (subscription_type = 'ADMIN_GRANTED' OR gateway = 'admin_granted')
     `, [nowISO, id]);
 
-    // Check for preserved underlying paid or trial subscriptions
+    // Check for preserved underlying paid or trial subscriptions (strictly excluding pending checkouts)
     const prevSubRows = await query(`
       SELECT s.*, p.key as plan_key, p.price as plan_catalog_price, p.name as plan_catalog_name
       FROM subscriptions s
@@ -1179,6 +1191,7 @@ router.post('/restaurants/:id/revoke-free-access', authenticateToken, requireSup
       WHERE s.restaurant_id = $1
         AND (s.subscription_type IS NULL OR s.subscription_type != 'ADMIN_GRANTED')
         AND (s.gateway IS NULL OR s.gateway != 'admin_granted')
+        AND s.status != 'pending'
       ORDER BY s.id DESC
       LIMIT 1
     `, [id]);

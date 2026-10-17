@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { CreditCard, ArrowDown } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
 import { BUSINESS_TYPE_METADATA, BUSINESS_TYPE_ALIASES } from '../../../utils/businessTaxonomy';
-import { matchesTenantStatusFilter, formatTenantPlanDisplay } from '../../../utils/subscriptionState';
+import { matchesTenantStatusFilter, formatTenantPlanDisplay, isLifetimeVipTenant, isVipTenant } from '../../../utils/subscriptionState';
 
 export default function SubscriptionsView({ restaurants, onSelectTenant }) {
   const [filter, setFilter] = useState('all');
 
-  const isVipTenant = (r) => matchesTenantStatusFilter(r, 'vip');
   const matchesSubFilter = (r, f) => matchesTenantStatusFilter(r, f);
 
   const filteredSubs = restaurants.filter(r => matchesSubFilter(r, filter));
@@ -72,7 +71,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
             ) : (
               filteredSubs.map(r => {
                 const isVip = isVipTenant(r);
-                const isLifetime = isVip && (r.access_until === 'Lifetime' || (!r.access_until && (!r.plan_expires_at || String(r.plan_expires_at).toLowerCase() === 'lifetime')));
+                const isLifetime = isLifetimeVipTenant(r);
 
                 return (
                   <tr key={r.id}>
@@ -120,7 +119,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                     </td>
                     <td style={{ fontWeight: 800, color: (isVip || r.auto_renew === 0 || r.auto_renew === false) ? 'var(--sa-danger)' : 'var(--sa-success)' }}>
                       {isVip
-                        ? (r.has_underlying_paid_subscription ? `OFF (Paid: ${r.underlying_auto_renew ? 'ON' : 'OFF'})` : 'OFF (N/A)')
+                        ? (r.has_underlying_paid_subscription && r.underlying_subscription_status === 'active' ? `OFF (Paid: ${r.underlying_auto_renew ? 'ON' : 'OFF'})` : 'OFF (N/A)')
                         : (r.auto_renew === 0 || r.auto_renew === false) ? '❌ OFF' : '✅ ON'}
                     </td>
                     <td style={{ fontWeight: 700 }}>
@@ -148,7 +147,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
       {/* Mobile Card List */}
       <div className="sa-mobile-card-list">
         {filteredSubs.map(r => {
-          const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030) || r.is_vip || r.is_complimentary;
+          const isLifetime = isLifetimeVipTenant(r);
           const planInfo = formatTenantPlanDisplay(r);
 
           return (
@@ -178,7 +177,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', paddingTop: '8px', borderTop: '1px solid var(--sa-border)' }}>
-                <span>Auto-renew: <strong>{isVipTenant(r) ? (r.has_underlying_paid_subscription ? `OFF (Paid: ${r.underlying_auto_renew ? 'ON' : 'OFF'})` : 'OFF (N/A)') : (r.auto_renew === 0 || r.auto_renew === false) ? 'OFF' : 'ON'}</strong></span>
+                <span>Auto-renew: <strong>{isVipTenant(r) ? (r.has_underlying_paid_subscription && r.underlying_subscription_status === 'active' ? `OFF (Paid: ${r.underlying_auto_renew ? 'ON' : 'OFF'})` : 'OFF (N/A)') : (r.auto_renew === 0 || r.auto_renew === false) ? 'OFF' : 'ON'}</strong></span>
                 <span>Until: <strong>{isLifetime ? '♾️ Lifetime' : (r.access_until && r.access_until !== 'Lifetime') ? new Date(r.access_until).toLocaleDateString('en-IN') : (r.plan_expires_at && String(r.plan_expires_at).toLowerCase() !== 'lifetime') ? new Date(r.plan_expires_at).toLocaleDateString('en-IN') : 'N/A'}</strong></span>
               </div>
             </div>

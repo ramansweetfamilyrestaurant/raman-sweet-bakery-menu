@@ -4,7 +4,7 @@ import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaur
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
 import { BUSINESS_TYPES, BUSINESS_TYPE_METADATA, resolveBusinessProfile, resolveServiceModelForBusinessType } from '../../utils/businessTaxonomy';
-import { calculateTenantMrr, formatTenantPlanDisplay } from '../../utils/subscriptionState';
+import { calculateTenantMrr, formatTenantPlanDisplay, isLifetimeVipTenant, isVipTenant } from '../../utils/subscriptionState';
 import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
 import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
 import AddBusinessModal from './modals/AddBusinessModal';
@@ -1935,16 +1935,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                   {/* Row 3: Expiring Within 7 Days */}
                   {restaurants.filter(r => {
-                    const d = getDaysRemaining(r.plan_expires_at);
-                    return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
+                    const d = getDaysRemaining(r.plan_expires_at || r.access_until);
+                    return d !== null && d > 0 && d <= 7 && !isVipTenant(r) && !isLifetimeVipTenant(r);
                   }).length > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '10px 14px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
                         <span style={{ background: '#64748B', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900, flexShrink: 0 }}>EXPIRING</span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
                           {restaurants.filter(r => {
-                            const d = getDaysRemaining(r.plan_expires_at);
-                            return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
+                            const d = getDaysRemaining(r.plan_expires_at || r.access_until);
+                            return d !== null && d > 0 && d <= 7 && !isVipTenant(r) && !isLifetimeVipTenant(r);
                           }).length} Subscriptions Expiring in &le; 7 Days
                         </span>
                       </div>
@@ -2081,7 +2081,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                               (r.access_until === 'Lifetime' || !r.access_until || new Date(r.access_until) >= new Date())
                             );
 
-                        const isLifetime = isVip && (r.access_until === 'Lifetime' || (!r.access_until && (!r.plan_expires_at || String(r.plan_expires_at).toLowerCase() === 'lifetime')));
+                        const isLifetime = isLifetimeVipTenant(r);
                         const daysLeft = getDaysRemaining(r.plan_expires_at || r.access_until);
                         const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
                         const isAutoRenewOff = isVip ? true : (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null);
@@ -2145,8 +2145,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                                 <span style={{
                                   padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.68rem', fontWeight: 800,
                                   background: '#F3F4F6', color: '#4B5563', border: '1px solid #E5E7EB'
-                                }} title={r.has_underlying_paid_subscription ? `Underlying Paid Auto-Renew: ${r.underlying_auto_renew ? 'ON' : 'OFF'}` : 'Complimentary VIP does not auto-renew'}>
-                                  {r.has_underlying_paid_subscription ? `OFF (Paid: ${r.underlying_auto_renew ? 'ON' : 'OFF'})` : 'OFF (N/A)'}
+                                }} title={r.has_underlying_paid_subscription && r.underlying_subscription_status === 'active' ? `Underlying Paid Auto-Renew: ${r.underlying_auto_renew ? 'ON' : 'OFF'}` : 'Complimentary VIP does not auto-renew'}>
+                                  {r.has_underlying_paid_subscription && r.underlying_subscription_status === 'active' ? `OFF (Paid: ${r.underlying_auto_renew ? 'ON' : 'OFF'})` : 'OFF (N/A)'}
                                 </span>
                               ) : (
                                 <span style={{

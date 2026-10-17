@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Store, Plus, RefreshCw, Eye, Sparkles } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
 import { BUSINESS_TYPE_METADATA, BUSINESS_TYPE_ALIASES } from '../../../utils/businessTaxonomy';
-import { matchesTenantStatusFilter, formatTenantPlanDisplay } from '../../../utils/subscriptionState';
+import { matchesTenantStatusFilter, formatTenantPlanDisplay, isLifetimeVipTenant } from '../../../utils/subscriptionState';
 
 export default function TenantsView({ restaurants, searchQuery, onSelectTenant, onAddTenant, onRefresh, loading }) {
   const [statusFilter, setStatusFilter] = useState('all');
@@ -115,7 +115,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
               </tr>
             ) : (
               filtered.map(r => {
-                const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030) || r.is_vip || r.is_complimentary;
+                const isLifetime = isLifetimeVipTenant(r);
                 const canonicalType = BUSINESS_TYPE_ALIASES[r.business_type] || r.business_type;
                 const bizMeta = BUSINESS_TYPE_METADATA[canonicalType] || { icon: '🏢', label: canonicalType || 'Restaurant' };
 
@@ -204,7 +204,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
       {/* Ultra-Compact Mobile Cards View (<= 767px) */}
       <div className="sa-mobile-card-list">
         {filtered.map(r => {
-          const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030) || r.is_vip || r.is_complimentary;
+          const isLifetime = isLifetimeVipTenant(r);
           const canonicalType = BUSINESS_TYPE_ALIASES[r.business_type] || r.business_type;
           const bizMeta = BUSINESS_TYPE_METADATA[canonicalType] || { icon: '🏢', label: canonicalType || 'Restaurant' };
           const planInfo = formatTenantPlanDisplay(r);

@@ -283,3 +283,54 @@ export function formatTenantPlanDisplay(tenant) {
     fullDisplay: `${primaryLabel} (${secondaryLabel})`
   };
 }
+
+/**
+ * Authoritatively determines if a tenant restaurant is VIP / Complimentary.
+ *
+ * @param {Object} r - Restaurant record
+ * @returns {boolean}
+ */
+export function isVipTenant(r) {
+  if (!r) return false;
+  return matchesTenantStatusFilter(r, 'vip');
+}
+
+/**
+ * Authoritatively determines if a VIP tenant has lifetime (or quasi-lifetime / 10-year grant) access.
+ *
+ * Rules:
+ * - Must be an active VIP / Complimentary tenant.
+ * - Access is considered Lifetime if:
+ *   - Explicit string 'Lifetime', 'never', 'infinity', or 'indefinite'
+ *   - No expiry date specified (null / undefined / empty)
+ *   - Expiry year is far in the future (> 2030, e.g. 10-year VIP grants like 2036-10-06)
+ * - Returns FALSE for finite / short-term VIP grants (e.g. 1-year VIP expiring in 2026 like Tenant 52).
+ *
+ * @param {Object} r - Restaurant record
+ * @returns {boolean}
+ */
+export function isLifetimeVipTenant(r) {
+  if (!r) return false;
+  const isVip = isVipTenant(r) || Boolean(
+    r.is_vip ||
+    r.is_complimentary ||
+    r.subscription_type === 'ADMIN_GRANTED' ||
+    r.subscription_type === 'COMPLIMENTARY' ||
+    r.subscription_type === 'VIP' ||
+    r.mandate_status === 'admin_granted' ||
+    r.mandate_status === 'complimentary' ||
+    r.is_lifetime ||
+    r.isLifetime
+  );
+  if (!isVip) return false;
+
+  const exp = r.access_until || r.plan_expires_at || r.current_period_end;
+  if (!exp) return true; // VIP with no explicit expiry is indefinite/lifetime
+
+  const str = String(exp).trim().toLowerCase();
+  if (str === 'lifetime' || str === 'never' || str === 'infinity' || str === 'indefinite') return true;
+
+  const d = new Date(exp);
+  if (isNaN(d.getTime())) return false;
+  return d.getFullYear() > 2030;
+}

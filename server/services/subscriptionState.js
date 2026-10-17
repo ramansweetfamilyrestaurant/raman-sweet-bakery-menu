@@ -130,7 +130,8 @@ export function resolveCanonicalSubscriptionState({ resto, sub, now = new Date()
     const vipExpiry = (resto.plan_expires_at !== undefined && resto.plan_expires_at !== null && String(resto.plan_expires_at).trim() !== '')
       ? resto.plan_expires_at
       : (isVipSub ? (sub.current_period_end || null) : null);
-    const isLifetime = !vipExpiry || String(vipExpiry).toLowerCase() === 'lifetime';
+    const parsedYear = vipExpiry && !isNaN(new Date(vipExpiry).getFullYear()) ? new Date(vipExpiry).getFullYear() : null;
+    const isLifetime = !vipExpiry || String(vipExpiry).toLowerCase() === 'lifetime' || (parsedYear !== null && parsedYear > 2030);
 
     return {
       status: SUBSCRIPTION_STATES.ACTIVE,
@@ -645,3 +646,92 @@ export function formatTenantPlanDisplay(tenant, now = new Date()) {
     fullDisplay: `${primaryLabel} (${secondaryLabel})`
   };
 }
+
+/**
+ * Authoritative Multi-Subscription Resolution Engine for TouchQR Tenants.
+ *
+ * Distinguishes between:
+ * 1. Active Admin-Granted / Complimentary VIP subscriptions (gateway = 'admin_granted', status = 'active')
+ * 2. Active Paid subscriptions (gateway = 'cashfree', status = 'active')
+ * 3. Cancelled Paid subscriptions (status = 'cancelled' or cancel_requested_at)
+ * 4. Abandoned / Pending checkout attempts (status = 'pending')
+ * 5. Expired historical subscriptions (status = 'expired')
+ *
+ * Guarantees:
+ * - A 'pending' checkout attempt must NEVER supersede an 'active' subscription.
+ * - If tenant has active VIP, effectiveSub is the active VIP subscription.
+ * - Underlying paid subscription is strictly a genuine paid subscription, NOT an uncompleted checkout attempt.
+ * - Preserves multi-tenant and multi-industry architecture.
+ *
+ * @param {Array<Object>} tenantSubs - All subscription rows for the tenant
+ * @param {Object|null} resto - Restaurant tenant row
+ * @returns {{ effectiveSub: Object|null, paidSub: Object|null, vipSub: Object|null }}
+ */
+export function resolveTenantSubscriptions(tenantSubs = [], resto = null) {
+  if (!Array.isArray(tenantSubs) || tenantSubs.length === 0) {
+    return { effectiveSub: null, paidSub: null, vipSub: null };
+  }
+
+  // Sort by id DESC (newest first)
+  const sorted = [...tenantSubs].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+
+  // 1. VIP / Admin-granted subscriptions
+  const activeVipSub = sorted.find(s =>
+    (s.subscription_type === 'ADMIN_GRANTED' || s.gateway === 'admin_granted') &&
+    s.status === 'active'
+  );
+  const anyVipSub = sorted.find(s =>
+    (s.subscription_type === 'ADMIN_GRANTED' || s.gateway === 'admin_granted')
+  );
+  const vipSub = activeVipSub || anyVipSub || null;
+
+  // 2. Paid subscriptions (Must NOT be 'pending' checkout attempts or expired historical records)
+  const activePaidSub = sorted.find(s =>
+    (s.subscription_type === 'PAID' || s.gateway === 'cashfree') &&
+    s.status === 'active'
+  );
+  const validCancelledPaidSub = sorted.find(s =>
+    (s.subscription_type === 'PAID' || s.gateway === 'cashfree') &&
+    (s.status === 'cancelled' || s.cancel_requested_at) &&
+    s.status !== 'pending' &&
+    s.current_period_end && new Date(s.current_period_end) >= new Date()
+  );
+  const anyNonPendingPaidSub = sorted.find(s =>
+    (s.subscription_type === 'PAID' || s.gateway === 'cashfree') &&
+    s.status !== 'pending'
+  );
+
+  // paidSub is the genuine underlying paid subscription (active > valid unexpired cancelled)
+  const paidSub = activePaidSub || validCancelledPaidSub || null;
+
+  // 3. Determine the primary/effective subscription
+  const isVipResto = resto && (
+    resto.is_vip ||
+    resto.is_complimentary ||
+    resto.subscription_type === 'ADMIN_GRANTED' ||
+    resto.mandate_status === 'admin_granted'
+  );
+
+  let effectiveSub = null;
+  if (activeVipSub) {
+    effectiveSub = activeVipSub;
+  } else if (isVipResto && vipSub) {
+    effectiveSub = vipSub;
+  } else if (activePaidSub) {
+    effectiveSub = activePaidSub;
+  } else if (sorted.find(s => s.status === 'active')) {
+    effectiveSub = sorted.find(s => s.status === 'active');
+  } else if (sorted.find(s => s.status === 'trialing')) {
+    effectiveSub = sorted.find(s => s.status === 'trialing');
+  } else if (validCancelledPaidSub) {
+    effectiveSub = validCancelledPaidSub;
+  } else if (anyNonPendingPaidSub) {
+    effectiveSub = anyNonPendingPaidSub;
+  } else {
+    // If only pending checkout attempts exist, fall back to newest
+    effectiveSub = sorted[0];
+  }
+
+  return { effectiveSub, paidSub, vipSub };
+}
+

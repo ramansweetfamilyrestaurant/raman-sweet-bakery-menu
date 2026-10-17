@@ -9,7 +9,7 @@ import {
 import Drawer from '../components/Drawer';
 import StatusBadge from '../components/StatusBadge';
 import { BUSINESS_TYPE_METADATA, BUSINESS_TYPE_ALIASES } from '../../../utils/businessTaxonomy';
-import { formatTenantPlanDisplay } from '../../../utils/subscriptionState';
+import { formatTenantPlanDisplay, isLifetimeVipTenant } from '../../../utils/subscriptionState';
 import '../styles/SuperAdmin.css';
 
 const getRestaurantLogoUrl = (logo) => {
@@ -166,7 +166,12 @@ export default function TenantDetailsView({
   };
 
   const isFiniteExpiry = Boolean(sub.access_until && sub.access_until !== 'Lifetime' && !isNaN(new Date(sub.access_until).getTime()));
-  const isLifetime = isVipAuthoritative ? (sub.access_until === 'Lifetime' || (!isFiniteExpiry && (!resto.plan_expires_at || resto.plan_expires_at === 'Lifetime'))) : false;
+  const isLifetime = isVipAuthoritative ? isLifetimeVipTenant({
+    ...resto,
+    ...sub,
+    is_vip: true,
+    access_until: sub.access_until || resto.access_until || resto.plan_expires_at
+  }) : false;
   const publicMenuUrl = `${window.location.origin}/${tenant.subdomain || tenant.slug}`;
 
   // Filtered transactions
@@ -302,7 +307,7 @@ export default function TenantDetailsView({
           <div style={{ background: 'rgba(255,255,255,0.07)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ fontSize: '0.65rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>AUTO DEBIT MANDATE</div>
             <div style={{ fontSize: '0.86rem', fontWeight: 900, color: isVipAuthoritative ? '#94A3B8' : (sub.auto_renew ? '#34D399' : '#F87171'), marginTop: '2px' }}>
-              {isVipAuthoritative ? (sub.has_underlying_paid_subscription ? `OFF (Underlying: ${sub.underlying_auto_renew ? 'ON' : 'OFF'})` : '❌ OFF (Not Applicable)') : (sub.auto_renew ? '✅ ON (Active)' : '❌ OFF (Disabled)')}
+              {isVipAuthoritative ? (sub.has_underlying_paid_subscription && sub.underlying_subscription_status === 'active' ? `OFF (Underlying: ${sub.underlying_auto_renew ? 'ON' : 'OFF'})` : '❌ OFF (Not Applicable)') : (sub.auto_renew ? '✅ ON (Active)' : '❌ OFF (Disabled)')}
             </div>
           </div>
 
@@ -634,7 +639,7 @@ export default function TenantDetailsView({
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
               <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Monthly Recurring Fee:</span>
-              <strong style={{ fontSize: '0.94rem' }}>{isLifetime ? '₹0 / Complimentary' : `₹${sub.plan_price} / month`}</strong>
+              <strong style={{ fontSize: '0.94rem' }}>{(isVipAuthoritative || isLifetime || Number(sub.plan_price) === 0) ? '₹0 / Complimentary' : `₹${sub.plan_price} / month`}</strong>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
@@ -648,7 +653,9 @@ export default function TenantDetailsView({
               <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Auto-Debit Mandate:</span>
               <strong style={{ color: isVipAuthoritative ? 'var(--sa-text-muted)' : (sub.auto_renew ? '#15803D' : '#DC2626') }}>
                 {isVipAuthoritative
-                  ? (sub.has_underlying_paid_subscription ? `OFF (Underlying Paid: ${sub.underlying_auto_renew ? 'Active' : 'Disabled'})` : '❌ OFF (Not Applicable for VIP)')
+                  ? (sub.has_underlying_paid_subscription && sub.underlying_subscription_status === 'active'
+                      ? `OFF (Underlying Paid: ${sub.underlying_auto_renew ? 'Active' : 'Disabled'})`
+                      : '❌ OFF (Not Applicable for VIP)')
                   : (sub.auto_renew ? '✅ Active (Auto-Renew Enabled)' : '❌ Inactive (Auto-Renew Disabled)')}
               </strong>
             </div>
@@ -670,7 +677,7 @@ export default function TenantDetailsView({
             </div>
           </div>
 
-          {sub.has_underlying_paid_subscription && (
+          {sub.has_underlying_paid_subscription && sub.underlying_subscription_status === 'active' && (
             <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', color: '#166534', padding: '12px 14px', borderRadius: '12px', fontSize: '0.82rem' }}>
               <strong>💳 Preserved Underlying Paid Subscription:</strong> An underlying paid subscription remains preserved (Status: {sub.underlying_subscription_status || 'active'}, Auto-Renew: {sub.underlying_auto_renew ? 'ON' : 'OFF'}). It will resume if complimentary VIP access is revoked.
             </div>
