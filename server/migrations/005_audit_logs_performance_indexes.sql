@@ -1,0 +1,72 @@
+-- TouchQR Migration 005: Audit Logs Performance Optimization Indexes
+-- Target Database: PostgreSQL 14+ / Neon Serverless Postgres
+-- Execution Mode: NON-TRANSACTIONAL (DO NOT WRAP IN BEGIN ... COMMIT)
+--
+-- CRITICAL POSTGRESQL CONSTRAINT:
+-- PostgreSQL does NOT allow CREATE INDEX CONCURRENTLY or DROP INDEX CONCURRENTLY
+-- inside a transaction block (ERROR: 25001).
+-- Each statement below MUST be executed as a standalone query outside of a transaction.
+
+-- ==============================================================================
+-- 1. Global Activity View & Deterministic Pagination Index
+-- ==============================================================================
+-- Query Shape (server/services/auditLogService.js):
+--   SELECT a.id, a.restaurant_id, a.actor_role, a.action, a.details, a.created_at,
+--          r.name AS restaurant_name, r.logo AS restaurant_logo
+--   FROM audit_logs a
+--   LEFT JOIN restaurants r ON r.id = a.restaurant_id
+--   [WHERE <category/actor/date conditions>]
+--   ORDER BY a.created_at DESC, a.id DESC
+--   LIMIT $limit OFFSET $offset;
+--
+-- Performance Rationale:
+-- - In Global Activity view (default Super Admin dashboard), pagination sorts on
+--   created_at DESC with id DESC as deterministic tie-breaker.
+-- - Without this index, PostgreSQL performs a full sequential scan of audit_logs,
+--   joins restaurants, and conducts an in-memory Sort (or spills to disk work_mem).
+-- - With this index, the query planner performs a backward Index Scan in exact sort
+--   order, returning paginated rows with near-zero latency regardless of table size.
+-- - Also optimizes date range queries (WHERE created_at >= $1 AND created_at <= $2).
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_logs_created_id
+ON audit_logs (created_at DESC, id DESC);
+
+-- ==============================================================================
+-- 2. Tenant-scoped Activity & Tenant 360 Index
+-- ==============================================================================
+-- Query Shape 1 (server/routes/superadmin.js line 366 - Tenant 360):
+--   SELECT id, actor_role, action, details, created_at
+--   FROM audit_logs
+--   WHERE restaurant_id = $1
+--   ORDER BY created_at DESC, id DESC
+--   LIMIT 50;
+--
+-- Query Shape 2 (server/services/auditLogService.js - Tenant-filtered Audit):
+--   SELECT ... FROM audit_logs a
+--   WHERE a.restaurant_id = $1
+--   ORDER BY a.created_at DESC, a.id DESC
+--   LIMIT $limit OFFSET $offset;
+--
+-- Performance Rationale:
+-- - Leading column (restaurant_id) satisfies equality filtering immediately.
+-- - Trailing columns (created_at DESC, id DESC) provide pre-sorted ordering.
+-- - Eliminates all sorting and avoids scanning audit records belonging to other tenants.
+-- - Limits index lookups to strictly the target tenant's recent activity stream.
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_logs_resto_created_id
+ON audit_logs (restaurant_id, created_at DESC, id DESC);
+
+-- ==============================================================================
+-- 3. Actor Role Index Justification (Why OMITTED)
+-- ==============================================================================
+-- Query Shape:
+--   LOWER(a.actor_role) IN ('superadmin', 'admin') or ('restaurant_admin', 'tenant_admin')
+--
+-- Why NOT created:
+-- 1. Very Low Cardinality: Only 4-5 role strings exist across the entire platform.
+--    PostgreSQL query planner rarely chooses a B-tree index on columns with low selectivity.
+-- 2. Expression Mismatch: The query normalizes with LOWER(), requiring an expression index
+--    rather than a standard column index.
+-- 3. Filter + Sort Dominance: Actor filters are almost always combined with created_at DESC.
+--    The planner achieves lower total cost by scanning idx_audit_logs_created_id and filtering
+--    actor_role in-stream than by scanning an actor index and sorting the results.
+-- 4. Write Overhead: audit_logs is an append-heavy write target. Adding unnecessary indexes
+--    slows down INSERT operations and increases WAL volume on production.

@@ -1411,6 +1411,8 @@ async function createTables(options = {}) {
       if (!orderCols.some(c => c.name === 'gst_rate')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN gst_rate REAL DEFAULT 0");
 
       if (!restoCols.some(c => c.name === 'kds_screen_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_screen_enabled INTEGER DEFAULT 1");
+      if (!restoCols.some(c => c.name === 'kds_pin_hash')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_pin_hash TEXT DEFAULT NULL");
+      if (!restoCols.some(c => c.name === 'kds_auth_version')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_auth_version INTEGER DEFAULT 1");
       if (!restoCols.some(c => c.name === 'table_verification_mode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN table_verification_mode TEXT DEFAULT 'GPS_WITH_STAFF_FALLBACK'");
       if (!restoCols.some(c => c.name === 'staff_verification_timeout_seconds')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN staff_verification_timeout_seconds INTEGER DEFAULT 120");
 

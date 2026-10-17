@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronRight, Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image, LayoutGrid, List, MoreHorizontal, ArrowUpDown, Clock, Radio, HardDrive, Settings, Users, UserCheck, Activity } from 'lucide-react';
 import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
 import { BUSINESS_TYPES, BUSINESS_TYPE_METADATA, resolveBusinessProfile, resolveServiceModelForBusinessType } from '../../utils/businessTaxonomy';
 import { calculateTenantMrr, formatTenantPlanDisplay, isLifetimeVipTenant, isVipTenant } from '../../utils/subscriptionState';
+import { formatAuditErrorMessage, computeAuditStats } from '../../utils/auditLogHelpers';
 import GrantFreeAccessModal from './modals/GrantFreeAccessModal';
 import RevokeFreeAccessModal from './modals/RevokeFreeAccessModal';
 import AddBusinessModal from './modals/AddBusinessModal';
@@ -181,12 +182,31 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [announceSubmitting, setAnnounceSubmitting] = useState(false);
   const [announcementsList, setAnnouncementsList] = useState([]);
 
-  // Audit Log Drawer State
+  // Audit Log Drawer & Activity Stream State
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [selectedAuditLog, setSelectedAuditLog] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
-  const [auditFilter, setAuditFilter] = useState('all'); // 'all', 'activations', 'suspensions', 'settings', 'security'
+  const [auditError, setAuditError] = useState(null);
+  const auditFetchInFlightRef = useRef(false);
+  const [auditPagination, setAuditPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+    currentPageCount: 0
+  });
+  const [auditStats, setAuditStats] = useState({
+    total: 0,
+    security: 0,
+    billing: 0,
+    tenant: 0,
+    vip: 0,
+    system: 0
+  });
+  const [auditFilter, setAuditFilter] = useState('all');
   const [auditSearch, setAuditSearch] = useState('');
 
   // New Restaurant Form State
@@ -290,14 +310,49 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     }
   }, [activeView]);
 
-  const loadAuditData = async () => {
+  const loadAuditData = async (force = false, params = null) => {
+    if (!token) return;
+    if (auditFetchInFlightRef.current && !force) {
+      return;
+    }
+    auditFetchInFlightRef.current = true;
     setAuditLoading(true);
+    setAuditError(null);
     try {
-      const logs = await fetchAuditLogs(token);
-      setAuditLogs(Array.isArray(logs) ? logs : []);
+      const queryParams = params || { page: 1, limit: 50, paginated: 'true' };
+      const data = await fetchAuditLogs(token, queryParams);
+      if (Array.isArray(data)) {
+        setAuditLogs(data);
+        setAuditPagination({
+          page: 1,
+          limit: data.length,
+          total: data.length,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false,
+          currentPageCount: data.length
+        });
+        setAuditStats(computeAuditStats(data));
+      } else if (data && typeof data === 'object') {
+        const logs = Array.isArray(data.logs) ? data.logs : [];
+        setAuditLogs(logs);
+        setAuditPagination(data.pagination || {
+          page: 1,
+          limit: 50,
+          total: logs.length,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false,
+          currentPageCount: logs.length
+        });
+        setAuditStats(data.stats || computeAuditStats(logs));
+      }
+      setAuditError(null);
     } catch (err) {
       console.error('Error fetching audit logs:', err);
+      setAuditError(formatAuditErrorMessage(err));
     } finally {
+      auditFetchInFlightRef.current = false;
       setAuditLoading(false);
     }
   };
@@ -2216,9 +2271,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             <AuditLogsView 
               auditLogs={auditLogs} 
               loading={auditLoading} 
-              onRefresh={loadAuditData} 
-              restaurants={restaurants} 
-              setSelectedTenant360={setSelectedTenant360} 
+              error={auditError}
+              pagination={auditPagination}
+              stats={auditStats}
+              onFetchLogs={(params, force) => loadAuditData(force, params)}
+              onRefresh={(params) => (params ? loadAuditData(true, params) : loadAuditData(true))}
+              restaurants={restaurants}
+              setSelectedTenant360={setSelectedTenant360}
             />
           )}
 

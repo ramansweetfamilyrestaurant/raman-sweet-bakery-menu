@@ -187,10 +187,24 @@ export default function TenantDetailsView({
   const filteredActivity = (activity || []).filter(act => {
     if (activityFilter === 'all') return true;
     const actUpper = (act.action || '').toUpperCase();
-    if (activityFilter === 'billing') return actUpper.includes('PAYMENT') || actUpper.includes('RENEW') || actUpper.includes('CANCEL');
-    if (activityFilter === 'security') return actUpper.includes('IMPERSONAT') || actUpper.includes('SUSPEND') || actUpper.includes('LOGIN');
-    if (activityFilter === 'vip') return actUpper.includes('VIP') || actUpper.includes('FREE');
-    if (activityFilter === 'tenant') return actUpper.includes('TENANT') || actUpper.includes('EMAIL') || actUpper.includes('UPDATE');
+    if (activityFilter === 'billing') {
+      return actUpper.includes('PAYMENT') || actUpper.includes('RENEW') || actUpper.includes('CANCEL') ||
+        actUpper.includes('REFUND') || actUpper.includes('DEBIT') || actUpper.includes('PRE_DEBIT') ||
+        actUpper.includes('BILLING') || actUpper.includes('CASHFREE') || actUpper.includes('CHECKOUT') ||
+        actUpper.includes('SUBSCRIPTION');
+    }
+    if (activityFilter === 'security') {
+      return actUpper.includes('IMPERSONAT') || actUpper.includes('SUSPEND') || actUpper.includes('LOGIN') ||
+        actUpper.includes('SECURITY') || actUpper.includes('PASSWORD') || actUpper.includes('CREDENTIAL');
+    }
+    if (activityFilter === 'vip') {
+      return actUpper.includes('VIP') || actUpper.includes('FREE') || actUpper.includes('GRANT') ||
+        actUpper.includes('ADMIN_ACCESS') || actUpper.includes('COMPLIMENTARY') || actUpper.includes('ADMIN_GRANTED');
+    }
+    if (activityFilter === 'tenant') {
+      return actUpper.includes('TENANT') || actUpper.includes('EMAIL') || actUpper.includes('UPDATE') ||
+        actUpper.includes('RESTAURANT') || actUpper.includes('ACTIVAT') || actUpper.includes('DELETE');
+    }
     return true;
   });
 

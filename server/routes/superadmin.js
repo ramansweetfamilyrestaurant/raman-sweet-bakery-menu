@@ -10,6 +10,7 @@ import { superAdminLoginRateLimiter, supportTicketReplyRateLimiter } from '../mi
 import { resolveCanonicalSubscriptionState, isAuthoritativeComplimentaryTenant, resolveAuthoritativeEntitlements, resolveTenantSubscriptions } from '../services/subscriptionState.js';
 import { resolveBusinessCategoryFromType, resolveBusinessProfile } from '../config/businessTaxonomy.js';
 import { validateReplyInput, validateStatusTransition, VALID_STATUSES, VALID_PRIORITIES, VALID_CATEGORIES, normalizeCategory } from '../services/supportTicketService.js';
+import { fetchPlatformAuditLogs } from '../services/auditLogService.js';
 
 function getAppBaseUrl(req) {
   if (process.env.APP_BASE_URL && !process.env.APP_BASE_URL.includes('onrender.com')) {
@@ -1567,26 +1568,15 @@ router.delete('/plans/:key', authenticateToken, requireSuperAdmin, async (req, r
 
 
 
-// GET Platform Audit Logs
+// GET Platform Audit Logs with Safe Server-Side Pagination & Filtering
 router.get('/audit-logs', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const logs = await query(`
-      SELECT 
-        a.id,
-        a.restaurant_id,
-        a.actor_role,
-        a.action,
-        a.details,
-        a.created_at,
-        r.name AS restaurant_name,
-        r.logo AS restaurant_logo
-      FROM audit_logs a
-      LEFT JOIN restaurants r ON r.id = a.restaurant_id
-      ORDER BY a.id DESC 
-      LIMIT 150
-    `);
-    res.json(logs || []);
+    const result = await fetchPlatformAuditLogs(query, req.query);
+    res.json(result);
   } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ error: err.message });
+    }
     console.error('Fetch audit logs error:', err);
     res.status(500).json({ error: 'Failed to fetch audit logs' });
   }

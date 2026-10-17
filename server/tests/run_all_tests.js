@@ -130,6 +130,26 @@ const suites = [
     name: 'VIP Duration & Auto-Renew Consistency',
     file: 'server/tests/vip_duration_consistency.test.js',
     requiresDb: true
+  },
+  {
+    name: 'Super Admin Audit Log Category & Actor Normalization',
+    file: 'server/tests/superadmin_audit_log_regression.test.js',
+    requiresDb: false
+  },
+  {
+    name: 'Tenant Admin Catalog Activity Logging',
+    file: 'server/tests/tenant_catalog_audit_logging.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'Tenant Admin Security, QR & Settings Activity Logging',
+    file: 'server/tests/tenant_security_settings_audit_logging.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'Audit Logs Index Migration Guard & Performance Optimization',
+    file: 'server/tests/audit_logs_index_migration_guard.test.js',
+    requiresDb: false
   }
 ];
 

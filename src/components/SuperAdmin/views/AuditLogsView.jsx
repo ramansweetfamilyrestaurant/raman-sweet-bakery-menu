@@ -1,89 +1,87 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   FileText, Shield, Key, Store, CreditCard, Sparkles, Settings, 
   Search, RefreshCw, Download, ExternalLink, ChevronDown, ChevronUp, 
-  X, Copy, Check, Clock, User, ArrowUpRight, Activity, Filter
+  X, Copy, Check, Clock, User, ArrowUpRight, Activity, Filter, AlertTriangle,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar
 } from 'lucide-react';
 import '../styles/SuperAdmin.css';
+import {
+  getCategory,
+  getActorDetails,
+  normalizeActorRole,
+  computeAuditStats,
+  resolveTenantDisplay
+} from '../../../utils/auditLogHelpers';
 
 export default function AuditLogsView({ 
   auditLogs = [], 
   loading = false, 
+  error = null,
+  pagination = null,
+  stats: serverStats = null,
+  onFetchLogs = null,
   onRefresh, 
   restaurants = [], 
   setSelectedTenant360 
 }) {
   const [activeFilter, setActiveFilter] = useState('all');
   const [actorFilter, setActorFilter] = useState('all');
+  const [restaurantFilter, setRestaurantFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
-  useEffect(() => {
-    if (onRefresh) onRefresh();
-  }, []);
-
-  // Categorize log entry
-  const getCategory = (log) => {
-    const act = (log.action || '').toUpperCase();
-    if (act.includes('SECURITY') || act.includes('LOGIN') || act.includes('LOGOUT') || act.includes('CREDENTIAL') || act.includes('PASSWORD') || act.includes('IMPERSONAT')) {
-      return { id: 'security', label: 'Security', icon: Key, color: '#9333EA', bg: '#F3E8FF', border: '#D8B4FE' };
-    }
-    if (act.includes('TENANT') || act.includes('RESTAURANT') || act.includes('ACTIVAT') || act.includes('SUSPEND') || act.includes('DELETE') || act.includes('REGISTER')) {
-      return { id: 'tenant', label: 'Shop', icon: Store, color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' };
-    }
-    if (act.includes('CASHFREE') || act.includes('PAYMENT') || act.includes('SUB_') || act.includes('SUBSCRIPTION') || act.includes('PLAN') || act.includes('CANCEL') || act.includes('RENEW')) {
-      return { id: 'billing', label: 'Billing', icon: CreditCard, color: '#16A34A', bg: '#DCFCE7', border: '#86EFAC' };
-    }
-    if (act.includes('VIP') || act.includes('COMPLIMENTARY') || act.includes('ADMIN_GRANTED')) {
-      return { id: 'vip', label: 'VIP', icon: Sparkles, color: '#D97706', bg: '#FEF3C7', border: '#FCD34D' };
-    }
-    return { id: 'system', label: 'System', icon: Settings, color: '#475569', bg: '#F1F5F9', border: '#CBD5E1' };
-  };
-
-  const getActorDetails = (role) => {
-    switch (role) {
-      case 'superadmin':
-        return { label: '👑 Super Admin', bg: '#FEF3C7', color: '#92400E' };
-      case 'restaurant_admin':
-      case 'admin':
-        return { label: '🏢 Resto Owner', bg: '#EFF6FF', color: '#1E40AF' };
-      case 'payment_gateway':
-        return { label: '💳 Cashfree Gateway', bg: '#DCFCE7', color: '#166534' };
-      case 'system':
-        return { label: '⚙️ System Worker', bg: '#F1F5F9', color: '#334155' };
-      default:
-        return { label: role ? `👤 ${role}` : '⚙️ System', bg: '#F1F5F9', color: '#334155' };
-    }
-  };
-
-  // Metrics counts
+  // Metrics counts: uses platform-wide serverStats if provided, or computes on current stream
   const stats = useMemo(() => {
-    let security = 0;
-    let billing = 0;
-    let tenant = 0;
-    let system = 0;
+    if (serverStats && typeof serverStats === 'object' && serverStats.total !== undefined) {
+      return serverStats;
+    }
+    return computeAuditStats(auditLogs);
+  }, [serverStats, auditLogs]);
 
-    (auditLogs || []).forEach(log => {
-      const cat = getCategory(log).id;
-      if (cat === 'security') security++;
-      else if (cat === 'billing') billing++;
-      else if (cat === 'tenant') tenant++;
-      else system++;
-    });
-
+  // Unified pagination state
+  const effectivePagination = useMemo(() => {
+    if (pagination && typeof pagination === 'object') {
+      const tot = pagination.total !== undefined ? pagination.total : (auditLogs ? auditLogs.length : 0);
+      const lim = pagination.limit || pageSize;
+      const curPage = pagination.page || page;
+      const totPages = pagination.totalPages || Math.max(1, Math.ceil(tot / lim));
+      return {
+        page: curPage,
+        limit: lim,
+        total: tot,
+        totalPages: totPages,
+        hasNextPage: pagination.hasNextPage !== undefined ? Boolean(pagination.hasNextPage) : curPage < totPages,
+        hasPrevPage: pagination.hasPrevPage !== undefined ? Boolean(pagination.hasPrevPage) : curPage > 1,
+        currentPageCount: pagination.currentPageCount !== undefined ? pagination.currentPageCount : (auditLogs ? auditLogs.length : 0)
+      };
+    }
+    const total = auditLogs ? auditLogs.length : 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
     return {
-      total: auditLogs.length,
-      security,
-      billing,
-      tenant,
-      system
+      page,
+      limit: pageSize,
+      total,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+      currentPageCount: total
     };
-  }, [auditLogs]);
+  }, [pagination, page, pageSize, auditLogs]);
 
   // Filtered Logs
+  // When server-side onFetchLogs is available, server delivers pre-filtered records.
+  // When running locally without onFetchLogs (fallback), performs full in-memory filter.
   const filteredLogs = useMemo(() => {
+    if (onFetchLogs) {
+      return auditLogs || [];
+    }
     return (auditLogs || [])
       .filter(log => {
         if (activeFilter === 'all') return true;
@@ -91,33 +89,239 @@ export default function AuditLogsView({
       })
       .filter(log => {
         if (actorFilter === 'all') return true;
-        return (log.actor_role || '').toLowerCase() === actorFilter.toLowerCase();
+        const logRole = normalizeActorRole(log.actor_role || log.role);
+        const filterRole = normalizeActorRole(actorFilter);
+        return logRole === filterRole;
+      })
+      .filter(log => {
+        if (restaurantFilter === 'all') return true;
+        if (restaurantFilter === 'platform') return !log.restaurant_id;
+        return String(log.restaurant_id) === String(restaurantFilter);
+      })
+      .filter(log => {
+        if (!startDate) return true;
+        const logTime = new Date(log.created_at || Date.now()).getTime();
+        const start = new Date(startDate).getTime();
+        return logTime >= start;
+      })
+      .filter(log => {
+        if (!endDate) return true;
+        const logTime = new Date(log.created_at || Date.now()).getTime();
+        const end = new Date(`${endDate}T23:59:59.999Z`).getTime();
+        return logTime <= end;
       })
       .filter(log => {
         if (!searchQuery.trim()) return true;
         const q = searchQuery.toLowerCase();
-        const targetResto = log.restaurant_id ? restaurants.find(r => r.id === log.restaurant_id) : null;
+        const tenantInfo = resolveTenantDisplay(log, restaurants);
+        const tenantName = (tenantInfo.name || '').toLowerCase();
+        const tenantSlug = (tenantInfo.loadedTenant?.slug || '').toLowerCase();
         return (log.action || '').toLowerCase().includes(q) ||
           (log.details || '').toLowerCase().includes(q) ||
           (log.actor_role || '').toLowerCase().includes(q) ||
           String(log.restaurant_id || '').includes(q) ||
-          (targetResto && (targetResto.name.toLowerCase().includes(q) || targetResto.slug.toLowerCase().includes(q)));
+          tenantName.includes(q) ||
+          tenantSlug.includes(q);
       });
-  }, [auditLogs, activeFilter, actorFilter, searchQuery, restaurants]);
+  }, [auditLogs, onFetchLogs, activeFilter, actorFilter, restaurantFilter, startDate, endDate, searchQuery, restaurants]);
+
+  // Debounced search query trigger (waits 300ms before server dispatch, skips initial mount)
+  const isSearchMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isSearchMountedRef.current) {
+      isSearchMountedRef.current = true;
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (onFetchLogs) {
+        setPage(1);
+        onFetchLogs({
+          page: 1,
+          limit: pageSize,
+          category: activeFilter,
+          actor: actorFilter,
+          restaurant_id: restaurantFilter,
+          start_date: startDate || null,
+          end_date: endDate || null,
+          search: searchQuery
+        });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Filter Change Handlers (Server-side & Pagination-reset coordinated)
+  const handleCategoryChange = (newCat) => {
+    setActiveFilter(newCat);
+    setPage(1);
+    if (onFetchLogs) {
+      onFetchLogs({
+        page: 1,
+        limit: pageSize,
+        category: newCat,
+        actor: actorFilter,
+        restaurant_id: restaurantFilter,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        search: searchQuery
+      });
+    }
+  };
+
+  const handleActorChange = (e) => {
+    const newActor = e.target.value;
+    setActorFilter(newActor);
+    setPage(1);
+    if (onFetchLogs) {
+      onFetchLogs({
+        page: 1,
+        limit: pageSize,
+        category: activeFilter,
+        actor: newActor,
+        restaurant_id: restaurantFilter,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        search: searchQuery
+      });
+    }
+  };
+
+  const handleRestaurantChange = (e) => {
+    const newResto = e.target.value;
+    setRestaurantFilter(newResto);
+    setPage(1);
+    if (onFetchLogs) {
+      onFetchLogs({
+        page: 1,
+        limit: pageSize,
+        category: activeFilter,
+        actor: actorFilter,
+        restaurant_id: newResto,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        search: searchQuery
+      });
+    }
+  };
+
+  const handleDateChange = (start, end) => {
+    setStartDate(start);
+    setEndDate(end);
+    setPage(1);
+    if (onFetchLogs) {
+      onFetchLogs({
+        page: 1,
+        limit: pageSize,
+        category: activeFilter,
+        actor: actorFilter,
+        restaurant_id: restaurantFilter,
+        start_date: start || null,
+        end_date: end || null,
+        search: searchQuery
+      });
+    }
+  };
+
+  const handlePageSizeChange = (e) => {
+    const newSize = Number(e.target.value) || 50;
+    setPageSize(newSize);
+    setPage(1);
+    if (onFetchLogs) {
+      onFetchLogs({
+        page: 1,
+        limit: newSize,
+        category: activeFilter,
+        actor: actorFilter,
+        restaurant_id: restaurantFilter,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        search: searchQuery
+      });
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > effectivePagination.totalPages || newPage === effectivePagination.page) return;
+    setPage(newPage);
+    if (onFetchLogs) {
+      onFetchLogs({
+        page: newPage,
+        limit: pageSize,
+        category: activeFilter,
+        actor: actorFilter,
+        restaurant_id: restaurantFilter,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        search: searchQuery
+      });
+    }
+  };
+
+  const handleRefreshClick = () => {
+    if (onRefresh) {
+      onRefresh({
+        page: effectivePagination.page,
+        limit: pageSize,
+        category: activeFilter,
+        actor: actorFilter,
+        restaurant_id: restaurantFilter,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        search: searchQuery
+      });
+    }
+  };
+
+  const handleClearFilters = () => {
+    setActiveFilter('all');
+    setActorFilter('all');
+    setRestaurantFilter('all');
+    setStartDate('');
+    setEndDate('');
+    setSearchQuery('');
+    setPage(1);
+    if (onFetchLogs) {
+      onFetchLogs({
+        page: 1,
+        limit: pageSize,
+        category: 'all',
+        actor: 'all',
+        restaurant_id: 'all',
+        start_date: null,
+        end_date: null,
+        search: ''
+      });
+    }
+  };
+
+  const hasActiveFilters = activeFilter !== 'all' ||
+    actorFilter !== 'all' ||
+    restaurantFilter !== 'all' ||
+    Boolean(startDate) ||
+    Boolean(endDate) ||
+    Boolean(searchQuery.trim());
+
+  // Current page boundary indices
+  const startIdx = effectivePagination.total === 0 ? 0 : (effectivePagination.page - 1) * effectivePagination.limit + 1;
+  const endIdx = effectivePagination.total === 0 ? 0 : Math.min(startIdx + (effectivePagination.currentPageCount || filteredLogs.length) - 1, effectivePagination.total);
 
   // Export audit logs as CSV
   const handleExportCSV = () => {
     if (filteredLogs.length === 0) return;
-    const headers = ['ID', 'Timestamp', 'Actor Role', 'Category', 'Action', 'Restaurant ID', 'Details'];
-    const rows = filteredLogs.map(log => [
-      log.id,
-      `"${new Date(log.created_at || Date.now()).toISOString()}"`,
-      `"${log.actor_role || 'system'}"`,
-      `"${getCategory(log).label}"`,
-      `"${(log.action || '').replace(/"/g, '""')}"`,
-      log.restaurant_id || 'System',
-      `"${(log.details || '').replace(/"/g, '""')}"`
-    ]);
+    const headers = ['ID', 'Timestamp', 'Actor Role', 'Category', 'Action', 'Restaurant ID', 'Restaurant Name', 'Details'];
+    const rows = filteredLogs.map(log => {
+      const tenantInfo = resolveTenantDisplay(log, restaurants);
+      return [
+        log.id,
+        `"${new Date(log.created_at || Date.now()).toISOString()}"`,
+        `"${log.actor_role || 'system'}"`,
+        `"${getCategory(log).label}"`,
+        `"${(log.action || '').replace(/"/g, '""')}"`,
+        log.restaurant_id || 'System',
+        `"${(tenantInfo.name || '').replace(/"/g, '""')}"`,
+        `"${(log.details || '').replace(/"/g, '""')}"`
+      ];
+    });
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
@@ -133,6 +337,85 @@ export default function AuditLogsView({
     navigator.clipboard.writeText(JSON.stringify(log, null, 2));
     setCopiedId(log.id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  // Reusable Pagination Bar
+  const renderPaginationBar = () => {
+    return (
+      <div className="sa-audit-pagination-bar">
+        <div className="sa-audit-pagination-info">
+          <span>
+            Showing <strong>{startIdx} – {endIdx}</strong> of <strong>{effectivePagination.total}</strong> records
+          </span>
+          <span className="sa-audit-pagination-badge">
+            Page {effectivePagination.page} of {effectivePagination.totalPages}
+          </span>
+          <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+            • {effectivePagination.currentPageCount || filteredLogs.length} on this page
+          </span>
+        </div>
+
+        <div className="sa-audit-pagination-controls">
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
+            Rows:
+            <select
+              value={effectivePagination.limit}
+              onChange={handlePageSizeChange}
+              className="sa-audit-page-select"
+              disabled={loading}
+            >
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
+
+          <button
+            type="button"
+            onClick={() => handlePageChange(1)}
+            disabled={loading || effectivePagination.page <= 1}
+            className="sa-audit-page-btn"
+            title="First Page"
+          >
+            <ChevronsLeft size={14} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handlePageChange(effectivePagination.page - 1)}
+            disabled={loading || !effectivePagination.hasPrevPage}
+            className="sa-audit-page-btn"
+            title="Previous Page"
+          >
+            <ChevronLeft size={14} /> Prev
+          </button>
+
+          <span style={{ fontSize: '0.74rem', fontWeight: 800, padding: '0 4px', color: 'var(--sa-text-main)', fontVariantNumeric: 'tabular-nums' }}>
+            {effectivePagination.page} / {effectivePagination.totalPages}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => handlePageChange(effectivePagination.page + 1)}
+            disabled={loading || !effectivePagination.hasNextPage}
+            className="sa-audit-page-btn"
+            title="Next Page"
+          >
+            Next <ChevronRight size={14} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handlePageChange(effectivePagination.totalPages)}
+            disabled={loading || effectivePagination.page >= effectivePagination.totalPages}
+            className="sa-audit-page-btn"
+            title="Last Page"
+          >
+            <ChevronsRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -160,9 +443,9 @@ export default function AuditLogsView({
                 </h2>
                 <span style={{
                   padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 900,
-                  background: '#10B981', color: '#FFFFFF', display: 'inline-flex', alignItems: 'center', gap: '4px'
+                  background: error ? '#EF4444' : '#10B981', color: '#FFFFFF', display: 'inline-flex', alignItems: 'center', gap: '4px'
                 }}>
-                  ● LIVE STREAM
+                  {error ? '● SYNC FAILED' : '● LIVE STREAM'}
                 </span>
               </div>
               <p style={{ margin: '3px 0 0 0', fontSize: '0.74rem', color: '#A7F3D0', fontWeight: 600, lineHeight: 1.3 }}>
@@ -177,9 +460,11 @@ export default function AuditLogsView({
               type="button"
               onClick={handleExportCSV}
               className="sa-btn"
+              disabled={filteredLogs.length === 0}
               style={{
                 background: 'rgba(255,255,255,0.1)', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.2)',
-                fontSize: '0.74rem', fontWeight: 800, padding: '7px 12px', borderRadius: '10px', whiteSpace: 'nowrap'
+                fontSize: '0.74rem', fontWeight: 800, padding: '7px 12px', borderRadius: '10px', whiteSpace: 'nowrap',
+                opacity: filteredLogs.length === 0 ? 0.5 : 1, cursor: filteredLogs.length === 0 ? 'not-allowed' : 'pointer'
               }}
             >
               <Download size={13} /> Export CSV
@@ -187,44 +472,54 @@ export default function AuditLogsView({
 
             <button
               type="button"
-              onClick={onRefresh}
+              onClick={handleRefreshClick}
+              disabled={loading}
               className="sa-btn"
               style={{
                 background: 'linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%)',
                 color: '#0A2315', border: 'none',
                 fontSize: '0.74rem', fontWeight: 900, padding: '7px 12px', borderRadius: '10px',
-                boxShadow: '0 4px 12px rgba(212, 175, 55, 0.35)', whiteSpace: 'nowrap'
+                boxShadow: '0 4px 12px rgba(212, 175, 55, 0.35)', whiteSpace: 'nowrap',
+                opacity: loading ? 0.8 : 1, cursor: loading ? 'not-allowed' : 'pointer'
               }}
             >
-              <RefreshCw size={13} className={loading ? 'spin' : ''} color="#0A2315" /> Refresh Trail
+              <RefreshCw size={13} className={loading ? 'spin' : ''} color="#0A2315" />
+              {loading ? 'Refreshing...' : 'Refresh Trail'}
             </button>
           </div>
         </div>
 
-        {/* 4 High-Impact Live Metric Cards */}
+        {/* 5 High-Impact Live Metric Cards (Platform Totals) */}
         <div className="sa-audit-hero-metrics">
-          <div className="sa-audit-metric-tile">
-            <div style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>LATEST LOGS</div>
+          <div className="sa-audit-metric-tile" title="Total platform events recorded">
+            <div style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>PLATFORM TOTAL</div>
             <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#34D399', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
-              📜 {stats.total} Logs
+              📜 {stats.total} Events
             </div>
           </div>
 
-          <div className="sa-audit-metric-tile">
+          <div className="sa-audit-metric-tile" title="Total security and authentication events">
             <div style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>SECURITY & ACCESS</div>
             <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#C084FC', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
               🔑 {stats.security} Events
             </div>
           </div>
 
-          <div className="sa-audit-metric-tile">
+          <div className="sa-audit-metric-tile" title="Total VIP, lifetime access, and administrative grants">
+            <div style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>VIP & GRANTS</div>
+            <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#FCD34D', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
+              ✨ {stats.vip} Events
+            </div>
+          </div>
+
+          <div className="sa-audit-metric-tile" title="Total Cashfree webhooks, payments, and plan changes">
             <div style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>BILLING & CASHFREE</div>
             <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#6EE7B7', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
               💳 {stats.billing} Events
             </div>
           </div>
 
-          <div className="sa-audit-metric-tile">
+          <div className="sa-audit-metric-tile" title="Total shop registrations, updates, and lifecycle operations">
             <div style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>SHOP LIFECYCLE</div>
             <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#93C5FD', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
               🏪 {stats.tenant} Events
@@ -233,7 +528,70 @@ export default function AuditLogsView({
         </div>
       </div>
 
-      {/* 🧭 2. FILTER PILLS STRIP, SEARCH & ACTOR SELECTOR */}
+      {/* ⚠️ TOP ERROR ALERT BANNER */}
+      {error && (
+        <div
+          className="sa-audit-error-banner"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            padding: '14px 18px',
+            borderRadius: '14px',
+            background: '#FEF2F2',
+            border: '1.5px solid #FCA5A5',
+            color: '#991B1B',
+            boxShadow: '0 2px 6px rgba(220, 38, 38, 0.08)',
+            flexWrap: 'wrap'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: '1 1 260px' }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '10px',
+              background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <AlertTriangle size={20} color="#DC2626" />
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.86rem', display: 'block', color: '#991B1B', fontWeight: 900 }}>
+                Audit Log Trail Sync Failed
+              </strong>
+              <p style={{ margin: '2px 0 0 0', fontSize: '0.76rem', color: '#B91C1C', lineHeight: 1.35 }}>
+                {error}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleRefreshClick}
+            disabled={loading}
+            className="sa-btn"
+            style={{
+              background: '#DC2626',
+              color: '#FFFFFF',
+              border: 'none',
+              fontWeight: 800,
+              fontSize: '0.76rem',
+              padding: '8px 16px',
+              borderRadius: '10px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              boxShadow: '0 2px 8px rgba(220, 38, 38, 0.25)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <RefreshCw size={13} className={loading ? 'spin' : ''} color="#FFFFFF" />
+            {loading ? 'Retrying...' : 'Retry Connection'}
+          </button>
+        </div>
+      )}
+
+      {/* 🧭 2. FILTER PILLS STRIP, SEARCH, TENANT, DATE & ACTOR CONTROLS */}
       <div className="sa-audit-controls-strip">
         
         {/* Category Filter Pills Strip with Touch Overflow */}
@@ -244,7 +602,7 @@ export default function AuditLogsView({
               { id: 'security', label: `Security (${stats.security})`, icon: Key },
               { id: 'tenant', label: `Shop (${stats.tenant})`, icon: Store },
               { id: 'billing', label: `Billing (${stats.billing})`, icon: CreditCard },
-              { id: 'vip', label: 'VIP & Grants', icon: Sparkles },
+              { id: 'vip', label: `VIP & Grants (${stats.vip})`, icon: Sparkles },
               { id: 'system', label: `System (${stats.system})`, icon: Settings },
             ].map(pill => {
               const Icon = pill.icon;
@@ -253,7 +611,7 @@ export default function AuditLogsView({
                 <button
                   key={pill.id}
                   type="button"
-                  onClick={() => setActiveFilter(pill.id)}
+                  onClick={() => handleCategoryChange(pill.id)}
                   className="sa-filter-pill-btn"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -273,25 +631,61 @@ export default function AuditLogsView({
           <div className="sa-filter-strip-fade" />
         </div>
 
-        {/* Search & Actor Filters (Responsive Desktop row / Mobile stack) */}
+        {/* Server-Side Filter Controls (Responsive Desktop row / Mobile stack) */}
         <div className="sa-audit-filter-controls-right" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Tenant / Shop Selector */}
+          <select
+            value={restaurantFilter}
+            onChange={handleRestaurantChange}
+            className="sa-audit-actor-select"
+            style={{ maxWidth: '170px' }}
+            title="Filter by Shop / Tenant"
+          >
+            <option value="all">🏢 All Shops & System</option>
+            <option value="platform">🌐 Platform Level (No Shop)</option>
+            {restaurants && restaurants.map(r => (
+              <option key={r.id} value={r.id}>
+                🏢 {r.name} (#{r.id})
+              </option>
+            ))}
+          </select>
+
+          {/* Date Range Inputs */}
+          <div className="sa-audit-date-inputs" title="Filter by Created Date Range">
+            <Calendar size={13} color="#64748B" style={{ flexShrink: 0 }} />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => handleDateChange(e.target.value, endDate)}
+              placeholder="From Date"
+              title="Start Date"
+            />
+            <span>–</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => handleDateChange(startDate, e.target.value)}
+              placeholder="To Date"
+              title="End Date"
+            />
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                onClick={() => handleDateChange('', '')}
+                className="sa-audit-date-clear-btn"
+                title="Clear date filter"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           {/* Actor Role Filter */}
           <select
             value={actorFilter}
-            onChange={(e) => setActorFilter(e.target.value)}
+            onChange={handleActorChange}
             className="sa-audit-actor-select"
-            style={{
-              height: '42px',
-              padding: '0 14px',
-              borderRadius: '12px',
-              border: '1.5px solid #E2E8F0',
-              fontSize: '0.80rem',
-              fontWeight: 700,
-              color: '#0F172A',
-              background: '#FFFFFF',
-              outline: 'none',
-              boxSizing: 'border-box'
-            }}
+            title="Filter by Actor Role"
           >
             <option value="all">👥 All Actors</option>
             <option value="superadmin">👑 Super Admin</option>
@@ -301,7 +695,7 @@ export default function AuditLogsView({
           </select>
 
           {/* Full Text Search Input with Safe Padding & Alignment */}
-          <div className="sa-audit-search-wrap" style={{ position: 'relative', width: '100%', minWidth: '240px', boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}>
+          <div className="sa-audit-search-wrap" style={{ position: 'relative', width: '100%', minWidth: '220px', boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}>
             <Search
               className="sa-audit-search-icon"
               size={16}
@@ -320,7 +714,7 @@ export default function AuditLogsView({
             <input
               type="text"
               className="sa-audit-search-input"
-              placeholder="Search action, details, actor..."
+              placeholder="Search action, details, actor, tenant..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -346,24 +740,6 @@ export default function AuditLogsView({
                 onClick={() => setSearchQuery('')}
                 className="sa-audit-search-clear-btn"
                 aria-label="Clear search"
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: '#F1F5F9',
-                  border: 'none',
-                  color: '#64748B',
-                  cursor: 'pointer',
-                  fontSize: '0.70rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 3
-                }}
               >
                 ✕
               </button>
@@ -374,13 +750,34 @@ export default function AuditLogsView({
 
       {/* 📋 3A. DESKTOP AUDIT LOG STREAM TABLE (>= 768px) */}
       <div className="sa-audit-desktop-table" style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--sa-border)', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+        {/* Stream Table Top Summary Bar */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '10px 16px', background: '#F8FAFC', borderBottom: '1px solid var(--sa-border)',
+          fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 700
+        }}>
+          <div>
+            Showing <strong>{startIdx} – {endIdx}</strong> of <strong>{effectivePagination.total}</strong> records
+            {hasActiveFilters && (
+              <span style={{ marginLeft: '8px', color: '#D97706', fontWeight: 800 }}>
+                • (Filtered View)
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.72rem', background: '#E2E8F0', padding: '2px 8px', borderRadius: '6px', fontWeight: 800, color: '#334155' }}>
+              {effectivePagination.currentPageCount || filteredLogs.length} on current page
+            </span>
+          </div>
+        </div>
+
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
             <thead>
               <tr style={{ background: '#F8FAFC', borderBottom: '1px solid var(--sa-border)' }}>
                 <th style={{ padding: '12px 16px', fontWeight: 800, color: 'var(--sa-text-muted)', width: '140px' }}>TIMESTAMP</th>
                 <th style={{ padding: '12px 16px', fontWeight: 800, color: 'var(--sa-text-muted)', width: '150px' }}>ACTOR / ROLE</th>
-                <th style={{ padding: '12px 16px', fontWeight: 800, color: 'var(--sa-text-muted)', width: '110px' }}>CATEGORY</th>
+                <th style={{ padding: '12px 16px', fontWeight: 800, color: 'var(--sa-text-muted)', width: '130px' }}>CATEGORY</th>
                 <th style={{ padding: '12px 16px', fontWeight: 800, color: 'var(--sa-text-muted)' }}>EVENT / ACTION</th>
                 <th style={{ padding: '12px 16px', fontWeight: 800, color: 'var(--sa-text-muted)' }}>DETAILS</th>
                 <th style={{ padding: '12px 16px', fontWeight: 800, color: 'var(--sa-text-muted)', textAlign: 'right', width: '90px' }}>ACTION</th>
@@ -389,21 +786,68 @@ export default function AuditLogsView({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--sa-text-muted)' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '44px 20px', color: 'var(--sa-text-muted)' }}>
                     ⏳ Loading live append-only audit log stream...
+                  </td>
+                </tr>
+              ) : error && filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '48px 24px', background: '#FFF5F5' }}>
+                    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <AlertTriangle size={36} color="#DC2626" />
+                      <strong style={{ color: '#991B1B', fontSize: '0.94rem' }}>
+                        Unable to Load Audit Log Stream
+                      </strong>
+                      <p style={{ margin: 0, color: '#B91C1C', fontSize: '0.80rem', maxWidth: '440px', lineHeight: 1.4 }}>
+                        {error}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRefreshClick}
+                        className="sa-btn"
+                        style={{
+                          background: '#DC2626', color: '#FFFFFF', border: 'none',
+                          fontWeight: 800, fontSize: '0.78rem', padding: '8px 18px', borderRadius: '10px',
+                          display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginTop: '6px'
+                        }}
+                      >
+                        <RefreshCw size={13} /> Retry Connection
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--sa-text-muted)' }}>
-                    📜 No audit log entries matched your filter.
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '44px 20px', color: 'var(--sa-text-muted)' }}>
+                    {!hasActiveFilters && effectivePagination.total === 0 ? (
+                      <div>
+                        <span style={{ fontSize: '1.2rem', display: 'block', marginBottom: '6px' }}>📜</span>
+                        <strong>No platform audit log records found.</strong>
+                        <p style={{ margin: '4px 0 0', fontSize: '0.74rem' }}>All master operations and system transactions will appear here.</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <span style={{ fontSize: '1.2rem', display: 'block', marginBottom: '6px' }}>🔍</span>
+                        <strong>No audit log entries matched your filter.</strong>
+                        <div style={{ marginTop: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={handleClearFilters}
+                            className="sa-btn sa-btn-secondary sa-btn-sm"
+                            style={{ fontSize: '0.72rem', padding: '4px 10px', fontWeight: 800 }}
+                          >
+                            Reset All Filters
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
                 filteredLogs.map(log => {
                   const cat = getCategory(log);
                   const actor = getActorDetails(log.actor_role || log.role);
-                  const targetTenant = log.restaurant_id ? restaurants.find(r => r.id === log.restaurant_id) : null;
+                  const tenantInfo = resolveTenantDisplay(log, restaurants);
 
                   return (
                     <tr key={log.id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background 0.15s ease' }}>
@@ -438,19 +882,28 @@ export default function AuditLogsView({
                         </span>
                       </td>
 
-                      {/* Event / Action */}
+                      {/* Event / Action & Restaurant Tenant */}
                       <td style={{ padding: '12px 16px' }}>
                         <strong style={{ fontSize: '0.82rem', color: 'var(--sa-text-main)', display: 'block' }}>
                           {log.action}
                         </strong>
-                        {targetTenant && setSelectedTenant360 && (
-                          <span
-                            onClick={() => setSelectedTenant360(targetTenant)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#B48F27', fontWeight: 800, cursor: 'pointer', marginTop: '2px' }}
-                            title="Open Shop 360° Profile"
-                          >
-                            🏢 {targetTenant.name} <ArrowUpRight size={10} />
-                          </span>
+                        {tenantInfo.name && (
+                          tenantInfo.hasLink ? (
+                            <span
+                              onClick={() => setSelectedTenant360 && setSelectedTenant360(tenantInfo.loadedTenant)}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#B48F27', fontWeight: 800, cursor: 'pointer', marginTop: '2px' }}
+                              title="Open Shop 360° Profile"
+                            >
+                              🏢 {tenantInfo.name} <ArrowUpRight size={10} />
+                            </span>
+                          ) : (
+                            <span
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#64748B', fontWeight: 700, marginTop: '2px' }}
+                              title={log.restaurant_id ? `Shop #${log.restaurant_id}` : ''}
+                            >
+                              🏢 {tenantInfo.name}
+                            </span>
+                          )
                         )}
                       </td>
 
@@ -478,23 +931,83 @@ export default function AuditLogsView({
             </tbody>
           </table>
         </div>
+
+        {/* Desktop Pagination Footer */}
+        {renderPaginationBar()}
       </div>
 
       {/* 📋 3B. MOBILE AUDIT LOG CARDS (<= 767px) */}
       <div className="sa-audit-mobile-cards">
+        {/* Stream Mobile Top Summary Bar */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '8px 12px', background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--sa-border)',
+          fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 700
+        }}>
+          <div>
+            Showing <strong>{startIdx} – {endIdx}</strong> of <strong>{effectivePagination.total}</strong>
+          </div>
+          <span style={{ fontSize: '0.70rem', background: '#E2E8F0', padding: '2px 7px', borderRadius: '6px', fontWeight: 800, color: '#334155' }}>
+            Page {effectivePagination.page} / {effectivePagination.totalPages}
+          </span>
+        </div>
+
         {loading ? (
           <div style={{ textAlign: 'center', padding: '30px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid var(--sa-border)', color: 'var(--sa-text-muted)', fontSize: '0.80rem' }}>
             ⏳ Loading live append-only audit log stream...
           </div>
+        ) : error && filteredLogs.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '36px 16px', background: '#FFF5F5', borderRadius: '14px', border: '1.5px solid #FCA5A5' }}>
+            <AlertTriangle size={32} color="#DC2626" style={{ margin: '0 auto 8px', display: 'block' }} />
+            <strong style={{ display: 'block', color: '#991B1B', fontSize: '0.90rem' }}>
+              Unable to Load Audit Logs
+            </strong>
+            <p style={{ margin: '6px 0 14px', color: '#B91C1C', fontSize: '0.78rem', lineHeight: 1.4 }}>
+              {error}
+            </p>
+            <button
+              type="button"
+              onClick={handleRefreshClick}
+              className="sa-btn"
+              style={{
+                background: '#DC2626', color: '#FFFFFF', border: 'none',
+                fontWeight: 800, fontSize: '0.80rem', padding: '9px 20px', borderRadius: '10px',
+                display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
+              }}
+            >
+              <RefreshCw size={14} /> Retry Connection
+            </button>
+          </div>
         ) : filteredLogs.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '30px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid var(--sa-border)', color: 'var(--sa-text-muted)', fontSize: '0.80rem' }}>
-            📜 No audit log entries matched your filter.
+            {!hasActiveFilters && effectivePagination.total === 0 ? (
+              <div>
+                <span style={{ fontSize: '1.2rem', display: 'block', marginBottom: '6px' }}>📜</span>
+                <strong>No platform audit log records found.</strong>
+                <p style={{ margin: '4px 0 0', fontSize: '0.74rem' }}>All master operations will appear here.</p>
+              </div>
+            ) : (
+              <div>
+                <span style={{ fontSize: '1.2rem', display: 'block', marginBottom: '6px' }}>🔍</span>
+                <strong>No audit log entries matched your filter.</strong>
+                <div style={{ marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="sa-btn sa-btn-secondary sa-btn-sm"
+                    style={{ fontSize: '0.72rem', padding: '4px 10px', fontWeight: 800 }}
+                  >
+                    Reset All Filters
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           filteredLogs.map(log => {
             const cat = getCategory(log);
             const actor = getActorDetails(log.actor_role || log.role);
-            const targetTenant = log.restaurant_id ? restaurants.find(r => r.id === log.restaurant_id) : null;
+            const tenantInfo = resolveTenantDisplay(log, restaurants);
 
             return (
               <div className="sa-audit-mobile-card" key={log.id}>
@@ -541,14 +1054,23 @@ export default function AuditLogsView({
                 {/* Action / Event */}
                 <div className="sa-audit-mobile-action">
                   <strong>{log.action}</strong>
-                  {targetTenant && setSelectedTenant360 && (
-                    <span
-                      onClick={() => setSelectedTenant360(targetTenant)}
-                      className="sa-audit-tenant-link"
-                      title="Open Shop 360° Profile"
-                    >
-                      🏢 {targetTenant.name} <ArrowUpRight size={10} />
-                    </span>
+                  {tenantInfo.name && (
+                    tenantInfo.hasLink ? (
+                      <span
+                        onClick={() => setSelectedTenant360 && setSelectedTenant360(tenantInfo.loadedTenant)}
+                        className="sa-audit-tenant-link"
+                        title="Open Shop 360° Profile"
+                      >
+                        🏢 {tenantInfo.name} <ArrowUpRight size={10} />
+                      </span>
+                    ) : (
+                      <span
+                        className="sa-audit-tenant-link"
+                        style={{ cursor: 'default', color: '#64748B' }}
+                      >
+                        🏢 {tenantInfo.name}
+                      </span>
+                    )
                   )}
                 </div>
 
@@ -560,6 +1082,9 @@ export default function AuditLogsView({
             );
           })
         )}
+
+        {/* Mobile Pagination Footer */}
+        {renderPaginationBar()}
       </div>
 
       {/* 🔍 4. EVENT DETAIL DEEP INSPECTOR MODAL */}
@@ -621,7 +1146,15 @@ export default function AuditLogsView({
                 <div>
                   <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>RESTAURANT / TENANT</span>
                   <strong style={{ color: '#0F766E', marginTop: '2px', display: 'block' }}>
-                    {selectedEvent.restaurant_id ? `Shop ID #${selectedEvent.restaurant_id}` : 'Platform Level / System'}
+                    {(() => {
+                      const modalTenant = resolveTenantDisplay(selectedEvent, restaurants);
+                      if (modalTenant.name) {
+                        return selectedEvent.restaurant_id
+                          ? `${modalTenant.name} (Shop #${selectedEvent.restaurant_id})`
+                          : modalTenant.name;
+                      }
+                      return selectedEvent.restaurant_id ? `Shop ID #${selectedEvent.restaurant_id}` : 'Platform Level / System';
+                    })()}
                   </strong>
                 </div>
 

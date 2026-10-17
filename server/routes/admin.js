@@ -240,6 +240,12 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
     }
 
     if (!admins || admins.length === 0) {
+      await logAudit(
+        null,
+        'system',
+        'SECURITY_LOGIN_FAILED',
+        'Failed tenant login attempt (account not found)'
+      );
       return res.status(401).json({ error: 'Invalid credentials. Username or restaurant not found.' });
     }
 
@@ -253,6 +259,13 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
     }
 
     if (!matchedAdmin) {
+      const candidateRestoId = admins[0]?.restaurant_id || null;
+      await logAudit(
+        candidateRestoId,
+        'system',
+        'SECURITY_LOGIN_FAILED',
+        'Failed tenant login attempt (incorrect password)'
+      );
       return res.status(401).json({ error: 'Invalid password. Please check your credentials.' });
     }
 
@@ -262,6 +275,12 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
 
     const isActive = resto?.active === 1 || resto?.active === true || resto?.active === '1' || resto?.active === undefined || resto?.active === null;
     if (!isActive || resto?.active === false || resto?.active === 0 || resto?.active === 'false') {
+      await logAudit(
+        resto?.id || admin.restaurant_id,
+        admin.role || 'restaurant_admin',
+        'SECURITY_LOGIN_FAILED',
+        `Blocked login attempt for suspended restaurant '${resto?.name || admin.restaurant_id}'`
+      );
       return res.status(403).json({ error: `Restaurant '${resto?.name || 'Account'}' has been suspended by Super Admin. Access disabled.` });
     }
 
@@ -273,6 +292,14 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
       { expiresIn: '30d' }
     );
     const { qr_secret, ...safeLoginResto } = (resto || {});
+
+    await logAudit(
+      admin.restaurant_id,
+      admin.role || 'restaurant_admin',
+      'SECURITY_LOGIN_SUCCESS',
+      `Tenant user '${admin.username}' logged in successfully`
+    );
+
     res.json({
       token,
       username: admin.username,
@@ -980,7 +1007,15 @@ router.post('/categories', authenticateToken, requireActiveSubscription, async (
       }
     } catch (_) {}
 
-    res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
+    const newId = result[0]?.id || result.lastInsertRowid;
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_CATEGORY_CREATED',
+      `Created category '${name}' (ID: ${newId})`
+    );
+
+    res.json({ success: true, id: newId });
   } catch (err) {
     console.error('Create category error:', err);
     res.status(500).json({ error: 'Failed to create category' });
@@ -996,12 +1031,18 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
     const { id } = req.params;
     const { name, name_hi, image, sort_order } = req.body;
 
+    // Fetch old category to verify tenant isolation and get previous name/image
+    const oldCatRows = await query('SELECT id, name, image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+    if (!oldCatRows || oldCatRows.length === 0) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    const oldCategory = oldCatRows[0];
+
     const processedImage = await processExternalImageUrl(image, targetId, 'categories');
 
-    // Fetch old category image to clean up if replaced or removed
+    // Clean up replaced or removed category image
     try {
-      const oldCatRows = await query('SELECT image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
-      const oldImage = oldCatRows && oldCatRows.length > 0 ? oldCatRows[0].image : null;
+      const oldImage = oldCategory.image;
       if (oldImage && oldImage !== processedImage) {
         await cleanupImage(oldImage);
       }
@@ -1022,6 +1063,11 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
       }
     } catch (_) {}
 
+    const catDetail = (name && name !== oldCategory.name)
+      ? `Updated category '${oldCategory.name}' to '${name}' (ID: ${id})`
+      : `Updated category '${oldCategory.name}' (ID: ${id})`;
+    await logAudit(targetId, req.user?.role || 'tenant_admin', 'TENANT_CATEGORY_UPDATED', catDetail);
+
     res.json({ success: true });
   } catch (err) {
     console.error('Update category error:', err);
@@ -1037,10 +1083,14 @@ router.delete('/categories/:id', authenticateToken, requireActiveSubscription, a
     }
     const { id } = req.params;
 
-    // Fetch category image before deleting
-    const catRows = await query('SELECT image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
-    if (catRows && catRows.length > 0 && catRows[0].image) {
-      await cleanupImage(catRows[0].image);
+    // Fetch category to verify tenant isolation before deleting
+    const catRows = await query('SELECT id, name, image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+    if (!catRows || catRows.length === 0) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    const deletedCategory = catRows[0];
+    if (deletedCategory.image) {
+      await cleanupImage(deletedCategory.image);
     }
 
     await query('DELETE FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
@@ -1052,6 +1102,13 @@ router.delete('/categories/:id', authenticateToken, requireActiveSubscription, a
         clearMenuBundleCache(slugRows[0].slug);
       }
     } catch (_) {}
+
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_CATEGORY_DELETED',
+      `Deleted category '${deletedCategory.name}' (ID: ${id})`
+    );
 
     res.json({ success: true });
   } catch (err) {
@@ -1069,6 +1126,14 @@ router.patch('/categories/:id/toggle', authenticateToken, requireActiveSubscript
     const { id } = req.params;
     const { active } = req.body;
     const activeBool = active === true || active === 1 || active === 'true';
+
+    // Verify category belongs strictly to this tenant
+    const catRows = await query('SELECT id, name FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+    if (!catRows || catRows.length === 0) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    const catName = catRows[0].name;
+
     await query('UPDATE categories SET active = $1 WHERE id = $2 AND restaurant_id = $3', [activeBool, id, targetId]);
     
     // Invalidate cache
@@ -1078,6 +1143,13 @@ router.patch('/categories/:id/toggle', authenticateToken, requireActiveSubscript
         clearMenuBundleCache(slugRows[0].slug);
       }
     } catch (_) {}
+
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_CATEGORY_TOGGLED',
+      `Category '${catName}' (ID: ${id}) ${activeBool ? 'activated' : 'deactivated'}`
+    );
 
     res.json({ success: true, active: activeBool });
   } catch (err) {
@@ -1111,6 +1183,13 @@ router.post('/categories/reorder', authenticateToken, requireActiveSubscription,
         clearMenuBundleCache(slugRows[0].slug);
       }
     } catch (_) {}
+
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_CATEGORIES_REORDERED',
+      `Reordered ${orders.length} categories`
+    );
 
     res.json({ success: true });
   } catch (err) {
@@ -1173,10 +1252,11 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
     }
 
     // Verify category belongs strictly to this tenant restaurant
-    const catCheck = await query('SELECT id FROM categories WHERE id = $1 AND restaurant_id = $2', [category_id, targetId]);
+    const catCheck = await query('SELECT id, name FROM categories WHERE id = $1 AND restaurant_id = $2', [category_id, targetId]);
     if (!catCheck || catCheck.length === 0) {
       return res.status(400).json({ error: 'Invalid category. The specified category does not belong to your restaurant.' });
     }
+    const categoryName = catCheck[0]?.name || `Category #${category_id}`;
 
     const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
     const modifiersVal = Array.isArray(req.body.modifiers) ? JSON.stringify(req.body.modifiers) : (typeof req.body.modifiers === 'string' ? req.body.modifiers : '[]');
@@ -1201,7 +1281,15 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
       }
     } catch (_) {}
 
-    res.json({ success: true, id: result[0]?.id || result.lastInsertRowid });
+    const newDishId = result[0]?.id || result.lastInsertRowid;
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_DISH_CREATED',
+      `Created dish '${name}' (ID: ${newDishId}, Price: ₹${price}${price_half ? `, Half: ₹${price_half}` : ''}, Category: '${categoryName}')`
+    );
+
+    res.json({ success: true, id: newDishId });
   } catch (err) {
     console.error('Create dish error:', err);
     res.status(500).json({ error: 'Failed to create dish' });
@@ -1220,6 +1308,13 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available, modifiers 
     } = req.body;
 
+    // Fetch old dish to verify tenant isolation and track old prices/images
+    const oldDishRows = await query('SELECT id, name, price, price_half, image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+    if (!oldDishRows || oldDishRows.length === 0) {
+      return res.status(404).json({ error: 'Dish not found' });
+    }
+    const oldDish = oldDishRows[0];
+
     // Verify category belongs strictly to this tenant restaurant
     if (category_id) {
       const catCheck = await query('SELECT id FROM categories WHERE id = $1 AND restaurant_id = $2', [category_id, targetId]);
@@ -1231,10 +1326,9 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
     const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
     const modifiersVal = Array.isArray(modifiers) ? JSON.stringify(modifiers) : (typeof modifiers === 'string' ? modifiers : '[]');
 
-    // Fetch old dish image to clean up if replaced or removed
+    // Clean up replaced or removed dish image
     try {
-      const oldDishRows = await query('SELECT image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
-      const oldImage = oldDishRows && oldDishRows.length > 0 ? oldDishRows[0].image : null;
+      const oldImage = oldDish.image;
       if (oldImage && oldImage !== processedImage) {
         await cleanupImage(oldImage);
       }
@@ -1264,6 +1358,20 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       }
     } catch (_) {}
 
+    const priceChanged = price !== undefined && Number(price) !== Number(oldDish.price);
+    const dishDetail = priceChanged
+      ? `Updated dish '${name || oldDish.name}' (ID: ${id}) - Price: ₹${oldDish.price} -> ₹${price}`
+      : `Updated dish '${name || oldDish.name}' (ID: ${id})`;
+    await logAudit(targetId, req.user?.role || 'tenant_admin', 'TENANT_DISH_UPDATED', dishDetail);
+    if (priceChanged) {
+      await logAudit(
+        targetId,
+        req.user?.role || 'tenant_admin',
+        'TENANT_DISH_PRICE_CHANGED',
+        `Price changed for dish '${name || oldDish.name}' (ID: ${id}) from ₹${oldDish.price} to ₹${price}`
+      );
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error('Update dish error:', err);
@@ -1280,6 +1388,14 @@ router.patch('/dishes/:id/toggle', authenticateToken, requireActiveSubscription,
     const { id } = req.params;
     const { available } = req.body;
     const availBool = (available === true || available === 1 || available === 'true' || available === '1');
+
+    // Verify dish belongs strictly to this tenant
+    const dishRows = await query('SELECT id, name FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+    if (!dishRows || dishRows.length === 0) {
+      return res.status(404).json({ error: 'Dish not found' });
+    }
+    const dishName = dishRows[0].name;
+
     await query('UPDATE dishes SET available = $1 WHERE id = $2 AND restaurant_id = $3', [availBool, id, targetId]);
     
     // Invalidate cache so changes reflect instantly
@@ -1289,6 +1405,13 @@ router.patch('/dishes/:id/toggle', authenticateToken, requireActiveSubscription,
         clearMenuBundleCache(slugRows[0].slug);
       }
     } catch (_) {}
+
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_DISH_AVAILABILITY_TOGGLED',
+      `Dish '${dishName}' (ID: ${id}) availability set to ${availBool ? 'available' : 'unavailable'}`
+    );
 
     res.json({ success: true, available: availBool });
   } catch (err) {
@@ -1308,6 +1431,13 @@ router.patch('/dishes/:id/price', authenticateToken, requireActiveSubscription, 
     const numPrice = Number(price);
     const numPriceHalf = (price_half !== undefined && price_half !== null && price_half !== '') ? Number(price_half) : null;
 
+    // Verify dish belongs strictly to this tenant and get previous prices
+    const dishRows = await query('SELECT id, name, price, price_half FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+    if (!dishRows || dishRows.length === 0) {
+      return res.status(404).json({ error: 'Dish not found' });
+    }
+    const oldDish = dishRows[0];
+
     await query(
       'UPDATE dishes SET price = $1, price_half = $2 WHERE id = $3 AND restaurant_id = $4',
       [numPrice, numPriceHalf, id, targetId]
@@ -1320,6 +1450,14 @@ router.patch('/dishes/:id/price', authenticateToken, requireActiveSubscription, 
         clearMenuBundleCache(slugRows[0].slug);
       }
     } catch (_) {}
+
+    const halfDetail = numPriceHalf !== null ? `, Half: ₹${oldDish.price_half ?? 'N/A'} -> ₹${numPriceHalf}` : '';
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_DISH_PRICE_CHANGED',
+      `Price changed for dish '${oldDish.name}' (ID: ${id}) from ₹${oldDish.price} to ₹${numPrice}${halfDetail}`
+    );
 
     res.json({ success: true, price: numPrice, price_half: numPriceHalf });
   } catch (err) {
@@ -1336,10 +1474,14 @@ router.delete('/dishes/:id', authenticateToken, requireActiveSubscription, async
     }
     const { id } = req.params;
 
-    // Fetch dish image before deleting
-    const dishRows = await query('SELECT image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
-    if (dishRows && dishRows.length > 0 && dishRows[0].image) {
-      await cleanupImage(dishRows[0].image);
+    // Fetch dish to verify tenant isolation before deleting
+    const dishRows = await query('SELECT id, name, image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+    if (!dishRows || dishRows.length === 0) {
+      return res.status(404).json({ error: 'Dish not found' });
+    }
+    const deletedDish = dishRows[0];
+    if (deletedDish.image) {
+      await cleanupImage(deletedDish.image);
     }
 
     await query('DELETE FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
@@ -1351,6 +1493,13 @@ router.delete('/dishes/:id', authenticateToken, requireActiveSubscription, async
         clearMenuBundleCache(slugRows[0].slug);
       }
     } catch (_) {}
+
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_DISH_DELETED',
+      `Deleted dish '${deletedDish.name}' (ID: ${id})`
+    );
 
     res.json({ success: true });
   } catch (err) {
@@ -1756,6 +1905,46 @@ const handleUpdateSettings = async (req, res) => {
       }
     } catch (cErr) {}
 
+    const ALLOWED_SETTING_FIELDS = [
+      'name', 'tagline', 'logo', 'phone', 'address', 'openingHours',
+      'google_review_url', 'google_reviews_enabled', 'filters_visibility',
+      'currency_symbol', 'fssai_lic_no', 'resto_type', 'business_type',
+      'food_type', 'service_model', 'business_category', 'whatsapp_number',
+      'whatsapp_enabled', 'theme_color', 'latitude', 'longitude',
+      'max_distance_meters', 'gst_enabled', 'gstin_number', 'total_tables',
+      'total_cabins', 'total_rooms', 'total_vip', 'table_prefix',
+      'order_retention_days', 'custom_domain', 'location_initialized',
+      'owner_name', 'owner_email', 'city', 'state', 'pincode',
+      'table_verification_mode', 'staff_verification_timeout_seconds',
+      'printer_mode', 'auto_print_kot', 'auto_print_bill', 'printer_paper_width',
+      'kds_pin'
+    ];
+    const updatedKeys = Object.keys(req.body).filter(k => ALLOWED_SETTING_FIELDS.includes(k) && req.body[k] !== undefined);
+
+    let kdsSummary = null;
+    if (req.body.kds_pin !== undefined) {
+      kdsSummary = (req.body.kds_pin === '' || req.body.kds_pin === null) ? 'KDS PIN cleared' : 'KDS PIN updated';
+    }
+
+    const nonPinKeys = updatedKeys.filter(k => k !== 'kds_pin');
+    let detailsSummary = '';
+    if (nonPinKeys.length > 0 && kdsSummary) {
+      detailsSummary = `Updated settings fields: [${nonPinKeys.join(', ')}] (${kdsSummary})`;
+    } else if (nonPinKeys.length > 0) {
+      detailsSummary = `Updated settings fields: [${nonPinKeys.join(', ')}]`;
+    } else if (kdsSummary) {
+      detailsSummary = kdsSummary;
+    } else {
+      detailsSummary = 'Updated settings';
+    }
+
+    await logAudit(
+      targetId,
+      req.user?.role || 'restaurant_admin',
+      'TENANT_SETTINGS_UPDATED',
+      detailsSummary
+    );
+
     res.json({ success: true, message: 'Restaurant settings updated successfully!' });
   } catch (err) {
     console.error('Update settings error:', err);
@@ -1858,6 +2047,13 @@ router.post('/qr/rotate-secret', authenticateToken, requireActiveSubscription, a
     const newSecret = generateRestaurantQrSecret();
     await query('UPDATE restaurants SET qr_secret = $1 WHERE id = $2', [newSecret, targetId]);
     clearRestoResolveCache();
+
+    await logAudit(
+      targetId,
+      req.user?.role || 'restaurant_admin',
+      'SECURITY_ROTATE_QR_SECRET',
+      `Rotated QR signing secret for restaurant ID ${targetId}`
+    );
 
     res.json({
       success: true,
@@ -2384,6 +2580,22 @@ router.post('/change-password', authenticateToken, async (req, res) => {
     }
 
     await query('UPDATE admins SET username = $1, password_hash = $2 WHERE id = $3', [updatedUsername, updatedHash, adminId]);
+
+    const targetId = admin.restaurant_id || req.user?.restaurant_id;
+    const changeSummary = [];
+    if (newPassword && newPassword.trim() !== '') changeSummary.push('password updated');
+    if (updatedUsername !== admin.username) changeSummary.push(`username changed to '${updatedUsername}'`);
+    const detailsMsg = changeSummary.length > 0
+      ? `Credentials updated for admin '${admin.username}' (${changeSummary.join(', ')})`
+      : `Credentials re-verified for admin '${admin.username}'`;
+
+    await logAudit(
+      targetId,
+      req.user?.role || admin.role || 'restaurant_admin',
+      'SECURITY_CREDENTIALS_CHANGED',
+      detailsMsg
+    );
+
     res.json({ success: true, username: updatedUsername });
   } catch (err) {
     console.error('Change password error:', err);
@@ -4387,7 +4599,24 @@ router.post('/combos', authenticateToken, requireActiveSubscription, async (req,
       'INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
       [targetId, name, description || '', price, processedImage || null, itemsStr, badge || '', sort_order || 0]
     );
-    res.json({ id: result[0]?.id || result.lastInsertRowid, message: 'Combo created successfully' });
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
+    const newComboId = result[0]?.id || result.lastInsertRowid;
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_COMBO_CREATED',
+      `Created combo '${name}' (ID: ${newComboId}, Price: ₹${price})`
+    );
+
+    res.json({ id: newComboId, message: 'Combo created successfully' });
   } catch (err) {
     console.error('Create combo error:', err);
     res.status(500).json({ error: 'Failed to create combo' });
@@ -4404,12 +4633,18 @@ router.put('/combos/:id', authenticateToken, requireActiveSubscription, async (r
     const { name, description, price, image, items, badge, sort_order, available } = req.body;
     const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
 
+    // Fetch old combo to verify tenant isolation and track old prices/images
+    const oldComboRows = await query('SELECT id, name, price, image FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
+    if (!oldComboRows || oldComboRows.length === 0) {
+      return res.status(404).json({ error: 'Combo not found' });
+    }
+    const oldCombo = oldComboRows[0];
+
     const processedImage = await processExternalImageUrl(image, targetId, 'combos');
 
     // Fetch old combo image to clean up if replaced or removed
     try {
-      const oldComboRows = await query('SELECT image FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
-      const oldImage = oldComboRows && oldComboRows.length > 0 ? oldComboRows[0].image : null;
+      const oldImage = oldCombo.image;
       if (oldImage && oldImage !== processedImage) {
         await cleanupImage(oldImage);
       }
@@ -4421,6 +4656,21 @@ router.put('/combos/:id', authenticateToken, requireActiveSubscription, async (r
       'UPDATE combos SET name = $1, description = $2, price = $3, image = $4, items = $5, badge = $6, sort_order = $7, available = $8 WHERE id = $9 AND restaurant_id = $10',
       [name, description || '', price, processedImage, itemsStr, badge || '', sort_order || 0, available !== undefined ? available : 1, req.params.id, targetId]
     );
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
+    const priceChanged = price !== undefined && Number(price) !== Number(oldCombo.price);
+    const comboDetail = priceChanged
+      ? `Updated combo '${name || oldCombo.name}' (ID: ${req.params.id}) - Price: ₹${oldCombo.price} -> ₹${price}`
+      : `Updated combo '${name || oldCombo.name}' (ID: ${req.params.id})`;
+    await logAudit(targetId, req.user?.role || 'tenant_admin', 'TENANT_COMBO_UPDATED', comboDetail);
+
     res.json({ message: 'Combo updated successfully' });
   } catch (err) {
     console.error('Update combo error:', err);
@@ -4437,6 +4687,14 @@ router.patch('/combos/:id/toggle', authenticateToken, requireActiveSubscription,
     }
     const { available } = req.body;
     const availBool = (available === true || available === 1 || available === 'true' || available === '1');
+
+    // Verify combo belongs strictly to this tenant and fetch its name
+    const comboRows = await query('SELECT id, name FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
+    if (!comboRows || comboRows.length === 0) {
+      return res.status(404).json({ error: 'Combo not found' });
+    }
+    const comboName = comboRows[0].name;
+
     await query('UPDATE combos SET available = $1 WHERE id = $2 AND restaurant_id = $3', [availBool, req.params.id, targetId]);
     
     // Invalidate cache
@@ -4446,6 +4704,13 @@ router.patch('/combos/:id/toggle', authenticateToken, requireActiveSubscription,
         clearMenuBundleCache(slugRows[0].slug);
       }
     } catch (_) {}
+
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_COMBO_TOGGLED',
+      `Combo '${comboName}' (ID: ${req.params.id}) availability set to ${availBool ? 'available' : 'unavailable'}`
+    );
 
     res.json({ success: true, message: 'Combo availability updated', available: availBool });
   } catch (err) {
@@ -4462,13 +4727,33 @@ router.delete('/combos/:id', authenticateToken, requireActiveSubscription, async
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    // Fetch combo image before deleting
-    const comboRows = await query('SELECT image FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
-    if (comboRows && comboRows.length > 0 && comboRows[0].image) {
-      await cleanupImage(comboRows[0].image);
+    // Fetch combo to verify tenant isolation before deleting
+    const comboRows = await query('SELECT id, name, image FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
+    if (!comboRows || comboRows.length === 0) {
+      return res.status(404).json({ error: 'Combo not found' });
+    }
+    const deletedCombo = comboRows[0];
+    if (deletedCombo.image) {
+      await cleanupImage(deletedCombo.image);
     }
 
     await query('DELETE FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
+
+    // Invalidate cache
+    try {
+      const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+      if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
+        clearMenuBundleCache(slugRows[0].slug);
+      }
+    } catch (_) {}
+
+    await logAudit(
+      targetId,
+      req.user?.role || 'tenant_admin',
+      'TENANT_COMBO_DELETED',
+      `Deleted combo '${deletedCombo.name}' (ID: ${req.params.id})`
+    );
+
     res.json({ message: 'Combo deleted successfully' });
   } catch (err) {
     console.error('Delete combo error:', err);

@@ -519,8 +519,18 @@ export async function deleteSaaSPlan(key, token) {
   return handleResponse(res, 'Failed to delete SaaS plan');
 }
 
-export async function fetchAuditLogs(token) {
-  const res = await fetch(`${API_BASE}/superadmin/audit-logs`, {
+export async function fetchAuditLogs(token, params = {}) {
+  const queryParams = new URLSearchParams();
+  if (params && typeof params === 'object') {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '' && value !== 'all') {
+        queryParams.append(key, String(value));
+      }
+    });
+  }
+  const queryString = queryParams.toString();
+  const url = `${API_BASE}/superadmin/audit-logs${queryString ? `?${queryString}` : ''}`;
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return handleResponse(res, 'Failed to fetch audit logs');
