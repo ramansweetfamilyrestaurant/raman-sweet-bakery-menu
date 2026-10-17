@@ -24,7 +24,10 @@ import {
   Sparkles,
   Lock,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  IndianRupee,
+  DollarSign,
+  Banknote
 } from 'lucide-react';
 import { formatQuota } from '../../../utils/planCapabilities';
 import { getDishImageUrl } from '../../../utils/imageHelper';
@@ -524,11 +527,15 @@ export default function HomeView({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1.25rem',
-            fontWeight: 900,
             flexShrink: 0
           }}>
-            {currencySymbol}
+            {currencySymbol === '$' ? (
+              <DollarSign size={20} strokeWidth={2.4} />
+            ) : currencySymbol === '₹' || !currencySymbol || currencySymbol === 'Rs' || currencySymbol === 'INR' ? (
+              <IndianRupee size={20} strokeWidth={2.4} />
+            ) : (
+              <Banknote size={20} strokeWidth={2.4} />
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
