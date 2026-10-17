@@ -179,15 +179,24 @@ export function matchesTenantStatusFilter(r, filter) {
   if (filter === 'suspended') return isSuspended;
   if (isSuspended) return false;
 
-  const isVip = Boolean(
-    r.is_vip ||
-    r.is_complimentary ||
-    r.subscription_type === 'ADMIN_GRANTED' ||
-    r.subscription_type === 'COMPLIMENTARY' ||
-    r.mandate_status === 'admin_granted' ||
-    r.mandate_status === 'complimentary' ||
-    (r.effective_plan_tier === 'enterprise' && Number(r.effective_plan_price) === 0)
-  );
+  const explicitVipFlag = (r.is_vip !== undefined)
+    ? Boolean(r.is_vip)
+    : (r.is_complimentary !== undefined)
+      ? Boolean(r.is_complimentary)
+      : null;
+
+  const rawExp = r.plan_expires_at || r.access_until;
+  const isVipExpired = rawExp && String(rawExp).toLowerCase() !== 'lifetime' && new Date(rawExp) < new Date();
+
+  const isVip = (explicitVipFlag !== null)
+    ? (explicitVipFlag && !isVipExpired)
+    : !isVipExpired && Boolean(
+        r.subscription_type === 'ADMIN_GRANTED' ||
+        r.subscription_type === 'COMPLIMENTARY' ||
+        r.mandate_status === 'admin_granted' ||
+        r.mandate_status === 'complimentary' ||
+        (r.effective_plan_tier === 'enterprise' && Number(r.effective_plan_price) === 0)
+      );
 
   if (filter === 'vip' || filter === 'complimentary') return isVip;
 

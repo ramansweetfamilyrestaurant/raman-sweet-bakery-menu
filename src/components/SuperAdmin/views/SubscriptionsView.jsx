@@ -71,7 +71,8 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
               </tr>
             ) : (
               filteredSubs.map(r => {
-                const isLifetime = r.subscription_type === 'ADMIN_GRANTED' || (r.access_until && new Date(r.access_until).getFullYear() > 2030);
+                const isVip = isVipTenant(r);
+                const isLifetime = isVip && (r.access_until === 'Lifetime' || (!r.access_until && (!r.plan_expires_at || String(r.plan_expires_at).toLowerCase() === 'lifetime')));
 
                 return (
                   <tr key={r.id}>
@@ -103,9 +104,9 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                         const planInfo = formatTenantPlanDisplay(r);
                         return (
                           <>
-                            <span style={{ fontWeight: 800, color: isVipTenant(r) ? '#7E22CE' : 'var(--sa-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontWeight: 800, color: isVip ? '#7E22CE' : 'var(--sa-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               {planInfo.primaryLabel}
-                              {isVipTenant(r) && <span style={{ color: '#a855f7', fontSize: '0.75rem', fontWeight: 900 }}> ★ VIP</span>}
+                              {isVip && <span style={{ color: '#a855f7', fontSize: '0.75rem', fontWeight: 900 }}> ★ VIP</span>}
                             </span>
                             <span style={{ fontSize: '0.7rem', color: 'var(--sa-text-muted)', display: 'block' }}>
                               {planInfo.secondaryLabel}
@@ -117,11 +118,19 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                     <td>
                       <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'suspended')} type={r.subscription_type} active={r.active} />
                     </td>
-                    <td style={{ fontWeight: 800, color: (r.auto_renew === 0 || r.auto_renew === false) ? 'var(--sa-danger)' : 'var(--sa-success)' }}>
-                      {(r.auto_renew === 0 || r.auto_renew === false) ? '❌ OFF' : '✅ ON'}
+                    <td style={{ fontWeight: 800, color: (isVip || r.auto_renew === 0 || r.auto_renew === false) ? 'var(--sa-danger)' : 'var(--sa-success)' }}>
+                      {isVip
+                        ? (r.has_underlying_paid_subscription ? `OFF (Paid: ${r.underlying_auto_renew ? 'ON' : 'OFF'})` : 'OFF (N/A)')
+                        : (r.auto_renew === 0 || r.auto_renew === false) ? '❌ OFF' : '✅ ON'}
                     </td>
                     <td style={{ fontWeight: 700 }}>
-                      {isLifetime ? '♾️ Lifetime' : r.access_until ? new Date(r.access_until).toLocaleDateString('en-IN') : 'N/A'}
+                      {isLifetime
+                        ? '♾️ Lifetime'
+                        : (r.access_until && r.access_until !== 'Lifetime')
+                          ? new Date(r.access_until).toLocaleDateString('en-IN')
+                          : (r.plan_expires_at && String(r.plan_expires_at).toLowerCase() !== 'lifetime')
+                            ? new Date(r.plan_expires_at).toLocaleDateString('en-IN')
+                            : 'N/A'}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <button onClick={() => onSelectTenant(r)} className="sa-btn sa-btn-secondary sa-btn-sm">
@@ -169,8 +178,8 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', paddingTop: '8px', borderTop: '1px solid var(--sa-border)' }}>
-                <span>Auto-renew: <strong>{(r.auto_renew === 0 || r.auto_renew === false) ? 'OFF' : 'ON'}</strong></span>
-                <span>Until: <strong>{isLifetime ? '♾️ Lifetime' : r.access_until ? new Date(r.access_until).toLocaleDateString('en-IN') : 'N/A'}</strong></span>
+                <span>Auto-renew: <strong>{isVipTenant(r) ? (r.has_underlying_paid_subscription ? `OFF (Paid: ${r.underlying_auto_renew ? 'ON' : 'OFF'})` : 'OFF (N/A)') : (r.auto_renew === 0 || r.auto_renew === false) ? 'OFF' : 'ON'}</strong></span>
+                <span>Until: <strong>{isLifetime ? '♾️ Lifetime' : (r.access_until && r.access_until !== 'Lifetime') ? new Date(r.access_until).toLocaleDateString('en-IN') : (r.plan_expires_at && String(r.plan_expires_at).toLowerCase() !== 'lifetime') ? new Date(r.plan_expires_at).toLocaleDateString('en-IN') : 'N/A'}</strong></span>
               </div>
             </div>
           );

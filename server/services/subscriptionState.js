@@ -28,7 +28,7 @@ export const SUBSCRIPTION_STATES = Object.freeze({
  * @param {Object|null} [sub] - Optional subscription record from DB
  * @returns {boolean}
  */
-export function isAuthoritativeComplimentaryTenant(resto, sub = null) {
+export function isAuthoritativeComplimentaryTenant(resto, sub = null, now = new Date()) {
   if (!resto) return false;
 
   const subType = String(resto.subscription_type || '').toUpperCase().trim();
@@ -37,25 +37,47 @@ export function isAuthoritativeComplimentaryTenant(resto, sub = null) {
   const subRecType = sub ? String(sub.subscription_type || '').toUpperCase().trim() : '';
   const subGateway = sub ? String(sub.gateway || '').toLowerCase().trim() : '';
 
+  let hasComplimentaryMarker = false;
   // Canonical admin-granted markers in restaurants table
   if (subType === 'ADMIN_GRANTED' || subType === 'COMPLIMENTARY' || subType === 'VIP') {
-    return true;
-  }
-  if (mandate === 'admin_granted' || mandate === 'complimentary') {
-    return true;
-  }
-
-  // Canonical admin-granted markers in subscriptions table
-  if (subRecType === 'ADMIN_GRANTED' || subGateway === 'admin_granted') {
-    return true;
-  }
-
-  // Legacy edge-case: plan_tier was set to vip/vip_ultra/vip_ultra_plan with ₹0 price and not on an active paid mandate
-  if ((planTier === 'vip' || planTier === 'vip_ultra' || planTier === 'vip_ultra_plan') && Number(resto.plan_price || 0) === 0 && mandate !== 'active') {
-    return true;
+    hasComplimentaryMarker = true;
+  } else if (mandate === 'admin_granted' || mandate === 'complimentary') {
+    hasComplimentaryMarker = true;
+  } else if (
+    (subRecType === 'ADMIN_GRANTED' || subGateway === 'admin_granted') &&
+    sub &&
+    sub.status !== 'cancelled' &&
+    sub.status !== 'expired'
+  ) {
+    hasComplimentaryMarker = true;
+  } else if ((planTier === 'vip' || planTier === 'vip_ultra' || planTier === 'vip_ultra_plan') && Number(resto.plan_price || 0) === 0 && mandate !== 'active') {
+    hasComplimentaryMarker = true;
   }
 
-  return false;
+  if (!hasComplimentaryMarker) {
+    return false;
+  }
+
+  // Check if this complimentary grant has a finite expiry that has passed!
+  // If sub is specifically an admin_granted subscription, check both resto and sub.
+  // If sub is a preserved underlying paid/trial subscription, only resto.plan_expires_at defines the VIP expiry.
+  const isVipSub = sub && (sub.subscription_type === 'ADMIN_GRANTED' || sub.gateway === 'admin_granted');
+  const rawExpiry = (resto.plan_expires_at !== undefined && resto.plan_expires_at !== null && String(resto.plan_expires_at).trim() !== '')
+    ? resto.plan_expires_at
+    : (isVipSub ? (sub.current_period_end || null) : null);
+
+  if (rawExpiry && String(rawExpiry).toLowerCase() !== 'lifetime') {
+    const expDate = new Date(String(rawExpiry).includes('T') ? rawExpiry : `${rawExpiry}T23:59:59Z`);
+    if (!isNaN(expDate.getTime())) {
+      const refTime = now instanceof Date ? now.getTime() : new Date(now).getTime();
+      if (expDate.getTime() < refTime) {
+        // Finite VIP grant has expired! Must no longer be treated as active complimentary access.
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -91,7 +113,7 @@ export function resolveCanonicalSubscriptionState({ resto, sub, now = new Date()
   // merely because the payment gateway subscription still says active or tenant has VIP access.
   const isSuspended = resto.active === false || resto.active === 0 || resto.active === '0' || resto.active === 'false';
   if (isSuspended) {
-    const isComplimentary = isAuthoritativeComplimentaryTenant(resto, sub);
+    const isComplimentary = isAuthoritativeComplimentaryTenant(resto, sub, now);
     return {
       status: SUBSCRIPTION_STATES.SUSPENDED,
       active: false,
@@ -102,15 +124,21 @@ export function resolveCanonicalSubscriptionState({ resto, sub, now = new Date()
     };
   }
 
-  // 1. Super Admin 100% Complimentary Lifetime Access
-  if (isAuthoritativeComplimentaryTenant(resto, sub)) {
+  // 1. Super Admin Complimentary Access (Active Lifetime or Active Finite Grant)
+  if (isAuthoritativeComplimentaryTenant(resto, sub, now)) {
+    const isVipSub = sub && (sub.subscription_type === 'ADMIN_GRANTED' || sub.gateway === 'admin_granted');
+    const vipExpiry = (resto.plan_expires_at !== undefined && resto.plan_expires_at !== null && String(resto.plan_expires_at).trim() !== '')
+      ? resto.plan_expires_at
+      : (isVipSub ? (sub.current_period_end || null) : null);
+    const isLifetime = !vipExpiry || String(vipExpiry).toLowerCase() === 'lifetime';
+
     return {
       status: SUBSCRIPTION_STATES.ACTIVE,
       active: true,
       isComplimentary: true,
       inGracePeriod: false,
-      accessUntil: resto.plan_expires_at || 'Lifetime',
-      badge: { label: 'Complimentary Access Active', color: '#3B82F6', icon: '🎁' }
+      accessUntil: isLifetime ? 'Lifetime' : vipExpiry,
+      badge: { label: isLifetime ? 'Complimentary Lifetime Access' : 'Complimentary Access Active', color: '#3B82F6', icon: '🎁' }
     };
   }
 
@@ -327,8 +355,8 @@ export function resolveCanonicalSubscriptionState({ resto, sub, now = new Date()
  *   }
  * }}
  */
-export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan = null }) {
-  const isComplimentary = isAuthoritativeComplimentaryTenant(resto, sub);
+export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan = null, now = new Date() }) {
+  const isComplimentary = isAuthoritativeComplimentaryTenant(resto, sub, now);
   const tierKey = (resto?.plan_tier || 'pro').toLowerCase().trim();
   const plan = saasPlan || {};
 
@@ -535,14 +563,7 @@ export function calculateTenantMrr(tenant) {
   if (isSuspended) return 0;
 
   // 2. Complimentary VIP tenants have ₹0 recurring revenue
-  const isVip = Boolean(
-    tenant.is_vip ||
-    tenant.is_complimentary ||
-    tenant.subscription_type === 'ADMIN_GRANTED' ||
-    tenant.mandate_status === 'admin_granted' ||
-    Number(tenant.plan_price) === 0 ||
-    Number(tenant.effective_plan_price) === 0
-  );
+  const isVip = isAuthoritativeComplimentaryTenant(tenant, null);
   if (isVip) return 0;
 
   // 3. Exclude non-active / non-paying states (trials, expired, cancelled, failed, awaiting charge)
@@ -586,7 +607,7 @@ export function calculateTenantMrr(tenant) {
  * @param {Object} tenant
  * @returns {{ primaryLabel: string, secondaryLabel: string, badgeText: string|null, fullDisplay: string }}
  */
-export function formatTenantPlanDisplay(tenant) {
+export function formatTenantPlanDisplay(tenant, now = new Date()) {
   if (!tenant) {
     return {
       primaryLabel: 'Pro Plan',
@@ -596,9 +617,7 @@ export function formatTenantPlanDisplay(tenant) {
     };
   }
 
-  const isVip = (tenant.is_vip !== undefined || tenant.is_complimentary !== undefined)
-    ? Boolean(tenant.is_vip || tenant.is_complimentary)
-    : isAuthoritativeComplimentaryTenant(tenant);
+  const isVip = isAuthoritativeComplimentaryTenant(tenant, null, now);
 
   if (isVip) {
     const rawBase = (tenant.plan_tier || '').trim();

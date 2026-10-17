@@ -125,6 +125,11 @@ const suites = [
     name: 'Super Admin VIP Data Parity & Consistency',
     file: 'server/tests/superadmin_vip_data_parity.test.js',
     requiresDb: true
+  },
+  {
+    name: 'VIP Duration & Auto-Renew Consistency',
+    file: 'server/tests/vip_duration_consistency.test.js',
+    requiresDb: true
   }
 ];
 

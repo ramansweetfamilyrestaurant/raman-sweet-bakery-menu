@@ -520,11 +520,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const getTenantStatus = (r) => {
     const isSuspended = (r.active === false || r.active === 0 || r.active === '0' || r.active === 'false' || r.subscription_status === 'suspended');
     if (isSuspended) return 'suspended';
-    const isVip = Boolean(r.is_vip || r.is_complimentary || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted' || Number(r.plan_price) === 0 || Number(r.effective_plan_price) === 0);
+
+    const isVip = (r.is_vip !== undefined)
+      ? Boolean(r.is_vip)
+      : Boolean(
+          (r.is_complimentary || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') &&
+          r.subscription_status !== 'expired' &&
+          r.subscription_status !== 'cancelled' &&
+          (r.access_until === 'Lifetime' || !r.access_until || new Date(r.access_until) >= new Date())
+        );
+
     if (isVip) return 'vip';
     const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null || r.subscription_status === 'auto_renew_off');
     if (isAutoRenewOff) return 'autorenew_off';
-    const daysLeft = getDaysRemaining(r.plan_expires_at);
+    const daysLeft = getDaysRemaining(r.plan_expires_at || r.access_until);
     const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
     if (isExpired) return 'expired';
     const isFailed = (r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due' || r.subscription_status === 'failed');
@@ -1849,7 +1858,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {/* KPI 4: Auto-Renew Off */}
                 <KpiCard
                   label="Auto-Renew Off"
-                  value={restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length}
+                  value={restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false && !r.is_vip && !r.is_complimentary).length}
                   icon={Clock}
                   color="#C2410C"
                   onClick={() => setStatusFilter('autorenew_off')}
@@ -1859,11 +1868,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {/* KPI 5: Complimentary / VIP */}
                 <KpiCard
                   label="Complimentary VIP"
-                  value={restaurants.filter(r => r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted').length}
+                  value={restaurants.filter(r => r.is_vip || r.is_complimentary || ((r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') && r.subscription_status !== 'expired')).length}
                   icon={Sparkles}
                   color="#7E22CE"
                   onClick={() => setStatusFilter('vip')}
-                  subtitle="Lifetime Access"
+                  subtitle="Active Grants"
                 />
               </div>
 
@@ -1905,12 +1914,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   )}
 
                   {/* Row 2: Auto-Renew Off */}
-                  {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length > 0 && (
+                  {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false && !r.is_vip && !r.is_complimentary).length > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '10px 14px', background: '#FFFBEB', borderRadius: '12px', border: '1px solid #FCD34D' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
                         <span style={{ background: '#D97706', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900, flexShrink: 0 }}>CANCEL PENDING</span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#92400E' }}>
-                          {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false).length} Accounts with Auto-Renew Disabled
+                          {restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false && !r.is_vip && !r.is_complimentary).length} Accounts with Auto-Renew Disabled
                         </span>
                       </div>
                       <button
@@ -2063,10 +2072,19 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     </thead>
                     <tbody>
                       {filteredAndSortedRestaurants.map(r => {
-                        const daysLeft = getDaysRemaining(r.plan_expires_at);
-                        const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
+                        const isVip = (r.is_vip !== undefined)
+                          ? Boolean(r.is_vip)
+                          : Boolean(
+                              (r.is_complimentary || r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') &&
+                              r.subscription_status !== 'expired' &&
+                              r.subscription_status !== 'cancelled' &&
+                              (r.access_until === 'Lifetime' || !r.access_until || new Date(r.access_until) >= new Date())
+                            );
+
+                        const isLifetime = isVip && (r.access_until === 'Lifetime' || (!r.access_until && (!r.plan_expires_at || String(r.plan_expires_at).toLowerCase() === 'lifetime')));
+                        const daysLeft = getDaysRemaining(r.plan_expires_at || r.access_until);
                         const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
-                        const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null);
+                        const isAutoRenewOff = isVip ? true : (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null);
 
                         return (
                           <tr key={r.id}>
@@ -2123,16 +2141,33 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                               <StatusBadge status={r.subscription_status} type={r.subscription_type} />
                             </td>
                             <td>
-                              <span style={{
-                                padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.68rem', fontWeight: 800,
-                                background: isAutoRenewOff ? '#FEE2E2' : '#DCFCE7',
-                                color: isAutoRenewOff ? '#DC2626' : '#15803D'
-                              }}>
-                                {isAutoRenewOff ? '❌ OFF' : '✅ ON'}
-                              </span>
+                              {isVip ? (
+                                <span style={{
+                                  padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.68rem', fontWeight: 800,
+                                  background: '#F3F4F6', color: '#4B5563', border: '1px solid #E5E7EB'
+                                }} title={r.has_underlying_paid_subscription ? `Underlying Paid Auto-Renew: ${r.underlying_auto_renew ? 'ON' : 'OFF'}` : 'Complimentary VIP does not auto-renew'}>
+                                  {r.has_underlying_paid_subscription ? `OFF (Paid: ${r.underlying_auto_renew ? 'ON' : 'OFF'})` : 'OFF (N/A)'}
+                                </span>
+                              ) : (
+                                <span style={{
+                                  padding: '3px 8px', borderRadius: 'var(--sa-radius-full)', fontSize: '0.68rem', fontWeight: 800,
+                                  background: isAutoRenewOff ? '#FEE2E2' : '#DCFCE7',
+                                  color: isAutoRenewOff ? '#DC2626' : '#15803D'
+                                }}>
+                                  {isAutoRenewOff ? '❌ OFF' : '✅ ON'}
+                                </span>
+                              )}
                             </td>
                             <td style={{ fontSize: '0.76rem', fontWeight: 700 }}>
-                              {isVip ? '♾️ Lifetime' : r.access_until ? new Date(r.access_until).toLocaleDateString('en-IN') : daysLeft !== null ? (isExpired ? 'Expired' : `${daysLeft}d left`) : 'Active'}
+                              {isLifetime
+                                ? '♾️ Lifetime'
+                                : (r.access_until && r.access_until !== 'Lifetime')
+                                  ? new Date(r.access_until).toLocaleDateString('en-IN')
+                                  : (r.plan_expires_at && String(r.plan_expires_at).toLowerCase() !== 'lifetime')
+                                    ? new Date(r.plan_expires_at).toLocaleDateString('en-IN')
+                                    : daysLeft !== null
+                                      ? (isExpired ? 'Expired' : `${daysLeft}d left`)
+                                      : 'Active'}
                             </td>
                             <td style={{ textAlign: 'right' }}>
                               <button

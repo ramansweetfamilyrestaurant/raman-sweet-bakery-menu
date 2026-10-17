@@ -115,26 +115,31 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
     planTier === 'vip' || planTier === 'vip_ultra' || planTier === 'vip_ultra_plan'
   ) && isZeroPrice;
 
-  const isComplimentary = Boolean(
-    actualResto?.subscription_type === 'ADMIN_GRANTED' ||
-    actualResto?.mandate_status === 'admin_granted' ||
-    actualSub?.subscription_type === 'ADMIN_GRANTED' ||
-    actualSub?.mandate_status === 'admin_granted' ||
-    actualSettings?.subscription_type === 'ADMIN_GRANTED' ||
-    actualResto?.is_complimentary === true ||
-    actualResto?.is_complimentary === 1 ||
-    actualResto?.is_complimentary === '1' ||
-    actualSub?.is_complimentary === true ||
-    actualSub?.is_complimentary === 1 ||
-    actualSub?.is_complimentary === '1' ||
-    actualResto?.is_vip === 1 ||
-    actualResto?.is_vip === true ||
-    actualResto?.is_vip === '1' ||
-    actualSub?.is_vip === true ||
-    actualSub?.is_vip === 1 ||
-    actualSub?.is_vip === '1' ||
-    hasLegacyVipAlias
-  );
+  const explicitVipFlag = (actualResto?.is_vip !== undefined)
+    ? Boolean(actualResto.is_vip)
+    : (actualSub?.is_vip !== undefined)
+      ? Boolean(actualSub.is_vip)
+      : null;
+
+  const rawExp = actualResto?.plan_expires_at || actualSub?.access_until || actualSub?.current_period_end;
+  const isExpired = rawExp && String(rawExp).toLowerCase() !== 'lifetime' && new Date(rawExp) < new Date();
+
+  const isComplimentary = (explicitVipFlag !== null)
+    ? (explicitVipFlag && !isExpired)
+    : !isExpired && Boolean(
+        actualResto?.subscription_type === 'ADMIN_GRANTED' ||
+        actualResto?.mandate_status === 'admin_granted' ||
+        actualSub?.subscription_type === 'ADMIN_GRANTED' ||
+        actualSub?.mandate_status === 'admin_granted' ||
+        actualSettings?.subscription_type === 'ADMIN_GRANTED' ||
+        actualResto?.is_complimentary === true ||
+        actualResto?.is_complimentary === 1 ||
+        actualResto?.is_complimentary === '1' ||
+        actualSub?.is_complimentary === true ||
+        actualSub?.is_complimentary === 1 ||
+        actualSub?.is_complimentary === '1' ||
+        hasLegacyVipAlias
+      );
 
   const isBoolTrue = (val, fallback = false) => {
     if (val === undefined || val === null) return fallback;

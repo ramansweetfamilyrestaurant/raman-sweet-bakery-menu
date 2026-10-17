@@ -206,7 +206,9 @@ export default function AddBusinessModal({
       }
 
       // 2. VIP ONBOARDING PATH -> Instant Transactional Creation
-      const expiryDate = new Date('2099-12-31T23:59:59Z').toISOString();
+      const expiryDate = formData.vip_duration_days && formData.vip_duration_days !== 'lifetime'
+        ? new Date(Date.now() + parseInt(formData.vip_duration_days, 10) * 86400 * 1000).toISOString()
+        : null;
 
       const payload = {
         name: formData.name.trim(),
