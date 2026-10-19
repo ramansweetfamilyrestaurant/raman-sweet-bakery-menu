@@ -112,9 +112,21 @@ export function requireActiveSubscription(req, res, next) {
   next();
 }
 
+export function requireAdminRole(req, res, next) {
+  const allowedRoles = ['restaurant_admin', 'superadmin'];
+  if (req.user && allowedRoles.includes(req.user.role)) {
+    return next();
+  }
+  return res.status(403).json({
+    error: 'ADMIN_ROLE_REQUIRED',
+    message: 'Access denied. Administrative role required.'
+  });
+}
+
 export function requireSuperAdmin(req, res, next) {
   if (req.user && req.user.role === 'superadmin') {
     return next();
   }
   return res.status(403).json({ error: 'Access denied. Superadmin role required.' });
 }
+

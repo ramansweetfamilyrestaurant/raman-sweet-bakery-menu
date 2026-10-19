@@ -101,7 +101,7 @@ async function run() {
       { expiresIn: '1d' }
     );
     const token802 = jwt.sign(
-      { id: 802, username: 'owner2', restaurant_id: 802, role: 'tenant_admin' },
+      { id: 802, username: 'owner2', restaurant_id: 802, role: 'restaurant_admin' },
       JWT_SECRET,
       { expiresIn: '1d' }
     );
@@ -314,7 +314,7 @@ async function run() {
       const logs = await query("SELECT * FROM audit_logs WHERE restaurant_id = 802 AND action = 'TENANT_COMBO_CREATED' ORDER BY id DESC LIMIT 1");
       assert.strictEqual(logs.length, 1);
       assert.strictEqual(logs[0].restaurant_id, 802);
-      assert.strictEqual(logs[0].actor_role, 'tenant_admin');
+      assert.strictEqual(logs[0].actor_role, 'restaurant_admin');
       assert.ok(logs[0].details.includes('Executive Lunch Combo'));
       assert.ok(logs[0].details.includes('249'));
     });
@@ -351,7 +351,7 @@ async function run() {
       const logs = await query("SELECT * FROM audit_logs WHERE restaurant_id = 802 AND action = 'TENANT_COMBO_TOGGLED' ORDER BY id DESC LIMIT 1");
       assert.strictEqual(logs.length, 1, 'Must write TENANT_COMBO_TOGGLED log');
       assert.strictEqual(logs[0].restaurant_id, 802);
-      assert.strictEqual(logs[0].actor_role, 'tenant_admin');
+      assert.strictEqual(logs[0].actor_role, 'restaurant_admin');
       assert.ok(logs[0].details.includes('Royal Executive Lunch Combo'));
       assert.ok(logs[0].details.includes(String(comboId)));
       assert.ok(logs[0].details.includes('unavailable'));

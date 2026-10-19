@@ -7,7 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { query, runAutoDataSummarization, saveImageToDb, saveR2ImageToDb, getImageRecordFromDb, deleteImageRecordFromDb, withTransaction, logAudit } from '../db.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics, purgeOrphanedR2Objects } from '../services/r2ImageService.js';
-import { authenticateToken, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
+import { authenticateToken, requireAdminRole, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
 import { isAuthoritativeComplimentaryTenant } from '../services/subscriptionState.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import { adminLoginRateLimiter, supportTicketCreateRateLimiter, supportTicketReplyRateLimiter } from '../middleware/rateLimiters.js';
@@ -314,6 +314,21 @@ router.post('/login', adminLoginRateLimiter, async (req, res) => {
   }
 });
 
+// POST /api/admin/forgot-password - Unauthenticated password reset disabled for production security
+router.post('/forgot-password', async (req, res) => {
+  return res.status(410).json({
+    error: 'PASSWORD_RESET_DISABLED',
+    message: 'Direct password reset via this endpoint is disabled for account security. Please contact Super Admin support via WhatsApp or email to request account recovery.'
+  });
+});
+
+// =========================================================================
+// ADMINISTRATIVE ROLE BOUNDARY (P0 AUTHORIZATION GATE)
+// Every route below this boundary requires valid admin authentication.
+// Allowed roles: restaurant_admin, superadmin (kds_screen strictly excluded)
+// =========================================================================
+router.use(authenticateToken, requireAdminRole);
+
 // GET /api/admin/me - Verify session and fetch current tenant details (BILLING ALLOWED)
 router.get('/me', authenticateToken, async (req, res) => {
   try {
@@ -521,15 +536,6 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch subscription status' });
   }
 });
-
-// POST /api/admin/forgot-password - Unauthenticated password reset disabled for production security
-router.post('/forgot-password', async (req, res) => {
-  return res.status(410).json({
-    error: 'PASSWORD_RESET_DISABLED',
-    message: 'Direct password reset via this endpoint is disabled for account security. Please contact Super Admin support via WhatsApp or email to request account recovery.'
-  });
-});
-
 
 // Admin Dashboard Summary Statistics (OPERATIONAL ROUTE)
 router.get('/stats', authenticateToken, requireActiveSubscription, async (req, res) => {

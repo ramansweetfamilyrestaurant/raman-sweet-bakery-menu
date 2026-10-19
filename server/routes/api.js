@@ -1587,6 +1587,15 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       customer_accuracy
     } = req.body;
 
+    // Validate & Normalize Customer Notes (P2 End-to-End Persistence)
+    let cleanNotes = null;
+    if (typeof notes === 'string') {
+      const trimmedNotes = notes.trim();
+      if (trimmedNotes.length > 0) {
+        cleanNotes = trimmedNotes.substring(0, 500);
+      }
+    }
+
     // Step 1: Validate Basic Payload Input
     if (!slug) {
       return res.status(400).json({ error: 'missing_slug', message: 'Restaurant slug is required' });
@@ -2103,8 +2112,9 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
               total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate,
               status, sent_to_kds, created_at,
               customer_latitude, customer_longitude, customer_accuracy, distance_meters,
-              session_id, round_number, parent_order_id, is_settled, idempotency_key
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING id
+              session_id, round_number, parent_order_id, is_settled, idempotency_key,
+              notes
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25) RETURNING id
           `, [
             targetId,
             cleanTable,
@@ -2129,7 +2139,8 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             roundNumber,
             parentOrderId,
             0,
-            storedIdempKey
+            storedIdempKey,
+            cleanNotes
           ]);
         } catch (insertErr) {
           console.warn('Auto-healing columns on order insertion:', insertErr.message);
@@ -2150,14 +2161,16 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_accuracy INT'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS distance_meters INT'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128)'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT'); } catch (e) {}
 
           result = await txQuery(`
             INSERT INTO orders (
               restaurant_id, table_number, customer_name, customer_phone, items, 
               total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate,
               status, sent_to_kds, created_at,
-              session_id, round_number, parent_order_id, is_settled, idempotency_key
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id
+              session_id, round_number, parent_order_id, is_settled, idempotency_key,
+              notes
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id
           `, [
             targetId,
             cleanTable,
@@ -2178,7 +2191,8 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             roundNumber,
             parentOrderId,
             0,
-            storedIdempKey
+            storedIdempKey,
+            cleanNotes
           ]);
         }
 
@@ -2201,6 +2215,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           grand_total_amount: taxBreakdown.grand_total,
           gst_rate: taxBreakdown.gst_rate,
           distance_meters: distanceMetersValue,
+          notes: cleanNotes,
           message: isAddonOrder
             ? `🎉 Round ${roundNumber} (Add-on Order #${orderId}) placed for Table #${cleanTable}!`
             : `🎉 Order #${orderId} placed successfully for Table #${cleanTable}!`
@@ -2545,11 +2560,11 @@ router.post('/service-requests', serviceRequestRateLimiter, async (req, res) => 
 });
 
 // Helper: Strict slug-only restaurant resolver (prevents token-header cross-talk during KDS auth)
-async function resolveRestaurantBySlug(slug) {
+async function resolveRestaurantBySlug(slug, queryFn = query) {
   if (!slug || typeof slug !== 'string' || slug.trim() === '') return null;
   const cleanSlug = slug.trim().toLowerCase();
   if (['menu', 'default', 'null', 'undefined', 'home', 'index', 'api', 'kitchen'].includes(cleanSlug)) return null;
-  const restos = await query('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
+  const restos = await queryFn('SELECT * FROM restaurants WHERE LOWER(slug) = $1', [cleanSlug]);
   if (restos && restos.length > 0) return restos[0];
   return null;
 }
@@ -2620,6 +2635,67 @@ export function verifyKdsAuthorization(req, resto, requiredPermission = 'kds:rea
   return { authorized: false, status: 403, error: 'UNAUTHORIZED_ROLE', message: 'Unauthorized role for KDS access.' };
 }
 
+// 🛡️ Reusable KDS Tenant Verification & SaaS Plan Entitlement Guard
+export async function verifyKdsTenantAndEntitlement(restoOrSlug, queryFn = query) {
+  let resto = restoOrSlug;
+  if (typeof restoOrSlug === 'string') {
+    try {
+      resto = await resolveRestaurantBySlug(restoOrSlug, queryFn);
+    } catch (dbErr) {
+      console.error('KDS restaurant resolution database error:', dbErr.message);
+      return { authorized: false, status: 503, error: 'PLAN_VERIFICATION_UNAVAILABLE', message: 'Plan verification is temporarily unavailable. Please retry.' };
+    }
+  }
+  // 1. Confirm the restaurant exists
+  if (!resto || !resto.id) {
+    return { authorized: false, status: 404, error: 'restaurant_not_found', message: 'Restaurant not found' };
+  }
+
+  // 2. Check authoritative restaurant suspension
+  const isSuspended = resto.active === false || resto.active === 0 || resto.active === '0' || resto.active === 'false';
+  if (isSuspended) {
+    // 3. Reject suspended restaurants with HTTP 403 and RESTAURANT_SUSPENDED
+    return { authorized: false, status: 403, error: 'RESTAURANT_SUSPENDED', message: 'Restaurant account is suspended.' };
+  }
+
+  // 4. Only for active restaurants, evaluate the authoritative complimentary/VIP entitlement exception
+  const isComplimentary = isAuthoritativeComplimentaryTenant(resto);
+  if (isComplimentary) {
+    return { authorized: true, resto };
+  }
+
+  // 5. For other tenants, verify saas_plans.kds_enabled
+  const planTierKey = resto.plan_tier ? String(resto.plan_tier).trim().toLowerCase() : '';
+  if (!planTierKey) {
+    // 6. Reject disabled or missing plan entitlements with HTTP 403 and KDS_DISABLED
+    return { authorized: false, status: 403, error: 'KDS_DISABLED', message: 'Kitchen Display System (KDS) is disabled on your SaaS plan tier.' };
+  }
+
+  let planRows;
+  try {
+    planRows = await queryFn('SELECT kds_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]);
+  } catch (dbErr) {
+    // 7. If plan verification fails because of a database error, return HTTP 503 and PLAN_VERIFICATION_UNAVAILABLE
+    console.error('KDS plan verification database error:', dbErr.message);
+    return { authorized: false, status: 503, error: 'PLAN_VERIFICATION_UNAVAILABLE', message: 'Plan verification is temporarily unavailable. Please retry.' };
+  }
+
+  if (!planRows || planRows.length === 0) {
+    // Unknown or missing plan fails closed
+    return { authorized: false, status: 403, error: 'KDS_DISABLED', message: 'Kitchen Display System (KDS) is disabled on your SaaS plan tier.' };
+  }
+
+  const saasPlan = planRows[0];
+  const kdsVal = saasPlan.kds_enabled;
+  const kdsPlanEnabled = (kdsVal === 1 || kdsVal === true || kdsVal === '1' || kdsVal === 'true');
+
+  if (!kdsPlanEnabled) {
+    return { authorized: false, status: 403, error: 'KDS_DISABLED', message: 'Kitchen Display System (KDS) is disabled on your SaaS plan tier.' };
+  }
+
+  return { authorized: true, resto };
+}
+
 // POST /api/kitchen/verify-pin - Authenticate kitchen screen with 4-digit PIN (Rate Limited & Scoped)
 router.post('/kitchen/verify-pin', kdsPinRateLimiter, async (req, res) => {
   try {
@@ -2634,22 +2710,12 @@ router.post('/kitchen/verify-pin', kdsPinRateLimiter, async (req, res) => {
       return res.status(400).json({ error: 'invalid_pin_format', message: 'KDS PIN must be exactly 4 numeric digits' });
     }
 
-    const resto = await resolveRestaurantBySlug(slug);
-    if (!resto) {
-      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
+    // Authoritative tenant suspension & KDS plan entitlement guard
+    const tenantCheck = await verifyKdsTenantAndEntitlement(slug);
+    if (!tenantCheck.authorized) {
+      return res.status(tenantCheck.status).json({ error: tenantCheck.error, message: tenantCheck.message });
     }
-
-    // Check SaaS Plan permissions for kds_enabled
-    const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
-    const planRows = await query('SELECT kds_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]);
-    const saasPlan = planRows[0] || {};
-    const kdsPlanEnabled = saasPlan.kds_enabled !== undefined && saasPlan.kds_enabled !== null
-      ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1')
-      : true;
-
-    if (!kdsPlanEnabled) {
-      return res.status(403).json({ error: 'KDS_DISABLED', message: 'Kitchen Display System (KDS) is disabled on your SaaS plan tier.' });
-    }
+    const resto = tenantCheck.resto;
 
     // Check if KDS PIN is configured for this restaurant
     if (!resto.kds_pin_hash) {
@@ -2696,10 +2762,12 @@ router.get('/kitchen/orders', async (req, res) => {
       return res.status(400).json({ error: 'missing_slug', message: 'Restaurant slug is required' });
     }
 
-    const resto = await resolveRestaurantBySlug(slug);
-    if (!resto) {
-      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
+    // Authoritative tenant suspension & KDS plan entitlement guard
+    const tenantCheck = await verifyKdsTenantAndEntitlement(slug);
+    if (!tenantCheck.authorized) {
+      return res.status(tenantCheck.status).json({ error: tenantCheck.error, message: tenantCheck.message });
     }
+    const resto = tenantCheck.resto;
 
     // Enforce KDS Authorization (Valid KDS JWT or Admin JWT matching this restaurant)
     const authCheck = verifyKdsAuthorization(req, resto, 'kds:read');
@@ -2707,29 +2775,23 @@ router.get('/kitchen/orders', async (req, res) => {
       return res.status(authCheck.status).json({ error: authCheck.error, message: authCheck.message });
     }
 
-    // Check SaaS Plan permissions for kds_enabled
-    const isComplimentary = isAuthoritativeComplimentaryTenant(resto);
-    const planTierKey = (resto.plan_tier || 'pro').toLowerCase();
-    const planRows = await query('SELECT kds_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]);
-    const saasPlan = planRows[0] || {};
-    const kdsPlanEnabled = isComplimentary || (saasPlan.kds_enabled !== undefined && saasPlan.kds_enabled !== null
-      ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1')
-      : true);
-
-    if (!kdsPlanEnabled) {
-      return res.status(403).json({ error: 'KDS_DISABLED', message: 'Kitchen Display System (KDS) is disabled on your SaaS plan tier.' });
-    }
-
     const targetId = resto.id;
 
-    // 🛡️ Data Minimization: Explicitly select ONLY fields required by the Kitchen Display UI
+    // 🛡️ Standalone KDS Active Queue (Synchronized Lifecycle Policy)
+    // Includes: 'kitchen', 'preparing', or 'accepted' with sent_to_kds = 1
+    // Excludes: 'pending', 'completed', 'cancelled', 'rejected', prepared (1), and settled (1)
+    // Treats NULL in kitchen_prepared and is_settled as 0 (unprepared & unsettled)
     const orders = await query(`
       SELECT id, session_id, round_number, parent_order_id, table_number,
-             customer_name, items, status, kitchen_prepared, created_at
+             customer_name, items, status, sent_to_kds, kitchen_prepared, is_settled, notes, created_at
       FROM orders
       WHERE restaurant_id = $1
-        AND status IN ('kitchen', 'preparing')
-        AND (kitchen_prepared IS NULL OR kitchen_prepared = 0)
+        AND (
+          status IN ('kitchen', 'preparing')
+          OR (status = 'accepted' AND sent_to_kds = 1)
+        )
+        AND (kitchen_prepared = 0 OR kitchen_prepared IS NULL)
+        AND (is_settled = 0 OR is_settled IS NULL)
       ORDER BY id ASC LIMIT 50
     `, [targetId]);
 
@@ -2749,7 +2811,10 @@ router.get('/kitchen/orders', async (req, res) => {
         customer_name: o.customer_name,
         items: parsedItems,
         status: o.status,
+        sent_to_kds: o.sent_to_kds,
         kitchen_prepared: o.kitchen_prepared,
+        is_settled: o.is_settled,
+        notes: typeof o.notes === 'string' && o.notes.trim().length > 0 ? o.notes : null,
         created_at: o.created_at
       };
     });
@@ -2769,7 +2834,7 @@ router.get('/kitchen/orders', async (req, res) => {
 router.patch('/kitchen/orders/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
-    const { slug } = req.query;
+    const slug = req.query.slug || req.body?.slug;
     const numericId = parseInt(id, 10);
     const orderId = isNaN(numericId) ? id : numericId;
 
@@ -2781,10 +2846,12 @@ router.patch('/kitchen/orders/:id/complete', async (req, res) => {
       return res.status(400).json({ error: 'missing_slug', message: 'Restaurant slug is required' });
     }
 
-    const resto = await resolveRestaurantBySlug(slug);
-    if (!resto) {
-      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
+    // Authoritative tenant suspension & KDS plan entitlement guard
+    const tenantCheck = await verifyKdsTenantAndEntitlement(slug);
+    if (!tenantCheck.authorized) {
+      return res.status(tenantCheck.status).json({ error: tenantCheck.error, message: tenantCheck.message });
     }
+    const resto = tenantCheck.resto;
 
     // Enforce KDS Authorization (Valid KDS JWT or Admin JWT matching this restaurant)
     const authCheck = verifyKdsAuthorization(req, resto, 'kds:complete');
@@ -2814,6 +2881,138 @@ router.patch('/kitchen/orders/:id/complete', async (req, res) => {
   } catch (err) {
     console.error('Mark kitchen prepared error:', err);
     res.status(500).json({ error: 'Failed to mark kitchen prepared' });
+  }
+});
+
+// PATCH /api/kitchen/orders/:id/recall - Recall order back to active kitchen queue (P1 Implementation)
+router.patch('/kitchen/orders/:id/recall', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const slug = req.query.slug || req.body?.slug;
+    const numericId = parseInt(id, 10);
+    const orderId = isNaN(numericId) ? id : numericId;
+
+    if (!orderId) {
+      return res.status(400).json({ error: 'invalid_order_id', message: 'Valid order ID is required' });
+    }
+
+    if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+      return res.status(400).json({ error: 'missing_slug', message: 'Restaurant slug is required' });
+    }
+
+    // 1. Authoritative tenant suspension & KDS plan entitlement guard
+    const tenantCheck = await verifyKdsTenantAndEntitlement(slug);
+    if (!tenantCheck.authorized) {
+      return res.status(tenantCheck.status).json({ error: tenantCheck.error, message: tenantCheck.message });
+    }
+    const resto = tenantCheck.resto;
+
+    // 2. Enforce KDS Authorization (Valid KDS JWT or Admin JWT matching this restaurant)
+    const authCheck = verifyKdsAuthorization(req, resto, 'kds:complete');
+    if (!authCheck.authorized) {
+      return res.status(authCheck.status).json({ error: authCheck.error, message: authCheck.message });
+    }
+
+    const targetId = resto.id;
+
+    // 3. Primary Atomic Conditional SQL Update
+    // Recall eligibility:
+    // - Status in ('kitchen', 'preparing') OR (status = 'accepted' AND sent_to_kds = 1)
+    // - kitchen_prepared = 1
+    // - is_settled = 0 OR is_settled IS NULL
+    // Normal recall changes kitchen_prepared from 1 to 0
+    const updateResult = await query(`
+      UPDATE orders
+      SET kitchen_prepared = 0
+      WHERE id = $1
+        AND restaurant_id = $2
+        AND (kitchen_prepared = 1)
+        AND (is_settled = 0 OR is_settled IS NULL)
+        AND (
+          status IN ('kitchen', 'preparing')
+          OR (status = 'accepted' AND sent_to_kds = 1)
+        )
+      RETURNING id, status, kitchen_prepared, is_settled, sent_to_kds
+    `, [orderId, targetId]);
+
+    if (updateResult && updateResult.length > 0) {
+      return res.json({
+        success: true,
+        id: orderId,
+        kitchen_prepared: 0,
+        idempotent: false,
+        message: 'Order recalled to active kitchen queue successfully.'
+      });
+    }
+
+    // 4. Duplicate-recall inspection (fallback diagnostics for affected_rows == 0)
+    const existing = await query(`
+      SELECT id, status, kitchen_prepared, is_settled, sent_to_kds
+      FROM orders
+      WHERE id = $1 AND restaurant_id = $2
+    `, [orderId, targetId]);
+
+    if (!existing || existing.length === 0) {
+      return res.status(404).json({
+        error: 'ORDER_NOT_FOUND',
+        message: 'Order not found for this restaurant'
+      });
+    }
+
+    const order = existing[0];
+
+    // Check settled status
+    if (order.is_settled === 1 || order.is_settled === '1' || order.is_settled === true) {
+      return res.status(409).json({
+        error: 'ORDER_ALREADY_SETTLED',
+        message: 'Settled orders cannot be recalled to kitchen queue.'
+      });
+    }
+
+    // Check terminal statuses (completed, cancelled, rejected)
+    if (['completed', 'cancelled', 'rejected'].includes(order.status)) {
+      return res.status(409).json({
+        error: 'ORDER_TERMINAL',
+        message: 'Terminal order cannot be recalled to kitchen queue.'
+      });
+    }
+
+    // Check accepted order never fired to KDS
+    if (order.status === 'accepted' && (order.sent_to_kds === 0 || order.sent_to_kds === '0' || order.sent_to_kds === null || order.sent_to_kds === undefined)) {
+      return res.status(409).json({
+        error: 'ORDER_NOT_IN_KDS',
+        message: 'Order was not fired to Kitchen Display System.'
+      });
+    }
+
+    // Check other ineligible statuses (e.g. pending)
+    const isEligibleStatus = order.status === 'kitchen' || order.status === 'preparing' || (order.status === 'accepted' && (order.sent_to_kds === 1 || order.sent_to_kds === '1' || order.sent_to_kds === true));
+    if (!isEligibleStatus) {
+      return res.status(409).json({
+        error: 'ORDER_INELIGIBLE',
+        message: `Order with status '${order.status}' is ineligible for kitchen recall.`
+      });
+    }
+
+    // Eligible order already active with kitchen_prepared = 0 OR NULL
+    const isUnprepared = order.kitchen_prepared === 0 || order.kitchen_prepared === '0' || order.kitchen_prepared === null || order.kitchen_prepared === undefined;
+    if (isUnprepared) {
+      return res.status(200).json({
+        success: true,
+        id: orderId,
+        kitchen_prepared: 0,
+        idempotent: true,
+        message: 'Order is already active in kitchen queue.'
+      });
+    }
+
+    return res.status(409).json({
+      error: 'ORDER_INELIGIBLE',
+      message: 'Order cannot be recalled in its current state.'
+    });
+  } catch (err) {
+    console.error('Kitchen recall error:', err);
+    res.status(500).json({ error: 'Failed to recall order to kitchen queue' });
   }
 });
 

@@ -25,6 +25,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { playKdsChime } from '../../../utils/soundManager';
+import { filterActiveKitchenOrders } from '../../../utils/kdsQueueFilter';
 
 export default function KdsDisplayView({
   orders = [],
@@ -49,20 +50,9 @@ export default function KdsDisplayView({
     return () => clearInterval(timer);
   }, []);
 
-  // Filter active running kitchen tickets (sent_to_kds !== 0 and kitchen_prepared !== 1)
+  // Filter active running kitchen tickets using shared pure queue filter
   const activeKitchenOrders = useMemo(() => {
-    const list = (Array.isArray(orders) ? orders : []).filter(
-      o => ['kitchen', 'accepted', 'pending', 'preparing'].includes(o.status) &&
-           (o.sent_to_kds !== 0 && o.sent_to_kds !== false && o.sent_to_kds !== '0') &&
-           (o.kitchen_prepared !== 1 && o.kitchen_prepared !== true && o.kitchen_prepared !== '1')
-    );
-
-    // Sort by creation time (oldest first for FIFO kitchen service)
-    return list.sort((a, b) => {
-      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return timeA - timeB;
-    });
+    return filterActiveKitchenOrders(orders);
   }, [orders]);
 
   // Play audio chime when a new ticket arrives in kitchen
@@ -623,8 +613,11 @@ export default function KdsDisplayView({
             const isRush = elapsedMins >= 15;
             const isCritical = elapsedMins >= 25;
             const items = parseItems(order.items);
-            const hasNotes = Boolean(order.notes || order.special_instructions || order.customer_notes);
-            const notesText = order.notes || order.special_instructions || order.customer_notes || '';
+            const rawNotes = order.notes || order.special_instructions || order.customer_notes;
+            const hasNotes = typeof rawNotes === 'string' && rawNotes.trim().length > 0;
+            const notesText = hasNotes ? rawNotes.trim() : '';
+            const roundNum = Number(order.round_number);
+            const isMultiRound = !isNaN(roundNum) && Number.isInteger(roundNum) && roundNum > 1;
 
             // Check if all items in ticket are checked off
             const allItemsChecked = items.length > 0 && items.every((_, idx) => checkedItemsMap[`${order.id}_${idx}`]);
@@ -655,15 +648,33 @@ export default function KdsDisplayView({
                   justifyContent: 'space-between'
                 }}>
                   <div>
-                    {/* Big Table / Location Header */}
-                    <div style={{
-                      fontSize: '1.22rem',
-                      fontWeight: 900,
-                      color: '#FFFFFF',
-                      letterSpacing: '-0.02em',
-                      lineHeight: 1.1
-                    }}>
-                      {formatKdsLocation(order.table_number, order.space_type, restaurantInfo?.business_type === 'hotel_resort' ? 'room' : restaurantInfo?.table_prefix)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      {/* Big Table / Location Header */}
+                      <div style={{
+                        fontSize: '1.22rem',
+                        fontWeight: 900,
+                        color: '#FFFFFF',
+                        letterSpacing: '-0.02em',
+                        lineHeight: 1.1
+                      }}>
+                        {formatKdsLocation(order.table_number, order.space_type, restaurantInfo?.business_type === 'hotel_resort' ? 'room' : restaurantInfo?.table_prefix)}
+                      </div>
+                      {isMultiRound && (
+                        <span style={{
+                          background: '#8B5CF6',
+                          color: '#FFFFFF',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 900,
+                          letterSpacing: '0.04em',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          boxShadow: '0 1px 4px rgba(139, 92, 246, 0.4)'
+                        }}>
+                          ROUND {roundNum}
+                        </span>
+                      )}
                     </div>
                     <span style={{ fontSize: '0.72rem', color: isRush ? '#FEF08A' : '#94A3B8', fontWeight: 700 }}>
                       Ticket #{order.id} • {order.customer_name || 'Dine-In Guest'}
@@ -713,7 +724,7 @@ export default function KdsDisplayView({
                       gap: '8px'
                     }}>
                       <AlertTriangle size={16} color="#F59E0B" style={{ flexShrink: 0, marginTop: '2px' }} />
-                      <div>
+                      <div style={{ wordBreak: 'break-word', minWidth: 0 }}>
                         <span style={{ fontSize: '0.66rem', color: '#FBBF24', textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>
                           CHEF INSTRUCTION:
                         </span>

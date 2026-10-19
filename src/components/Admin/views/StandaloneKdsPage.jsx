@@ -18,6 +18,7 @@ import {
   Square
 } from 'lucide-react';
 import { playKitchenSiren, unlockNotificationSound } from '../../../utils/soundManager';
+import { filterActiveKitchenOrders } from '../../../utils/kdsQueueFilter';
 
 export default function StandaloneKdsPage({ slug = '' }) {
   const [orders, setOrders] = useState([]);
@@ -163,7 +164,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
         if (data.restaurant?.name) {
           setRestaurantName(data.restaurant.name);
         }
-        const activeOrders = Array.isArray(data.orders) ? data.orders : [];
+        const activeOrders = filterActiveKitchenOrders(data.orders);
         const currentIds = new Set(activeOrders.map(o => String(o.id)));
 
         if (knownOrderIdsRef.current !== null) {
@@ -932,8 +933,11 @@ export default function StandaloneKdsPage({ slug = '' }) {
             const isRush = elapsedMins >= 15;
             const isCritical = elapsedMins >= 25;
             const items = parseItems(order.items);
-            const hasNotes = Boolean(order.notes || order.special_instructions || order.customer_notes);
-            const notesText = order.notes || order.special_instructions || order.customer_notes || '';
+            const rawNotes = order.notes || order.special_instructions || order.customer_notes;
+            const hasNotes = typeof rawNotes === 'string' && rawNotes.trim().length > 0;
+            const notesText = hasNotes ? rawNotes.trim() : '';
+            const roundNum = Number(order.round_number);
+            const isMultiRound = !isNaN(roundNum) && Number.isInteger(roundNum) && roundNum > 1;
             const allItemsChecked = items.length > 0 && items.every((_, idx) => checkedItemsMap[`${order.id}_${idx}`]);
 
             return (
@@ -961,8 +965,26 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   justifyContent: 'space-between'
                 }}>
                   <div>
-                    <div style={{ fontSize: '1.22rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                      {formatKdsLocation(order.table_number, order.space_type, restaurantMeta?.business_type === 'hotel_resort' ? 'room' : restaurantMeta?.table_prefix)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: '1.22rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                        {formatKdsLocation(order.table_number, order.space_type, restaurantMeta?.business_type === 'hotel_resort' ? 'room' : restaurantMeta?.table_prefix)}
+                      </div>
+                      {isMultiRound && (
+                        <span style={{
+                          background: '#8B5CF6',
+                          color: '#FFFFFF',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 900,
+                          letterSpacing: '0.04em',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          boxShadow: '0 1px 4px rgba(139, 92, 246, 0.4)'
+                        }}>
+                          ROUND {roundNum}
+                        </span>
+                      )}
                     </div>
                     <span style={{ fontSize: '0.72rem', color: isRush ? '#FEF08A' : '#94A3B8', fontWeight: 700 }}>
                       Ticket #{order.id} • {order.customer_name || 'Dine-in'}
@@ -1008,7 +1030,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                       gap: '8px'
                     }}>
                       <AlertTriangle size={16} color="#F59E0B" style={{ flexShrink: 0, marginTop: '2px' }} />
-                      <div>
+                      <div style={{ wordBreak: 'break-word', minWidth: 0 }}>
                         <span style={{ fontSize: '0.66rem', color: '#FBBF24', textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>
                           CHEF INSTRUCTION:
                         </span>

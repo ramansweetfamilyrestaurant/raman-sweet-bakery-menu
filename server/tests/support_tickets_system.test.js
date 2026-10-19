@@ -82,7 +82,7 @@ async function run() {
 
   const adminARes = await query(
     `INSERT INTO admins (username, password_hash, restaurant_id, role)
-     VALUES ('test_ticket_alpha_admin', 'hash123', $1, 'admin') RETURNING id`,
+     VALUES ('test_ticket_alpha_admin', 'hash123', $1, 'restaurant_admin') RETURNING id`,
     [restoAId]
   );
   const adminAId = (adminARes.rows || adminARes)[0]?.id || adminARes.lastInsertRowid;
@@ -96,7 +96,7 @@ async function run() {
 
   const adminBRes = await query(
     `INSERT INTO admins (username, password_hash, restaurant_id, role)
-     VALUES ('test_ticket_beta_admin', 'hash123', $1, 'admin') RETURNING id`,
+     VALUES ('test_ticket_beta_admin', 'hash123', $1, 'restaurant_admin') RETURNING id`,
     [restoBId]
   );
   const adminBId = (adminBRes.rows || adminBRes)[0]?.id || adminBRes.lastInsertRowid;
@@ -110,7 +110,7 @@ async function run() {
 
   const adminCRes = await query(
     `INSERT INTO admins (username, password_hash, restaurant_id, role)
-     VALUES ('test_ticket_gamma_admin', 'hash123', $1, 'admin') RETURNING id`,
+     VALUES ('test_ticket_gamma_admin', 'hash123', $1, 'restaurant_admin') RETURNING id`,
     [restoCId]
   );
   const adminCId = (adminCRes.rows || adminCRes)[0]?.id || adminCRes.lastInsertRowid;
@@ -123,9 +123,9 @@ async function run() {
   const superOp1Id = (superOp1Res.rows || superOp1Res)[0]?.id || superOp1Res.lastInsertRowid;
 
   // Generate verified JWT tokens
-  const tokenTenantA = jwt.sign({ id: adminAId, username: 'test_ticket_alpha_admin', restaurant_id: restoAId, role: 'admin' }, JWT_SECRET, { expiresIn: '1h' });
-  const tokenTenantB = jwt.sign({ id: adminBId, username: 'test_ticket_beta_admin', restaurant_id: restoBId, role: 'admin' }, JWT_SECRET, { expiresIn: '1h' });
-  const tokenTenantC = jwt.sign({ id: adminCId, username: 'test_ticket_gamma_admin', restaurant_id: restoCId, role: 'admin' }, JWT_SECRET, { expiresIn: '1h' });
+  const tokenTenantA = jwt.sign({ id: adminAId, username: 'test_ticket_alpha_admin', restaurant_id: restoAId, role: 'restaurant_admin' }, JWT_SECRET, { expiresIn: '1h' });
+  const tokenTenantB = jwt.sign({ id: adminBId, username: 'test_ticket_beta_admin', restaurant_id: restoBId, role: 'restaurant_admin' }, JWT_SECRET, { expiresIn: '1h' });
+  const tokenTenantC = jwt.sign({ id: adminCId, username: 'test_ticket_gamma_admin', restaurant_id: restoCId, role: 'restaurant_admin' }, JWT_SECRET, { expiresIn: '1h' });
   const tokenSuperAdmin = jwt.sign({ id: superOp1Id, username: 'test_ticket_super_op1', role: 'superadmin' }, JWT_SECRET, { expiresIn: '1h' });
 
   // Setup express test server

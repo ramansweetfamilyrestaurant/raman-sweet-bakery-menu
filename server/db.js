@@ -237,6 +237,7 @@ async function createTables(options = {}) {
         total_amount DECIMAL(10, 2) NOT NULL,
         status VARCHAR(50) DEFAULT 'pending',
         sent_to_kds INT DEFAULT 0,
+        notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
 
@@ -741,6 +742,7 @@ async function createTables(options = {}) {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(10, 2) DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS grand_total_amount NUMERIC(10, 2) DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_rate NUMERIC(5, 2) DEFAULT 0;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT;`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_idemp ON orders (restaurant_id, idempotency_key);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_screen_enabled INT DEFAULT 1;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);`,
@@ -1089,6 +1091,7 @@ async function createTables(options = {}) {
         total_amount REAL NOT NULL,
         status TEXT DEFAULT 'pending',
         sent_to_kds INTEGER DEFAULT 0,
+        notes TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
@@ -1474,6 +1477,7 @@ async function createTables(options = {}) {
       if (!orderCols.some(c => c.name === 'tax_amount')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN tax_amount REAL DEFAULT 0");
       if (!orderCols.some(c => c.name === 'grand_total_amount')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN grand_total_amount REAL DEFAULT 0");
       if (!orderCols.some(c => c.name === 'gst_rate')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN gst_rate REAL DEFAULT 0");
+      if (!orderCols.some(c => c.name === 'notes')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN notes TEXT");
 
       if (!restoCols.some(c => c.name === 'kds_screen_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_screen_enabled INTEGER DEFAULT 1");
       if (!restoCols.some(c => c.name === 'kds_pin_hash')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_pin_hash TEXT DEFAULT NULL");

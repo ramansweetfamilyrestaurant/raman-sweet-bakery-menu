@@ -37,6 +37,21 @@ const suites = [
     requiresDb: false // Unit tests run always; DB integration sections gated
   },
   {
+    name: 'P0 Admin Authorization Security Boundary',
+    file: 'server/tests/p0_admin_authorization.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'P1 KDS Authorization, Entitlement & Recall',
+    file: 'server/tests/p1_kds_authorization_and_recall.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'P2 KDS Data Integrity, Queue Consistency & Ticket Presentation',
+    file: 'server/tests/p2_kds_data_integrity.test.js',
+    requiresDb: true
+  },
+  {
     name: 'Phase 4 Subscription Lifecycle & Cron',
     file: 'server/tests/subscription-lifecycle.test.js',
     requiresDb: true

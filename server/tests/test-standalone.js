@@ -10,16 +10,24 @@ assert(paymentRouter, 'payment.js router exported successfully');
 import adminRouter from '../routes/admin.js';
 assert(adminRouter, 'admin.js router exported successfully');
 
+// 2b. Verify api.js routes & KDS exports
+import apiRouter, { verifyKdsTenantAndEntitlement, verifyKdsAuthorization } from '../routes/api.js';
+assert(apiRouter, 'api.js router exported successfully');
+assert(typeof verifyKdsTenantAndEntitlement === 'function', 'verifyKdsTenantAndEntitlement is a function');
+assert(typeof verifyKdsAuthorization === 'function', 'verifyKdsAuthorization is a function');
+
 // 3. Verify subscriptionCron functions
 import { checkExpiredSubscriptions, startSubscriptionCron } from '../subscriptionCron.js';
 assert(typeof checkExpiredSubscriptions === 'function', 'checkExpiredSubscriptions is a function');
 assert(typeof startSubscriptionCron === 'function', 'startSubscriptionCron is a function');
 
 // 4. Verify auth.js middleware functions
-import { checkSubscriptionStatus, authenticateToken, requireActiveSubscription } from '../middleware/auth.js';
+import { checkSubscriptionStatus, authenticateToken, requireActiveSubscription, requireAdminRole } from '../middleware/auth.js';
 assert(typeof checkSubscriptionStatus === 'function', 'checkSubscriptionStatus is a function');
 assert(typeof authenticateToken === 'function', 'authenticateToken is a function');
 assert(typeof requireActiveSubscription === 'function', 'requireActiveSubscription is a function');
+assert(typeof requireAdminRole === 'function', 'requireAdminRole is a function');
+
 
 // 5. Verify cashfree service
 import { createCashfreeSubscriptionSession, fetchCashfreeSubscriptionStatus, verifyCashfreeWebhookSignature } from '../services/cashfree.js';
