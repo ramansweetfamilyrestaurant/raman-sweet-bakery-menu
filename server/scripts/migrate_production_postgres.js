@@ -107,6 +107,23 @@ export const SUPPORT_TICKET_MIGRATION_DDL = Object.freeze([
   }
 ]);
 
+export const ORDERS_NOTES_MIGRATION_DDL = Object.freeze([
+  {
+    name: 'column:orders.notes',
+    type: 'column',
+    schema: 'public',
+    table: 'orders',
+    column: 'notes',
+    target: 'orders.notes',
+    sql: 'ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS notes TEXT;'
+  }
+]);
+
+export const PRODUCTION_MIGRATION_DDL = Object.freeze([
+  ...SUPPORT_TICKET_MIGRATION_DDL,
+  ...ORDERS_NOTES_MIGRATION_DDL
+]);
+
 /**
  * Checks whether a PostgreSQL connection URL or environment represents production.
  */
@@ -179,15 +196,42 @@ export function verifyConnectedDatabaseIdentity(dbName, userName, appDbUrl = nul
 }
 
 /**
+ * Resolves a single migration or full registry from a migration name.
+ * Rejects unknown or empty migration names with clear MIGRATION_CONFIG_ERROR before connection.
+ */
+export function resolveSelectedMigrations(migrationName) {
+  if (migrationName === undefined || migrationName === null) {
+    return PRODUCTION_MIGRATION_DDL;
+  }
+  const rawName = String(migrationName).trim();
+  if (!rawName) {
+    throw new Error('MIGRATION_CONFIG_ERROR: --migration flag cannot be empty.');
+  }
+  const matched = PRODUCTION_MIGRATION_DDL.filter(m => m.name === rawName);
+  if (matched.length === 0) {
+    const available = PRODUCTION_MIGRATION_DDL.map(m => m.name).join(', ');
+    throw new Error(`MIGRATION_CONFIG_ERROR: Unknown migration name '${rawName}'. Available migrations: ${available}`);
+  }
+  return matched;
+}
+
+/**
  * Executes or previews PostgreSQL migration with multi-layer safety guards.
  *
  * @param {object} options
  * @param {string} [options.migrationUrl] - Target database URL (must be provided or MIGRATION_DATABASE_URL set)
  * @param {boolean} [options.dryRun] - If true, inspects schema and reports planned DDL without applying changes
  * @param {boolean} [options.confirmProduction] - Required if targeting a production database
+ * @param {Array} [options.migrations] - Specific migrations to execute (defaults to PRODUCTION_MIGRATION_DDL)
+ * @param {string} [options.migrationName] - Single migration name to execute from registry
+ * @param {object} [options.pool] - Optional existing pg.Pool instance for testing
  * @returns {Promise<{ success: boolean, dryRun: boolean, executed: string[], skipped: string[], inspected: object }>}
  */
 export async function runPostgresMigration(options = {}) {
+  let migrations = options.migrations;
+  if (!migrations) {
+    migrations = resolveSelectedMigrations(options.migrationName);
+  }
   const rawUrl = options.migrationUrl || process.env.MIGRATION_DATABASE_URL;
 
   // 1. Invariant: MIGRATION_DATABASE_URL must be explicitly supplied.
@@ -221,7 +265,7 @@ export async function runPostgresMigration(options = {}) {
     dbUrl.includes('localhost') ||
     dbUrl.includes('127.0.0.1');
 
-  const pool = new Pool({
+  const pool = options.pool || new Pool({
     connectionString: dbUrl,
     ssl: isLocalOrNoSsl ? false : { rejectUnauthorized: false },
     connectionTimeoutMillis: 10000
@@ -233,7 +277,8 @@ export async function runPostgresMigration(options = {}) {
     database: null,
     user: null,
     existingTables: [],
-    existingIndexes: []
+    existingIndexes: [],
+    existingColumns: []
   };
 
   try {
@@ -254,11 +299,11 @@ export async function runPostgresMigration(options = {}) {
       );
     }
 
-    // Query existing tables and indexes
+    // Query existing tables, indexes, and columns
     const tablesRes = await pool.query(`
       SELECT table_name
       FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name IN ('support_tickets', 'support_ticket_messages', 'restaurants', 'admins');
+      WHERE table_schema = 'public' AND table_name IN ('support_tickets', 'support_ticket_messages', 'restaurants', 'admins', 'orders');
     `);
     inspected.existingTables = (tablesRes.rows || []).map(r => r.table_name);
 
@@ -269,9 +314,16 @@ export async function runPostgresMigration(options = {}) {
     `);
     inspected.existingIndexes = (indexesRes.rows || []).map(r => r.indexname);
 
+    const columnsRes = await pool.query(`
+      SELECT table_schema, table_name, column_name, data_type, is_nullable
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'orders';
+    `);
+    inspected.existingColumns = (columnsRes.rows || []).map(r => `${r.table_name}.${r.column_name}`);
+
     if (dryRun) {
       console.log('🔍 [DRY RUN MODE] Inspecting schema without applying modifications...');
-      for (const item of SUPPORT_TICKET_MIGRATION_DDL) {
+      for (const item of migrations) {
         if (item.type === 'table') {
           const exists = inspected.existingTables.includes(item.target);
           if (exists) {
@@ -290,31 +342,55 @@ export async function runPostgresMigration(options = {}) {
             console.log(`  ➕ Index '${item.target}' WOULD be created.`);
             executed.push(item.name);
           }
+        } else if (item.type === 'column') {
+          const colTarget = item.target || `${item.table}.${item.column}`;
+          const exists = inspected.existingColumns.includes(colTarget);
+          if (exists) {
+            console.log(`  ℹ️ Column '${colTarget}' already exists (no change needed).`);
+            skipped.push(item.name);
+          } else {
+            console.log(`  ➕ Column '${colTarget}' WOULD be added.`);
+            executed.push(item.name);
+          }
         }
       }
 
-      console.log('\n[DRY RUN SUMMARY] Planned actions: ' + executed.length + ' to create, ' + skipped.length + ' already exist.');
+      console.log('\n[DRY RUN SUMMARY] Planned actions: ' + executed.length + ' to create/add, ' + skipped.length + ' already exist.');
       console.log('[DRY RUN SAFETY] Zero DDL statements were executed.');
       return { success: true, dryRun: true, executed, skipped, inspected };
     }
 
-    // 3. Prerequisite check: foreign key targets must exist
-    const restoCheck = inspected.existingTables.includes('restaurants');
-    if (!restoCheck) {
-      const reg = await pool.query("SELECT to_regclass('public.restaurants') as tbl");
-      if (!reg.rows[0]?.tbl) {
-        throw new Error("MIGRATION_PREREQUISITE_FAILED: Parent table 'restaurants' does not exist in target database.");
+    // 3. Prerequisite check: parent tables must exist
+    const hasSupportTickets = migrations.some(m => m.name && m.name.includes('support_ticket'));
+    if (hasSupportTickets) {
+      const restoCheck = inspected.existingTables.includes('restaurants');
+      if (!restoCheck) {
+        const reg = await pool.query("SELECT to_regclass('public.restaurants') as tbl");
+        if (!reg.rows[0]?.tbl) {
+          throw new Error("MIGRATION_PREREQUISITE_FAILED: Parent table 'restaurants' does not exist in target database.");
+        }
       }
     }
 
-    // Capture pre-migration row counts if tables already exist
+    const hasOrdersMigration = migrations.some(m => m.type === 'column' && (m.table === 'orders' || (m.target && m.target.startsWith('orders'))));
+    if (hasOrdersMigration) {
+      const ordersCheck = inspected.existingTables.includes('orders');
+      if (!ordersCheck) {
+        const reg = await pool.query("SELECT to_regclass('public.orders') as tbl");
+        if (!reg.rows[0]?.tbl) {
+          throw new Error("MIGRATION_PREREQUISITE_FAILED: Target table 'orders' does not exist in target database.");
+        }
+      }
+    }
+
+    // Capture pre-migration row counts if support ticket tables already exist
     let preTicketCount = 0;
     let preMsgCount = 0;
-    if (inspected.existingTables.includes('support_tickets')) {
+    if (hasSupportTickets && inspected.existingTables.includes('support_tickets')) {
       const cRes = await pool.query('SELECT COUNT(*) as count FROM support_tickets');
       preTicketCount = parseInt(cRes.rows[0]?.count || 0, 10);
     }
-    if (inspected.existingTables.includes('support_ticket_messages')) {
+    if (hasSupportTickets && inspected.existingTables.includes('support_ticket_messages')) {
       const mRes = await pool.query('SELECT COUNT(*) as count FROM support_ticket_messages');
       preMsgCount = parseInt(mRes.rows[0]?.count || 0, 10);
     }
@@ -325,7 +401,7 @@ export async function runPostgresMigration(options = {}) {
     try {
       await client.query('BEGIN');
 
-      for (const item of SUPPORT_TICKET_MIGRATION_DDL) {
+      for (const item of migrations) {
         await client.query(item.sql);
         executed.push(item.name);
         console.log(`  ✓ ${item.name} applied successfully.`);
@@ -339,21 +415,49 @@ export async function runPostgresMigration(options = {}) {
       client.release();
     }
 
-    // Verify post-migration table presence & row counts
-    const postTicketCountRes = await pool.query('SELECT COUNT(*) as count FROM support_tickets');
-    const postMsgCountRes = await pool.query('SELECT COUNT(*) as count FROM support_ticket_messages');
-    const postTicketCount = parseInt(postTicketCountRes.rows[0]?.count || 0, 10);
-    const postMsgCount = parseInt(postMsgCountRes.rows[0]?.count || 0, 10);
+    // Verify post-migration table presence & row counts for support tickets
+    if (hasSupportTickets && inspected.existingTables.includes('support_tickets') && inspected.existingTables.includes('support_ticket_messages')) {
+      const postTicketCountRes = await pool.query('SELECT COUNT(*) as count FROM support_tickets');
+      const postMsgCountRes = await pool.query('SELECT COUNT(*) as count FROM support_ticket_messages');
+      const postTicketCount = parseInt(postTicketCountRes.rows[0]?.count || 0, 10);
+      const postMsgCount = parseInt(postMsgCountRes.rows[0]?.count || 0, 10);
 
-    if (postTicketCount < preTicketCount || postMsgCount < preMsgCount) {
-      throw new Error('MIGRATION_INTEGRITY_VIOLATION: Row count decreased post-migration.');
+      if (postTicketCount < preTicketCount || postMsgCount < preMsgCount) {
+        throw new Error('MIGRATION_INTEGRITY_VIOLATION: Row count decreased post-migration.');
+      }
+
+      console.log(`📊 Post-migration verification: ${postTicketCount} tickets, ${postMsgCount} messages exist (data preserved).`);
     }
 
-    console.log(`📊 Post-migration verification: ${postTicketCount} tickets, ${postMsgCount} messages exist (data preserved).`);
+    // Targeted schema verification for column additions (e.g., orders.notes)
+    // Avoids full-table COUNT(*) on orders for fast, metadata-only column additions
+    if (hasOrdersMigration) {
+      const colRes = await pool.query(`
+        SELECT table_schema, table_name, column_name, data_type, is_nullable
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'orders' AND column_name = 'notes';
+      `);
+
+      if (!colRes.rows || colRes.rows.length === 0) {
+        throw new Error("MIGRATION_VERIFICATION_FAILED: Column 'public.orders.notes' was not found in information_schema after migration.");
+      }
+
+      const col = colRes.rows[0];
+      if (col.data_type !== 'text') {
+        throw new Error(`MIGRATION_VERIFICATION_FAILED: Expected column 'public.orders.notes' data_type to be 'text', got '${col.data_type}'.`);
+      }
+      if (col.is_nullable !== 'YES') {
+        throw new Error(`MIGRATION_VERIFICATION_FAILED: Expected column 'public.orders.notes' is_nullable to be 'YES', got '${col.is_nullable}'.`);
+      }
+
+      console.log(`🔍 Verified column public.orders.notes: data_type=${col.data_type}, is_nullable=${col.is_nullable}`);
+    }
 
     return { success: true, dryRun: false, executed, skipped, inspected };
   } finally {
-    await pool.end().catch(() => {});
+    if (!options.pool) {
+      await pool.end().catch(() => {});
+    }
   }
 }
 
@@ -362,15 +466,31 @@ if (process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('migrate_pro
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
   const confirmProduction = args.includes('--confirm-production');
+  const migrationArg = args.find(a => a.startsWith('--migration=') || a === '--migration');
+
+  let migrationName = undefined;
+  if (migrationArg) {
+    if (migrationArg === '--migration') {
+      const idx = args.indexOf('--migration');
+      migrationName = args[idx + 1] !== undefined ? args[idx + 1] : '';
+    } else {
+      migrationName = migrationArg.slice('--migration='.length);
+    }
+  }
 
   console.log('======================================================================');
   console.log('🛡️  TOUCHQR POSTGRESQL MIGRATION RUNNER');
   console.log('======================================================================');
+  if (migrationName !== undefined) {
+    console.log(`Target: SINGLE MIGRATION (${migrationName || '<empty>'})`);
+  } else {
+    console.log('Target: ALL REGISTERED MIGRATIONS (Default)');
+  }
   if (dryRun) {
     console.log('Mode: DRY RUN (Read-Only Safety Check)');
   }
 
-  runPostgresMigration({ dryRun, confirmProduction })
+  runPostgresMigration({ dryRun, confirmProduction, migrationName })
     .then((result) => {
       console.log('\n======================================================================');
       if (result.dryRun) {

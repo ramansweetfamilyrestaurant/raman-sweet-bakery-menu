@@ -81,6 +81,9 @@ export const getSlugFromUrl = () => {
 export const isSlugKitchenPath = (rawPath) => {
   if (!rawPath) return false;
   const cleanPath = String(rawPath).toLowerCase().replace(/\/$/, '');
+  if (cleanPath === '/kitchen' || cleanPath === 'kitchen') {
+    return true;
+  }
   const parts = cleanPath.split('/').filter(Boolean);
   if (parts.length === 2 && parts[1] === 'kitchen') {
     const slugCandidate = parts[0];
@@ -988,8 +991,7 @@ export default function App() {
   // Load Menu Data
   const loadMenuData = async (forcedSlug = '', silent = false) => {
     const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '');
-    if (rawPath === '/kitchen') {
-      setRestaurantStatus('not_found');
+    if (rawPath === '/kitchen' || isSlugKitchenPath(window.location.pathname)) {
       setLoading(false);
       return;
     }
@@ -1219,9 +1221,7 @@ export default function App() {
       const isSecurity = path === '/security' || path === '/security/';
       const isContact = path === '/contact' || path === '/contact/' || path === '/support';
 
-      if (isGenericKitchen) {
-        setRestaurantStatus('not_found');
-      } else if (isKitchen) {
+      if (isGenericKitchen || isKitchen) {
         setView('kitchen-kds');
         document.title = 'Kitchen KDS Display System';
       } else if (isPrivacy) {
@@ -1940,7 +1940,7 @@ export default function App() {
   if (view === 'kitchen-kds') {
     return (
       <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#090D16', color: '#F8FAFC', minHeight: '100vh', fontWeight: 800 }}>🍳 Loading Kitchen Display System...</div>}>
-        <StandaloneKdsPage slug={getSlugFromUrl() || (info && info.slug) || ''} />
+        <StandaloneKdsPage slug={getSlugFromUrl() || new URLSearchParams(window.location.search).get('slug') || ''} />
       </Suspense>
     );
   }

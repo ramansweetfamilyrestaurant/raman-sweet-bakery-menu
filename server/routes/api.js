@@ -1958,6 +1958,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       executionResolve = resolve;
       executionReject = reject;
     });
+    executionPromise.catch(() => {});
     orderInFlightMutex.set(idempKey, executionPromise);
 
     try {
@@ -2143,6 +2144,18 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             cleanNotes
           ]);
         } catch (insertErr) {
+          // If orders.notes column is unexpectedly missing, strictly reject auto-healing schema mutation.
+          // Dedicated migration (server/scripts/migrate_orders_notes.js) must be run prior to deployment.
+          const isNotesMissing = Boolean(
+            (insertErr.code === '42703' && String(insertErr.message).toLowerCase().includes('notes')) ||
+            String(insertErr.message).toLowerCase().includes('column "notes"') ||
+            String(insertErr.message).toLowerCase().includes('has no column named notes')
+          );
+          if (isNotesMissing) {
+            console.error('Database schema error: orders.notes column does not exist. Dedicated migration is required.');
+            throw insertErr;
+          }
+
           console.warn('Auto-healing columns on order insertion:', insertErr.message);
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1'); } catch (e) {}
@@ -2161,7 +2174,6 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_accuracy INT'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS distance_meters INT'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128)'); } catch (e) {}
-          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT'); } catch (e) {}
 
           result = await txQuery(`
             INSERT INTO orders (
@@ -2233,7 +2245,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       throw innerErr;
     }
   } catch (err) {
-    console.error('Create order error:', err);
+    console.error('Create order error:', err.message || 'Database error');
     res.status(500).json({ error: 'Failed to place order' });
   }
 });
@@ -2596,9 +2608,14 @@ export function verifyKdsAuthorization(req, resto, requiredPermission = 'kds:rea
     return { authorized: false, status: 401, error: 'INVALID_KDS_TOKEN', message: 'Malformed authentication token.' };
   }
 
-  // Case 1: SuperAdmin master access
+  // Case 1: SuperAdmin master access - direct access forbidden; impersonation required
   if (decoded.role === 'superadmin') {
-    return { authorized: true, user: decoded, isSuperAdmin: true };
+    return {
+      authorized: false,
+      status: 403,
+      error: 'SUPERADMIN_IMPERSONATION_REQUIRED',
+      message: 'Direct Super Admin access to tenant Kitchen Display is restricted. Please use 1-Click Impersonation to access this restaurant.'
+    };
   }
 
   // Case 2: Restaurant Admin access (matching tenant)

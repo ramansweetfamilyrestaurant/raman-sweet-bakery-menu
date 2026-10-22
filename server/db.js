@@ -95,6 +95,9 @@ async function initDb(options = {}) {
       }
     }
 
+    // Explicit test database identity check BEFORE any schema creation, migration, or seeding
+    await verifyTestDatabaseIdentity(dbType === 'postgres' ? pgPool : sqliteDb, { isPostgres: dbType === 'postgres' });
+
     if (!process.env.VERCEL) {
       await createTables(options);
       if (!paymentIndexVerified) {
@@ -109,8 +112,6 @@ async function initDb(options = {}) {
       isDbInitialized = true;
     }
 
-    // Explicit test database identity check where infrastructure permits
-    await verifyTestDatabaseIdentity(query, { isPostgres: dbType === 'postgres' });
     return;
   }
 

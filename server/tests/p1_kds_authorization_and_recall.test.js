@@ -38,6 +38,7 @@ import { query, initDb } from '../db.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import apiRouter, { verifyKdsTenantAndEntitlement } from '../routes/api.js';
 import adminRouter from '../routes/admin.js';
+import superadminRouter from '../routes/superadmin.js';
 
 // Pre-flight Database Guard: strictly enforce local disposable test DB
 const rawTestUrl = process.env.TEST_DATABASE_URL;
@@ -84,11 +85,12 @@ async function run() {
 
   await initDb();
 
-  // Create isolated ephemeral Express test server mounting api and admin routers
+  // Create isolated ephemeral Express test server mounting superadmin, admin and api routers
   const app = express();
   app.use(express.json());
-  app.use('/api', apiRouter);
+  app.use('/api/superadmin', superadminRouter);
   app.use('/api/admin', adminRouter);
+  app.use('/api', apiRouter);
 
   const server = http.createServer(app);
   await new Promise(resolve => server.listen(0, resolve));
@@ -126,6 +128,10 @@ async function run() {
     UNKNOWN_PLAN_ID,
     CROSS_RESTO_ID
   ];
+
+  const SUPERADMIN_ID = 99901;
+  const SUPERADMIN_USER = 'p1_kds_master_superadmin';
+  const SUPERADMIN_PASS = 'SuperSecretKdsAdmin1!';
 
   const TEST_PIN = '4321';
 
@@ -197,11 +203,24 @@ async function run() {
       VALUES ($1, 'P1 Unknown Plan Resto', $2, 'non_existent_plan_xyz', true, $3, 1, 'standard', 'active')
     `, [UNKNOWN_PLAN_ID, UNKNOWN_PLAN_SLUG, pinHash]);
 
-    // 7. Seed Cross-Tenant Restaurant
+    // 7. Seed Cross-Tenant Restaurant & Admin
     await query(`
       INSERT INTO restaurants (id, name, slug, plan_tier, active, kds_pin_hash, kds_auth_version, subscription_type, mandate_status)
       VALUES ($1, 'P1 Cross Tenant Resto', $2, 'enterprise', true, $3, 1, 'VIP', 'active')
     `, [CROSS_RESTO_ID, CROSS_SLUG, pinHash]);
+    await query(`
+      INSERT INTO admins (id, username, password_hash, restaurant_id, role)
+      VALUES ($1, 'p1_cross_owner', $2, $1, 'restaurant_admin')
+    `, [CROSS_RESTO_ID, passHash]);
+
+    // 8. Seed Super Admin for authorization & impersonation tests
+    await query('DELETE FROM admins WHERE id = $1 OR username = $2', [SUPERADMIN_ID, SUPERADMIN_USER]);
+
+    const superPassHash = await bcrypt.hash(SUPERADMIN_PASS, 10);
+    await query(`
+      INSERT INTO admins (id, username, password_hash, restaurant_id, role)
+      VALUES ($1, $2, $3, NULL, 'superadmin')
+    `, [SUPERADMIN_ID, SUPERADMIN_USER, superPassHash]);
 
     // Helper token generators
     const makeKdsToken = (rid, slug, perms = ['kds:read', 'kds:complete']) => jwt.sign(
@@ -217,6 +236,7 @@ async function run() {
 
     const activeKdsToken = makeKdsToken(ACTIVE_RESTO_ID, ACTIVE_SLUG);
     const activeAdminToken = makeAdminToken(ACTIVE_RESTO_ID, ACTIVE_RESTO_ID);
+    const crossAdminToken = makeAdminToken(CROSS_RESTO_ID, CROSS_RESTO_ID);
     const suspendedKdsToken = makeKdsToken(SUSPENDED_RESTO_ID, SUSPENDED_SLUG);
     const suspendedVipToken = makeKdsToken(SUSPENDED_VIP_ID, SUSPENDED_VIP_SLUG);
     const disabledPlanToken = makeKdsToken(DISABLED_PLAN_ID, DISABLED_PLAN_SLUG);
@@ -719,19 +739,230 @@ async function run() {
       finalOrder.is_settled === 1 && !inQueueRace ? 'PASS' : 'FAIL',
       `Concurrent settlement & recall: DB is_settled=${finalOrder.is_settled}, absent from queue=${!inQueueRace}`);
 
+    // =========================================================================
+    // SECTION E: SUPER ADMIN KDS AUTHORIZATION POLICY & IMPERSONATION SCOPING
+    // =========================================================================
+    console.log('\n--- SECTION E: Super Admin KDS Authorization Policy & Impersonation Scoping ---');
+
+    const ORDER_SA_COMPLETE_ID = 801;
+    const ORDER_SA_RECALL_ID = 802;
+    await query('DELETE FROM orders WHERE id IN (801, 802)');
+    await query(`
+      INSERT INTO orders (id, restaurant_id, table_number, items, status, sent_to_kds, kitchen_prepared, is_settled, total_amount)
+      VALUES ($1, $2, 'T-SA1', '[]', 'kitchen', 1, 0, 0, 100)
+    `, [ORDER_SA_COMPLETE_ID, ACTIVE_RESTO_ID]);
+    await query(`
+      INSERT INTO orders (id, restaurant_id, table_number, items, status, sent_to_kds, kitchen_prepared, is_settled, total_amount)
+      VALUES ($1, $2, 'T-SA2', '[]', 'kitchen', 1, 1, 0, 150)
+    `, [ORDER_SA_RECALL_ID, ACTIVE_RESTO_ID]);
+
+    // E.0: Obtain genuine master Super Admin token via real login flow
+    const resSaLogin = await fetch(`${baseUrl}/superadmin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: SUPERADMIN_USER, password: SUPERADMIN_PASS })
+    });
+    const dataSaLogin = await resSaLogin.json();
+    assert.strictEqual(resSaLogin.status, 200, `Super Admin login should return 200, got ${resSaLogin.status}`);
+    assert.ok(dataSaLogin.token, 'Super Admin login must return token');
+    const masterSuperAdminToken = dataSaLogin.token;
+
+    const decodedMaster = jwt.decode(masterSuperAdminToken);
+    assert.strictEqual(decodedMaster.role, 'superadmin', 'Master token must have role superadmin');
+    record('E0_GENUINE_SUPERADMIN_LOGIN', 'PASS', 'Genuine master Super Admin token obtained via /superadmin/login');
+
+    // E.1: Direct master Super Admin token access DENIED with HTTP 403 SUPERADMIN_IMPERSONATION_REQUIRED
+    // E.1.a: GET /api/kitchen/orders
+    const resSaGetOrders = await fetch(`${baseUrl}/kitchen/orders?slug=${ACTIVE_SLUG}`, {
+      headers: { 'Authorization': `Bearer ${masterSuperAdminToken}` }
+    });
+    const dataSaGetOrders = await resSaGetOrders.json();
+    record('E1_DIRECT_SUPERADMIN_GET_ORDERS_DENIED',
+      resSaGetOrders.status === 403 && dataSaGetOrders.error === 'SUPERADMIN_IMPERSONATION_REQUIRED' ? 'PASS' : 'FAIL',
+      `Direct master Super Admin GET orders returned ${resSaGetOrders.status} (${dataSaGetOrders.error})`);
+
+    // E.1.b: PATCH /api/kitchen/orders/:id/complete (Order state MUST remain unchanged in DB)
+    const resSaComplete = await fetch(`${baseUrl}/kitchen/orders/${ORDER_SA_COMPLETE_ID}/complete?slug=${ACTIVE_SLUG}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${masterSuperAdminToken}` }
+    });
+    const dataSaComplete = await resSaComplete.json();
+    const rowsSaComplete = await query('SELECT kitchen_prepared FROM orders WHERE id = $1', [ORDER_SA_COMPLETE_ID]);
+    record('E1_DIRECT_SUPERADMIN_COMPLETE_DENIED',
+      resSaComplete.status === 403 && dataSaComplete.error === 'SUPERADMIN_IMPERSONATION_REQUIRED' && rowsSaComplete[0].kitchen_prepared === 0 ? 'PASS' : 'FAIL',
+      `Direct master Super Admin complete returned ${resSaComplete.status} (${dataSaComplete.error}), DB state unchanged (kitchen_prepared=${rowsSaComplete[0].kitchen_prepared})`);
+
+    // E.1.c: PATCH /api/kitchen/orders/:id/recall (Order state MUST remain unchanged in DB)
+    const resSaRecall = await fetch(`${baseUrl}/kitchen/orders/${ORDER_SA_RECALL_ID}/recall?slug=${ACTIVE_SLUG}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${masterSuperAdminToken}` }
+    });
+    const dataSaRecall = await resSaRecall.json();
+    const rowsSaRecall = await query('SELECT kitchen_prepared FROM orders WHERE id = $1', [ORDER_SA_RECALL_ID]);
+    record('E1_DIRECT_SUPERADMIN_RECALL_DENIED',
+      resSaRecall.status === 403 && dataSaRecall.error === 'SUPERADMIN_IMPERSONATION_REQUIRED' && rowsSaRecall[0].kitchen_prepared === 1 ? 'PASS' : 'FAIL',
+      `Direct master Super Admin recall returned ${resSaRecall.status} (${dataSaRecall.error}), DB state unchanged (kitchen_prepared=${rowsSaRecall[0].kitchen_prepared})`);
+
+    // E.2: Authorization check order preservation: Master Super Admin cannot bypass suspension or plan entitlement
+    const resSaSuspended = await fetch(`${baseUrl}/kitchen/orders?slug=${SUSPENDED_SLUG}`, {
+      headers: { 'Authorization': `Bearer ${masterSuperAdminToken}` }
+    });
+    const dataSaSuspended = await resSaSuspended.json();
+    record('E2_SUPERADMIN_CANNOT_BYPASS_SUSPENSION',
+      resSaSuspended.status === 403 && dataSaSuspended.error === 'RESTAURANT_SUSPENDED' ? 'PASS' : 'FAIL',
+      `Direct master Super Admin on suspended tenant returns ${resSaSuspended.status} (${dataSaSuspended.error})`);
+
+    const resSaDisabledPlan = await fetch(`${baseUrl}/kitchen/orders?slug=${DISABLED_PLAN_SLUG}`, {
+      headers: { 'Authorization': `Bearer ${masterSuperAdminToken}` }
+    });
+    const dataSaDisabledPlan = await resSaDisabledPlan.json();
+    record('E2_SUPERADMIN_CANNOT_BYPASS_PLAN_ENTITLEMENT',
+      resSaDisabledPlan.status === 403 && dataSaDisabledPlan.error === 'KDS_DISABLED' ? 'PASS' : 'FAIL',
+      `Direct master Super Admin on disabled plan returns ${resSaDisabledPlan.status} (${dataSaDisabledPlan.error})`);
+
+    // E.3: Real 1-Click Impersonation Flow succeeds and provides tenant-scoped KDS access
+    const resImpersonate = await fetch(`${baseUrl}/superadmin/restaurants/${ACTIVE_RESTO_ID}/impersonate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${masterSuperAdminToken}`
+      }
+    });
+    const dataImpersonate = await resImpersonate.json();
+    assert.strictEqual(resImpersonate.status, 200, `Impersonation request should return 200, got ${resImpersonate.status}`);
+    assert.ok(dataImpersonate.token, 'Impersonation response must provide token');
+
+    const impersonatedToken = dataImpersonate.token;
+    const decodedImp = jwt.decode(impersonatedToken);
+    assert.strictEqual(decodedImp.role, 'restaurant_admin', 'Impersonated token role must be restaurant_admin');
+    assert.strictEqual(Number(decodedImp.restaurant_id), ACTIVE_RESTO_ID, 'Impersonated token restaurant_id must match target restaurant');
+    assert.strictEqual(decodedImp.is_impersonated, true, 'Impersonated token must have is_impersonated: true');
+    record('E3_IMPERSONATION_TOKEN_ACQUIRED', 'PASS',
+      `Acquired real impersonation token with role=${decodedImp.role}, restaurant_id=${decodedImp.restaurant_id}, is_impersonated=${decodedImp.is_impersonated}`);
+
+    // E.3.a: Impersonated token can access target restaurant KDS orders
+    const resImpOrders = await fetch(`${baseUrl}/kitchen/orders?slug=${ACTIVE_SLUG}`, {
+      headers: { 'Authorization': `Bearer ${impersonatedToken}` }
+    });
+    record('E3_IMPERSONATED_GET_ORDERS_SUCCESS', resImpOrders.status === 200 ? 'PASS' : 'FAIL',
+      `Impersonated token GET orders returned HTTP ${resImpOrders.status}`);
+
+    // E.3.b: Impersonated token can complete order on target restaurant
+    const resImpComplete = await fetch(`${baseUrl}/kitchen/orders/${ORDER_SA_COMPLETE_ID}/complete?slug=${ACTIVE_SLUG}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${impersonatedToken}` }
+    });
+    const dataImpComplete = await resImpComplete.json();
+    const rowsImpComplete = await query('SELECT kitchen_prepared FROM orders WHERE id = $1', [ORDER_SA_COMPLETE_ID]);
+    record('E3_IMPERSONATED_COMPLETE_SUCCESS',
+      resImpComplete.status === 200 && dataImpComplete.success && rowsImpComplete[0].kitchen_prepared === 1 ? 'PASS' : 'FAIL',
+      `Impersonated token completed order (HTTP ${resImpComplete.status}, DB kitchen_prepared=${rowsImpComplete[0].kitchen_prepared})`);
+
+    // E.3.c: Impersonated token can recall order on target restaurant
+    const resImpRecall = await fetch(`${baseUrl}/kitchen/orders/${ORDER_SA_COMPLETE_ID}/recall?slug=${ACTIVE_SLUG}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${impersonatedToken}` }
+    });
+    const dataImpRecall = await resImpRecall.json();
+    const rowsImpRecall = await query('SELECT kitchen_prepared FROM orders WHERE id = $1', [ORDER_SA_COMPLETE_ID]);
+    record('E3_IMPERSONATED_RECALL_SUCCESS',
+      resImpRecall.status === 200 && dataImpRecall.success && rowsImpRecall[0].kitchen_prepared === 0 ? 'PASS' : 'FAIL',
+      `Impersonated token recalled order (HTTP ${resImpRecall.status}, DB kitchen_prepared=${rowsImpRecall[0].kitchen_prepared})`);
+
+    // E.4: Impersonated token CANNOT access cross-tenant KDS (HTTP 403 TENANT_MISMATCH)
+    const resImpCrossOrders = await fetch(`${baseUrl}/kitchen/orders?slug=${CROSS_SLUG}`, {
+      headers: { 'Authorization': `Bearer ${impersonatedToken}` }
+    });
+    const dataImpCrossOrders = await resImpCrossOrders.json();
+    record('E4_IMPERSONATED_CROSS_TENANT_ORDERS_DENIED',
+      resImpCrossOrders.status === 403 && dataImpCrossOrders.error === 'TENANT_MISMATCH' ? 'PASS' : 'FAIL',
+      `Impersonated token denied cross-tenant KDS access with ${resImpCrossOrders.status} (${dataImpCrossOrders.error})`);
+
+    const resImpCrossComplete = await fetch(`${baseUrl}/kitchen/orders/${ORDER_CROSS_ID}/complete?slug=${CROSS_SLUG}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${impersonatedToken}` }
+    });
+    const dataImpCrossComplete = await resImpCrossComplete.json();
+    record('E4_IMPERSONATED_CROSS_TENANT_COMPLETE_DENIED',
+      resImpCrossComplete.status === 403 && dataImpCrossComplete.error === 'TENANT_MISMATCH' ? 'PASS' : 'FAIL',
+      `Impersonated token denied cross-tenant complete with ${resImpCrossComplete.status} (${dataImpCrossComplete.error})`);
+
+    const resImpCrossRecall = await fetch(`${baseUrl}/kitchen/orders/${ORDER_CROSS_ID}/recall?slug=${CROSS_SLUG}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${impersonatedToken}` }
+    });
+    const dataImpCrossRecall = await resImpCrossRecall.json();
+    record('E4_IMPERSONATED_CROSS_TENANT_RECALL_DENIED',
+      resImpCrossRecall.status === 403 && dataImpCrossRecall.error === 'TENANT_MISMATCH' ? 'PASS' : 'FAIL',
+      `Impersonated token denied cross-tenant recall with ${resImpCrossRecall.status} (${dataImpCrossRecall.error})`);
+
+    // E.5: Regular Restaurant Admin token cross-tenant protection (HTTP 403 TENANT_MISMATCH)
+    const resCrossAdminOrders = await fetch(`${baseUrl}/kitchen/orders?slug=${ACTIVE_SLUG}`, {
+      headers: { 'Authorization': `Bearer ${crossAdminToken}` }
+    });
+    const dataCrossAdminOrders = await resCrossAdminOrders.json();
+    record('E5_CROSS_ADMIN_ORDERS_DENIED',
+      resCrossAdminOrders.status === 403 && dataCrossAdminOrders.error === 'TENANT_MISMATCH' ? 'PASS' : 'FAIL',
+      `Cross-tenant restaurant admin token denied with ${resCrossAdminOrders.status} (${dataCrossAdminOrders.error})`);
+
+    const resCrossAdminComplete = await fetch(`${baseUrl}/kitchen/orders/801/complete?slug=${ACTIVE_SLUG}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${crossAdminToken}` }
+    });
+    const dataCrossAdminComplete = await resCrossAdminComplete.json();
+    record('E5_CROSS_ADMIN_COMPLETE_DENIED',
+      resCrossAdminComplete.status === 403 && dataCrossAdminComplete.error === 'TENANT_MISMATCH' ? 'PASS' : 'FAIL',
+      `Cross-tenant restaurant admin token denied complete with ${resCrossAdminComplete.status} (${dataCrossAdminComplete.error})`);
+
+    // E.6: KDS Token scope & validity checks
+    // E.6.a: Read-only KDS token denied complete operation (403 INSUFFICIENT_PERMISSIONS)
+    const resReadOnlyComplete = await fetch(`${baseUrl}/kitchen/orders/801/complete?slug=${ACTIVE_SLUG}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${readOnlyToken}` }
+    });
+    const dataReadOnlyComplete = await resReadOnlyComplete.json();
+    record('E6_READ_ONLY_KDS_COMPLETE_DENIED',
+      resReadOnlyComplete.status === 403 && dataReadOnlyComplete.error === 'INSUFFICIENT_PERMISSIONS' ? 'PASS' : 'FAIL',
+      `Read-only KDS token denied complete with ${resReadOnlyComplete.status} (${dataReadOnlyComplete.error})`);
+
+    // E.6.b: Expired KDS session token denied (401 KDS_TOKEN_EXPIRED)
+    const expiredKdsToken = jwt.sign(
+      { role: 'kds_screen', restaurant_id: ACTIVE_RESTO_ID, slug: ACTIVE_SLUG, auth_version: 1, permissions: ['kds:read', 'kds:complete'] },
+      JWT_SECRET,
+      { expiresIn: '-1s' }
+    );
+    const resExpired = await fetch(`${baseUrl}/kitchen/orders?slug=${ACTIVE_SLUG}`, {
+      headers: { 'Authorization': `Bearer ${expiredKdsToken}` }
+    });
+    const dataExpired = await resExpired.json();
+    record('E6_EXPIRED_KDS_TOKEN_DENIED',
+      resExpired.status === 401 && dataExpired.error === 'KDS_TOKEN_EXPIRED' ? 'PASS' : 'FAIL',
+      `Expired KDS session token rejected with ${resExpired.status} (${dataExpired.error})`);
+
+    // E.6.c: Cross-tenant order complete attempt denied (404 order_not_found)
+    const resCrossOrderComplete = await fetch(`${baseUrl}/kitchen/orders/${ORDER_CROSS_ID}/complete?slug=${ACTIVE_SLUG}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${activeKdsToken}` }
+    });
+    const dataCrossOrderComplete = await resCrossOrderComplete.json();
+    record('E6_CROSS_ORDER_COMPLETE_DENIED',
+      resCrossOrderComplete.status === 404 && dataCrossOrderComplete.error === 'order_not_found' ? 'PASS' : 'FAIL',
+      `Cross-tenant order complete attempt returned ${resCrossOrderComplete.status} (${dataCrossOrderComplete.error})`);
+
   } catch (err) {
     console.error('Fatal test error:', err);
     failed++;
   } finally {
     // Cleanup test fixtures
     try {
+      await query('DELETE FROM admins WHERE id = $1 OR username = $2', [SUPERADMIN_ID, SUPERADMIN_USER]);
       for (const rid of ALL_TEST_RESTOS.concat([9108])) {
         await query('DELETE FROM subscriptions WHERE restaurant_id = $1', [rid]);
         await query('DELETE FROM orders WHERE restaurant_id = $1', [rid]);
         await query('DELETE FROM admins WHERE restaurant_id = $1', [rid]);
         await query('DELETE FROM restaurants WHERE id = $1', [rid]);
       }
-      await query('DELETE FROM orders WHERE id IN (501, 502, 503, 504, 505, 506, 507, 508, 509, 601, 602, 603, 604, 605, 606, 607, 608, 609, 610, 611, 612, 701, 702, 703)');
+      await query('DELETE FROM orders WHERE id IN (501, 502, 503, 504, 505, 506, 507, 508, 509, 601, 602, 603, 604, 605, 606, 607, 608, 609, 610, 611, 612, 701, 702, 703, 801, 802)');
     } catch (cleanErr) {
       console.warn('Cleanup notice:', cleanErr.message);
     }

@@ -10,11 +10,22 @@
  */
 
 import assert from 'assert';
-import { runPostgresMigration, isProductionDatabaseUrl, SUPPORT_TICKET_MIGRATION_DDL } from '../scripts/migrate_production_postgres.js';
+import pg from 'pg';
+import {
+  runPostgresMigration,
+  isProductionDatabaseUrl,
+  resolveSelectedMigrations,
+  SUPPORT_TICKET_MIGRATION_DDL,
+  ORDERS_NOTES_MIGRATION_DDL,
+  PRODUCTION_MIGRATION_DDL
+} from '../scripts/migrate_production_postgres.js';
+import { validateMigrationTargetUrl } from '../scripts/migrate_orders_notes.js';
 
 console.log('======================================================================');
 console.log('🛡️  POSTGRESQL MIGRATION WORKFLOW & GUARD TEST SUITE');
 console.log('======================================================================\n');
+
+const LOCAL_TEST_URL = 'postgres://postgres:postgres@127.0.0.1:5432/touchqr_disposable_test';
 
 let passed = 0;
 let failed = 0;
@@ -32,6 +43,9 @@ async function test(name, fn) {
 }
 
 async function runSuite() {
+  // Validate local test URL before connecting
+  validateMigrationTargetUrl(LOCAL_TEST_URL);
+
   // -------------------------------------------------------------------
   // 1. Missing MIGRATION_DATABASE_URL is rejected
   // -------------------------------------------------------------------
@@ -143,6 +157,353 @@ async function runSuite() {
       },
       /MIGRATION_SAFETY_VIOLATION/
     );
+  });
+
+  // -------------------------------------------------------------------
+  // 8. orders.notes registration in PRODUCTION_MIGRATION_DDL
+  // -------------------------------------------------------------------
+  await test('8. orders.notes is registered with exact DDL and strictly additive invariants', () => {
+    assert(ORDERS_NOTES_MIGRATION_DDL.length === 1, 'ORDERS_NOTES_MIGRATION_DDL must define exactly 1 migration item');
+    const item = ORDERS_NOTES_MIGRATION_DDL[0];
+    assert.strictEqual(item.name, 'column:orders.notes');
+    assert.strictEqual(item.type, 'column');
+    assert.strictEqual(item.schema, 'public');
+    assert.strictEqual(item.table, 'orders');
+    assert.strictEqual(item.column, 'notes');
+    assert.strictEqual(item.sql, 'ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS notes TEXT;');
+
+    // Invariants: nullable, no default, no NOT NULL, no DROP / RENAME
+    assert(item.sql.includes('IF NOT EXISTS'), 'DDL must use IF NOT EXISTS for idempotency');
+    assert(!item.sql.includes('NOT NULL'), 'notes column must remain nullable');
+    assert(!item.sql.includes('DEFAULT'), 'notes column must not set a default value');
+    assert(!item.sql.includes('DROP'), 'DDL must not drop any column');
+    assert(!item.sql.includes('RENAME'), 'DDL must not rename any column');
+
+    // Confirm presence in PRODUCTION_MIGRATION_DDL
+    const prodItems = PRODUCTION_MIGRATION_DDL.map(m => m.name);
+    assert(prodItems.includes('column:orders.notes'), 'PRODUCTION_MIGRATION_DDL must include column:orders.notes');
+    assert(prodItems.includes('table:support_tickets'), 'PRODUCTION_MIGRATION_DDL must include support_tickets');
+  });
+
+  // -------------------------------------------------------------------
+  // 9. resolveSelectedMigrations resolves single migration and preserves default
+  // -------------------------------------------------------------------
+  await test('9. resolveSelectedMigrations resolves single named migration and preserves default', () => {
+    // Single named migration
+    const selected = resolveSelectedMigrations('column:orders.notes');
+    assert.strictEqual(selected.length, 1);
+    assert.strictEqual(selected[0].name, 'column:orders.notes');
+
+    // Preserves default when omitted
+    const allDefault = resolveSelectedMigrations(undefined);
+    assert.strictEqual(allDefault.length, PRODUCTION_MIGRATION_DDL.length);
+    assert.strictEqual(allDefault, PRODUCTION_MIGRATION_DDL);
+
+    const nullDefault = resolveSelectedMigrations(null);
+    assert.strictEqual(nullDefault.length, PRODUCTION_MIGRATION_DDL.length);
+  });
+
+  // -------------------------------------------------------------------
+  // 10. Unknown or empty migration names fail safely before connection
+  // -------------------------------------------------------------------
+  await test('10. Unknown or empty migration names fail safely with MIGRATION_CONFIG_ERROR', async () => {
+    // Empty migration name
+    assert.throws(
+      () => resolveSelectedMigrations(''),
+      /MIGRATION_CONFIG_ERROR: --migration flag cannot be empty/
+    );
+    assert.throws(
+      () => resolveSelectedMigrations('   '),
+      /MIGRATION_CONFIG_ERROR: --migration flag cannot be empty/
+    );
+
+    // Unknown migration name
+    assert.throws(
+      () => resolveSelectedMigrations('unknown:some_random_table'),
+      /MIGRATION_CONFIG_ERROR: Unknown migration name 'unknown:some_random_table'/
+    );
+
+    // SQL injection attempt through migration name rejected
+    assert.throws(
+      () => resolveSelectedMigrations('column:orders.notes; DROP TABLE orders;'),
+      /MIGRATION_CONFIG_ERROR: Unknown migration name/
+    );
+
+    // runPostgresMigration fails closed before opening DB connection
+    await assert.rejects(
+      async () => {
+        await runPostgresMigration({
+          migrationUrl: LOCAL_TEST_URL,
+          migrationName: 'invalid_migration_name'
+        });
+      },
+      /MIGRATION_CONFIG_ERROR: Unknown migration name/
+    );
+
+    await assert.rejects(
+      async () => {
+        await runPostgresMigration({
+          migrationUrl: LOCAL_TEST_URL,
+          migrationName: ''
+        });
+      },
+      /MIGRATION_CONFIG_ERROR: --migration flag cannot be empty/
+    );
+  });
+
+  // -------------------------------------------------------------------
+  // 11. --migration=column:orders.notes --dry-run examines only column:orders.notes
+  // -------------------------------------------------------------------
+  await test('11. --migration=column:orders.notes --dry-run examines ONLY orders.notes (missing column mock)', async () => {
+    const mockQueries = [];
+    const mockPool = {
+      query: async (sql) => {
+        mockQueries.push(sql);
+        if (sql.includes('SELECT current_database()')) {
+          return { rows: [{ db: 'touchqr_disposable_test', usr: 'postgres', version: 'PostgreSQL 16' }] };
+        }
+        if (sql.includes('information_schema.tables')) {
+          return { rows: [{ table_name: 'orders' }] };
+        }
+        if (sql.includes('pg_indexes')) {
+          return { rows: [] };
+        }
+        if (sql.includes('information_schema.columns')) {
+          // Table exists but 'notes' column is missing
+          return { rows: [{ table_schema: 'public', table_name: 'orders', column_name: 'id', data_type: 'integer', is_nullable: 'NO' }] };
+        }
+        return { rows: [] };
+      },
+      end: async () => {}
+    };
+
+    const dryRunResult = await runPostgresMigration({
+      migrationUrl: LOCAL_TEST_URL,
+      dryRun: true,
+      migrationName: 'column:orders.notes',
+      pool: mockPool
+    });
+
+    assert.strictEqual(dryRunResult.dryRun, true, 'Result must report dryRun = true');
+    assert.strictEqual(dryRunResult.executed.length, 1, 'Only orders.notes must be planned');
+    assert.strictEqual(dryRunResult.executed[0], 'column:orders.notes');
+    assert.strictEqual(dryRunResult.skipped.length, 0);
+
+    // Crucial: No support ticket tables or indexes are in executed or skipped
+    const allActions = [...dryRunResult.executed, ...dryRunResult.skipped];
+    assert(!allActions.some(a => a.includes('support_ticket')), 'Support ticket migrations must be completely excluded');
+    assert(!mockQueries.some(q => q.includes('ALTER TABLE')), 'Dry run must NOT execute ALTER TABLE DDL');
+  });
+
+  // -------------------------------------------------------------------
+  // 12. Existing orders.notes reported as already present, with no DDL during dry-run
+  // -------------------------------------------------------------------
+  await test('12. Existing orders.notes is reported as already present, with no DDL during dry-run', async () => {
+    const dryRunReal = await runPostgresMigration({
+      migrationUrl: LOCAL_TEST_URL,
+      dryRun: true,
+      migrationName: 'column:orders.notes'
+    });
+
+    assert.strictEqual(dryRunReal.dryRun, true);
+    assert.strictEqual(dryRunReal.skipped.length, 1);
+    assert.strictEqual(dryRunReal.skipped[0], 'column:orders.notes', 'Existing column must be reported as skipped in dry-run');
+    assert.strictEqual(dryRunReal.executed.length, 0, 'Planned actions must be 0 when column already exists');
+
+    // Confirms support tickets were NOT examined
+    const allActions = [...dryRunReal.executed, ...dryRunReal.skipped];
+    assert(!allActions.some(a => a.includes('support_ticket')), 'Support ticket migrations must be completely excluded');
+  });
+
+  // -------------------------------------------------------------------
+  // 13. Selected execution applies only the notes migration
+  // -------------------------------------------------------------------
+  await test('13. Selected execution applies ONLY the notes migration', async () => {
+    const applyResult = await runPostgresMigration({
+      migrationUrl: LOCAL_TEST_URL,
+      dryRun: false,
+      migrationName: 'column:orders.notes'
+    });
+
+    assert.strictEqual(applyResult.success, true);
+    assert.strictEqual(applyResult.dryRun, false);
+    assert.strictEqual(applyResult.executed.length, 1);
+    assert.strictEqual(applyResult.executed[0], 'column:orders.notes');
+    assert(!applyResult.executed.some(a => a.includes('support_ticket')), 'No support ticket migrations were executed');
+  });
+
+  // -------------------------------------------------------------------
+  // 14. Repeated selected execution is idempotent
+  // -------------------------------------------------------------------
+  await test('14. Repeated selected execution is idempotent', async () => {
+    const rerunResult = await runPostgresMigration({
+      migrationUrl: LOCAL_TEST_URL,
+      dryRun: false,
+      migrationName: 'column:orders.notes'
+    });
+
+    assert.strictEqual(rerunResult.success, true);
+    assert.strictEqual(rerunResult.dryRun, false);
+
+    // Verify column exists exactly once in information_schema
+    const pool = new pg.Pool({ connectionString: LOCAL_TEST_URL });
+    try {
+      const countRes = await pool.query(`
+        SELECT COUNT(*) as count
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'orders' AND column_name = 'notes';
+      `);
+      assert.strictEqual(parseInt(countRes.rows[0].count, 10), 1, 'Column public.orders.notes must exist exactly once');
+
+      // Verify schema properties
+      const colRes = await pool.query(`
+        SELECT data_type, is_nullable, column_default
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'orders' AND column_name = 'notes';
+      `);
+      assert.strictEqual(colRes.rows[0].data_type, 'text');
+      assert.strictEqual(colRes.rows[0].is_nullable, 'YES');
+      assert.strictEqual(colRes.rows[0].column_default, null);
+    } finally {
+      await pool.end();
+    }
+  });
+
+  // -------------------------------------------------------------------
+  // 15. Omitting --migration preserves existing default registry behavior
+  // -------------------------------------------------------------------
+  await test('15. Omitting --migration preserves existing default registry behavior (all 10 migrations)', async () => {
+    const defaultDryRun = await runPostgresMigration({
+      migrationUrl: LOCAL_TEST_URL,
+      dryRun: true
+    });
+
+    assert.strictEqual(defaultDryRun.dryRun, true);
+    const totalExamined = defaultDryRun.executed.length + defaultDryRun.skipped.length;
+    assert.strictEqual(totalExamined, PRODUCTION_MIGRATION_DDL.length, 'Must examine all 10 registered migrations by default');
+
+    const examinedNames = [...defaultDryRun.executed, ...defaultDryRun.skipped];
+    assert(examinedNames.includes('table:support_tickets'));
+    assert(examinedNames.includes('table:support_ticket_messages'));
+    assert(examinedNames.includes('index:idx_support_tickets_resto_created'));
+    assert(examinedNames.includes('column:orders.notes'));
+  });
+
+  // -------------------------------------------------------------------
+  // 16. Production confirmation requirements remain enforced with single migration
+  // -------------------------------------------------------------------
+  await test('16. Production confirmation requirements remain enforced with --migration', async () => {
+    const prodUrl = 'postgres://user:pass@ep-cool-fog-123.aws.neon.tech/neondb';
+
+    await assert.rejects(
+      async () => {
+        await runPostgresMigration({
+          migrationUrl: prodUrl,
+          migrationName: 'column:orders.notes',
+          dryRun: false,
+          confirmProduction: false
+        });
+      },
+      /MIGRATION_SAFETY_VIOLATION/
+    );
+  });
+
+  // -------------------------------------------------------------------
+  // 17. Local-only migrate_orders_notes.js continues to reject remote/production targets
+  // -------------------------------------------------------------------
+  await test('17. Local-only migrate_orders_notes.js strictly rejects remote and production targets', () => {
+    // Neon production target
+    assert.throws(
+      () => validateMigrationTargetUrl('postgres://user:pass@ep-cool-fog-123.aws.neon.tech/neondb'),
+      /MIGRATION_SAFETY_VIOLATION/
+    );
+
+    // Non-local IP host
+    assert.throws(
+      () => validateMigrationTargetUrl('postgres://user:pass@192.168.1.100:5432/touchqr_disposable_test'),
+      /restricted to local targets only/
+    );
+
+    // Non-disposable DB name
+    assert.throws(
+      () => validateMigrationTargetUrl('postgres://postgres:postgres@127.0.0.1:5432/touchqr_production'),
+      /Database name must be exactly touchqr_disposable_test/
+    );
+
+    // Non-postgres protocol
+    assert.throws(
+      () => validateMigrationTargetUrl('http://127.0.0.1:5432/touchqr_disposable_test'),
+      /Protocol must be postgres: or postgresql:/
+    );
+
+    // Missing URL
+    assert.throws(
+      () => validateMigrationTargetUrl(''),
+      /MIGRATION_CONFIG_ERROR/
+    );
+
+    // Identical to DATABASE_URL guard
+    const originalDbUrl = process.env.DATABASE_URL;
+    try {
+      process.env.DATABASE_URL = LOCAL_TEST_URL;
+      assert.throws(
+        () => validateMigrationTargetUrl(LOCAL_TEST_URL),
+        /MIGRATION_SAFETY_VIOLATION: MIGRATION_DATABASE_URL is identical to DATABASE_URL/
+      );
+    } finally {
+      if (originalDbUrl) process.env.DATABASE_URL = originalDbUrl;
+      else delete process.env.DATABASE_URL;
+    }
+
+    // Valid local disposable target
+    const valid = validateMigrationTargetUrl(LOCAL_TEST_URL);
+    assert.strictEqual(valid.host, '127.0.0.1');
+    assert.strictEqual(valid.database, 'touchqr_disposable_test');
+  });
+
+  // -------------------------------------------------------------------
+  // 18. CLI End-to-End: --migration flag parsing via child_process
+  // -------------------------------------------------------------------
+  await test('18. CLI invocations handle --migration flag and errors end-to-end', async () => {
+    const { spawnSync } = await import('child_process');
+
+    // Valid selected dry run
+    const cliValid = spawnSync(
+      process.execPath,
+      ['server/scripts/migrate_production_postgres.js', '--migration=column:orders.notes', '--dry-run'],
+      {
+        env: { ...process.env, MIGRATION_DATABASE_URL: LOCAL_TEST_URL },
+        encoding: 'utf8'
+      }
+    );
+    assert.strictEqual(cliValid.status, 0, `CLI should succeed, got output: ${cliValid.stderr || cliValid.stdout}`);
+    assert(cliValid.stdout.includes('Target: SINGLE MIGRATION (column:orders.notes)'));
+    assert(cliValid.stdout.includes('column:orders.notes'));
+    assert(!cliValid.stdout.includes('support_tickets WOULD be created'));
+
+    // Unknown migration name rejected before DB connection
+    const cliUnknown = spawnSync(
+      process.execPath,
+      ['server/scripts/migrate_production_postgres.js', '--migration=unknown_test_col', '--dry-run'],
+      {
+        env: { ...process.env, MIGRATION_DATABASE_URL: LOCAL_TEST_URL },
+        encoding: 'utf8'
+      }
+    );
+    assert.strictEqual(cliUnknown.status, 1);
+    assert(cliUnknown.stderr.includes('MIGRATION_CONFIG_ERROR: Unknown migration name'));
+
+    // Empty migration name rejected
+    const cliEmpty = spawnSync(
+      process.execPath,
+      ['server/scripts/migrate_production_postgres.js', '--migration='],
+      {
+        env: { ...process.env, MIGRATION_DATABASE_URL: LOCAL_TEST_URL },
+        encoding: 'utf8'
+      }
+    );
+    assert.strictEqual(cliEmpty.status, 1);
+    assert(cliEmpty.stderr.includes('MIGRATION_CONFIG_ERROR: --migration flag cannot be empty'));
   });
 
   console.log('\n======================================================================');

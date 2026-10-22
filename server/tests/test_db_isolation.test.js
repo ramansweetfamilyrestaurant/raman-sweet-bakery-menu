@@ -323,6 +323,48 @@ async function runIsolationTests() {
       } catch (e) {}
     });
 
+    // ----------------------------------------------------
+    // TEST 15: initDb() validates identity BEFORE schema creation/seeding
+    // ----------------------------------------------------
+    await test('15. initDb() performs identity check before creating any tables or seeding', async () => {
+      await resetDbForTesting();
+      const testDbPath = 'menu_premutation_guard_test.db';
+      process.env.NODE_ENV = 'test';
+      process.env.TEST_DATABASE_URL = `sqlite:${testDbPath}`;
+      // Set expected name to something that definitely mismatches the connected file
+      process.env.TEST_DB_EXPECTED_NAME = 'non_existent_isolated_target';
+
+      await assert.rejects(
+        async () => {
+          await initDb();
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('identity check mismatch'), `Expected identity mismatch, got: ${err.message}`);
+          return true;
+        }
+      );
+
+      delete process.env.TEST_DB_EXPECTED_NAME;
+
+      // Verify that NO tables were created in the database file
+      const sqliteModule = await import('better-sqlite3');
+      const Database = sqliteModule.default || sqliteModule;
+      const rawDb = new Database(path.resolve(testDbPath));
+      try {
+        const tables = rawDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
+        assert.strictEqual(tables.length, 0, `Expected 0 tables created before identity check failure, found: ${tables.map(t => t.name).join(', ')}`);
+      } finally {
+        rawDb.close();
+        await resetDbForTesting();
+        try {
+          if (fs.existsSync(testDbPath)) {
+            fs.unlinkSync(testDbPath);
+          }
+        } catch (e) {}
+      }
+    });
+
   } finally {
     process.env = origEnv;
     await resetDbForTesting();

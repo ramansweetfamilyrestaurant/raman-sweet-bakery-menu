@@ -320,8 +320,24 @@ export async function verifyTestDatabaseIdentity(queryFnOrClient, options = {}) 
     const dbName = String(rows[0]?.db_name || '').toLowerCase();
 
     // 1. Must not match known production identifiers
-    const prodDbNames = ['production', 'prod_db', 'master_db', 'touchqr_prod', 'touchqr_production', 'live_db'];
-    if (prodDbNames.includes(dbName) || dbName.endsWith('_prod')) {
+    const prodDbNames = [
+      'production',
+      'prod_db',
+      'master_db',
+      'touchqr_prod',
+      'touchqr_production',
+      'live_db',
+      'neondb_prod',
+      'main_db',
+      'prod',
+      'master',
+      'live'
+    ];
+    if (
+      prodDbNames.includes(dbName) ||
+      dbName.endsWith('_prod') ||
+      dbName.endsWith('-prod')
+    ) {
       throw new Error(
         'TEST_DB_SAFETY_VIOLATION: Database identity check failed. Connected database is marked as production.'
       );

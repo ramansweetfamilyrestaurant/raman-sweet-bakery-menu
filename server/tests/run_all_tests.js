@@ -52,6 +52,11 @@ const suites = [
     requiresDb: true
   },
   {
+    name: 'P3 KDS Reliability & Shared-Device Safety',
+    file: 'server/tests/p3_kds_reliability_and_safety.test.js',
+    requiresDb: true
+  },
+  {
     name: 'Phase 4 Subscription Lifecycle & Cron',
     file: 'server/tests/subscription-lifecycle.test.js',
     requiresDb: true

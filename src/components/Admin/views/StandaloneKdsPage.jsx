@@ -15,10 +15,20 @@ import {
   RotateCcw,
   Layers,
   CheckSquare,
-  Square
+  Square,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  ExternalLink,
+  Store
 } from 'lucide-react';
 import { playKitchenSiren, unlockNotificationSound } from '../../../utils/soundManager';
 import { filterActiveKitchenOrders } from '../../../utils/kdsQueueFilter';
+import {
+  resolveKdsSlug,
+  parseRecallErrorResponse,
+  calculateConnectionStatus
+} from '../../../utils/kdsHelpers';
 
 export default function StandaloneKdsPage({ slug = '' }) {
   const [orders, setOrders] = useState([]);
@@ -40,40 +50,114 @@ export default function StandaloneKdsPage({ slug = '' }) {
   const [recentlyCompleted, setRecentlyCompleted] = useState([]);
   const [showCompletedDrawer, setShowCompletedDrawer] = useState(false);
 
+  // P3 States: Shared-device safety, recall UX & connection status
+  const [needsTenantPrompt, setNeedsTenantPrompt] = useState(false);
+  const [tenantSlugInput, setTenantSlugInput] = useState('');
+  const [recallingOrderIds, setRecallingOrderIds] = useState([]);
+  const [recallNotice, setRecallNotice] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState('online'); // 'online' | 'reconnecting' | 'offline'
+  const [lastSyncTime, setLastSyncTime] = useState(null);
+
+  // Lifecycle & concurrency refs
+  const isMountedRef = useRef(true);
+  const isPollingInProgressRef = useRef(false);
+  const pollingAbortControllerRef = useRef(null);
+  const currentPollSlugRef = useRef('');
+  const consecutiveFailuresRef = useRef(0);
+  const sirenIntervalRef = useRef(null);
+  const sirenTimeoutRef = useRef(null);
   const knownOrderIdsRef = useRef(null);
 
+  /**
+   * Resolve current slug strictly from URL path or explicit ?slug= query param.
+   * STRICTLY ignores localStorage.touchqr_admin_slug and touchqr_last_slug to prevent
+   * shared kitchen tablet leakage.
+   */
   const resolveCurrentSlug = () => {
-    if (slug) return slug;
-    const parts = window.location.pathname.split('/').filter(Boolean);
-    if (parts.length >= 2 && parts[parts.length - 1] === 'kitchen') {
-      return parts[parts.length - 2];
-    } else if (parts.length > 0 && parts[0] !== 'kitchen') {
-      return parts[0];
-    }
-    const searchSlug = new URLSearchParams(window.location.search).get('slug');
-    if (searchSlug) return searchSlug;
-    return localStorage.getItem('touchqr_admin_slug') || localStorage.getItem('touchqr_last_slug') || '';
+    return resolveKdsSlug({
+      slug,
+      pathname: typeof window !== 'undefined' ? window.location.pathname : '',
+      search: typeof window !== 'undefined' ? window.location.search : ''
+    });
   };
 
   const getStoredKdsToken = (targetSlug) => {
-    if (!targetSlug) return '';
+    if (!targetSlug || typeof localStorage === 'undefined') return '';
     return localStorage.getItem(`touchqr_kds_token_${targetSlug}`) || '';
   };
 
   const setStoredKdsToken = (targetSlug, token) => {
-    if (!targetSlug) return;
+    if (!targetSlug || typeof localStorage === 'undefined') return;
     localStorage.setItem(`touchqr_kds_token_${targetSlug}`, token);
   };
 
   const clearStoredKdsToken = (targetSlug) => {
-    if (!targetSlug) return;
+    if (!targetSlug || typeof localStorage === 'undefined') return;
     localStorage.removeItem(`touchqr_kds_token_${targetSlug}`);
   };
 
+  // Clock updater & component unmount lifecycle tracking
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    isMountedRef.current = true;
+    const timer = setInterval(() => {
+      if (isMountedRef.current) {
+        setCurrentTime(new Date());
+      }
+    }, 1000);
+
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(timer);
+      stopSiren();
+      if (pollingAbortControllerRef.current) {
+        try { pollingAbortControllerRef.current.abort(); } catch (e) {}
+      }
+    };
   }, []);
+
+  // Browser online/offline event listeners as supplemental signals
+  useEffect(() => {
+    const handleOnline = () => {
+      if (isMountedRef.current) {
+        fetchOrders();
+      }
+    };
+    const handleOffline = () => {
+      if (isMountedRef.current) {
+        setConnectionStatus('offline');
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Auto-dismiss recall notice banner after 6 seconds
+  useEffect(() => {
+    if (!recallNotice) return;
+    const timer = setTimeout(() => {
+      if (isMountedRef.current) {
+        setRecallNotice(null);
+      }
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [recallNotice]);
+
+  const stopSiren = () => {
+    if (sirenIntervalRef.current) {
+      clearInterval(sirenIntervalRef.current);
+      sirenIntervalRef.current = null;
+    }
+    if (sirenTimeoutRef.current) {
+      clearTimeout(sirenTimeoutRef.current);
+      sirenTimeoutRef.current = null;
+    }
+  };
 
   const playSiren = () => {
     try {
@@ -85,15 +169,23 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
   const playSirenFor8Seconds = () => {
     try {
-      const startTime = Date.now();
+      // Clear any existing active timer before starting replacement sequence
+      stopSiren();
+      if (!isMountedRef.current) return;
+
       playSiren();
-      const sirenTimer = setInterval(() => {
-        if (Date.now() - startTime >= 8000) {
-          clearInterval(sirenTimer);
+      const startTime = Date.now();
+      sirenIntervalRef.current = setInterval(() => {
+        if (!isMountedRef.current || Date.now() - startTime >= 8000) {
+          stopSiren();
         } else {
           playSiren();
         }
       }, 2600);
+
+      sirenTimeoutRef.current = setTimeout(() => {
+        stopSiren();
+      }, 8200);
     } catch (e) {
       console.warn('8-second Siren error:', e);
     }
@@ -102,17 +194,31 @@ export default function StandaloneKdsPage({ slug = '' }) {
   const unlockAudio = () => {
     unlockNotificationSound().then(() => {
       playSiren();
-      setAudioUnlocked(true);
+      if (isMountedRef.current) setAudioUnlocked(true);
     }).catch(() => {
-      setAudioUnlocked(true);
+      if (isMountedRef.current) setAudioUnlocked(true);
     });
   };
 
+  /**
+   * Fetch kitchen orders with in-flight request guard and AbortController.
+   * Prevents overlapping polls, invalidates stale tenant responses, and catches AbortError safely.
+   */
   const fetchOrders = async () => {
     const targetSlug = resolveCurrentSlug();
+    currentPollSlugRef.current = targetSlug;
+
+    // Shared device safety: If slug is missing, display prompt and dispatch ZERO API calls
     if (!targetSlug) {
-      setNotFound(true);
+      setNeedsTenantPrompt(true);
       setLoading(false);
+      return;
+    }
+
+    setNeedsTenantPrompt(false);
+
+    // In-flight guard: do not start duplicate poll if previous request is still running
+    if (isPollingInProgressRef.current) {
       return;
     }
 
@@ -123,12 +229,27 @@ export default function StandaloneKdsPage({ slug = '' }) {
       return;
     }
 
+    isPollingInProgressRef.current = true;
+
+    // Abort prior in-flight request if any
+    if (pollingAbortControllerRef.current) {
+      try { pollingAbortControllerRef.current.abort(); } catch (e) {}
+    }
+    const abortController = new AbortController();
+    pollingAbortControllerRef.current = abortController;
+
     try {
       const res = await fetch(`/api/kitchen/orders?slug=${encodeURIComponent(targetSlug)}`, {
+        signal: abortController.signal,
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      // Ignore response if unmounted or if tenant changed while request was in flight
+      if (!isMountedRef.current || currentPollSlugRef.current !== targetSlug) {
+        return;
+      }
 
       if (res.status === 401 || res.status === 403) {
         const errData = await res.json().catch(() => ({}));
@@ -157,8 +278,21 @@ export default function StandaloneKdsPage({ slug = '' }) {
         return;
       }
 
+      if (!res.ok) {
+        throw new Error(`HTTP_${res.status}`);
+      }
+
       const data = await res.json();
+      if (!isMountedRef.current || currentPollSlugRef.current !== targetSlug) {
+        return;
+      }
+
       if (data.success) {
+        // Authoritative API response received -> mark online
+        consecutiveFailuresRef.current = 0;
+        setConnectionStatus('online');
+        setLastSyncTime(new Date());
+
         setNeedsPinUnlock(false);
         setPinUnconfigured(false);
         if (data.restaurant?.name) {
@@ -182,17 +316,62 @@ export default function StandaloneKdsPage({ slug = '' }) {
         knownOrderIdsRef.current = currentIds;
         setOrders(activeOrders);
       }
-    } catch (e) {
-      console.warn('Failed to poll kitchen orders:', e);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        // Controlled abort on unmount or slug transition; do not count as connection error
+        return;
+      }
+      consecutiveFailuresRef.current += 1;
+      const nextStatus = calculateConnectionStatus({
+        consecutiveFailures: consecutiveFailuresRef.current,
+        isBrowserOnline: typeof navigator !== 'undefined' ? navigator.onLine : true
+      });
+      setConnectionStatus(nextStatus);
+      console.warn('Failed to poll kitchen orders:', err.message || err);
     } finally {
-      setLoading(false);
+      // Crucial: Release in-flight guard so future polling intervals can recover
+      isPollingInProgressRef.current = false;
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
+  // Polling interval with cleanup on unmount or slug change
   useEffect(() => {
+    const targetSlug = resolveCurrentSlug();
+    currentPollSlugRef.current = targetSlug;
+    knownOrderIdsRef.current = null;
+    consecutiveFailuresRef.current = 0;
+
     fetchOrders();
-    const interval = setInterval(fetchOrders, 3000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 3000);
+
+    return () => {
+      clearInterval(interval);
+      if (pollingAbortControllerRef.current) {
+        try { pollingAbortControllerRef.current.abort(); } catch (e) {}
+      }
+      isPollingInProgressRef.current = false;
+    };
+  }, [slug]);
+
+  // Load restaurant metadata
+  useEffect(() => {
+    const targetSlug = resolveCurrentSlug();
+    if (targetSlug) {
+      fetch(`/api/info?slug=${encodeURIComponent(targetSlug)}`)
+        .then(r => r.json())
+        .then(d => {
+          if (isMountedRef.current && d && d.name) {
+            setRestaurantName(d.name);
+            setRestaurantMeta(d);
+          }
+        })
+        .catch(() => {});
+    }
   }, [slug]);
 
   const handleVerifyPin = async (e) => {
@@ -237,7 +416,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
     } catch (err) {
       setPinError('Connection error. Please check your network and try again.');
     } finally {
-      setPinSubmitting(false);
+      if (isMountedRef.current) {
+        setPinSubmitting(false);
+      }
     }
   };
 
@@ -259,6 +440,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
           })
             .then(r => r.json().then(data => ({ ok: r.ok, data })))
             .then(({ ok, data }) => {
+              if (!isMountedRef.current) return;
               if (ok && data.success && data.token) {
                 setStoredKdsToken(targetSlug, data.token);
                 setNeedsPinUnlock(false);
@@ -278,9 +460,15 @@ export default function StandaloneKdsPage({ slug = '' }) {
               }
             })
             .catch(() => {
-              setPinError('Connection error. Please try again.');
+              if (isMountedRef.current) {
+                setPinError('Connection error. Please try again.');
+              }
             })
-            .finally(() => setPinSubmitting(false));
+            .finally(() => {
+              if (isMountedRef.current) {
+                setPinSubmitting(false);
+              }
+            });
         }, 100);
       }
     }
@@ -322,6 +510,89 @@ export default function StandaloneKdsPage({ slug = '' }) {
     }
   };
 
+  /**
+   * Safe, idempotent order recall with in-flight click protection,
+   * rollback on failure, status parsing (409, 403, 404, 500), and queue resynchronization.
+   */
+  const handleRecallOrder = async (order) => {
+    if (!order || !order.id) return;
+
+    // Prevent repeated clicks from creating concurrent duplicate requests
+    if (recallingOrderIds.includes(order.id)) {
+      return;
+    }
+
+    const targetSlug = resolveCurrentSlug();
+    if (!targetSlug) {
+      setRecallNotice({
+        type: 'error',
+        message: 'Cannot recall order: missing restaurant slug.'
+      });
+      return;
+    }
+
+    setRecallingOrderIds(prev => [...prev, order.id]);
+
+    // Preserve previous queues for rollback on error
+    const previousOrders = [...orders];
+    const previousRecentlyCompleted = [...recentlyCompleted];
+
+    // Optimistic UI update
+    setRecentlyCompleted(prev => prev.filter(o => o.id !== order.id));
+    setOrders(prev => [order, ...prev.filter(o => o.id !== order.id)]);
+
+    const token = getStoredKdsToken(targetSlug);
+
+    try {
+      const res = await fetch(`/api/kitchen/orders/${order.id}/recall?slug=${encodeURIComponent(targetSlug)}`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+
+      const data = await res.json().catch(() => ({}));
+      const parsed = parseRecallErrorResponse(res.status, data, order.id);
+
+      if (parsed.success) {
+        setRecallNotice({
+          type: 'success',
+          message: parsed.message
+        });
+        fetchOrders();
+      } else {
+        // Request rejected by server -> rollback optimistic update
+        setOrders(previousOrders);
+        setRecentlyCompleted(previousRecentlyCompleted);
+
+        setRecallNotice({
+          type: 'error',
+          message: parsed.message
+        });
+
+        if (parsed.isForbidden && data.error === 'KDS_DISABLED') {
+          setKdsDisabled(true);
+        }
+
+        // Resynchronize authoritative queue
+        fetchOrders();
+      }
+    } catch (err) {
+      // Network failure -> rollback optimistic update & resynchronize
+      setOrders(previousOrders);
+      setRecentlyCompleted(previousRecentlyCompleted);
+
+      const parsed = parseRecallErrorResponse(0, {}, order.id);
+      setRecallNotice({
+        type: 'error',
+        message: parsed.message
+      });
+      fetchOrders();
+    } finally {
+      if (isMountedRef.current) {
+        setRecallingOrderIds(prev => prev.filter(id => id !== order.id));
+      }
+    }
+  };
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
@@ -354,21 +625,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
   };
 
   const parseItems = safeParseItems;
-
-  useEffect(() => {
-    const targetSlug = resolveCurrentSlug();
-    if (targetSlug) {
-      fetch(`/api/info?slug=${encodeURIComponent(targetSlug)}`)
-        .then(r => r.json())
-        .then(d => {
-          if (d && d.name) {
-            setRestaurantName(d.name);
-            setRestaurantMeta(d);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [slug]);
 
   const formatKdsLocation = (raw, spaceType, fallbackPrefix = null) => {
     if (!raw) return 'TAKEAWAY';
@@ -422,23 +678,6 @@ export default function StandaloneKdsPage({ slug = '' }) {
     }));
   };
 
-  const handleRecallOrder = async (order) => {
-    if (!order) return;
-    setRecentlyCompleted(prev => prev.filter(o => o.id !== order.id));
-    setOrders(prev => [order, ...prev]);
-    const targetSlug = resolveCurrentSlug();
-    const token = getStoredKdsToken(targetSlug);
-    try {
-      await fetch(`/api/kitchen/orders/${order.id}/recall?slug=${encodeURIComponent(targetSlug)}`, {
-        method: 'PATCH',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-      fetchOrders();
-    } catch (e) {
-      console.warn('Recall error:', e);
-    }
-  };
-
   const aggregatedPrepItems = useMemo(() => {
     const map = {};
     orders.forEach(o => {
@@ -460,6 +699,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
     return sum + items.reduce((iSum, it) => iSum + Number(it.quantity || it.qty || 1), 0);
   }, 0);
 
+  // 1. Loading screen
   if (loading) {
     return (
       <div style={{
@@ -479,6 +719,103 @@ export default function StandaloneKdsPage({ slug = '' }) {
     );
   }
 
+  // 2. Shared-device tenant link prompt (When accessed via generic /kitchen without slug)
+  if (needsTenantPrompt || (!resolveCurrentSlug() && !loading)) {
+    const handleOpenExplicitSlug = (e) => {
+      if (e) e.preventDefault();
+      const clean = tenantSlugInput.trim().toLowerCase();
+      if (!clean) return;
+      window.location.href = `/${clean}/kitchen`;
+    };
+
+    return (
+      <div
+        id="kds-tenant-prompt-screen"
+        style={{
+          minHeight: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
+          background: 'linear-gradient(135deg, #090D16 0%, #0F172A 100%)',
+          color: '#FFFFFF', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
+        }}
+      >
+        <div style={{
+          background: '#0F172A', border: '1px solid #1E293B', borderRadius: '24px',
+          padding: '36px 28px', maxWidth: '460px', width: '100%',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.6)', boxSizing: 'border-box'
+        }}>
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '18px',
+            background: 'linear-gradient(135deg, #38BDF8 0%, #2563EB 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px auto', boxShadow: '0 8px 24px rgba(56,189,248,0.3)'
+          }}>
+            <Store size={32} color="#FFFFFF" />
+          </div>
+
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#F8FAFC', margin: '0 0 10px 0' }}>
+            Restaurant Kitchen Link Required
+          </h1>
+          <p style={{ fontSize: '0.90rem', color: '#94A3B8', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
+            This kitchen display requires a restaurant-specific link. Open your restaurant's dedicated kitchen URL or enter its slug below:
+          </p>
+
+          <form onSubmit={handleOpenExplicitSlug} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+            <input
+              id="kds-slug-input"
+              type="text"
+              placeholder="Enter restaurant slug (e.g. ramansweet)"
+              value={tenantSlugInput}
+              onChange={(e) => setTenantSlugInput(e.target.value)}
+              style={{
+                width: '100%', padding: '14px 16px', borderRadius: '12px',
+                border: '1px solid #334155', background: '#1E293B',
+                color: '#F8FAFC', fontSize: '0.95rem', fontWeight: 700,
+                outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+            <button
+              id="kds-slug-submit-btn"
+              type="submit"
+              disabled={!tenantSlugInput.trim()}
+              style={{
+                width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+                background: tenantSlugInput.trim()
+                  ? 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)'
+                  : '#334155',
+                color: '#FFFFFF', fontWeight: 900, fontSize: '0.95rem',
+                cursor: tenantSlugInput.trim() ? 'pointer' : 'not-allowed',
+                boxShadow: tenantSlugInput.trim() ? '0 4px 16px rgba(56,189,248,0.3)' : 'none'
+              }}
+            >
+              🍳 Open Kitchen Display
+            </button>
+          </form>
+
+          <div style={{
+            background: '#131D31', border: '1px solid #1E293B', borderRadius: '12px',
+            padding: '12px 14px', textAlign: 'left', fontSize: '0.76rem', color: '#64748B', lineHeight: 1.5
+          }}>
+            <strong style={{ color: '#94A3B8', display: 'block', marginBottom: '4px' }}>Supported Kitchen URL Formats:</strong>
+            <div>• <code style={{ color: '#38BDF8' }}>touchqr.in/:restaurant-slug/kitchen</code></div>
+            <div>• <code style={{ color: '#38BDF8' }}>touchqr.in/kitchen?slug=:restaurant-slug</code></div>
+          </div>
+
+          <button
+            onClick={() => { window.location.href = '/'; }}
+            style={{
+              marginTop: '20px', background: 'none', border: 'none',
+              color: '#94A3B8', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+          >
+            🏠 Return to TouchQR Homepage
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. 404 Restaurant Not Found
   if (notFound) {
     return (
       <div style={{
@@ -494,7 +831,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
           404 - Restaurant Not Found
         </h1>
         <p style={{ fontSize: '0.92rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
-          The kitchen screen you are trying to access does not exist. Please check the URL slug.
+          The kitchen screen you are trying to access does not exist. Please verify the restaurant URL slug.
         </p>
         <button
           onClick={() => { window.location.href = '/'; }}
@@ -511,6 +848,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
     );
   }
 
+  // 4. Subscription tier locked
   if (kdsDisabled) {
     return (
       <div style={{
@@ -546,6 +884,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
     );
   }
 
+  // 5. PIN Not Configured
   if (pinUnconfigured) {
     return (
       <div style={{
@@ -581,6 +920,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
     );
   }
 
+  // 6. PIN Lock Keypad Screen
   if (needsPinUnlock) {
     return (
       <div style={{
@@ -592,7 +932,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
         <div style={{
           background: '#0F172A', border: '1px solid #1E293B', borderRadius: '24px',
           padding: '32px 24px', maxWidth: '380px', width: '100%',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.6)', textAlign: 'center'
+          boxShadow: '0 20px 40px rgba(0,0,0,0.6)', textAlign: 'center', boxSizing: 'border-box'
         }}>
           <div style={{
             width: '60px', height: '60px', borderRadius: '18px',
@@ -650,7 +990,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                 }}
                 style={{
                   padding: '16px 0', borderRadius: '14px', border: '1px solid #334155',
-                  background: key === 'C' || key === '⌫' ? '#1E293B' : '#1E293B',
+                  background: '#1E293B',
                   color: key === 'C' ? '#F87171' : key === '⌫' ? '#FBBF24' : '#F8FAFC',
                   fontSize: '1.25rem', fontWeight: 900, cursor: 'pointer',
                   transition: 'background 0.1s', userSelect: 'none'
@@ -686,9 +1026,54 @@ export default function StandaloneKdsPage({ slug = '' }) {
     );
   }
 
+  // 7. Main Standalone KDS Live Screen
   return (
-    <div style={{ minHeight: '100vh', background: '#070B14', color: '#F8FAFC', padding: '16px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+    <div
+      className="touchqr-kds-root"
+      style={{
+        minHeight: '100vh',
+        background: '#070B14',
+        color: '#F8FAFC',
+        padding: 'clamp(8px, 2vw, 16px)',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
+        width: '100%',
+        maxWidth: '100vw'
+      }}
+    >
       <style>{`
+        .touchqr-kds-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+          gap: 14px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        @media (max-width: 480px) {
+          .touchqr-kds-grid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+          .kds-header-bar {
+            padding: 10px 12px !important;
+            gap: 8px !important;
+          }
+          .kds-header-title {
+            font-size: 1.05rem !important;
+          }
+        }
+        @media (max-width: 330px) {
+          .touchqr-kds-root {
+            padding: 6px !important;
+          }
+          .touchqr-kds-grid {
+            gap: 8px;
+          }
+          .kds-card {
+            border-radius: 12px !important;
+          }
+        }
         .kds-card-rush-glow {
           box-shadow: 0 0 25px rgba(239, 68, 68, 0.35) !important;
           animation: kdsRushPulse 2s infinite ease-in-out;
@@ -709,6 +1094,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
         }
       `}</style>
 
+      {/* AUDIO UNLOCK BANNER */}
       {!audioUnlocked && (
         <div
           onClick={unlockAudio}
@@ -717,10 +1103,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
             color: '#FFFFFF',
             padding: '14px 20px',
             borderRadius: '14px',
-            marginBottom: '16px',
+            marginBottom: '14px',
             textAlign: 'center',
             fontWeight: 900,
-            fontSize: '0.98rem',
+            fontSize: '0.95rem',
             cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(234, 88, 12, 0.4)',
             border: '2px solid #FDE047'
@@ -730,31 +1116,77 @@ export default function StandaloneKdsPage({ slug = '' }) {
         </div>
       )}
 
+      {/* RECALL / ERROR NOTIFICATION BANNER */}
+      {recallNotice && (
+        <div
+          style={{
+            background: recallNotice.type === 'success'
+              ? 'linear-gradient(90deg, #064E3B 0%, #065F46 100%)'
+              : 'linear-gradient(90deg, #7F1D1D 0%, #991B1B 100%)',
+            border: recallNotice.type === 'success' ? '1px solid #10B981' : '1px solid #EF4444',
+            color: recallNotice.type === 'success' ? '#D1FAE5' : '#FEE2E2',
+            padding: '12px 18px',
+            borderRadius: '12px',
+            marginBottom: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.86rem',
+            fontWeight: 800,
+            boxShadow: '0 4px 14px rgba(0,0,0,0.4)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>{recallNotice.type === 'success' ? '✅' : '⚠️'}</span>
+            <span>{recallNotice.message}</span>
+          </div>
+          <button
+            onClick={() => setRecallNotice(null)}
+            style={{
+              background: 'none', border: 'none', color: '#FFFFFF',
+              fontSize: '1rem', cursor: 'pointer', opacity: 0.8
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* TOP COMMAND HEADER */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: '12px', background: 'linear-gradient(180deg, #0F172A 0%, #0B1120 100%)',
-        padding: '14px 20px', borderRadius: '16px', border: '1px solid #1E293B', marginBottom: '14px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div
+        className="kds-header-bar"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap', gap: '12px', background: 'linear-gradient(180deg, #0F172A 0%, #0B1120 100%)',
+          padding: '14px 20px', borderRadius: '16px', border: '1px solid #1E293B', marginBottom: '14px',
+          boxSizing: 'border-box'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
           <div style={{
             width: '44px', height: '44px', borderRadius: '12px',
             background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.5rem', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+            fontSize: '1.5rem', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)', flexShrink: 0
           }}>
             🍳
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#F8FAFC', margin: 0, letterSpacing: '-0.02em' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1
+                className="kds-header-title"
+                style={{
+                  fontSize: '1.25rem', fontWeight: 900, color: '#F8FAFC', margin: 0,
+                  letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                }}
+              >
                 {restaurantName} — KDS
               </h1>
               <span style={{ fontSize: '0.66rem', fontWeight: 900, background: '#10B981', color: '#022C22', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
                 LIVE CHEF SCREEN
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '0.74rem', color: '#94A3B8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '0.74rem', color: '#94A3B8', flexWrap: 'wrap' }}>
               <span>Active Tickets: <strong style={{ color: '#38BDF8' }}>{orders.length}</strong></span>
               <span>•</span>
               <span>Total Dishes: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
@@ -769,6 +1201,75 @@ export default function StandaloneKdsPage({ slug = '' }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* OFFLINE / RECONNECTION STATUS INDICATOR */}
+          <div
+            id="kds-connection-indicator"
+            title={
+              connectionStatus === 'online'
+                ? `Connected & Live • Last sync ${lastSyncTime ? lastSyncTime.toLocaleTimeString() : 'just now'}`
+                : connectionStatus === 'reconnecting'
+                ? 'Network issue detected. Retrying connection...'
+                : 'Offline. Retrying automatically...'
+            }
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 10px',
+              borderRadius: '8px',
+              fontSize: '0.70rem',
+              fontWeight: 900,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              background:
+                connectionStatus === 'online'
+                  ? 'rgba(16, 185, 129, 0.15)'
+                  : connectionStatus === 'reconnecting'
+                  ? 'rgba(245, 158, 11, 0.15)'
+                  : 'rgba(239, 68, 68, 0.18)',
+              border:
+                connectionStatus === 'online'
+                  ? '1px solid #10B981'
+                  : connectionStatus === 'reconnecting'
+                  ? '1px solid #F59E0B'
+                  : '1.5px solid #EF4444',
+              color:
+                connectionStatus === 'online'
+                  ? '#34D399'
+                  : connectionStatus === 'reconnecting'
+                  ? '#FCD34D'
+                  : '#FCA5A5'
+            }}
+          >
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                background:
+                  connectionStatus === 'online'
+                    ? '#10B981'
+                    : connectionStatus === 'reconnecting'
+                    ? '#F59E0B'
+                    : '#EF4444',
+                display: 'inline-block',
+                boxShadow:
+                  connectionStatus === 'online'
+                    ? '0 0 6px #10B981'
+                    : connectionStatus === 'reconnecting'
+                    ? '0 0 6px #F59E0B'
+                    : '0 0 8px #EF4444'
+              }}
+            />
+            <span>
+              {connectionStatus === 'online'
+                ? 'ONLINE'
+                : connectionStatus === 'reconnecting'
+                ? 'RECONNECTING'
+                : 'OFFLINE'}
+            </span>
+          </div>
+
           <button
             type="button"
             onClick={() => setShowPrepSummary(!showPrepSummary)}
@@ -881,36 +1382,42 @@ export default function StandaloneKdsPage({ slug = '' }) {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-            {recentlyCompleted.map(ord => (
-              <div
-                key={ord.id}
-                style={{
-                  background: '#1E293B', border: '1px solid #334155', borderRadius: '10px',
-                  padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap'
-                }}
-              >
-                <div>
-                  <strong style={{ fontSize: '0.80rem', color: '#F8FAFC' }}>
-                    {formatKdsLocation(ord.table_number, ord.space_type)}
-                  </strong>
-                  <span style={{ fontSize: '0.68rem', color: '#94A3B8', display: 'block' }}>
-                    Order #{ord.id}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRecallOrder(ord)}
+            {recentlyCompleted.map(ord => {
+              const isRecallingThis = recallingOrderIds.includes(ord.id);
+              return (
+                <div
+                  key={ord.id}
                   style={{
-                    padding: '4px 8px', borderRadius: '6px', border: '1px solid #F59E0B',
-                    background: 'rgba(245, 158, 11, 0.15)', color: '#FDE68A', fontSize: '0.70rem',
-                    fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                    background: '#1E293B', border: '1px solid #334155', borderRadius: '10px',
+                    padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap'
                   }}
                 >
-                  <RotateCcw size={11} />
-                  <span>Undo</span>
-                </button>
-              </div>
-            ))}
+                  <div>
+                    <strong style={{ fontSize: '0.80rem', color: '#F8FAFC' }}>
+                      {formatKdsLocation(ord.table_number, ord.space_type)}
+                    </strong>
+                    <span style={{ fontSize: '0.68rem', color: '#94A3B8', display: 'block' }}>
+                      Order #{ord.id}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isRecallingThis}
+                    onClick={() => handleRecallOrder(ord)}
+                    style={{
+                      padding: '4px 8px', borderRadius: '6px', border: '1px solid #F59E0B',
+                      background: isRecallingThis ? '#334155' : 'rgba(245, 158, 11, 0.15)',
+                      color: isRecallingThis ? '#94A3B8' : '#FDE68A', fontSize: '0.70rem',
+                      fontWeight: 800, cursor: isRecallingThis ? 'not-allowed' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '4px'
+                    }}
+                  >
+                    <RotateCcw size={11} />
+                    <span>{isRecallingThis ? 'Recalling...' : 'Undo'}</span>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -927,7 +1434,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
           </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '14px' }}>
+        <div className="touchqr-kds-grid">
           {orders.map(order => {
             const elapsedMins = getElapsedMins(order.created_at);
             const isRush = elapsedMins >= 15;
@@ -943,7 +1450,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
             return (
               <div
                 key={order.id}
-                className={isRush ? 'kds-card-rush-glow' : ''}
+                className={`kds-card ${isRush ? 'kds-card-rush-glow' : ''}`}
                 style={{
                   background: '#0E1626',
                   borderRadius: '16px',
@@ -952,7 +1459,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  minWidth: 0,
+                  maxWidth: '100%',
+                  boxSizing: 'border-box'
                 }}
               >
                 {/* TICKET TOP HEADER */}
@@ -962,11 +1472,13 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   borderBottom: '1px solid rgba(255,255,255,0.08)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  gap: '8px',
+                  flexWrap: 'wrap'
                 }}>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <div style={{ fontSize: '1.22rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                      <div style={{ fontSize: '1.22rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1.1, wordBreak: 'break-word' }}>
                         {formatKdsLocation(order.table_number, order.space_type, restaurantMeta?.business_type === 'hotel_resort' ? 'room' : restaurantMeta?.table_prefix)}
                       </div>
                       {isMultiRound && (
@@ -986,12 +1498,12 @@ export default function StandaloneKdsPage({ slug = '' }) {
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: isRush ? '#FEF08A' : '#94A3B8', fontWeight: 700 }}>
+                    <span style={{ fontSize: '0.72rem', color: isRush ? '#FEF08A' : '#94A3B8', fontWeight: 700, wordBreak: 'break-word' }}>
                       Ticket #{order.id} • {order.customer_name || 'Dine-in'}
                     </span>
                   </div>
 
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{
                       background: isCritical ? '#DC2626' : (isRush ? '#D97706' : '#2563EB'),
                       color: '#FFFFFF',
@@ -1015,7 +1527,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                 </div>
 
                 {/* TICKET BODY */}
-                <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
                   {hasNotes && (
                     <div style={{
                       background: 'rgba(245, 158, 11, 0.15)',
@@ -1027,10 +1539,12 @@ export default function StandaloneKdsPage({ slug = '' }) {
                       fontWeight: 800,
                       display: 'flex',
                       alignItems: 'flex-start',
-                      gap: '8px'
+                      gap: '8px',
+                      minWidth: 0,
+                      boxSizing: 'border-box'
                     }}>
                       <AlertTriangle size={16} color="#F59E0B" style={{ flexShrink: 0, marginTop: '2px' }} />
-                      <div style={{ wordBreak: 'break-word', minWidth: 0 }}>
+                      <div style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}>
                         <span style={{ fontSize: '0.66rem', color: '#FBBF24', textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>
                           CHEF INSTRUCTION:
                         </span>
@@ -1039,7 +1553,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                     {items.map((item, idx) => {
                       const isChecked = Boolean(checkedItemsMap[`${order.id}_${idx}`]);
                       const rawMods = item.modifiers;
@@ -1064,10 +1578,12 @@ export default function StandaloneKdsPage({ slug = '' }) {
                             justifyContent: 'space-between',
                             cursor: 'pointer',
                             opacity: isChecked ? 0.6 : 1,
-                            userSelect: 'none'
+                            userSelect: 'none',
+                            minWidth: 0,
+                            boxSizing: 'border-box'
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
                             <div style={{
                               color: isChecked ? '#10B981' : '#64748B',
                               display: 'flex',
@@ -1095,14 +1611,16 @@ export default function StandaloneKdsPage({ slug = '' }) {
                               ×{item.quantity || item.qty || 1}
                             </span>
 
-                            <div style={{ minWidth: 0 }}>
+                            <div style={{ minWidth: 0, flex: 1 }}>
                               <strong style={{
                                 fontSize: '0.92rem',
                                 color: isChecked ? '#94A3B8' : '#F8FAFC',
                                 fontWeight: 800,
                                 textDecoration: isChecked ? 'line-through' : 'none',
                                 display: 'block',
-                                lineHeight: 1.2
+                                lineHeight: 1.2,
+                                wordBreak: 'break-word',
+                                overflowWrap: 'anywhere'
                               }}>
                                 {item.name || item.dish_name}
                               </strong>
@@ -1124,7 +1642,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
                                       border: '1px solid #CA8A04',
                                       padding: '1px 5px',
                                       borderRadius: '4px',
-                                      fontWeight: 800
+                                      fontWeight: 800,
+                                      wordBreak: 'break-word'
                                     }}
                                   >
                                     ➕ {m.name}
@@ -1140,7 +1659,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                 </div>
 
                 {/* TICKET FOOTER: READY BUTTON */}
-                <div style={{ padding: '12px 14px', background: '#0A101C', borderTop: '1px solid #1E293B' }}>
+                <div style={{ padding: '12px 14px', background: '#0A101C', borderTop: '1px solid #1E293B', boxSizing: 'border-box' }}>
                   <button
                     onClick={() => {
                       setRecentlyCompleted(prev => [{ ...order, completedAt: new Date() }, ...prev.slice(0, 9)]);

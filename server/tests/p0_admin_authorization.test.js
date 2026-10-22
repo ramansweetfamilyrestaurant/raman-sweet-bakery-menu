@@ -368,6 +368,16 @@ async function run() {
       record('MASTER_SUPERADMIN_NO_TENANT_ORDERS', 'FAIL', `Expected 401, got ${resSuperOrders.status}: ${JSON.stringify(dataSuperOrders)}`);
     }
 
+    const resSuperKds = await fetch(`${baseUrl}/kitchen/orders?slug=${TEST_SLUG}`, {
+      headers: { 'Authorization': `Bearer ${masterSuperAdminToken}` }
+    });
+    const dataSuperKds = await resSuperKds.json();
+    if (resSuperKds.status === 403 && dataSuperKds.error === 'SUPERADMIN_IMPERSONATION_REQUIRED') {
+      record('MASTER_SUPERADMIN_NO_DIRECT_KDS', 'PASS', 'Master superadmin token without tenant impersonation correctly rejected with 403 SUPERADMIN_IMPERSONATION_REQUIRED on /kitchen/orders');
+    } else {
+      record('MASTER_SUPERADMIN_NO_DIRECT_KDS', 'FAIL', `Expected 403 SUPERADMIN_IMPERSONATION_REQUIRED, got ${resSuperKds.status}: ${JSON.stringify(dataSuperKds)}`);
+    }
+
     // ====================================================================
     // VERIFICATION 8: Legitimate KDS endpoints remain unbroken
     // ====================================================================

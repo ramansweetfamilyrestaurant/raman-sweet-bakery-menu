@@ -449,6 +449,72 @@ async function run() {
     record('KITCHEN_GET_NOTES_ACCURATE', 'FAIL', err.message);
   }
 
+  // Test 2.6: Missing orders.notes column returns controlled failure and does NOT execute schema DDL
+  try {
+    // Temporarily drop orders.notes to verify runtime request behavior against unmigrated schema
+    await query('ALTER TABLE orders DROP COLUMN IF EXISTS notes;');
+
+    const colCheckBefore = await query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'orders' AND column_name = 'notes';
+    `);
+    assert.strictEqual(colCheckBefore.length, 0, 'orders.notes column must be absent');
+
+    const { qrToken, presenceToken } = createOrderCredentials(P2_SLUG, 'table', '5', P2_QR_SECRET, P2_RESTO_ID);
+    const res = await fetch(`${baseUrl}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slug: P2_SLUG,
+        table_number: '5',
+        table_token: qrToken,
+        presence_token: presenceToken,
+        items: [{ dish_id: dishId, quantity: 1 }],
+        notes: 'Attempting order when notes column is missing'
+      })
+    });
+
+    const data = await res.json();
+    assert.strictEqual(res.status, 500, `Expected 500 controlled failure, got ${res.status}`);
+    assert.strictEqual(data.error, 'Failed to place order');
+
+    // Crucial Invariant: Verify request handling did NOT mutate schema or execute DDL
+    const colCheckAfterRequest = await query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'orders' AND column_name = 'notes';
+    `);
+    assert.strictEqual(colCheckAfterRequest.length, 0, 'Request handling must NOT execute schema DDL or auto-heal notes column');
+
+    // Run dedicated migration to restore orders.notes safely
+    const restoreResult = await runOrdersNotesMigration({
+      migrationUrl: LOCAL_TEST_URL,
+      dryRun: false
+    });
+    assert.strictEqual(restoreResult.success, true);
+    assert.strictEqual(restoreResult.columnVerified, true);
+
+    // Verify order placement succeeds after migration is applied
+    const resAfterMig = await fetch(`${baseUrl}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slug: P2_SLUG,
+        table_number: '5',
+        table_token: qrToken,
+        presence_token: presenceToken,
+        items: [{ dish_id: dishId, quantity: 1 }],
+        notes: 'Notes persistence works after migration restored'
+      })
+    });
+    const dataAfterMig = await resAfterMig.json();
+    assert.strictEqual(resAfterMig.status, 200);
+    assert.strictEqual(dataAfterMig.notes, 'Notes persistence works after migration restored');
+
+    record('REQUEST_HANDLING_NO_SCHEMA_DDL', 'PASS', 'Request handling does not execute schema DDL when notes column is missing; dedicated migration restores functionality');
+  } catch (err) {
+    record('REQUEST_HANDLING_NO_SCHEMA_DDL', 'FAIL', err.message);
+  }
+
   // ====================================================================
   // SECTION 3: Shared Pure Queue-Filter Utility Verification
   // ====================================================================

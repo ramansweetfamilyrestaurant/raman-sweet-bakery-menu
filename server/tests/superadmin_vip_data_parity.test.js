@@ -121,6 +121,8 @@ async function runSuite() {
     // -----------------------------------------------------------------------------------------------------
     const now = new Date();
     const futureDate = new Date(now.getTime() + 60 * 86400 * 1000).toISOString();
+    const finiteVipIso = futureDate;
+    const finiteVipDateStr = futureDate.split('T')[0];
 
     // Tenant A (VIP on basic tier base)
     await query(`
@@ -248,16 +250,16 @@ async function runSuite() {
     `, [restoJ.id, futureDate]);
 
     // Tenant K: Finite VIP tenant mimicking Tenant 52 (TouchQR Demo)
-    // Has 1-year VIP grant expiring 2026-10-21
+    // Has finite VIP grant (expiring <= 2030, relative to execution time)
     await query(`
       INSERT INTO restaurants (name, slug, business_type, plan_tier, plan_price, subscription_type, mandate_status, active, plan_expires_at)
-      VALUES ('Finite VIP Demo', 'test-parity-finite-vip', 'restaurant', 'pro', 0, 'ADMIN_GRANTED', 'admin_granted', true, '2026-10-21T10:40:07.314Z')
-    `);
+      VALUES ('Finite VIP Demo', 'test-parity-finite-vip', 'restaurant', 'pro', 0, 'ADMIN_GRANTED', 'admin_granted', true, $1)
+    `, [finiteVipIso]);
     const [restoK] = await query("SELECT * FROM restaurants WHERE slug = 'test-parity-finite-vip'");
     await query(`
       INSERT INTO subscriptions (restaurant_id, plan_id, gateway, status, amount, currency, billing_cycle, subscription_type, current_period_end)
-      VALUES ($1, 2, 'admin_granted', 'active', 0, 'INR', 'monthly', 'ADMIN_GRANTED', '2026-10-21 10:40:07.314')
-    `, [restoK.id]);
+      VALUES ($1, 2, 'admin_granted', 'active', 0, 'INR', 'monthly', 'ADMIN_GRANTED', $2)
+    `, [restoK.id, finiteVipIso]);
 
     // =====================================================================================================
     // TEST 1: Basic base-tier tenant with valid VIP access gets Enterprise VIP Access, ₹0, is_vip: true
@@ -839,8 +841,8 @@ async function runSuite() {
 
       assert.strictEqual(t360.subscription.status, 'active');
       assert.strictEqual(t360.subscription.is_vip, true);
-      assert.strictEqual(t360.subscription.is_lifetime, false, 'Finite 2026 expiry must NOT be marked lifetime');
-      assert(t360.subscription.access_until.includes('2026-10-21'), 'access_until must retain exact 2026 date');
+      assert.strictEqual(t360.subscription.is_lifetime, false, 'Finite expiry must NOT be marked lifetime');
+      assert(t360.subscription.access_until.includes(finiteVipDateStr), `access_until must retain exact date ${finiteVipDateStr}`);
 
       // Presentation formatting check
       const display = formatTenantPlanDisplay({ ...t360.tenant, ...t360.subscription });
