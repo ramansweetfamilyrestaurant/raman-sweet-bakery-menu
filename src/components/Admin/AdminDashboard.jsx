@@ -168,16 +168,12 @@ export default function AdminDashboard({
   const isExpired = (daysLeft !== null && daysLeft <= 0) || (restaurantInfo?.active === false || restaurantInfo?.active === 0);
 
   useEffect(() => {
-    // 🔔 1. Auto-Prompt Browser Push Notification Permission
-    if ('Notification' in window) {
+    // 🔔 1. Inspect Browser Push Notification Permission (Do NOT auto-request on mount or background effect)
+    if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'granted') {
         setPermissionsGranted(true);
-      } else if (Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            setPermissionsGranted(true);
-          }
-        }).catch(e => console.warn('Auto Notification permission error:', e));
+      } else {
+        setPermissionsGranted(false);
       }
     }
 
@@ -228,9 +224,6 @@ export default function AdminDashboard({
         setTimeout(() => setToastMessage(''), 4000);
       }
     });
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
-    }
   };
 
   const handleDismissAudioBanner = () => {
@@ -251,19 +244,37 @@ export default function AdminDashboard({
 
   const requestNotificationPermission = async () => {
     try {
-      if ('Notification' in window) {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          setPermissionsGranted(true);
+          setToastMessage('🔔 Push Notifications are already granted.');
+          setTimeout(() => setToastMessage(''), 3000);
+          return 'granted';
+        }
+        if (Notification.permission === 'denied') {
+          setPermissionsGranted(false);
+          setToastMessage('⚠️ Notifications Blocked. Please allow notifications in browser permissions.');
+          setTimeout(() => setToastMessage(''), 4000);
+          return 'denied';
+        }
         const res = await Notification.requestPermission();
         if (res === 'granted') {
+          setPermissionsGranted(true);
           setToastMessage('🔔 Push Notifications Granted! You will receive live order popups.');
         } else {
+          setPermissionsGranted(false);
           setToastMessage('⚠️ Notifications Blocked. Please allow notifications in browser permissions.');
         }
+        setTimeout(() => setToastMessage(''), 4000);
+        return res;
       } else {
         setToastMessage('⚠️ Push notifications not supported on this browser.');
+        setTimeout(() => setToastMessage(''), 4000);
+        return 'unsupported';
       }
-      setTimeout(() => setToastMessage(''), 4000);
     } catch (e) {
       console.warn('Notification error:', e);
+      return 'denied';
     }
   };
 

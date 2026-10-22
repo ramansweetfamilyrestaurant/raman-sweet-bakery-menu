@@ -252,6 +252,16 @@ export default function NotificationView({
 
   const handleRequestPush = async () => {
     if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        setPrefPushEnabled(true);
+        setSuccessToast('🔔 Browser push notifications are already enabled!');
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        setPrefPushEnabled(false);
+        alert('Push notifications are blocked in your browser settings. Please allow notifications in browser permissions.');
+        return;
+      }
       try {
         const perm = await Notification.requestPermission();
         if (perm === 'granted') {

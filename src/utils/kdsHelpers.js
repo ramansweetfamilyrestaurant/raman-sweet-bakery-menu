@@ -187,6 +187,21 @@ export function calculateConnectionStatus({ consecutiveFailures = 0, isBrowserOn
 export const KDS_SOUND_STORAGE_PREFIX = 'touchqr_kds_sound_pref_';
 
 /**
+ * Validate that a tenant slug is a legitimate restaurant identifier.
+ * Rejects empty values, string 'null'/'undefined'/'unknown', and reserved system routes.
+ *
+ * @param {string} targetSlug
+ * @returns {boolean}
+ */
+export function isValidKdsTenantSlug(targetSlug) {
+  if (!targetSlug || typeof targetSlug !== 'string') return false;
+  const clean = targetSlug.trim().toLowerCase();
+  if (!clean || clean === 'null' || clean === 'undefined' || clean === 'unknown') return false;
+  if (SYSTEM_ROUTE_BLACKLIST.has(clean)) return false;
+  return true;
+}
+
+/**
  * Retrieve tenant-isolated KDS sound preference from storage.
  * Strictly scopes by tenant slug to prevent cross-restaurant leakage on shared devices.
  *
@@ -195,11 +210,11 @@ export const KDS_SOUND_STORAGE_PREFIX = 'touchqr_kds_sound_pref_';
  * @returns {string} 'enabled' | 'muted' | ''
  */
 export function getKdsSoundPreference(targetSlug, storage = typeof localStorage !== 'undefined' ? localStorage : null) {
-  if (!targetSlug || typeof targetSlug !== 'string' || !storage) return '';
+  if (!isValidKdsTenantSlug(targetSlug) || !storage) return '';
   const cleanSlug = targetSlug.trim().toLowerCase();
-  if (!cleanSlug) return '';
   try {
-    return storage.getItem(`${KDS_SOUND_STORAGE_PREFIX}${cleanSlug}`) || '';
+    const val = storage.getItem(`${KDS_SOUND_STORAGE_PREFIX}${cleanSlug}`);
+    return (val === 'enabled' || val === 'muted') ? val : '';
   } catch (e) {
     return '';
   }
@@ -214,11 +229,11 @@ export function getKdsSoundPreference(targetSlug, storage = typeof localStorage 
  * @returns {boolean}
  */
 export function setKdsSoundPreference(targetSlug, pref = 'enabled', storage = typeof localStorage !== 'undefined' ? localStorage : null) {
-  if (!targetSlug || typeof targetSlug !== 'string' || !storage) return false;
+  if (!isValidKdsTenantSlug(targetSlug) || !storage) return false;
   const cleanSlug = targetSlug.trim().toLowerCase();
-  if (!cleanSlug) return false;
+  const cleanPref = (pref === 'muted') ? 'muted' : 'enabled';
   try {
-    storage.setItem(`${KDS_SOUND_STORAGE_PREFIX}${cleanSlug}`, pref);
+    storage.setItem(`${KDS_SOUND_STORAGE_PREFIX}${cleanSlug}`, cleanPref);
     return true;
   } catch (e) {
     return false;

@@ -38,8 +38,7 @@ import {
   calculateConnectionStatus,
   getKdsSoundPreference,
   setKdsSoundPreference,
-  shouldShowKdsSoundPrompt,
-  safeRequestNotificationPermission
+  shouldShowKdsSoundPrompt
 } from '../../../utils/kdsHelpers';
 
 export default function StandaloneKdsPage({ slug = '' }) {
@@ -55,6 +54,13 @@ export default function StandaloneKdsPage({ slug = '' }) {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [pinSubmitting, setPinSubmitting] = useState(false);
+  const [resolvedSlug, setResolvedSlug] = useState(() => {
+    return resolveKdsSlug({
+      slug,
+      pathname: typeof window !== 'undefined' ? window.location.pathname : '',
+      search: typeof window !== 'undefined' ? window.location.search : ''
+    });
+  });
   const [soundPreference, setSoundPreference] = useState(() => {
     const initialSlug = resolveKdsSlug({
       slug,
@@ -67,13 +73,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
     return typeof isNotificationSoundReady === 'function' ? isNotificationSoundReady() : false;
   });
   const [audioUnlocked, setAudioUnlocked] = useState(() => {
-    const initialSlug = resolveKdsSlug({
-      slug,
-      pathname: typeof window !== 'undefined' ? window.location.pathname : '',
-      search: typeof window !== 'undefined' ? window.location.search : ''
-    });
-    const pref = initialSlug ? getKdsSoundPreference(initialSlug) : '';
-    return pref === 'enabled' || (typeof isNotificationSoundReady === 'function' && isNotificationSoundReady());
+    return typeof isNotificationSoundReady === 'function' ? isNotificationSoundReady() : false;
   });
   const [restaurantMeta, setRestaurantMeta] = useState(null);
   const [checkedItemsMap, setCheckedItemsMap] = useState({});
@@ -179,26 +179,50 @@ export default function StandaloneKdsPage({ slug = '' }) {
     return () => clearTimeout(timer);
   }, [recallNotice]);
 
-  // Sync sound preference when target slug changes or resolves
+  // Synchronize resolved tenant slug from prop, URL pathname, query, and history navigation
   useEffect(() => {
-    const currentSlug = resolveCurrentSlug();
-    if (currentSlug) {
-      const pref = getKdsSoundPreference(currentSlug);
+    const updateResolvedSlug = () => {
+      const next = resolveKdsSlug({
+        slug,
+        pathname: typeof window !== 'undefined' ? window.location.pathname : '',
+        search: typeof window !== 'undefined' ? window.location.search : ''
+      });
+      setResolvedSlug(next);
+    };
+
+    updateResolvedSlug();
+
+    window.addEventListener('popstate', updateResolvedSlug);
+    return () => {
+      window.removeEventListener('popstate', updateResolvedSlug);
+    };
+  }, [slug]);
+
+  // Sync sound preference when resolved tenant slug changes or resolves
+  useEffect(() => {
+    if (resolvedSlug) {
+      const pref = getKdsSoundPreference(resolvedSlug);
       setSoundPreference(pref);
       if (pref === 'enabled') {
-        setAudioUnlocked(true);
+        const ready = typeof isNotificationSoundReady === 'function' && isNotificationSoundReady();
+        setAudioUnlocked(ready);
+      } else if (pref === 'muted') {
+        setAudioUnlocked(false);
+      } else {
+        setAudioUnlocked(false);
       }
+    } else {
+      setSoundPreference('');
+      setAudioUnlocked(false);
     }
-  }, [slug]);
+  }, [resolvedSlug]);
 
   // Subscribe to AudioContext readiness and listen for user gestures to unlock audio
   useEffect(() => {
     const unsubscribe = subscribeAudioState((ready) => {
       if (isMountedRef.current) {
         setIsAudioReady(ready);
-        if (ready) {
-          setAudioUnlocked(true);
-        }
+        setAudioUnlocked(ready);
       }
     });
 
@@ -289,18 +313,24 @@ export default function StandaloneKdsPage({ slug = '' }) {
       setKdsSoundPreference(currentSlug, 'enabled');
       setSoundPreference('enabled');
     }
-    if (isMountedRef.current) setAudioUnlocked(true);
 
     unlockNotificationSound().then((success) => {
       if (success && isMountedRef.current) {
         setIsAudioReady(true);
+        setAudioUnlocked(true);
         try { playKdsChime(); } catch (e) {}
+      } else if (isMountedRef.current) {
+        setIsAudioReady(false);
+        setAudioUnlocked(false);
       }
-    }).catch(() => {
-      if (isMountedRef.current) setAudioUnlocked(true);
+    }).catch((err) => {
+      // Audio unlock failure must NOT reset saved sound preference or crash app
+      console.warn('KDS audio unlock failed:', err);
+      if (isMountedRef.current) {
+        setIsAudioReady(false);
+        setAudioUnlocked(false);
+      }
     });
-
-    safeRequestNotificationPermission().catch(() => {});
   };
 
   const handleToggleSound = () => {
@@ -310,27 +340,45 @@ export default function StandaloneKdsPage({ slug = '' }) {
         setKdsSoundPreference(currentSlug, 'enabled');
         setSoundPreference('enabled');
       }
-      setAudioUnlocked(true);
       unlockNotificationSound().then((success) => {
         if (success && isMountedRef.current) {
           setIsAudioReady(true);
+          setAudioUnlocked(true);
           try { playKdsChime(); } catch (e) {}
+        } else if (isMountedRef.current) {
+          setIsAudioReady(false);
+          setAudioUnlocked(false);
         }
-      }).catch(() => {});
-      safeRequestNotificationPermission().catch(() => {});
+      }).catch((err) => {
+        console.warn('KDS sound toggle audio unlock failed:', err);
+        if (isMountedRef.current) {
+          setIsAudioReady(false);
+          setAudioUnlocked(false);
+        }
+      });
     } else if (!isAudioReady && soundPreference === 'enabled') {
       unlockNotificationSound().then((success) => {
         if (success && isMountedRef.current) {
           setIsAudioReady(true);
+          setAudioUnlocked(true);
           try { playKdsChime(); } catch (e) {}
+        } else if (isMountedRef.current) {
+          setIsAudioReady(false);
+          setAudioUnlocked(false);
         }
-      }).catch(() => {});
-      safeRequestNotificationPermission().catch(() => {});
+      }).catch((err) => {
+        console.warn('KDS retry audio unlock failed:', err);
+        if (isMountedRef.current) {
+          setIsAudioReady(false);
+          setAudioUnlocked(false);
+        }
+      });
     } else {
       if (currentSlug) {
         setKdsSoundPreference(currentSlug, 'muted');
         setSoundPreference('muted');
       }
+      setAudioUnlocked(false);
       stopSiren();
     }
   };
@@ -491,13 +539,12 @@ export default function StandaloneKdsPage({ slug = '' }) {
       }
       isPollingInProgressRef.current = false;
     };
-  }, [slug]);
+  }, [resolvedSlug]);
 
   // Load restaurant metadata
   useEffect(() => {
-    const targetSlug = resolveCurrentSlug();
-    if (targetSlug) {
-      fetch(`/api/info?slug=${encodeURIComponent(targetSlug)}`)
+    if (resolvedSlug) {
+      fetch(`/api/info?slug=${encodeURIComponent(resolvedSlug)}`)
         .then(r => r.json())
         .then(d => {
           if (isMountedRef.current && d && d.name) {
@@ -507,7 +554,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
         })
         .catch(() => {});
     }
-  }, [slug]);
+  }, [resolvedSlug]);
 
   const handleVerifyPin = async (e) => {
     if (e) e.preventDefault();

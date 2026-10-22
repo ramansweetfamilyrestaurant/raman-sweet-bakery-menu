@@ -1108,6 +1108,10 @@ export default function SetupView({
 
   const requestPushPermission = () => {
     if ('Notification' in window) {
+      if (Notification.permission === 'granted' || Notification.permission === 'denied') {
+        alert(`Push Notifications Permission: ${Notification.permission.toUpperCase()}`);
+        return;
+      }
       Notification.requestPermission().then(perm => {
         alert(`Push Notifications Permission: ${perm.toUpperCase()}`);
       });
