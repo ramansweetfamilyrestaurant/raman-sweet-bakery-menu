@@ -22,7 +22,12 @@ import apiRouter from '../routes/api.js';
 import {
   resolveKdsSlug,
   parseRecallErrorResponse,
-  calculateConnectionStatus
+  calculateConnectionStatus,
+  getKdsSoundPreference,
+  setKdsSoundPreference,
+  shouldShowKdsSoundPrompt,
+  safeRequestNotificationPermission,
+  KDS_SOUND_STORAGE_PREFIX
 } from '../../src/utils/kdsHelpers.js';
 import {
   isOrderActiveInKitchen,
@@ -445,9 +450,155 @@ async function run() {
   }
 
   // ====================================================================
-  // SECTION 7: Local Disposable Database Integration (Backend Recall Verification)
+  // SECTION 7: KDS Sound Permission, Tenant Isolation & Autoplay Safety Invariants
   // ====================================================================
-  console.log('--- SECTION 7: Local Disposable Database Integration (Backend Recall Verification) ---');
+  console.log('--- SECTION 7: KDS Sound Permission, Tenant Isolation & Autoplay Safety Invariants ---');
+
+  // Test 7.1: Tenant sound preference isolation
+  try {
+    const mockStore = {};
+    const mockStorage = {
+      getItem: (key) => (Object.prototype.hasOwnProperty.call(mockStore, key) ? mockStore[key] : null),
+      setItem: (key, val) => { mockStore[key] = String(val); },
+      removeItem: (key) => { delete mockStore[key]; }
+    };
+
+    // Save for tenant 'bistro-delight'
+    const saved = setKdsSoundPreference('bistro-delight', 'enabled', mockStorage);
+    assert.strictEqual(saved, true);
+    assert.strictEqual(mockStore[`${KDS_SOUND_STORAGE_PREFIX}bistro-delight`], 'enabled');
+
+    // Read back for bistro-delight
+    const prefA = getKdsSoundPreference('bistro-delight', mockStorage);
+    assert.strictEqual(prefA, 'enabled');
+
+    // Another tenant 'cafe-central' on the same shared device must remain empty/isolated
+    const prefB = getKdsSoundPreference('cafe-central', mockStorage);
+    assert.strictEqual(prefB, '', 'Tenant cafe-central must not inherit bistro-delight sound preference');
+
+    // Missing or invalid slug returns empty and writes nothing
+    assert.strictEqual(getKdsSoundPreference('', mockStorage), '');
+    assert.strictEqual(setKdsSoundPreference('', 'enabled', mockStorage), false);
+
+    record('SOUND_TENANT_ISOLATION', 'PASS', 'KDS sound preference is strictly tenant-isolated and prevents cross-restaurant leakage');
+  } catch (err) {
+    record('SOUND_TENANT_ISOLATION', 'FAIL', err.message);
+  }
+
+  // Test 7.2: Custom prompt suppression on remount with saved preference
+  try {
+    // 1. First visit (unspecified preference, audio not ready) -> prompt shows
+    const showFirstVisit = shouldShowKdsSoundPrompt({
+      soundPreference: '',
+      isAudioReady: false,
+      isAudioUnlocked: false
+    });
+    assert.strictEqual(showFirstVisit, true, 'First visit with unspecified preference should show prompt');
+
+    // 2. Remount with saved 'enabled' preference -> prompt suppressed
+    const showAfterEnabled = shouldShowKdsSoundPrompt({
+      soundPreference: 'enabled',
+      isAudioReady: false,
+      isAudioUnlocked: false
+    });
+    assert.strictEqual(showAfterEnabled, false, 'Remount with saved enabled preference must suppress prompt');
+
+    // 3. Remount with saved 'muted' preference -> prompt suppressed
+    const showAfterMuted = shouldShowKdsSoundPrompt({
+      soundPreference: 'muted',
+      isAudioReady: false,
+      isAudioUnlocked: false
+    });
+    assert.strictEqual(showAfterMuted, false, 'Remount with saved muted preference must suppress prompt');
+
+    // 4. In-session unlocked state -> prompt suppressed
+    const showWhenReady = shouldShowKdsSoundPrompt({
+      soundPreference: '',
+      isAudioReady: true,
+      isAudioUnlocked: false
+    });
+    assert.strictEqual(showWhenReady, false, 'In-session ready audio must suppress prompt');
+
+    record('SOUND_PROMPT_SUPPRESSION_ON_REMOUNT', 'PASS', 'Saved tenant preference suppresses repeated custom sound prompt on subsequent visits');
+  } catch (err) {
+    record('SOUND_PROMPT_SUPPRESSION_ON_REMOUNT', 'FAIL', err.message);
+  }
+
+  // Test 7.3: Browser Notification permission safeguard (no re-request if granted or denied)
+  try {
+    let requestCount = 0;
+    const makeMockNotification = (perm) => ({
+      permission: perm,
+      requestPermission: async () => {
+        requestCount++;
+        return 'granted';
+      }
+    });
+
+    // Case 1: Already 'granted' -> must NOT invoke requestPermission()
+    requestCount = 0;
+    const resGranted = await safeRequestNotificationPermission(makeMockNotification('granted'));
+    assert.strictEqual(resGranted, 'granted');
+    assert.strictEqual(requestCount, 0, 'Must not re-request permission when already granted');
+
+    // Case 2: Already 'denied' -> must NOT invoke requestPermission()
+    requestCount = 0;
+    const resDenied = await safeRequestNotificationPermission(makeMockNotification('denied'));
+    assert.strictEqual(resDenied, 'denied');
+    assert.strictEqual(requestCount, 0, 'Must not re-request permission when already denied');
+
+    // Case 3: 'default' -> invokes requestPermission() upon user action
+    requestCount = 0;
+    const resDefault = await safeRequestNotificationPermission(makeMockNotification('default'));
+    assert.strictEqual(resDefault, 'granted');
+    assert.strictEqual(requestCount, 1, 'Must request permission when permission is default');
+
+    // Case 4: Unsupported environment -> returns 'unsupported' without throw
+    const resUnsupported = await safeRequestNotificationPermission(null);
+    assert.strictEqual(resUnsupported, 'unsupported');
+
+    record('NOTIFICATION_PERMISSION_SAFEGUARD', 'PASS', 'Browser notification permission only requested when default; granted/denied never re-triggered');
+  } catch (err) {
+    record('NOTIFICATION_PERMISSION_SAFEGUARD', 'FAIL', err.message);
+  }
+
+  // Test 7.4: StandaloneKdsPage source code audit for sound safety
+  try {
+    const kdsSource = fs.readFileSync(path.join(rootDir, 'src/components/Admin/views/StandaloneKdsPage.jsx'), 'utf8');
+
+    // Must NOT have unpersisted useState(false) for audio without soundPreference check
+    assert.ok(
+      kdsSource.includes('getKdsSoundPreference'),
+      'Must utilize getKdsSoundPreference for initial state and tenant syncing'
+    );
+
+    // Must have #kds-sound-toggle-btn for user gesture control
+    assert.ok(
+      kdsSource.includes('id="kds-sound-toggle-btn"'),
+      'Must render accessible header sound control #kds-sound-toggle-btn'
+    );
+
+    // Must use shouldShowKdsSoundPrompt
+    assert.ok(
+      kdsSource.includes('shouldShowKdsSoundPrompt'),
+      'Custom banner must be gated with shouldShowKdsSoundPrompt'
+    );
+
+    // Must NOT call raw Notification.requestPermission() inside StandaloneKdsPage without safe guard
+    assert.ok(
+      !kdsSource.includes('Notification.requestPermission()'),
+      'StandaloneKdsPage must not contain unguarded Notification.requestPermission() calls'
+    );
+
+    record('SOURCE_AUDIT_KDS_SOUND_SAFETY', 'PASS', 'StandaloneKdsPage source code enforces tenant persistence, gesture controls & permission guards');
+  } catch (err) {
+    record('SOURCE_AUDIT_KDS_SOUND_SAFETY', 'FAIL', err.message);
+  }
+
+  // ====================================================================
+  // SECTION 8: Local Disposable Database Integration (Backend Recall Verification)
+  // ====================================================================
+  console.log('--- SECTION 8: Local Disposable Database Integration (Backend Recall Verification) ---');
 
   let server;
   let baseUrl;

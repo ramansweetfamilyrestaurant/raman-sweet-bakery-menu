@@ -20,14 +20,26 @@ import {
   WifiOff,
   RefreshCw,
   ExternalLink,
-  Store
+  Store,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
-import { playKitchenSiren, unlockNotificationSound } from '../../../utils/soundManager';
+import {
+  playKitchenSiren,
+  playKdsChime,
+  unlockNotificationSound,
+  isNotificationSoundReady,
+  subscribeAudioState
+} from '../../../utils/soundManager';
 import { filterActiveKitchenOrders } from '../../../utils/kdsQueueFilter';
 import {
   resolveKdsSlug,
   parseRecallErrorResponse,
-  calculateConnectionStatus
+  calculateConnectionStatus,
+  getKdsSoundPreference,
+  setKdsSoundPreference,
+  shouldShowKdsSoundPrompt,
+  safeRequestNotificationPermission
 } from '../../../utils/kdsHelpers';
 
 export default function StandaloneKdsPage({ slug = '' }) {
@@ -43,7 +55,26 @@ export default function StandaloneKdsPage({ slug = '' }) {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [pinSubmitting, setPinSubmitting] = useState(false);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [soundPreference, setSoundPreference] = useState(() => {
+    const initialSlug = resolveKdsSlug({
+      slug,
+      pathname: typeof window !== 'undefined' ? window.location.pathname : '',
+      search: typeof window !== 'undefined' ? window.location.search : ''
+    });
+    return initialSlug ? getKdsSoundPreference(initialSlug) : '';
+  });
+  const [isAudioReady, setIsAudioReady] = useState(() => {
+    return typeof isNotificationSoundReady === 'function' ? isNotificationSoundReady() : false;
+  });
+  const [audioUnlocked, setAudioUnlocked] = useState(() => {
+    const initialSlug = resolveKdsSlug({
+      slug,
+      pathname: typeof window !== 'undefined' ? window.location.pathname : '',
+      search: typeof window !== 'undefined' ? window.location.search : ''
+    });
+    const pref = initialSlug ? getKdsSoundPreference(initialSlug) : '';
+    return pref === 'enabled' || (typeof isNotificationSoundReady === 'function' && isNotificationSoundReady());
+  });
   const [restaurantMeta, setRestaurantMeta] = useState(null);
   const [checkedItemsMap, setCheckedItemsMap] = useState({});
   const [showPrepSummary, setShowPrepSummary] = useState(true);
@@ -148,6 +179,61 @@ export default function StandaloneKdsPage({ slug = '' }) {
     return () => clearTimeout(timer);
   }, [recallNotice]);
 
+  // Sync sound preference when target slug changes or resolves
+  useEffect(() => {
+    const currentSlug = resolveCurrentSlug();
+    if (currentSlug) {
+      const pref = getKdsSoundPreference(currentSlug);
+      setSoundPreference(pref);
+      if (pref === 'enabled') {
+        setAudioUnlocked(true);
+      }
+    }
+  }, [slug]);
+
+  // Subscribe to AudioContext readiness and listen for user gestures to unlock audio
+  useEffect(() => {
+    const unsubscribe = subscribeAudioState((ready) => {
+      if (isMountedRef.current) {
+        setIsAudioReady(ready);
+        if (ready) {
+          setAudioUnlocked(true);
+        }
+      }
+    });
+
+    // Attempt silent unlock (works if user has engaged with domain or autoplay permitted)
+    unlockNotificationSound().then((success) => {
+      if (success && isMountedRef.current) {
+        setIsAudioReady(true);
+        setAudioUnlocked(true);
+      }
+    }).catch(() => {});
+
+    // Passive gesture listener: silently resumes AudioContext on user interaction with KDS
+    const handleGestureUnlock = () => {
+      unlockNotificationSound().then((success) => {
+        if (success && isMountedRef.current) {
+          setIsAudioReady(true);
+          setAudioUnlocked(true);
+          const currentSlug = resolveCurrentSlug();
+          if (currentSlug && !getKdsSoundPreference(currentSlug)) {
+            setKdsSoundPreference(currentSlug, 'enabled');
+            setSoundPreference('enabled');
+          }
+        }
+      }).catch(() => {});
+    };
+
+    const gestureEvents = ['click', 'touchstart', 'pointerdown', 'keydown'];
+    gestureEvents.forEach(evt => window.addEventListener(evt, handleGestureUnlock, { passive: true }));
+
+    return () => {
+      unsubscribe();
+      gestureEvents.forEach(evt => window.removeEventListener(evt, handleGestureUnlock));
+    };
+  }, []);
+
   const stopSiren = () => {
     if (sirenIntervalRef.current) {
       clearInterval(sirenIntervalRef.current);
@@ -169,6 +255,12 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
   const playSirenFor8Seconds = () => {
     try {
+      const currentSlug = resolveCurrentSlug();
+      const pref = currentSlug ? getKdsSoundPreference(currentSlug) : soundPreference;
+      if (pref === 'muted') {
+        return;
+      }
+
       // Clear any existing active timer before starting replacement sequence
       stopSiren();
       if (!isMountedRef.current) return;
@@ -192,12 +284,55 @@ export default function StandaloneKdsPage({ slug = '' }) {
   };
 
   const unlockAudio = () => {
-    unlockNotificationSound().then(() => {
-      playSiren();
-      if (isMountedRef.current) setAudioUnlocked(true);
+    const currentSlug = resolveCurrentSlug();
+    if (currentSlug) {
+      setKdsSoundPreference(currentSlug, 'enabled');
+      setSoundPreference('enabled');
+    }
+    if (isMountedRef.current) setAudioUnlocked(true);
+
+    unlockNotificationSound().then((success) => {
+      if (success && isMountedRef.current) {
+        setIsAudioReady(true);
+        try { playKdsChime(); } catch (e) {}
+      }
     }).catch(() => {
       if (isMountedRef.current) setAudioUnlocked(true);
     });
+
+    safeRequestNotificationPermission().catch(() => {});
+  };
+
+  const handleToggleSound = () => {
+    const currentSlug = resolveCurrentSlug();
+    if (soundPreference === 'muted') {
+      if (currentSlug) {
+        setKdsSoundPreference(currentSlug, 'enabled');
+        setSoundPreference('enabled');
+      }
+      setAudioUnlocked(true);
+      unlockNotificationSound().then((success) => {
+        if (success && isMountedRef.current) {
+          setIsAudioReady(true);
+          try { playKdsChime(); } catch (e) {}
+        }
+      }).catch(() => {});
+      safeRequestNotificationPermission().catch(() => {});
+    } else if (!isAudioReady && soundPreference === 'enabled') {
+      unlockNotificationSound().then((success) => {
+        if (success && isMountedRef.current) {
+          setIsAudioReady(true);
+          try { playKdsChime(); } catch (e) {}
+        }
+      }).catch(() => {});
+      safeRequestNotificationPermission().catch(() => {});
+    } else {
+      if (currentSlug) {
+        setKdsSoundPreference(currentSlug, 'muted');
+        setSoundPreference('muted');
+      }
+      stopSiren();
+    }
   };
 
   /**
@@ -1095,8 +1230,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
       `}</style>
 
       {/* AUDIO UNLOCK BANNER */}
-      {!audioUnlocked && (
+      {shouldShowKdsSoundPrompt({ soundPreference, isAudioReady, isAudioUnlocked: audioUnlocked }) && (
         <div
+          id="kds-audio-unlock-banner"
           onClick={unlockAudio}
           style={{
             background: 'linear-gradient(90deg, #EA580C 0%, #DC2626 100%)',
@@ -1109,10 +1245,15 @@ export default function StandaloneKdsPage({ slug = '' }) {
             fontSize: '0.95rem',
             cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(234, 88, 12, 0.4)',
-            border: '2px solid #FDE047'
+            border: '2px solid #FDE047',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
           }}
         >
-          🔊 TAP HERE TO UNLOCK KITCHEN EMERGENCY ALARM SOUND & FULL LOUD SIREN
+          <Volume2 size={20} />
+          <span>TAP HERE TO UNLOCK KITCHEN EMERGENCY ALARM SOUND & FULL LOUD SIREN</span>
         </div>
       )}
 
@@ -1269,6 +1410,63 @@ export default function StandaloneKdsPage({ slug = '' }) {
                 : 'OFFLINE'}
             </span>
           </div>
+
+          {/* SOUND ENABLE / TOGGLE CONTROL */}
+          <button
+            id="kds-sound-toggle-btn"
+            type="button"
+            onClick={handleToggleSound}
+            title={
+              soundPreference === 'muted'
+                ? 'Sound is muted for this kitchen. Tap to enable siren alerts.'
+                : isAudioReady
+                ? 'Kitchen siren sound active. Tap to mute or test.'
+                : 'Audio requires gesture in new browser session. Tap to enable sound.'
+            }
+            style={{
+              height: '36px',
+              padding: '0 10px',
+              borderRadius: '10px',
+              border: soundPreference === 'muted'
+                ? '1px solid #475569'
+                : isAudioReady
+                ? '1px solid #10B981'
+                : '1px solid #F59E0B',
+              background: soundPreference === 'muted'
+                ? 'rgba(71, 85, 105, 0.2)'
+                : isAudioReady
+                ? 'rgba(16, 185, 129, 0.15)'
+                : 'rgba(245, 158, 11, 0.15)',
+              color: soundPreference === 'muted'
+                ? '#94A3B8'
+                : isAudioReady
+                ? '#34D399'
+                : '#FCD34D',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {soundPreference === 'muted' ? (
+              <>
+                <VolumeX size={14} />
+                <span>Muted</span>
+              </>
+            ) : isAudioReady ? (
+              <>
+                <Volume2 size={14} />
+                <span>Sound ON</span>
+              </>
+            ) : (
+              <>
+                <Volume2 size={14} />
+                <span>Enable Sound</span>
+              </>
+            )}
+          </button>
 
           <button
             type="button"
