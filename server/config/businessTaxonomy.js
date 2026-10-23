@@ -334,20 +334,29 @@ export function getAvailableSpaceTypesForBusiness(businessType, serviceModel, op
   }
 
   // All other dining / food service models (dine_in_table)
-  return [
+  const spaces = [
     { id: 'table', label: '🍽️ Dining Table', singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' },
     { id: 'cabin', label: '🛋️ Private Cabin', singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.', param: 'cabin' },
     { id: 'vip', label: '👑 VIP Lounge', singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' }
   ];
+
+  if (options.counter_ordering_enabled === 1 || options.counter_ordering_enabled === true || options.counter_ordering_enabled === '1') {
+    spaces.push({ id: 'counter', label: '🧾 Billing Counter', singular: 'Counter', plural: 'Counters', badge: 'BILLING COUNTER', param: 'counter' });
+  }
+
+  return spaces;
 }
 
 /**
  * Resolves standard space configuration (singular, plural, badge, param) for a given space type prefix.
- * @param {string} prefix - 'table' | 'cabin' | 'room' | 'vip' | 'cinema_seat'
+ * @param {string} prefix - 'table' | 'cabin' | 'room' | 'vip' | 'cinema_seat' | 'counter'
  * @returns {{ id: string, label: string, singular: string, plural: string, badge: string, param: string }}
  */
 export function getSpaceConfig(prefix = 'table') {
   const t = String(prefix || 'table').toLowerCase();
+  if (t === 'counter') {
+    return { id: 'counter', label: '🧾 Billing Counter', singular: 'Counter', plural: 'Counters', badge: 'BILLING COUNTER', param: 'counter' };
+  }
   if (t === 'cinema_seat' || t === 'cinema') {
     return { id: 'cinema_seat', label: '🎬 Cinema Seat', singular: 'Cinema Seat', plural: 'Cinema Seats', badge: 'CINEMA SEAT', param: 'cinema' };
   }

@@ -35,6 +35,7 @@ export function isValidHmacTokenFormat(token) {
  */
 export function normalizeSpaceType(raw) {
   const s = String(raw || '').trim().toLowerCase();
+  if (s === 'counter' || s === 'counter_ordering' || s.includes('counter')) return 'counter';
   if (s.includes('cinema') || s.includes('seat')) return 'cinema_seat';
   if (s.includes('cabin')) return 'cabin';
   if (s.includes('room')) return 'room';
@@ -54,6 +55,8 @@ export function normalizeSpaceNumber(raw) {
   const s = String(raw).trim();
   if (!s) return '';
 
+  if (s.toLowerCase() === 'counter') return 'COUNTER';
+
   const cinemaMatch = s.match(/^(?:screen\s*(\d+)[\s\-_•|,]+row\s*([a-zA-Z]+)[\s\-_•|,]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
   if (cinemaMatch) {
     const screen = cinemaMatch[1] || cinemaMatch[4];
@@ -62,7 +65,7 @@ export function normalizeSpaceNumber(raw) {
     return `S${screen}-${row}-${seat}`;
   }
 
-  const cleaned = s.replace(/^(table|cabin|room|vip|tbl|🍽️|🛋️|🏨|👑|🎬|\s)+/i, '').trim();
+  const cleaned = s.replace(/^(table|cabin|room|vip|counter|tbl|🍽️|🛋️|🏨|👑|🎬|🧾|\s)+/i, '').trim();
   if (/^\d+$/.test(cleaned)) {
     return String(parseInt(cleaned, 10));
   }

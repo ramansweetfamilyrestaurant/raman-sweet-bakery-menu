@@ -94,6 +94,18 @@ export default function OrdersView({
     return [];
   };
 
+  const handleTriggerBillAction = (order) => {
+    if (!order) return;
+    if (typeof onOpenBillModal === 'function') {
+      onOpenBillModal(order);
+    } else {
+      console.error('[BILLING SAFETY] Bill modal handler is unavailable. Refusing to complete order without explicit payment settlement.');
+      if (typeof alert === 'function') {
+        alert('Billing modal is unavailable. Orders cannot be completed without explicit payment settlement.');
+      }
+    }
+  };
+
   const profile = resolveBusinessProfile(restaurantInfo || settingsForm || {});
   const effectiveBiz = profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type;
   const effectiveService = profile?.service_model || settingsForm?.service_model || restaurantInfo?.service_model;
@@ -151,6 +163,9 @@ export default function OrdersView({
     const raw = String(order.table_number || '').trim();
     const expType = order.space_type ? String(order.space_type).toLowerCase() : null;
 
+    if (raw.toLowerCase() === 'counter' || expType === 'counter') {
+      return { space_type: 'counter', space_number: 'COUNTER' };
+    }
     if (/^cabin\s*#?\s*(\d+)/i.test(raw)) {
       const m = raw.match(/^cabin\s*#?\s*(\d+)/i);
       return { space_type: 'cabin', space_number: String(m[1]) };
@@ -384,6 +399,9 @@ export default function OrdersView({
     if (!raw) return isCinema ? 'Screen 1 • Seat 1' : isHotel ? 'Room 101' : 'Table 1';
     const str = String(raw).trim();
     
+    if (spaceType === 'counter' || str.toLowerCase() === 'counter' || str.toLowerCase() === 'counter:counter') {
+      return '⚡ Counter';
+    }
     if (isCinema) {
       return `🎬 ${str.toLowerCase().startsWith('screen') ? str : `Screen 1 • Seat ${str}`}`;
     }
@@ -1055,7 +1073,18 @@ export default function OrdersView({
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
                           {isPending && (
                             <button
-                              onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'kitchen') : null}
+                              onClick={() => {
+                                const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
+                                if (isCounter) {
+                                  if (onOpenAcceptRouting) {
+                                    onOpenAcceptRouting(order);
+                                  }
+                                  return;
+                                }
+                                if (onUpdateStatus) {
+                                  onUpdateStatus(order.id, 'kitchen');
+                                }
+                              }}
                               style={{
                                 padding: '6px 12px',
                                 borderRadius: '8px',
@@ -1091,16 +1120,19 @@ export default function OrdersView({
 
                           {isReady && (
                             <button
-                              onClick={() => onOpenBillModal ? onOpenBillModal(order) : (onUpdateStatus && onUpdateStatus(order.id, 'completed'))}
+                              onClick={() => handleTriggerBillAction(order)}
+                              disabled={!onOpenBillModal}
+                              title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
                               style={{
                                 padding: '6px 12px',
                                 borderRadius: '8px',
-                                background: '#7E22CE',
+                                background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
                                 color: '#FFFFFF',
                                 border: 'none',
                                 fontSize: '0.74rem',
                                 fontWeight: 800,
-                                cursor: 'pointer'
+                                cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
+                                opacity: onOpenBillModal ? 1 : 0.6
                               }}
                             >
                               💳 Bill
@@ -1233,7 +1265,18 @@ export default function OrdersView({
                     <div style={{ display: 'flex', gap: '6px' }}>
                       {isPending && (
                         <button
-                          onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'kitchen') : null}
+                          onClick={() => {
+                            const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
+                            if (isCounter) {
+                              if (onOpenAcceptRouting) {
+                                onOpenAcceptRouting(order);
+                              }
+                              return;
+                            }
+                            if (onUpdateStatus) {
+                              onUpdateStatus(order.id, 'kitchen');
+                            }
+                          }}
                           style={{
                             padding: '8px 14px',
                             borderRadius: '10px',
@@ -1269,16 +1312,19 @@ export default function OrdersView({
 
                       {isReady && (
                         <button
-                          onClick={() => onOpenBillModal ? onOpenBillModal(order) : (onUpdateStatus && onUpdateStatus(order.id, 'completed'))}
+                          onClick={() => handleTriggerBillAction(order)}
+                          disabled={!onOpenBillModal}
+                          title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
                           style={{
                             padding: '8px 14px',
                             borderRadius: '10px',
-                            background: '#7E22CE',
+                            background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
                             color: '#FFFFFF',
                             border: 'none',
                             fontSize: '0.78rem',
                             fontWeight: 800,
-                            cursor: 'pointer'
+                            cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
+                            opacity: onOpenBillModal ? 1 : 0.6
                           }}
                         >
                           💳 Bill
@@ -1557,17 +1603,20 @@ export default function OrdersView({
                           Details
                         </button>
                         <button
-                          onClick={() => onOpenBillModal ? onOpenBillModal(space.activeOrder) : (onPrintBill && onPrintBill(space.activeOrder))}
+                          onClick={() => handleTriggerBillAction(space.activeOrder)}
+                          disabled={!onOpenBillModal}
+                          title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
                           style={{
                             flex: 1,
                             padding: '6px 8px',
                             borderRadius: '8px',
-                            background: '#261B14',
+                            background: onOpenBillModal ? '#261B14' : '#9CA3AF',
                             color: '#FFFFFF',
                             border: 'none',
                             fontSize: '0.70rem',
                             fontWeight: 800,
-                            cursor: 'pointer'
+                            cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
+                            opacity: onOpenBillModal ? 1 : 0.6
                           }}
                         >
                           Bill
@@ -2028,6 +2077,14 @@ export default function OrdersView({
               {(selectedOrder.status === 'pending' || selectedOrder.status === 'ordered') && (
                 <button
                   onClick={() => {
+                    const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
+                    if (isCounter) {
+                      if (onOpenAcceptRouting) {
+                        onOpenAcceptRouting(selectedOrder);
+                      }
+                      setSelectedOrder(null);
+                      return;
+                    }
                     if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'kitchen');
                     setSelectedOrder(null);
                   }}
@@ -2074,21 +2131,27 @@ export default function OrdersView({
               {(selectedOrder.status === 'served' || selectedOrder.status === 'ready') && (
                 <button
                   onClick={() => {
-                    setSelectedOrder(null);
-                    if (onOpenBillModal) onOpenBillModal(selectedOrder);
-                    else if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'completed');
+                    if (typeof onOpenBillModal === 'function') {
+                      setSelectedOrder(null);
+                      handleTriggerBillAction(selectedOrder);
+                    } else {
+                      handleTriggerBillAction(selectedOrder);
+                    }
                   }}
+                  disabled={!onOpenBillModal}
+                  title={!onOpenBillModal ? 'Billing modal unavailable' : 'Generate Bill & Complete Order'}
                   style={{
                     width: '100%',
                     padding: '12px',
                     borderRadius: '12px',
-                    background: '#7E22CE',
+                    background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
                     color: '#FFFFFF',
                     fontSize: '0.84rem',
                     fontWeight: 900,
                     border: 'none',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(126, 34, 206, 0.3)'
+                    cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
+                    boxShadow: onOpenBillModal ? '0 2px 8px rgba(126, 34, 206, 0.3)' : 'none',
+                    opacity: onOpenBillModal ? 1 : 0.6
                   }}
                 >
                   Generate Bill & Complete Order

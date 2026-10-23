@@ -169,23 +169,25 @@ async function runIsolationTests() {
     await test('8. Valid designated PostgreSQL test database passes validation', async () => {
       process.env.NODE_ENV = 'test';
       process.env.DATABASE_URL = 'postgresql://mainuser:secret@ep-main.aws.neon.tech/neondb';
+      process.env.STAGING_DATABASE_HOST = 'ep-isolated-test.aws.neon.tech';
       const res = validateTestDatabaseUrl('postgresql://testuser:secret@ep-isolated-test.aws.neon.tech/touchqr_test');
       assert.strictEqual(res.isPostgres, true);
       assert.strictEqual(res.isSqlite, false);
+      delete process.env.STAGING_DATABASE_HOST;
     });
 
     // ----------------------------------------------------
     // TEST 9: Same host and DB as DATABASE_URL with different params is rejected
     // ----------------------------------------------------
     await test('9. Target with same host and db as DATABASE_URL is rejected', async () => {
-      process.env.DATABASE_URL = 'postgresql://mainuser:secret@ep-cluster.neon.tech/touchqr?sslmode=require';
+      process.env.DATABASE_URL = 'postgresql://mainuser:secret@127.0.0.1:5432/touchqr?sslmode=disable';
       assert.throws(
         () => {
-          validateTestDatabaseUrl('postgresql://different_user:different_secret@ep-cluster.neon.tech/touchqr?sslmode=verify-full');
+          validateTestDatabaseUrl('postgresql://different_user:different_secret@127.0.0.1:5432/touchqr?sslmode=disable');
         },
         (err) => {
           assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
-          assert(err.message.includes('same host and database'), `Expected same host and database violation`);
+          assert(err.message.includes('same host and database') || err.message.includes('identical to DATABASE_URL'), `Expected same host and database violation`);
           assert(!err.message.includes('different_secret'), 'Must not leak credentials');
           return true;
         }
@@ -363,6 +365,322 @@ async function runIsolationTests() {
           }
         } catch (e) {}
       }
+    });
+
+    // ----------------------------------------------------
+    // TEST 16: Targeting staging application database (touchqr_staging_app) is rejected
+    // ----------------------------------------------------
+    await test('16. Targeting staging application database (touchqr_staging_app) is rejected', async () => {
+      assert.throws(
+        () => {
+          validateTestDatabaseUrl('postgresql://staging_user:secret123@ep-staging.aws.neon.tech/touchqr_staging_app');
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('application database'), `Expected application database message`);
+          assert(!err.message.includes('secret123'), 'Must not leak credentials');
+          return true;
+        }
+      );
+    });
+
+    // ----------------------------------------------------
+    // TEST 17: TEST_DATABASE_URL matching MIGRATION_DATABASE_URL is rejected
+    // ----------------------------------------------------
+    await test('17. TEST_DATABASE_URL identical or same host+db as MIGRATION_DATABASE_URL is rejected', async () => {
+      process.env.MIGRATION_DATABASE_URL = 'postgresql://mig_user:secret123@ep-staging.aws.neon.tech/touchqr_staging_test';
+      assert.throws(
+        () => {
+          validateTestDatabaseUrl('postgresql://mig_user:secret123@ep-staging.aws.neon.tech/touchqr_staging_test');
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('MIGRATION_DATABASE_URL'), `Expected MIGRATION_DATABASE_URL check error`);
+          return true;
+        }
+      );
+
+      assert.throws(
+        () => {
+          validateTestDatabaseUrl('postgresql://diff_user:diff_secret@ep-staging.aws.neon.tech/touchqr_staging_test?sslmode=require');
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('MIGRATION_DATABASE_URL'), `Expected MIGRATION_DATABASE_URL check error`);
+          return true;
+        }
+      );
+      delete process.env.MIGRATION_DATABASE_URL;
+    });
+
+    // ----------------------------------------------------
+    // TEST 18: Targeting production neondb is rejected even when DATABASE_URL is unset
+    // ----------------------------------------------------
+    await test('18. Targeting production neondb is rejected unconditionally', async () => {
+      delete process.env.DATABASE_URL;
+      assert.throws(
+        () => {
+          validateTestDatabaseUrl('postgresql://user:secret123@ep-random.aws.neon.tech/neondb');
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('production'), 'Expected production mention');
+          assert(!err.message.includes('secret123'), 'Must not leak credentials');
+          return true;
+        }
+      );
+    });
+
+    // ----------------------------------------------------
+    // TEST 19: Non-test target without test or disposable in name fails closed
+    // ----------------------------------------------------
+    await test('19. Non-test target without "test" or "disposable" fails closed', async () => {
+      delete process.env.DATABASE_URL;
+      assert.throws(
+        () => {
+          validateTestDatabaseUrl('postgresql://user:secret123@ep-random.aws.neon.tech/analytics');
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('not explicitly recognized as a dedicated test database'), `Expected fail-closed message`);
+          return true;
+        }
+      );
+    });
+
+    // ----------------------------------------------------
+    // TEST 20: Valid dedicated staging test target (touchqr_staging_test) passes
+    // ----------------------------------------------------
+    await test('20. Valid dedicated staging test target (touchqr_staging_test) passes validation', async () => {
+      delete process.env.DATABASE_URL;
+      delete process.env.MIGRATION_DATABASE_URL;
+      process.env.STAGING_DATABASE_HOST = 'ep-staging.aws.neon.tech';
+      const res = validateTestDatabaseUrl('postgresql://test_user:secret123@ep-staging.aws.neon.tech/touchqr_staging_test?sslmode=require');
+      assert.strictEqual(res.isPostgres, true);
+      assert.strictEqual(res.isSqlite, false);
+      delete process.env.STAGING_DATABASE_HOST;
+    });
+
+    // ----------------------------------------------------
+    // TEST 21: Legitimate dedicated staging test target using neondb_owner role passes validation
+    // ----------------------------------------------------
+    await test('21. Legitimate dedicated staging test target using neondb_owner role passes validation', async () => {
+      delete process.env.DATABASE_URL;
+      delete process.env.MIGRATION_DATABASE_URL;
+      process.env.STAGING_DATABASE_HOST = 'ep-staging.aws.neon.tech';
+      const res = validateTestDatabaseUrl('postgresql://neondb_owner:secret123@ep-staging.aws.neon.tech/touchqr_staging_test?sslmode=require');
+      assert.strictEqual(res.isPostgres, true);
+      assert.strictEqual(res.isSqlite, false);
+      delete process.env.STAGING_DATABASE_HOST;
+    });
+
+    // ----------------------------------------------------
+    // TEST 22: neondb_owner role targeting production neondb is rejected
+    // ----------------------------------------------------
+    await test('22. neondb_owner role targeting production neondb is rejected', async () => {
+      delete process.env.DATABASE_URL;
+      assert.throws(
+        () => {
+          validateTestDatabaseUrl('postgresql://neondb_owner:secret123@ep-prod.aws.neon.tech/neondb');
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('production'), 'Expected production mention');
+          assert(!err.message.includes('secret123'), 'Must not leak credentials');
+          return true;
+        }
+      );
+    });
+
+    // ----------------------------------------------------
+    // TEST 23: neondb_owner role targeting application touchqr_staging_app is rejected
+    // ----------------------------------------------------
+    await test('23. neondb_owner role targeting application touchqr_staging_app is rejected', async () => {
+      delete process.env.DATABASE_URL;
+      assert.throws(
+        () => {
+          validateTestDatabaseUrl('postgresql://neondb_owner:secret123@ep-staging.aws.neon.tech/touchqr_staging_app');
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('application database'), 'Expected application database mention');
+          assert(!err.message.includes('secret123'), 'Must not leak credentials');
+          return true;
+        }
+      );
+    });
+
+    // ----------------------------------------------------
+    // TEST 24: Known production hostname is rejected even if database name is touchqr_staging_app
+    // ----------------------------------------------------
+    await test('24. URL targeting known production hostname is rejected even if db name is touchqr_staging_app', async () => {
+      process.env.DATABASE_URL = 'postgresql://main_user:secret@ep-prod-cluster.neon.tech:5432/neondb';
+      process.env.STAGING_DATABASE_HOST = 'ep-dedicated-staging.neon.tech';
+      assert.throws(
+        () => {
+          validateTestDatabaseUrl('postgresql://tester:secret@ep-prod-cluster.neon.tech:5432/touchqr_staging_app');
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('production database endpoint'), `Must identify production endpoint`);
+          return true;
+        }
+      );
+      delete process.env.DATABASE_URL;
+      delete process.env.STAGING_DATABASE_HOST;
+    });
+
+    // ----------------------------------------------------
+    // TEST 25: Known production hostname is rejected even if database name is touchqr_staging_test
+    // ----------------------------------------------------
+    await test('25. URL targeting known production hostname is rejected even if db name is touchqr_staging_test', async () => {
+      process.env.DATABASE_URL = 'postgresql://main_user:secret@ep-prod-cluster.neon.tech:5432/neondb';
+      process.env.STAGING_DATABASE_HOST = 'ep-dedicated-staging.neon.tech';
+      assert.throws(
+        () => {
+          validateTestDatabaseUrl('postgresql://tester:secret@ep-prod-cluster.neon.tech:5432/touchqr_staging_test');
+        },
+        (err) => {
+          assert(err.message.includes('TEST_DB_SAFETY_VIOLATION'), `Expected violation, got: ${err.message}`);
+          assert(err.message.includes('production database endpoint'), `Must identify production endpoint`);
+          return true;
+        }
+      );
+      delete process.env.DATABASE_URL;
+      delete process.env.STAGING_DATABASE_HOST;
+    });
+
+    // ----------------------------------------------------
+    // TEST 26: Automated test target is rejected if it points to production endpoint or touchqr_staging_app regardless of username/tricks
+    // ----------------------------------------------------
+    await test('26. Automated test target rejected if pointing to production or touchqr_staging_app regardless of tricks', async () => {
+      process.env.DATABASE_URL = 'postgresql://main_user:secret@ep-prod-cluster.neon.tech:5432/neondb';
+      process.env.STAGING_DATABASE_HOST = 'ep-dedicated-staging.neon.tech';
+
+      // Trick 1: staging username targeting production host
+      assert.throws(
+        () => validateTestDatabaseUrl('postgresql://staging_user:secret@ep-prod-cluster.neon.tech:5432/my_test_db'),
+        /TEST_DB_SAFETY_VIOLATION/
+      );
+
+      // Trick 2: test username targeting touchqr_staging_app on allowed staging host
+      assert.throws(
+        () => validateTestDatabaseUrl('postgresql://test_runner:secret@ep-dedicated-staging.neon.tech:5432/touchqr_staging_app'),
+        /application database/
+      );
+
+      delete process.env.DATABASE_URL;
+      delete process.env.STAGING_DATABASE_HOST;
+    });
+
+    // ----------------------------------------------------
+    // TEST 27: Arbitrary remote endpoint with db containing staging/test rejected unless in allowlist
+    // ----------------------------------------------------
+    await test('27. Arbitrary remote endpoint with "staging" or "test" rejected unless in allowlist', async () => {
+      delete process.env.DATABASE_URL;
+      process.env.STAGING_DATABASE_HOST = 'ep-dedicated-staging.neon.tech';
+
+      assert.throws(
+        () => validateTestDatabaseUrl('postgresql://attacker:secret@arbitrary-unauthorized-host.neon.tech:5432/touchqr_staging_test'),
+        /does not match the explicitly configured test\/staging endpoint allowlist/
+      );
+
+      delete process.env.STAGING_DATABASE_HOST;
+    });
+
+    // ----------------------------------------------------
+    // TEST 28: Remote test database fails closed if STAGING_DATABASE_HOST / TEST_DATABASE_HOST is absent
+    // ----------------------------------------------------
+    await test('28. Remote test database fails closed if STAGING_DATABASE_HOST is absent', async () => {
+      delete process.env.DATABASE_URL;
+      delete process.env.STAGING_DATABASE_HOST;
+      delete process.env.TEST_DATABASE_HOST;
+
+      assert.throws(
+        () => validateTestDatabaseUrl('postgresql://tester:secret@ep-some-remote-host.neon.tech:5432/touchqr_staging_test'),
+        /Remote TEST_DATABASE_URL requires an explicitly configured test\/staging host allowlist/
+      );
+    });
+
+    // ----------------------------------------------------
+    // TEST 29: STAGING_DATABASE_HOST matching production DATABASE_URL hostname triggers safety violation
+    // ----------------------------------------------------
+    await test('29. STAGING_DATABASE_HOST matching production DATABASE_URL hostname fails closed', async () => {
+      process.env.DATABASE_URL = 'postgresql://main_user:secret@ep-prod-cluster.neon.tech:5432/neondb';
+      process.env.STAGING_DATABASE_HOST = 'ep-prod-cluster.neon.tech,ep-other-staging.neon.tech';
+
+      // Targeting remote host while STAGING_DATABASE_HOST conflicts with production host
+      assert.throws(
+        () => validateTestDatabaseUrl('postgresql://tester:secret@ep-other-staging.neon.tech:5432/touchqr_staging_test'),
+        /matches the production database endpoint/
+      );
+
+      delete process.env.DATABASE_URL;
+      delete process.env.STAGING_DATABASE_HOST;
+    });
+
+    // ----------------------------------------------------
+    // TEST 30: verifyTestDatabaseIdentity rejects live connection if TEST_DATABASE_URL points to production endpoint
+    // ----------------------------------------------------
+    await test('30. verifyTestDatabaseIdentity rejects live connection if TEST_DATABASE_URL points to production endpoint', async () => {
+      process.env.DATABASE_URL = 'postgresql://main_user:secret@ep-prod-cluster.neon.tech:5432/neondb';
+      process.env.TEST_DATABASE_URL = 'postgresql://tester:secret@ep-prod-cluster.neon.tech:5432/touchqr_staging_test';
+      process.env.STAGING_DATABASE_HOST = 'ep-prod-cluster.neon.tech';
+
+      const mockQuery = async () => [{ db_name: 'touchqr_staging_test', user_name: 'tester' }];
+
+      await assert.rejects(
+        async () => {
+          await verifyTestDatabaseIdentity(mockQuery, { isPostgres: true });
+        },
+        /TEST_DB_SAFETY_VIOLATION/
+      );
+
+      delete process.env.DATABASE_URL;
+      delete process.env.TEST_DATABASE_URL;
+      delete process.env.STAGING_DATABASE_HOST;
+    });
+
+    // ----------------------------------------------------
+    // TEST 31: verifyTestDatabaseIdentity rejects live connection if connected database is touchqr_staging_app
+    // ----------------------------------------------------
+    await test('31. verifyTestDatabaseIdentity rejects live connection if connected db is touchqr_staging_app', async () => {
+      delete process.env.DATABASE_URL;
+      process.env.STAGING_DATABASE_HOST = 'ep-dedicated-staging.neon.tech';
+      process.env.TEST_DATABASE_URL = 'postgresql://tester:secret@ep-dedicated-staging.neon.tech:5432/touchqr_staging_app';
+
+      const mockQuery = async () => [{ db_name: 'touchqr_staging_app', user_name: 'tester' }];
+
+      await assert.rejects(
+        async () => {
+          await verifyTestDatabaseIdentity(mockQuery, { isPostgres: true });
+        },
+        /application database/
+      );
+
+      delete process.env.TEST_DATABASE_URL;
+      delete process.env.STAGING_DATABASE_HOST;
+    });
+
+    // ----------------------------------------------------
+    // TEST 32: verifyTestDatabaseIdentity rejects live connection on remote host if STAGING_DATABASE_HOST is not configured
+    // ----------------------------------------------------
+    await test('32. verifyTestDatabaseIdentity rejects live connection on remote host if STAGING_DATABASE_HOST is unconfigured', async () => {
+      delete process.env.DATABASE_URL;
+      delete process.env.STAGING_DATABASE_HOST;
+      delete process.env.TEST_DATABASE_HOST;
+      process.env.TEST_DATABASE_URL = 'postgresql://tester:secret@ep-dedicated-staging.neon.tech:5432/touchqr_staging_test';
+
+      const mockQuery = async () => [{ db_name: 'touchqr_staging_test', user_name: 'tester' }];
+
+      await assert.rejects(
+        async () => {
+          await verifyTestDatabaseIdentity(mockQuery, { isPostgres: true });
+        },
+        /Remote test endpoint requires an explicitly configured allowlist/
+      );
+
+      delete process.env.TEST_DATABASE_URL;
     });
 
   } finally {

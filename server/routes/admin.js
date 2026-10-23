@@ -1522,7 +1522,7 @@ const handleUpdateSettings = async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, business_category, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, business_category, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds, counter_ordering_enabled } = req.body;
 
     let cleanOwnerEmail = undefined;
     if (owner_email !== undefined) {
@@ -1605,6 +1605,10 @@ const handleUpdateSettings = async (req, res) => {
     const cleanVerifMode = table_verification_mode !== undefined ? normalizeVerificationMode(table_verification_mode) : null;
     const cleanStaffTimeout = staff_verification_timeout_seconds !== undefined
       ? Math.min(600, Math.max(30, parseInt(staff_verification_timeout_seconds, 10) || 120))
+      : null;
+
+    const cleanCounterOrdering = counter_ordering_enabled !== undefined
+      ? (counter_ordering_enabled === true || counter_ordering_enabled === 1 || counter_ordering_enabled === '1' || counter_ordering_enabled === 'true' ? 1 : 0)
       : null;
 
     let cleanBusinessType = null;
@@ -1773,8 +1777,9 @@ const handleUpdateSettings = async (req, res) => {
             printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width),
             business_type = COALESCE($39, business_type), food_type = COALESCE($40, food_type), service_model = COALESCE($41, service_model),
             owner_email = CASE WHEN $42::boolean THEN $43 ELSE owner_email END,
-            business_category = COALESCE($44, business_category)
-        WHERE id = $45
+            business_category = COALESCE($44, business_category),
+            counter_ordering_enabled = COALESCE($45, counter_ordering_enabled)
+        WHERE id = $46
       `, [
         name !== undefined ? name : null,
         tagline !== undefined ? tagline : null,
@@ -1820,6 +1825,7 @@ const handleUpdateSettings = async (req, res) => {
         cleanOwnerEmail !== undefined,
         cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
         cleanBusinessCategory,
+        cleanCounterOrdering,
         targetId
       ]);
     } catch (sqlErr) {
@@ -1840,14 +1846,16 @@ const handleUpdateSettings = async (req, res) => {
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50)");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_email VARCHAR(255) DEFAULT NULL");
           await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_category VARCHAR(50) DEFAULT 'dine_in'");
+          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 0");
           await query(`
             UPDATE restaurants 
             SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds),
                 printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width),
                 business_type = COALESCE($39, business_type), food_type = COALESCE($40, food_type), service_model = COALESCE($41, service_model),
                 owner_email = CASE WHEN $42::boolean THEN $43 ELSE owner_email END,
-                business_category = COALESCE($44, business_category)
-            WHERE id = $45
+                business_category = COALESCE($44, business_category),
+                counter_ordering_enabled = COALESCE($45, counter_ordering_enabled)
+            WHERE id = $46
           `, [
             name !== undefined ? name : null,
             tagline !== undefined ? tagline : null,
@@ -1893,6 +1901,7 @@ const handleUpdateSettings = async (req, res) => {
             cleanOwnerEmail !== undefined,
             cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
             cleanBusinessCategory,
+            cleanCounterOrdering,
             targetId
           ]);
         } catch (innerErr) {
@@ -1923,7 +1932,7 @@ const handleUpdateSettings = async (req, res) => {
       'owner_name', 'owner_email', 'city', 'state', 'pincode',
       'table_verification_mode', 'staff_verification_timeout_seconds',
       'printer_mode', 'auto_print_kot', 'auto_print_bill', 'printer_paper_width',
-      'kds_pin'
+      'kds_pin', 'counter_ordering_enabled'
     ];
     const updatedKeys = Object.keys(req.body).filter(k => ALLOWED_SETTING_FIELDS.includes(k) && req.body[k] !== undefined);
 
@@ -1991,7 +2000,7 @@ router.post('/qr/generate', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to generate QR tokens for another restaurant' });
     }
 
-    const restos = await query('SELECT id, slug, qr_secret, custom_domain FROM restaurants WHERE id = $1', [targetId]);
+    const restos = await query('SELECT id, slug, qr_secret, custom_domain, counter_ordering_enabled FROM restaurants WHERE id = $1', [targetId]);
     if (!restos || restos.length === 0) return res.status(404).json({ error: 'Restaurant not found' });
     const resto = restos[0];
 
@@ -2003,12 +2012,22 @@ router.post('/qr/generate', authenticateToken, async (req, res) => {
 
     const generateSingle = (rawType, rawNum) => {
       const canonicalType = normalizeSpaceType(rawType || 'table');
-      const canonicalNum = normalizeSpaceNumber(rawNum || '1');
+      const canonicalNum = normalizeSpaceNumber(rawNum || (canonicalType === 'counter' ? 'COUNTER' : '1'));
       if (!canonicalNum) {
         return { error: 'Invalid space identifier' };
       }
+      if (canonicalType === 'counter') {
+        const isCounterEnabled = Boolean(
+          resto.counter_ordering_enabled === 1 ||
+          resto.counter_ordering_enabled === true ||
+          resto.counter_ordering_enabled === '1'
+        );
+        if (!isCounterEnabled) {
+          return { error: 'Counter ordering capability is not enabled for this restaurant' };
+        }
+      }
       const token = generateHmacQrToken(resto.slug, canonicalType, canonicalNum, resto.qr_secret);
-      const urlParam = canonicalType === 'cinema_seat' ? 'cinema' : (canonicalType === 'cabin' ? 'cabin' : canonicalType === 'room' ? 'room' : canonicalType === 'vip' ? 'vip' : 'table');
+      const urlParam = canonicalType === 'counter' ? 'counter' : (canonicalType === 'cinema_seat' ? 'cinema' : (canonicalType === 'cabin' ? 'cabin' : canonicalType === 'room' ? 'room' : canonicalType === 'vip' ? 'vip' : 'table'));
       const relativeUrl = `/${resto.slug}?${urlParam}=${encodeURIComponent(canonicalNum)}&tkn=${token}`;
       return {
         canonical_space_type: canonicalType,
@@ -2664,7 +2683,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const { id } = req.params;
-    const { status, sent_to_kds, kitchen_prepared } = req.body;
+    const { status, sent_to_kds, kitchen_prepared, counter_acknowledgement, settle } = req.body;
 
     const numericId = parseInt(id, 10);
     const orderId = isNaN(numericId) ? id : numericId;
@@ -2676,42 +2695,248 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
 
     let prepVal = (kitchen_prepared === 1 || kitchen_prepared === true || kitchen_prepared === '1') ? 1 : 0;
 
-    // Fetch order to check session_id
-    const existing = await query('SELECT id, session_id, parent_order_id, table_number FROM orders WHERE id = $1 AND restaurant_id = $2', [orderId, targetId]);
-    const targetOrder = existing[0] || null;
+    // 1. Fetch target order strictly bound to authenticated restaurant
+    const existing = await query(`
+      SELECT id, session_id, parent_order_id, table_number, status, sent_to_kds,
+             kitchen_prepared, is_settled, payment_method, terminal_at
+      FROM orders
+      WHERE id = $1 AND restaurant_id = $2
+    `, [orderId, targetId]);
 
+    const targetOrder = existing[0] || null;
+    if (!targetOrder) {
+      return res.status(404).json({ error: 'Order not found or does not belong to this restaurant' });
+    }
+
+    // 2. Strict Role Authorization (Zero Fallback)
+    const callerRole = String(req.user?.role || '').trim();
+    const VALID_STAFF_ROLES = ['restaurant_admin', 'superadmin'];
+
+    // 3. Terminal Lifecycle & Stable terminal_at Logic
+    const TERMINAL_STATUSES = Object.freeze(['completed', 'cancelled', 'rejected']);
+    const currentStatus = String(targetOrder.status || 'pending').toLowerCase();
+    const newStatus = status ? String(status).toLowerCase() : currentStatus;
+    const isCurrentTerminal = TERMINAL_STATUSES.includes(currentStatus);
+    const isTargetTerminal = TERMINAL_STATUSES.includes(newStatus);
+
+    // Enforce Policy: Prohibit reopening terminal orders
+    if (isCurrentTerminal && !isTargetTerminal) {
+      return res.status(400).json({
+        error: 'order_already_terminal',
+        message: `Order #${orderId} is already in terminal state '${currentStatus}' and cannot be reopened.`
+      });
+    }
+
+    // 4. Counter Identification & Kitchen Acknowledgement Guard
+    const isCounterOrder = String(targetOrder.table_number || '').trim().toLowerCase() === 'counter';
+    if (isCounterOrder && (status === 'kitchen' || status === 'preparing' || kdsVal === 1)) {
+      if (!VALID_STAFF_ROLES.includes(callerRole)) {
+        return res.status(403).json({ error: 'ADMIN_ROLE_REQUIRED', message: 'Staff role required to authorize counter order preparation' });
+      }
+      const isAcknowledged = Boolean(
+        counter_acknowledgement &&
+        (counter_acknowledgement.confirmed === true || counter_acknowledgement.confirmed === 'true' || counter_acknowledgement.acknowledged === true)
+      );
+      if (!isAcknowledged) {
+        return res.status(400).json({
+          error: 'counter_acknowledgement_required',
+          message: 'Staff acknowledgement is required before sending a counter order to the kitchen.'
+        });
+      }
+    }
+
+    // 5. Handle Rejected / Cancelled (Preserve existing hard-delete behavior)
     if (status === 'rejected' || status === 'cancelled') {
-      // Instantly HARD DELETE rejected/cancelled order so ZERO record remains in DB or UI
       await query('DELETE FROM orders WHERE id = $1 AND restaurant_id = $2', [orderId, targetId]);
       return res.json({ success: true, id: orderId, status: 'cancelled', deleted: true });
     }
 
-    let updateRes = null;
-    if (status === 'completed') {
-      if (targetOrder?.session_id) {
-        // Settle entire Table Session in one single transaction
-        updateRes = await query(
-          'UPDATE orders SET status = $1, is_settled = 1 WHERE restaurant_id = $2 AND session_id = $3 RETURNING id',
-          ['completed', targetId, targetOrder.session_id]
-        );
-      } else {
-        updateRes = await query(
-          'UPDATE orders SET status = $1, is_settled = 1 WHERE id = $2 AND restaurant_id = $3 RETURNING id',
-          ['completed', orderId, targetId]
-        );
-      }
+    let finalTerminalAt = targetOrder.terminal_at || null;
+    if (!isCurrentTerminal && isTargetTerminal) {
+      // First entry into terminal state
+      finalTerminalAt = new Date().toISOString();
+    } else if (isCurrentTerminal && isTargetTerminal) {
+      // Subsequent updates to already-terminal orders strictly preserve existing value (including NULL on legacy records)
+      finalTerminalAt = targetOrder.terminal_at || null;
     } else {
-      updateRes = await query(
-        'UPDATE orders SET status = $1, sent_to_kds = $2, kitchen_prepared = $3 WHERE id = $4 AND restaurant_id = $5 RETURNING id',
-        [status, kdsVal, prepVal, orderId, targetId]
-      );
+      finalTerminalAt = null;
     }
 
-    if (!updateRes || updateRes.length === 0) {
-      return res.status(404).json({ error: 'Order not found or does not belong to this restaurant' });
+    // 6. Decoupled Financial Settlement Validation
+    const isSettlementRequested = Boolean(settle && typeof settle === 'object');
+    let reqPaymentMethod = null;
+
+    if (isSettlementRequested) {
+      if (!VALID_STAFF_ROLES.includes(callerRole)) {
+        return res.status(403).json({
+          error: 'UNAUTHORIZED_SETTLEMENT_ROLE',
+          message: `Role '${callerRole || 'unspecified'}' is not authorized to settle bills. Required: ${VALID_STAFF_ROLES.join(', ')}`
+        });
+      }
+
+      const allowedMethods = ['cash', 'upi', 'card'];
+      reqPaymentMethod = String(settle.method || '').trim().toLowerCase();
+      if (!allowedMethods.includes(reqPaymentMethod)) {
+        return res.status(400).json({
+          error: 'invalid_settlement_method',
+          message: `Invalid settlement method '${reqPaymentMethod}'. Allowed offline methods: ${allowedMethods.join(', ')}`
+        });
+      }
     }
 
-    res.json({ success: true, id: orderId, status, sent_to_kds: kdsVal, kitchen_prepared: prepVal, is_settled: status === 'completed' ? 1 : 0 });
+    // 7. Atomic Transaction: Concurrency-Protected Settlement & Order State Updates
+    let finalSettled = targetOrder.is_settled || 0;
+    let finalPaymentMethod = targetOrder.payment_method || 'cash';
+    let alreadySettled = false;
+    let didSettleTransition = false;
+    let updatedOrderRecord = null;
+
+    await withTransaction(async (txQuery) => {
+      if (isSettlementRequested) {
+        let settleSql = '';
+        let settleParams = [];
+
+        if (!isCounterOrder && targetOrder.session_id) {
+          // Settle dining table session conditionally (only unsettled rows transition)
+          // Preserves individual status, sent_to_kds, and kitchen_prepared flags of other rounds in the session
+          settleSql = `
+            UPDATE orders
+            SET status = CASE WHEN id = $1 THEN $2 ELSE status END,
+                sent_to_kds = CASE WHEN id = $1 THEN $3 ELSE sent_to_kds END,
+                kitchen_prepared = CASE WHEN id = $1 THEN $4 ELSE kitchen_prepared END,
+                terminal_at = CASE WHEN id = $1 THEN $5 ELSE terminal_at END,
+                is_settled = 1,
+                payment_method = $6,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE restaurant_id = $7 AND session_id = $8 AND (is_settled = 0 OR is_settled IS NULL)
+            RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
+          `;
+          settleParams = [orderId, newStatus, kdsVal, prepVal, finalTerminalAt, reqPaymentMethod, targetId, targetOrder.session_id];
+        } else {
+          // Settle single order conditionally (only unsettled row transitions)
+          settleSql = `
+            UPDATE orders
+            SET status = $1, sent_to_kds = $2, kitchen_prepared = $3,
+                is_settled = 1, payment_method = $4, terminal_at = $5, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $6 AND restaurant_id = $7 AND (is_settled = 0 OR is_settled IS NULL)
+            RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
+          `;
+          settleParams = [newStatus, kdsVal, prepVal, reqPaymentMethod, finalTerminalAt, orderId, targetId];
+        }
+
+        const settleRes = await txQuery(settleSql, settleParams);
+
+        if (settleRes && settleRes.length > 0) {
+          // Winning transaction that performed the settlement transition
+          didSettleTransition = true;
+          alreadySettled = false;
+          finalSettled = 1;
+          finalPaymentMethod = reqPaymentMethod;
+          updatedOrderRecord = settleRes.find(r => String(r.id) === String(orderId)) || settleRes[0];
+
+          // Atomic Audit: Financial Settlement (only logged once by winning transition)
+          await txQuery(`
+            INSERT INTO audit_logs (restaurant_id, actor_role, action, details)
+            VALUES ($1, $2, $3, $4)
+          `, [
+            targetId,
+            callerRole || 'restaurant_admin',
+            'ORDER_BILL_SETTLED',
+            JSON.stringify({
+              order_id: orderId,
+              table_number: targetOrder.table_number,
+              payment_method: finalPaymentMethod,
+              settled_by: req.user.username || req.user.id,
+              timestamp: new Date().toISOString()
+            })
+          ]);
+        } else {
+          // Losing concurrent transaction or already-settled order: fetch authoritative state
+          const currentRows = await txQuery(`
+            SELECT id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
+            FROM orders
+            WHERE id = $1 AND restaurant_id = $2
+          `, [orderId, targetId]);
+
+          if (!currentRows || currentRows.length === 0) {
+            throw new Error('ORDER_UPDATE_FAILED');
+          }
+
+          updatedOrderRecord = currentRows[0];
+          alreadySettled = Boolean(updatedOrderRecord.is_settled === 1 || updatedOrderRecord.is_settled === '1' || updatedOrderRecord.is_settled === true);
+          finalSettled = updatedOrderRecord.is_settled || 1;
+          finalPaymentMethod = updatedOrderRecord.payment_method || reqPaymentMethod;
+          finalTerminalAt = updatedOrderRecord.terminal_at || finalTerminalAt;
+
+          // If caller also provided a status update, only apply if not reopening an already-terminal order
+          const currentRecordStatus = String(updatedOrderRecord.status || 'pending').toLowerCase();
+          const isRecordTerminal = TERMINAL_STATUSES.includes(currentRecordStatus);
+          if (newStatus !== currentRecordStatus && (!isRecordTerminal || isTargetTerminal)) {
+            const statusUpdateRes = await txQuery(`
+              UPDATE orders
+              SET status = $1, sent_to_kds = $2, kitchen_prepared = $3, terminal_at = $4, updated_at = CURRENT_TIMESTAMP
+              WHERE id = $5 AND restaurant_id = $6
+              RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
+            `, [newStatus, kdsVal, prepVal, finalTerminalAt, orderId, targetId]);
+            if (statusUpdateRes && statusUpdateRes.length > 0) {
+              updatedOrderRecord = statusUpdateRes[0];
+            }
+          }
+        }
+      } else {
+        // Non-settlement status update: Preserves existing is_settled and payment_method untouched
+        const updateSql = `
+          UPDATE orders
+          SET status = $1, sent_to_kds = $2, kitchen_prepared = $3, terminal_at = $4, updated_at = CURRENT_TIMESTAMP
+          WHERE id = $5 AND restaurant_id = $6
+          RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
+        `;
+        const updateRes = await txQuery(updateSql, [newStatus, kdsVal, prepVal, finalTerminalAt, orderId, targetId]);
+        if (!updateRes || updateRes.length === 0) {
+          throw new Error('ORDER_UPDATE_FAILED');
+        }
+        updatedOrderRecord = updateRes[0];
+        finalSettled = updatedOrderRecord.is_settled || 0;
+        finalPaymentMethod = updatedOrderRecord.payment_method || 'cash';
+        finalTerminalAt = updatedOrderRecord.terminal_at;
+      }
+
+      // Atomic Audit 1: Counter Kitchen Authorization (only if transitioning into kitchen)
+      const isEnteringKitchen = isCounterOrder &&
+        (newStatus === 'kitchen' || newStatus === 'preparing' || kdsVal === 1) &&
+        currentStatus !== 'kitchen' && currentStatus !== 'preparing';
+
+      if (isEnteringKitchen) {
+        await txQuery(`
+          INSERT INTO audit_logs (restaurant_id, actor_role, action, details)
+          VALUES ($1, $2, $3, $4)
+        `, [
+          targetId,
+          callerRole || 'restaurant_admin',
+          'COUNTER_ORDER_KITCHEN_ACKNOWLEDGED',
+          JSON.stringify({
+            order_id: orderId,
+            table_number: 'Counter',
+            staff_id: req.user.id,
+            staff_username: req.user.username || 'admin',
+            action: 'send_to_kitchen',
+            timestamp: new Date().toISOString()
+          })
+        ]);
+      }
+    });
+
+    res.json({
+      success: true,
+      id: orderId,
+      status: newStatus,
+      sent_to_kds: kdsVal,
+      kitchen_prepared: prepVal,
+      is_settled: finalSettled,
+      payment_method: finalPaymentMethod,
+      terminal_at: finalTerminalAt,
+      already_settled: alreadySettled
+    });
   } catch (err) {
     console.error('Update order status error:', err);
     res.status(500).json({ error: 'Failed to update order status' });

@@ -13,6 +13,7 @@ import ComboFormModal from './ComboFormModal';
 import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X, BarChart2, TrendingUp, Download, Award, MapPin, RefreshCw, CreditCard } from 'lucide-react';
 
 import PaymentModal from '../PaymentModal';
+import { calculateBillDetails } from '../../utils/billingHelper';
 
 import './styles/Admin.css';
 import AdminSidebar from './components/AdminSidebar';
@@ -93,6 +94,7 @@ export default function AdminDashboard({
   const [analyticsData, setAnalyticsData] = useState(null);
   const [billOrderModal, setBillOrderModal] = useState(null);
   const [acceptRoutingModal, setAcceptRoutingModal] = useState(null); // { order, show: true }
+  const [isRoutingSubmitting, setIsRoutingSubmitting] = useState(false);
   const [kotFilter, setKotFilter] = useState('all');
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(() => getInitialAdminState('info', null));
@@ -132,7 +134,7 @@ export default function AdminDashboard({
           setMasterSupportPhone(data.support_whatsapp);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const getDaysRemaining = (expiryStr) => {
@@ -183,7 +185,7 @@ export default function AdminDashboard({
     });
 
     // 🔊 3. Attempt silent audio unlock on mount (succeeds if browser has autoplay permission)
-    unlockNotificationSound().catch(() => {});
+    unlockNotificationSound().catch(() => { });
 
     // 🔊 4. Unlock notification audio on first user gesture
     const handleUserGestureUnlock = () => {
@@ -193,7 +195,7 @@ export default function AdminDashboard({
           setHasSoundSetupCompleted(true);
           try {
             localStorage.setItem('touchqr_admin_sound_setup_v1', 'enabled');
-          } catch (e) {}
+          } catch (e) { }
         }
       });
     };
@@ -216,7 +218,7 @@ export default function AdminDashboard({
         try {
           localStorage.setItem('touchqr_admin_sound_setup_v1', 'enabled');
           localStorage.setItem('touchqr_admin_audio_banner_dismissed', 'true');
-        } catch (e) {}
+        } catch (e) { }
         setToastMessage('🔊 Alert Sounds Unlocked & Active!');
         setTimeout(() => setToastMessage(''), 3000);
       } else {
@@ -230,7 +232,7 @@ export default function AdminDashboard({
     setAudioBannerDismissed(true);
     try {
       localStorage.setItem('touchqr_admin_audio_banner_dismissed', 'true');
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const requestAudioPermission = () => {
@@ -429,7 +431,7 @@ export default function AdminDashboard({
           const latestCall = presenceCalls[0];
           const rawTbl = String(latestCall.table_number || '1');
           const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
-            ? rawTbl 
+            ? rawTbl
             : `Table ${rawTbl}`;
           console.log('[SOUND_DEBUG] presence_request_detected', { id: latestCall.id, table: formattedTbl });
           playPresenceAlert();
@@ -439,7 +441,7 @@ export default function AdminDashboard({
           const latestCall = waiterCalls[0];
           const rawTbl = String(latestCall.table_number || '1');
           const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
-            ? rawTbl 
+            ? rawTbl
             : `Table ${rawTbl}`;
           console.log('[SOUND_DEBUG] waiter_request_detected', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
           playWaiterAlert();
@@ -491,7 +493,7 @@ export default function AdminDashboard({
       });
       try {
         localStorage.setItem('admin_cache_orders', JSON.stringify(mergedOrders));
-      } catch (e) {}
+      } catch (e) { }
       setServiceRequests(safeReqs);
     } catch (err) {
       console.error('Failed to load orders & requests:', err);
@@ -713,7 +715,7 @@ export default function AdminDashboard({
         agoStr = `${hrs}h ${mins}m ago`;
       }
       return { timeStr, agoStr };
-    } catch (e) {}
+    } catch (e) { }
     return { timeStr: String(dateStr), agoStr: '' };
   };
 
@@ -1067,9 +1069,9 @@ export default function AdminDashboard({
             <h2>KITCHEN ORDER TICKET</h2>
             <div class="table-badge">KOT ${order.id}</div>
             ${isRoundAddon
-              ? `<div class="round-badge">🔄 ROUND ${order.round_number} (ADD-ON ORDER)</div>`
-              : `<div style="font-weight:900;font-size:12px;margin-top:2px;">ROUND 1 (NEW ORDER)</div>`
-            }
+        ? `<div class="round-badge">🔄 ROUND ${order.round_number} (ADD-ON ORDER)</div>`
+        : `<div style="font-weight:900;font-size:12px;margin-top:2px;">ROUND 1 (NEW ORDER)</div>`
+      }
           </div>
 
           <div class="meta">
@@ -1109,42 +1111,12 @@ export default function AdminDashboard({
     const selectedWidth = (paperWidth || settingsForm.printer_paper_width) === '58mm' ? '58mm' : '80mm';
     const bodyWidth = selectedWidth === '58mm' ? '48mm' : '72mm';
 
-    // Consolidate ONLY orders belonging to this exact dining session
-    let sessionOrders = [];
-    if (order.session_id) {
-      sessionOrders = (Array.isArray(orders) ? orders : []).filter(o => 
-        o.session_id === order.session_id &&
-        o.status !== 'rejected' && o.status !== 'cancelled'
-      );
-    } else if (order.parent_order_id) {
-      sessionOrders = (Array.isArray(orders) ? orders : []).filter(o => 
-        (o.id === order.parent_order_id || o.parent_order_id === order.parent_order_id || o.id === order.id) &&
-        o.status !== 'rejected' && o.status !== 'cancelled'
-      );
-    } else {
-      // Standalone single order (or parent order without session_id)
-      sessionOrders = (Array.isArray(orders) ? orders : []).filter(o => 
-        (o.id === order.id || o.parent_order_id === order.id) &&
-        o.status !== 'rejected' && o.status !== 'cancelled'
-      );
-    }
+    const billData = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
+    const { sessionOrders, totalRoundsCount, subtotal, cgst, sgst, grandTotal } = billData;
 
-    if (sessionOrders.length === 0) {
-      if (order.status !== 'rejected' && order.status !== 'cancelled') {
-        sessionOrders = [order];
-      } else {
-        sessionOrders = [];
-      }
-    }
-    sessionOrders.sort((a, b) => (Number(a.round_number) || Number(a.id)) - (Number(b.round_number) || Number(b.id)));
-
-    const targetOrders = sessionOrders;
-    const totalRoundsCount = targetOrders.length;
-
-    let subtotal = 0;
     let itemsHtml = '';
 
-    targetOrders.forEach((ord, oIdx) => {
+    sessionOrders.forEach((ord, oIdx) => {
       const parsed = safeParseItems(ord.items);
       if (totalRoundsCount > 1) {
         itemsHtml += `
@@ -1162,7 +1134,6 @@ export default function AdminDashboard({
           ? `<div style="font-size:11px;color:#555;font-weight:normal;padding-left:6px;margin-top:2px;">+ ${mods.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
           : '';
         const lineTotal = Number(i.price) * Number(i.quantity);
-        subtotal += lineTotal;
         itemsHtml += `
           <tr>
             <td style="padding:4px 0;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;">
@@ -1174,16 +1145,6 @@ export default function AdminDashboard({
         `;
       });
     });
-
-    let cgst = 0;
-    let sgst = 0;
-    let grandTotal = subtotal;
-
-    if (isGst) {
-      cgst = Math.round(subtotal * 0.025 * 100) / 100;
-      sgst = Math.round(subtotal * 0.025 * 100) / 100;
-      grandTotal = Math.round((subtotal + cgst + sgst) * 100) / 100;
-    }
 
     return `
       <!DOCTYPE html>
@@ -1376,6 +1337,74 @@ export default function AdminDashboard({
     }
   };
 
+  const [isSettlingOrder, setIsSettlingOrder] = useState(false);
+
+  const handleSettleAndCompleteOrder = async (order, paymentMode = 'CASH') => {
+    if (!order || isSettlingOrder) return;
+    setIsSettlingOrder(true);
+
+    const settleMethod = paymentMode === 'CARD' ? 'card' : (paymentMode.startsWith('UPI') ? 'upi' : 'cash');
+    const orderId = order.id;
+    const key = String(orderId);
+
+    try {
+      // 1. Execute authorized backend settlement transaction through existing API contract
+      const settleResult = await updateOrderStatus(orderId, 'completed', token, {
+        settle: {
+          method: settleMethod
+        }
+      });
+
+      if (!settleResult || settleResult.error) {
+        throw new Error(settleResult?.error || settleResult?.message || 'Settlement failed');
+      }
+
+      // 2. Settlement confirmed by backend: update local orders state & close modal
+      setOrders(prev => prev.map(o => {
+        if (order.session_id && o.session_id === order.session_id) {
+          // In multi-round session, all rounds are marked settled
+          return {
+            ...o,
+            status: String(o.id) === key ? 'completed' : o.status,
+            is_settled: 1,
+            payment_method: settleMethod
+          };
+        }
+        return String(o.id) === key
+          ? { ...o, status: 'completed', is_settled: 1, payment_method: settleMethod }
+          : o;
+      }));
+
+      setBillOrderModal(null);
+
+      // 3. Audio & Notification feedback
+      try {
+        playWaiterAlert();
+      } catch (soundErr) {
+        console.warn('[SOUND] Completion sound error:', soundErr);
+      }
+      const targetOrder = orders.find(o => String(o.id) === key) || order;
+      const tblNum = targetOrder?.table_number ? `Table ${targetOrder.table_number}` : `Order ${orderId}`;
+      setToastMessage(`💳 ${tblNum} Payment Settled & Order Completed!`);
+      setTimeout(() => setToastMessage(''), 4000);
+
+      // 4. Authoritative reload from server
+      await loadOrders();
+
+      // 5. Generate / Print Customer Bill (Safe, post-settlement distinct outcome)
+      try {
+        await handlePrintCustomerBill(order, paymentMode);
+      } catch (printErr) {
+        console.warn('Post-settlement print notice:', printErr);
+      }
+    } catch (err) {
+      console.error('Settlement error:', err);
+      alert(err.message || 'Payment settlement failed. Order remains unsettled.');
+    } finally {
+      setIsSettlingOrder(false);
+    }
+  };
+
   const handlePreviewPrint = (order, type = 'kot', paymentMode = 'CASH') => {
     const printWindow = window.open('', '_blank', 'width=400,height=700');
     if (!printWindow) {
@@ -1504,6 +1533,7 @@ export default function AdminDashboard({
       total_rooms: 0,
       total_vip: 0,
       table_prefix: 'table',
+      counter_ordering_enabled: false,
       watermark_removal_enabled: false,
       custom_domain_enabled: false,
       analytics_export_enabled: false,
@@ -1563,11 +1593,11 @@ export default function AdminDashboard({
   const handleOpenCreateCombo = () => {
     const currentCount = (combos || []).length;
     const planKey = (settingsForm.plan_tier || (info && info.plan_tier) || 'pro').toLowerCase();
-    const maxCombos = (restaurantInfo?.max_combos !== undefined && restaurantInfo?.max_combos !== null) 
-      ? Number(restaurantInfo.max_combos) 
-      : ((info?.max_combos !== undefined && info?.max_combos !== null) 
-          ? Number(info.max_combos) 
-          : (planInfo?.max_combos !== undefined ? planInfo.max_combos : (planKey === 'basic' ? 3 : planKey === 'pro' ? 10 : 9999)));
+    const maxCombos = (restaurantInfo?.max_combos !== undefined && restaurantInfo?.max_combos !== null)
+      ? Number(restaurantInfo.max_combos)
+      : ((info?.max_combos !== undefined && info?.max_combos !== null)
+        ? Number(info.max_combos)
+        : (planInfo?.max_combos !== undefined ? planInfo.max_combos : (planKey === 'basic' ? 3 : planKey === 'pro' ? 10 : 9999)));
 
     if (currentCount >= maxCombos) {
       setComboLimitModalInfo({
@@ -1602,7 +1632,7 @@ export default function AdminDashboard({
           parsed[field] = newCount;
           parsed.table_prefix = prefix;
           localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
-        } catch {}
+        } catch { }
       }
     }
 
@@ -1648,7 +1678,7 @@ export default function AdminDashboard({
           parsed[field] = newCount;
           parsed.table_prefix = prefix;
           localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
-        } catch {}
+        } catch { }
       }
     }
 
@@ -1747,6 +1777,7 @@ export default function AdminDashboard({
           total_rooms: infoData.total_rooms !== undefined && infoData.total_rooms !== null ? Number(infoData.total_rooms) : 0,
           total_vip: infoData.total_vip !== undefined && infoData.total_vip !== null ? Number(infoData.total_vip) : 0,
           table_prefix: (currentSlug && localStorage.getItem(`touchqr_table_prefix_${currentSlug}`)) || infoData.table_prefix || 'table',
+          counter_ordering_enabled: Boolean(infoData.counter_ordering_enabled === 1 || infoData.counter_ordering_enabled === true || infoData.counter_ordering_enabled === '1'),
           order_retention_days: infoData.order_retention_days || 7,
           custom_domain: infoData.custom_domain || '',
           watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
@@ -1807,7 +1838,7 @@ export default function AdminDashboard({
     loadData();
     fetchAnnouncements().then(data => {
       if (Array.isArray(data)) setAnnouncements(data);
-    }).catch(() => {});
+    }).catch(() => { });
   }, [token, propSlug]);
 
   const handleToggleDish = async (id, nextAvailable) => {
@@ -1815,10 +1846,10 @@ export default function AdminDashboard({
       const dish = dishes.find(d => String(d.id) === String(id));
       const currentAvail = dish ? (dish.available !== false && dish.available !== 0 && dish.is_available !== false) : true;
       const isNext = typeof nextAvailable === 'boolean' ? nextAvailable : !currentAvail;
-      
+
       // Optimistic state update
       setDishes(prev => prev.map(d => String(d.id) === String(id) ? { ...d, available: isNext, is_available: isNext } : d));
-      
+
       await toggleDishAvailability(id, isNext, token);
     } catch (err) {
       console.error('Failed to update dish availability:', err);
@@ -1828,15 +1859,15 @@ export default function AdminDashboard({
   };
 
   const handleToggleBadge = async (dish, targetBadge) => {
-    const isTarget = (dish.badge || '').toLowerCase().includes(targetBadge.toLowerCase()) || 
-                     (targetBadge.toLowerCase().includes('must try') && Boolean(dish.must_try));
+    const isTarget = (dish.badge || '').toLowerCase().includes(targetBadge.toLowerCase()) ||
+      (targetBadge.toLowerCase().includes('must try') && Boolean(dish.must_try));
     const newBadge = isTarget ? '' : targetBadge;
     const newMustTry = targetBadge.toLowerCase().includes('must try') ? (!isTarget ? 1 : 0) : (dish.must_try ? 1 : 0);
-    
+
     try {
       // Optimistic state update
       setDishes(prev => prev.map(d => String(d.id) === String(dish.id) ? { ...d, badge: newBadge, must_try: newMustTry } : d));
-      
+
       const res = await fetch(`/api/admin/dishes/${dish.id}`, {
         method: 'PUT',
         headers: {
@@ -1884,10 +1915,10 @@ export default function AdminDashboard({
       const cat = categories.find(c => String(c.id) === String(catId));
       const currentActive = cat ? isCatActive(cat.active) : true;
       const isNext = typeof nextActive === 'boolean' ? nextActive : !currentActive;
-      
+
       // Optimistic update
       setCategories(prev => prev.map(c => String(c.id) === String(catId) ? { ...c, active: isNext, is_active: isNext } : c));
-      
+
       await toggleCategoryActive(catId, isNext, token);
     } catch (err) {
       alert(err.message || 'Failed to update category status');
@@ -1899,12 +1930,12 @@ export default function AdminDashboard({
     try {
       // Optimistic update
       setCategories(newOrderedCategories);
-      
+
       const payload = newOrderedCategories.map((cat, index) => ({
         id: cat.id,
         sort_order: index
       }));
-      
+
       await reorderCategories(payload, token);
     } catch (err) {
       console.error('Failed to reorder categories:', err);
@@ -1927,10 +1958,10 @@ export default function AdminDashboard({
       const combo = combos.find(c => String(c.id) === String(id));
       const currentAvail = combo ? (combo.available !== false && combo.available !== 0 && combo.is_available !== false) : true;
       const isNext = typeof nextAvailable === 'boolean' ? nextAvailable : !currentAvail;
-      
+
       // Optimistic update
       setCombos(prev => prev.map(c => String(c.id) === String(id) ? { ...c, available: isNext ? 1 : 0, is_available: isNext } : c));
-      
+
       await toggleComboAvailability(id, isNext, token);
     } catch (err) {
       alert('Failed to update combo availability: ' + (err.message || ''));
@@ -1973,7 +2004,7 @@ export default function AdminDashboard({
           const parsed = JSON.parse(cached);
           parsed.table_prefix = newType;
           localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
-        } catch {}
+        } catch { }
       }
     }
 
@@ -2074,7 +2105,7 @@ export default function AdminDashboard({
       alert('Unable to generate secure signed QR code. Please check server connection.');
       return;
     }
-    
+
     // Generate native high-resolution black QR code locally (zero CORS, zero lag)
     let qrImgUrl = '';
     try {
@@ -2664,7 +2695,7 @@ export default function AdminDashboard({
     if (!d) return false;
     const nameStr = (d.name || '').toLowerCase();
     const searchStr = (search || '').toLowerCase();
-    const matchesSearch = nameStr.includes(searchStr) || 
+    const matchesSearch = nameStr.includes(searchStr) ||
       (d.name_hi && String(d.name_hi).toLowerCase().includes(searchStr));
     const matchesCategory = selectedCatFilter === 'all' || String(d.category_id) === String(selectedCatFilter);
     return matchesSearch && matchesCategory;
@@ -3029,362 +3060,363 @@ export default function AdminDashboard({
         {/* Right Main Dashboard Area */}
         <div className="adm-dashboard-container" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <AdminHeader
-          restaurantInfo={restaurantInfo}
-          username={username}
-          onLogout={onLogout}
-          onReturnToMenu={onReturnToMenu}
-          onOpenHelp={() => setActiveTab('support')}
-          supportPhone={masterSupportPhone}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          pendingOrdersCount={orders.filter(o => o.status === 'pending' || o.status === 'ordered').length}
-          analyticsEnabled={isAnalyticsEnabled}
-          ordersEnabled={isDirectOrderingEnabled}
-        />
+            restaurantInfo={restaurantInfo}
+            username={username}
+            onLogout={onLogout}
+            onReturnToMenu={onReturnToMenu}
+            onOpenHelp={() => setActiveTab('support')}
+            supportPhone={masterSupportPhone}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            pendingOrdersCount={orders.filter(o => o.status === 'pending' || o.status === 'ordered').length}
+            analyticsEnabled={isAnalyticsEnabled}
+            ordersEnabled={isDirectOrderingEnabled}
+          />
 
-        <main className="adm-main-canvas">
-          <div className="adm-content-body">
-            {/* HOME VIEW (Business Command Center) */}
-            {activeTab === 'home' && (
-              <HomeView
-                restaurantInfo={restaurantInfo}
-                analyticsData={analyticsData}
-                orders={orders}
-                serviceRequests={serviceRequests}
-                dishes={safeDishes}
-                categories={safeCategories}
-                combos={combos}
-                totalTablesCount={totalTablesCount}
-                settingsForm={settingsForm}
-                isAudioReady={isAudioReady}
-                subscriptionStatus={subscriptionStatus}
-                capabilities={tenantCaps}
-                onNavigateTab={(tab) => setActiveTab(tab)}
-                onOpenAddDish={() => setDishModalData('new')}
-                onOpenAddCategory={() => setCatModalData('new')}
-                onReturnToMenu={onReturnToMenu}
-                onNavigateToSetup={(drawer = null) => {
-                  setInitialSetupDrawer(drawer);
-                  setActiveTab('settings');
-                }}
-                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-              />
-            )}
+          <main className="adm-main-canvas">
+            <div className="adm-content-body">
+              {/* HOME VIEW (Business Command Center) */}
+              {activeTab === 'home' && (
+                <HomeView
+                  restaurantInfo={restaurantInfo}
+                  analyticsData={analyticsData}
+                  orders={orders}
+                  serviceRequests={serviceRequests}
+                  dishes={safeDishes}
+                  categories={safeCategories}
+                  combos={combos}
+                  totalTablesCount={totalTablesCount}
+                  settingsForm={settingsForm}
+                  isAudioReady={isAudioReady}
+                  subscriptionStatus={subscriptionStatus}
+                  capabilities={tenantCaps}
+                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  onOpenAddDish={() => setDishModalData('new')}
+                  onOpenAddCategory={() => setCatModalData('new')}
+                  onReturnToMenu={onReturnToMenu}
+                  onNavigateToSetup={(drawer = null) => {
+                    setInitialSetupDrawer(drawer);
+                    setActiveTab('settings');
+                  }}
+                  currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                />
+              )}
 
-            {/* ORDERS VIEW */}
-            {['orders', 'floor-map', 'service-requests', 'kds'].includes(activeTab) && (
-              <OrdersView
-                orders={orders}
-                activeSubTab={activeTab}
-                setActiveSubTab={setActiveTab}
-                kotFilter={kotFilter}
-                setKotFilter={setKotFilter}
-                onUpdateStatus={handleUpdateStatus}
-                onOpenAcceptRouting={(order) => {
-                  const isKdsEnabled = settingsForm.kds_screen_enabled !== 0 && settingsForm.kds_screen_enabled !== false && restaurantInfo?.kds_screen_enabled !== 0 && restaurantInfo?.kds_screen_enabled !== false;
-                  if (!isKdsEnabled) {
-                    handleUpdateStatus(order.id, 'accepted', { sent_to_kds: 0 });
-                  } else {
-                    setAcceptRoutingModal(order);
-                  }
-                }}
-                onOpenBillModal={setBillOrderModal}
-                onPrintBill={(order) => handlePrintCustomerBill(order, 'CASH')}
-                serviceRequests={serviceRequests}
-                onResolveServiceRequest={handleResolveServiceRequest}
-                onApprovePresenceRequest={handleApprovePresenceRequest}
-                onRejectPresenceRequest={handleRejectPresenceRequest}
-                restaurantInfo={restaurantInfo}
-                onPrintQR={handlePrintQR}
-                onDirectPrint={handleDirectBluetoothPrint}
-                onPreviewPrint={handlePreviewPrint}
-                printingOrderId={printingOrderId}
-                printingType={printingType}
-                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-                capabilities={tenantCaps}
-                settingsForm={settingsForm}
-                token={token}
-                onNavigateToSetup={(drawer = null) => {
-                  setInitialSetupDrawer(drawer);
-                  setActiveTab('settings');
-                }}
-                ordersEnabled={isDirectOrderingEnabled}
-              />
-            )}
+              {/* ORDERS VIEW */}
+              {['orders', 'floor-map', 'service-requests', 'kds'].includes(activeTab) && (
+                <OrdersView
+                  orders={orders}
+                  activeSubTab={activeTab}
+                  setActiveSubTab={setActiveTab}
+                  kotFilter={kotFilter}
+                  setKotFilter={setKotFilter}
+                  onUpdateStatus={handleUpdateStatus}
+                  onOpenAcceptRouting={(order) => {
+                    const isKdsEnabled = settingsForm.kds_screen_enabled !== 0 && settingsForm.kds_screen_enabled !== false && restaurantInfo?.kds_screen_enabled !== 0 && restaurantInfo?.kds_screen_enabled !== false;
+                    const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
+                    if (isCounter || isKdsEnabled) {
+                      setAcceptRoutingModal(order);
+                    } else {
+                      handleUpdateStatus(order.id, 'accepted', { sent_to_kds: 0 });
+                    }
+                  }}
+                  onOpenBillModal={setBillOrderModal}
+                  onPrintBill={(order) => handlePrintCustomerBill(order, 'CASH')}
+                  serviceRequests={serviceRequests}
+                  onResolveServiceRequest={handleResolveServiceRequest}
+                  onApprovePresenceRequest={handleApprovePresenceRequest}
+                  onRejectPresenceRequest={handleRejectPresenceRequest}
+                  restaurantInfo={restaurantInfo}
+                  onPrintQR={handlePrintQR}
+                  onDirectPrint={handleDirectBluetoothPrint}
+                  onPreviewPrint={handlePreviewPrint}
+                  printingOrderId={printingOrderId}
+                  printingType={printingType}
+                  currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                  capabilities={tenantCaps}
+                  settingsForm={settingsForm}
+                  token={token}
+                  onNavigateToSetup={(drawer = null) => {
+                    setInitialSetupDrawer(drawer);
+                    setActiveTab('settings');
+                  }}
+                  ordersEnabled={isDirectOrderingEnabled}
+                />
+              )}
 
-            {/* ANALYTICS VIEW */}
-            {activeTab === 'analytics' && (
-              <AnalyticsView
-                analyticsData={analyticsData}
-                onExportReport={handleExportSalesReport}
-                onDownloadAllCSV={handleDownloadAllSalesReport}
-                onFilterPeriod={handleFilterAnalytics}
-                exporting={exportingReport}
-                exportingAll={exportingReport}
-                analyticsExportEnabled={tenantCaps.analytics_export_enabled}
-                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-                categories={safeCategories}
-                dishes={safeDishes}
-                orders={orders}
-                onViewOrders={() => setActiveTab('orders')}
-              />
-            )}
+              {/* ANALYTICS VIEW */}
+              {activeTab === 'analytics' && (
+                <AnalyticsView
+                  analyticsData={analyticsData}
+                  onExportReport={handleExportSalesReport}
+                  onDownloadAllCSV={handleDownloadAllSalesReport}
+                  onFilterPeriod={handleFilterAnalytics}
+                  exporting={exportingReport}
+                  exportingAll={exportingReport}
+                  analyticsExportEnabled={tenantCaps.analytics_export_enabled}
+                  currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                  categories={safeCategories}
+                  dishes={safeDishes}
+                  orders={orders}
+                  onViewOrders={() => setActiveTab('orders')}
+                />
+              )}
 
-            {/* MENU VIEW */}
-            {['dishes', 'categories', 'combos'].includes(activeTab) && (
-              <MenuView
-                token={token}
-                dishes={safeDishes}
-                categories={safeCategories}
-                combos={combos}
-                activeSubTab={activeTab}
-                setActiveSubTab={setActiveTab}
-                search={search}
-                setSearch={setSearch}
-                selectedCatFilter={selectedCatFilter}
-                setSelectedCatFilter={setSelectedCatFilter}
-                onToggleAvailability={handleToggleDish}
-                onOpenAddDish={() => setDishModalData('new')}
-                onOpenEditDish={(dish) => setDishModalData(dish)}
-                onDeleteDish={handleDeleteDish}
-                onUpdateQuickPrice={handleQuickPriceSave}
-                onToggleCategoryActive={handleToggleCategory}
-                onReorderCategories={handleReorderCategories}
-                onDeleteCategory={handleDeleteCategory}
-                onOpenAddCategory={() => setCatModalData('new')}
-                onOpenEditCategory={(cat) => setCatModalData(cat)}
-                onOpenAddCombo={() => setComboModalData('new')}
-                onOpenEditCombo={(combo) => setComboModalData(combo)}
-                onDeleteCombo={handleDeleteCombo}
-                onToggleComboAvailability={handleToggleComboAvailability}
-                onToggleBadge={handleToggleBadge}
-                onRefreshData={loadData}
-                onReturnToMenu={onReturnToMenu}
-                restaurantInfo={restaurantInfo}
-                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-                maxDishes={tenantCaps.max_dishes}
-                maxCategories={tenantCaps.max_categories}
-                maxCombos={tenantCaps.max_combos}
-                onUpgrade={() => {
-                  setActiveTab('billing');
-                }}
-              />
-            )}
+              {/* MENU VIEW */}
+              {['dishes', 'categories', 'combos'].includes(activeTab) && (
+                <MenuView
+                  token={token}
+                  dishes={safeDishes}
+                  categories={safeCategories}
+                  combos={combos}
+                  activeSubTab={activeTab}
+                  setActiveSubTab={setActiveTab}
+                  search={search}
+                  setSearch={setSearch}
+                  selectedCatFilter={selectedCatFilter}
+                  setSelectedCatFilter={setSelectedCatFilter}
+                  onToggleAvailability={handleToggleDish}
+                  onOpenAddDish={() => setDishModalData('new')}
+                  onOpenEditDish={(dish) => setDishModalData(dish)}
+                  onDeleteDish={handleDeleteDish}
+                  onUpdateQuickPrice={handleQuickPriceSave}
+                  onToggleCategoryActive={handleToggleCategory}
+                  onReorderCategories={handleReorderCategories}
+                  onDeleteCategory={handleDeleteCategory}
+                  onOpenAddCategory={() => setCatModalData('new')}
+                  onOpenEditCategory={(cat) => setCatModalData(cat)}
+                  onOpenAddCombo={() => setComboModalData('new')}
+                  onOpenEditCombo={(combo) => setComboModalData(combo)}
+                  onDeleteCombo={handleDeleteCombo}
+                  onToggleComboAvailability={handleToggleComboAvailability}
+                  onToggleBadge={handleToggleBadge}
+                  onRefreshData={loadData}
+                  onReturnToMenu={onReturnToMenu}
+                  restaurantInfo={restaurantInfo}
+                  currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                  maxDishes={tenantCaps.max_dishes}
+                  maxCategories={tenantCaps.max_categories}
+                  maxCombos={tenantCaps.max_combos}
+                  onUpgrade={() => {
+                    setActiveTab('billing');
+                  }}
+                />
+              )}
 
-            {/* QR GENERATOR VIEW */}
-            {activeTab === 'qr-generator' && (
-              <QrGeneratorView
-                tableNumber={tableNumber}
-                setTableNumber={setTableNumber}
-                totalTablesCount={totalTablesCount}
-                onAddTable={(count, prefix) => handleAddTable(count, prefix)}
-                onDeleteTable={(num, prefix) => handleDeleteTable(num, prefix)}
-                onPrintQR={handlePrintQR}
-                onPrintAllQRs={handlePrintAllQRs}
-                settingsForm={settingsForm}
-                token={token}
-                restaurantInfo={restaurantInfo}
-                capabilities={tenantCaps}
-                onReturnToMenu={onReturnToMenu}
-                onBackToSetup={(drawer = null) => {
-                  setInitialSetupDrawer(drawer);
-                  setActiveTab('settings');
-                }}
-                onUpgrade={() => {
-                  setActiveTab('billing');
-                }}
-                onUpdateSpaceType={handleUpdateSpaceType}
-              />
-            )}
+              {/* QR GENERATOR VIEW */}
+              {activeTab === 'qr-generator' && (
+                <QrGeneratorView
+                  tableNumber={tableNumber}
+                  setTableNumber={setTableNumber}
+                  totalTablesCount={totalTablesCount}
+                  onAddTable={(count, prefix) => handleAddTable(count, prefix)}
+                  onDeleteTable={(num, prefix) => handleDeleteTable(num, prefix)}
+                  onPrintQR={handlePrintQR}
+                  onPrintAllQRs={handlePrintAllQRs}
+                  settingsForm={settingsForm}
+                  token={token}
+                  restaurantInfo={restaurantInfo}
+                  capabilities={tenantCaps}
+                  onReturnToMenu={onReturnToMenu}
+                  onBackToSetup={(drawer = null) => {
+                    setInitialSetupDrawer(drawer);
+                    setActiveTab('settings');
+                  }}
+                  onUpgrade={() => {
+                    setActiveTab('billing');
+                  }}
+                  onUpdateSpaceType={handleUpdateSpaceType}
+                />
+              )}
 
-            {/* OFFERS & PROMOTIONS VIEW */}
-            {activeTab === 'offers' && (
-              <OffersView
-                restaurantInfo={restaurantInfo}
-                settingsForm={settingsForm}
-                dishes={dishes}
-                combos={combos}
-                categories={categories}
-                token={token}
-                capabilities={tenantCaps}
-                onUpgrade={() => {
-                  setActiveTab('billing');
-                }}
-                onNavigate={(tab) => setActiveTab(tab)}
-              />
-            )}
+              {/* OFFERS & PROMOTIONS VIEW */}
+              {activeTab === 'offers' && (
+                <OffersView
+                  restaurantInfo={restaurantInfo}
+                  settingsForm={settingsForm}
+                  dishes={dishes}
+                  combos={combos}
+                  categories={categories}
+                  token={token}
+                  capabilities={tenantCaps}
+                  onUpgrade={() => {
+                    setActiveTab('billing');
+                  }}
+                  onNavigate={(tab) => setActiveTab(tab)}
+                />
+              )}
 
-            {/* CUSTOMERS & GUEST INSIGHTS VIEW */}
-            {activeTab === 'customers' && (
-              <CustomersView
-                restaurantInfo={restaurantInfo}
-                settingsForm={settingsForm}
-                orders={orders}
-                token={token}
-                capabilities={tenantCaps}
-                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-                onUpgrade={() => {
-                  setActiveTab('billing');
-                }}
-                onNavigate={(tab) => setActiveTab(tab)}
-              />
-            )}
+              {/* CUSTOMERS & GUEST INSIGHTS VIEW */}
+              {activeTab === 'customers' && (
+                <CustomersView
+                  restaurantInfo={restaurantInfo}
+                  settingsForm={settingsForm}
+                  orders={orders}
+                  token={token}
+                  capabilities={tenantCaps}
+                  currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                  onUpgrade={() => {
+                    setActiveTab('billing');
+                  }}
+                  onNavigate={(tab) => setActiveTab(tab)}
+                />
+              )}
 
-            {/* BILLING & SUBSCRIPTION VIEW (FULL-PAGE WORKSPACE) */}
-            {(activeTab === 'billing' || activeTab === 'subscription') && (
-              <BillingView
-                restaurantInfo={restaurantInfo}
-                settingsForm={settingsForm}
-                dishes={safeDishes}
-                categories={safeCategories}
-                combos={combos}
-                totalTablesCount={totalTablesCount}
-                token={token}
-                capabilities={tenantCaps}
-                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-                onUpgrade={(planKey) => {
-                  setPaymentModalPlan(planKey || 'pro');
-                  setShowPaymentModal(true);
-                }}
-                onOpenBillingModal={(planKey) => {
-                  setPaymentModalPlan(planKey || 'pro');
-                  setShowPaymentModal(true);
-                }}
-                onNavigate={(tab) => setActiveTab(tab)}
-                onRefreshInfo={() => loadData(true)}
-              />
-            )}
+              {/* BILLING & SUBSCRIPTION VIEW (FULL-PAGE WORKSPACE) */}
+              {(activeTab === 'billing' || activeTab === 'subscription') && (
+                <BillingView
+                  restaurantInfo={restaurantInfo}
+                  settingsForm={settingsForm}
+                  dishes={safeDishes}
+                  categories={safeCategories}
+                  combos={combos}
+                  totalTablesCount={totalTablesCount}
+                  token={token}
+                  capabilities={tenantCaps}
+                  currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                  onUpgrade={(planKey) => {
+                    setPaymentModalPlan(planKey || 'pro');
+                    setShowPaymentModal(true);
+                  }}
+                  onOpenBillingModal={(planKey) => {
+                    setPaymentModalPlan(planKey || 'pro');
+                    setShowPaymentModal(true);
+                  }}
+                  onNavigate={(tab) => setActiveTab(tab)}
+                  onRefreshInfo={() => loadData(true)}
+                />
+              )}
 
-            {/* REVIEWS & FEEDBACK VIEW */}
-            {activeTab === 'review' && (
-              <ReviewView
-                settingsForm={settingsForm}
-                setSettingsForm={setSettingsForm}
-                handleSaveSettings={handleSaveSettings}
-                token={token}
-                restaurantInfo={restaurantInfo}
-                capabilities={tenantCaps}
-                onUpgrade={() => {
-                  setActiveTab('billing');
-                }}
-                onBackToSetup={(drawer = null) => {
-                  setInitialSetupDrawer(drawer);
-                  setActiveTab('settings');
-                }}
-              />
-            )}
+              {/* REVIEWS & FEEDBACK VIEW */}
+              {activeTab === 'review' && (
+                <ReviewView
+                  settingsForm={settingsForm}
+                  setSettingsForm={setSettingsForm}
+                  handleSaveSettings={handleSaveSettings}
+                  token={token}
+                  restaurantInfo={restaurantInfo}
+                  capabilities={tenantCaps}
+                  onUpgrade={() => {
+                    setActiveTab('billing');
+                  }}
+                  onBackToSetup={(drawer = null) => {
+                    setInitialSetupDrawer(drawer);
+                    setActiveTab('settings');
+                  }}
+                />
+              )}
 
-            {/* NOTIFICATIONS & ALERTS CENTER VIEW */}
-            {activeTab === 'notifications' && (
-              <NotificationView
-                orders={orders}
-                serviceRequests={serviceRequests}
-                dishes={safeDishes}
-                restaurantInfo={restaurantInfo}
-                settingsForm={settingsForm}
-                capabilities={tenantCaps}
-                token={token}
-                onNavigate={(tab, drawer = null) => {
-                  if (drawer) setInitialSetupDrawer(drawer);
-                  setActiveTab(tab);
-                }}
-                onBackToDashboard={() => setActiveTab('home')}
-                onUpdateOrderStatus={handleUpdateStatus}
-                onResolveServiceRequest={handleResolveServiceRequest}
-              />
-            )}
+              {/* NOTIFICATIONS & ALERTS CENTER VIEW */}
+              {activeTab === 'notifications' && (
+                <NotificationView
+                  orders={orders}
+                  serviceRequests={serviceRequests}
+                  dishes={safeDishes}
+                  restaurantInfo={restaurantInfo}
+                  settingsForm={settingsForm}
+                  capabilities={tenantCaps}
+                  token={token}
+                  onNavigate={(tab, drawer = null) => {
+                    if (drawer) setInitialSetupDrawer(drawer);
+                    setActiveTab(tab);
+                  }}
+                  onBackToDashboard={() => setActiveTab('home')}
+                  onUpdateOrderStatus={handleUpdateStatus}
+                  onResolveServiceRequest={handleResolveServiceRequest}
+                />
+              )}
 
-            {/* HELP & SUPPORT CENTER VIEW */}
-            {activeTab === 'support' && (
-              <SupportView
-                restaurantInfo={restaurantInfo}
-                settingsForm={settingsForm}
-                capabilities={tenantCaps}
-                token={token}
-                onNavigate={(tab, drawer = null) => {
-                  if (drawer) setInitialSetupDrawer(drawer);
-                  setActiveTab(tab);
-                }}
-                onBackToDashboard={() => setActiveTab('home')}
-                onBackToSettings={() => setActiveTab('settings')}
-              />
-            )}
+              {/* HELP & SUPPORT CENTER VIEW */}
+              {activeTab === 'support' && (
+                <SupportView
+                  restaurantInfo={restaurantInfo}
+                  settingsForm={settingsForm}
+                  capabilities={tenantCaps}
+                  token={token}
+                  onNavigate={(tab, drawer = null) => {
+                    if (drawer) setInitialSetupDrawer(drawer);
+                    setActiveTab(tab);
+                  }}
+                  onBackToDashboard={() => setActiveTab('home')}
+                  onBackToSettings={() => setActiveTab('settings')}
+                />
+              )}
 
-            {/* SETUP VIEW */}
-            {activeTab === 'settings' && (
-              <SetupView
-                initialDrawer={initialSetupDrawer}
-                restaurantInfo={restaurantInfo}
-                capabilities={tenantCaps}
-                onUpgrade={() => {
-                  setActiveTab('billing');
-                }}
-                settingsForm={settingsForm}
-                setSettingsForm={setSettingsForm}
-                handleSaveSettings={handleSaveSettings}
-                credForm={credForm}
-                setCredForm={setCredForm}
-                handleChangeCredentials={handleChangeCredentials}
-                credMsg={credMsg}
-                token={token}
-                uploadImage={uploadImage}
-                setShowPrinterModal={setShowPrinterModal}
-                setShowHelpModal={setShowHelpModal}
-                onOpenBillingModal={() => setShowPaymentModal(true)}
-                onRefreshInfo={loadData}
-                supportPhone={masterSupportPhone}
-                onOptimizeDatabase={async () => {
-                  try {
-                    await optimizeDatabase(token, 90);
-                    alert('⚡ Database optimized successfully!');
-                  } catch (e) {
-                    alert('Optimization failed: ' + (e.message || 'Server error'));
-                  }
-                }}
-                onNavigate={(tab) => {
-                  setInitialSetupDrawer(null);
-                  setActiveTab(tab);
-                }}
-              />
-            )}
+              {/* SETUP VIEW */}
+              {activeTab === 'settings' && (
+                <SetupView
+                  initialDrawer={initialSetupDrawer}
+                  restaurantInfo={restaurantInfo}
+                  capabilities={tenantCaps}
+                  onUpgrade={() => {
+                    setActiveTab('billing');
+                  }}
+                  settingsForm={settingsForm}
+                  setSettingsForm={setSettingsForm}
+                  handleSaveSettings={handleSaveSettings}
+                  credForm={credForm}
+                  setCredForm={setCredForm}
+                  handleChangeCredentials={handleChangeCredentials}
+                  credMsg={credMsg}
+                  token={token}
+                  uploadImage={uploadImage}
+                  setShowPrinterModal={setShowPrinterModal}
+                  setShowHelpModal={setShowHelpModal}
+                  onOpenBillingModal={() => setShowPaymentModal(true)}
+                  onRefreshInfo={loadData}
+                  supportPhone={masterSupportPhone}
+                  onOptimizeDatabase={async () => {
+                    try {
+                      await optimizeDatabase(token, 90);
+                      alert('⚡ Database optimized successfully!');
+                    } catch (e) {
+                      alert('Optimization failed: ' + (e.message || 'Server error'));
+                    }
+                  }}
+                  onNavigate={(tab) => {
+                    setInitialSetupDrawer(null);
+                    setActiveTab(tab);
+                  }}
+                />
+              )}
 
-            {/* SAFE FALLBACK FOR UNRECOGNIZED / INVALID TABS */}
-            {!['home', 'orders', 'floor-map', 'service-requests', 'kds', 'analytics', 'dishes', 'categories', 'combos', 'qr-generator', 'offers', 'customers', 'billing', 'subscription', 'review', 'notifications', 'support', 'settings'].includes(activeTab) && (
-              <HomeView
-                restaurantInfo={restaurantInfo}
-                analyticsData={analyticsData}
-                orders={orders}
-                serviceRequests={serviceRequests}
-                dishes={safeDishes}
-                categories={safeCategories}
-                combos={combos}
-                totalTablesCount={totalTablesCount}
-                settingsForm={settingsForm}
-                isAudioReady={isAudioReady}
-                subscriptionStatus={subscriptionStatus}
-                capabilities={tenantCaps}
-                onNavigateTab={(tab) => setActiveTab(tab)}
-                onOpenAddDish={() => setDishModalData('new')}
-                onOpenAddCategory={() => setCatModalData('new')}
-                onReturnToMenu={onReturnToMenu}
-                onNavigateToSetup={(drawer = null) => {
-                  setInitialSetupDrawer(drawer);
-                  setActiveTab('settings');
-                }}
-                currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-              />
-            )}
-          </div>
-        </main>
+              {/* SAFE FALLBACK FOR UNRECOGNIZED / INVALID TABS */}
+              {!['home', 'orders', 'floor-map', 'service-requests', 'kds', 'analytics', 'dishes', 'categories', 'combos', 'qr-generator', 'offers', 'customers', 'billing', 'subscription', 'review', 'notifications', 'support', 'settings'].includes(activeTab) && (
+                <HomeView
+                  restaurantInfo={restaurantInfo}
+                  analyticsData={analyticsData}
+                  orders={orders}
+                  serviceRequests={serviceRequests}
+                  dishes={safeDishes}
+                  categories={safeCategories}
+                  combos={combos}
+                  totalTablesCount={totalTablesCount}
+                  settingsForm={settingsForm}
+                  isAudioReady={isAudioReady}
+                  subscriptionStatus={subscriptionStatus}
+                  capabilities={tenantCaps}
+                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  onOpenAddDish={() => setDishModalData('new')}
+                  onOpenAddCategory={() => setCatModalData('new')}
+                  onReturnToMenu={onReturnToMenu}
+                  onNavigateToSetup={(drawer = null) => {
+                    setInitialSetupDrawer(drawer);
+                    setActiveTab('settings');
+                  }}
+                  currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                />
+              )}
+            </div>
+          </main>
 
-        <AdminBottomNavigation
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
-          analyticsEnabled={isAnalyticsEnabled}
-          ordersEnabled={isDirectOrderingEnabled}
-        />
-      </div>
+          <AdminBottomNavigation
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
+            analyticsEnabled={isAnalyticsEnabled}
+            ordersEnabled={isDirectOrderingEnabled}
+          />
+        </div>
       </div>
 
       {/* Dish & Category Form Modals */}
@@ -3457,7 +3489,7 @@ export default function AdminDashboard({
             }}>
               <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#FFD700', marginBottom: '6px' }}>👑 Upgrade your SaaS Plan to unlock:</div>
               <div style={{ fontSize: '0.78rem', color: '#D1D5DB', lineHeight: 1.5 }}>
-                • <strong>Pro Plan:</strong> Up to 10 Combos & Thalis<br/>
+                • <strong>Pro Plan:</strong> Up to 10 Combos & Thalis<br />
                 • <strong>Enterprise Plan:</strong> Unlimited Combos & Direct Table Ordering
               </div>
             </div>
@@ -3517,12 +3549,34 @@ export default function AdminDashboard({
 
             <div style={{ background: 'var(--adm-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--adm-border)' }}>
               <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--adm-primary)' }}>
-                Table {acceptRoutingModal.table_number || 'Takeaway'} • Order {acceptRoutingModal.id}
+                {((String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter')) ? '⚡ Billing Counter' : `Table ${acceptRoutingModal.table_number || 'Takeaway'}`} • Order {acceptRoutingModal.id}
               </div>
               <div style={{ fontSize: '0.78rem', color: 'var(--adm-muted)', marginTop: '2px' }}>
-                Customer: {acceptRoutingModal.customer_name || 'Dine-In Guest'} • Total: {settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}{acceptRoutingModal.total_amount}
+                Customer: {acceptRoutingModal.customer_name || 'Guest'} • Total: {settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}{acceptRoutingModal.total_amount}
               </div>
             </div>
+
+            {acceptRoutingModal && ((String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter')) && (
+              <div style={{
+                background: '#FFFBEB',
+                border: '1.5px solid #F59E0B',
+                borderRadius: '12px',
+                padding: '12px 14px',
+                display: 'flex',
+                gap: '10px',
+                alignItems: 'flex-start'
+              }}>
+                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>⚡</span>
+                <div>
+                  <strong style={{ color: '#92400E', fontSize: '0.84rem', display: 'block', fontWeight: 800 }}>
+                    Counter Order Staff Confirmation
+                  </strong>
+                  <span style={{ color: '#B45309', fontSize: '0.74rem', lineHeight: 1.4, display: 'block', marginTop: '2px' }}>
+                    Confirm customer is physically present at the billing counter to authorize sending this order to the kitchen.
+                  </span>
+                </div>
+              </div>
+            )}
 
             <p style={{ fontSize: '0.82rem', color: 'var(--adm-text)', margin: 0, fontWeight: 700 }}>
               Where would you like to route this order for preparation?
@@ -3530,10 +3584,25 @@ export default function AdminDashboard({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
+                disabled={isRoutingSubmitting}
                 onClick={async () => {
-                  const targetId = acceptRoutingModal.id;
-                  setAcceptRoutingModal(null);
-                  await handleUpdateStatus(targetId, 'kitchen', { sent_to_kds: 1 });
+                  if (isRoutingSubmitting) return;
+                  setIsRoutingSubmitting(true);
+                  try {
+                    const targetId = acceptRoutingModal.id;
+                    const isCounter = (String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter');
+                    const extra = { sent_to_kds: 1 };
+                    if (isCounter) {
+                      extra.counter_acknowledgement = {
+                        confirmed: true,
+                        acknowledged_at: new Date().toISOString()
+                      };
+                    }
+                    await handleUpdateStatus(targetId, 'kitchen', extra);
+                    setAcceptRoutingModal(null);
+                  } finally {
+                    setIsRoutingSubmitting(false);
+                  }
                 }}
                 style={{
                   padding: '14px',
@@ -3543,7 +3612,8 @@ export default function AdminDashboard({
                   border: '1px solid #38BDF8',
                   fontWeight: 900,
                   fontSize: '0.92rem',
-                  cursor: 'pointer',
+                  cursor: isRoutingSubmitting ? 'not-allowed' : 'pointer',
+                  opacity: isRoutingSubmitting ? 0.7 : 1,
                   textAlign: 'left',
                   display: 'flex',
                   alignItems: 'center',
@@ -3558,10 +3628,25 @@ export default function AdminDashboard({
               </button>
 
               <button
+                disabled={isRoutingSubmitting}
                 onClick={async () => {
-                  const targetId = acceptRoutingModal.id;
-                  setAcceptRoutingModal(null);
-                  await handleUpdateStatus(targetId, 'kitchen', { sent_to_kds: 0 });
+                  if (isRoutingSubmitting) return;
+                  setIsRoutingSubmitting(true);
+                  try {
+                    const targetId = acceptRoutingModal.id;
+                    const isCounter = (String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter');
+                    const extra = { sent_to_kds: 0 };
+                    if (isCounter) {
+                      extra.counter_acknowledgement = {
+                        confirmed: true,
+                        acknowledged_at: new Date().toISOString()
+                      };
+                    }
+                    await handleUpdateStatus(targetId, 'kitchen', extra);
+                    setAcceptRoutingModal(null);
+                  } finally {
+                    setIsRoutingSubmitting(false);
+                  }
                 }}
                 style={{
                   padding: '14px',
@@ -3571,7 +3656,8 @@ export default function AdminDashboard({
                   border: '1px solid var(--adm-border)',
                   fontWeight: 800,
                   fontSize: '0.92rem',
-                  cursor: 'pointer',
+                  cursor: isRoutingSubmitting ? 'not-allowed' : 'pointer',
+                  opacity: isRoutingSubmitting ? 0.7 : 1,
                   textAlign: 'left',
                   display: 'flex',
                   alignItems: 'center',
@@ -3614,9 +3700,22 @@ export default function AdminDashboard({
             <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0A2315', marginBottom: '4px' }}>
               🧾 Print Final Customer Bill
             </h3>
-            <span style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
-              Order {billOrderModal.id} • Total: {(restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'))}{billOrderModal.total_amount}
-            </span>
+            {(() => {
+              const billData = calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
+              const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'));
+              if (billData.isMultiRound) {
+                return (
+                  <span id="payment-modal-order-summary" style={{ fontSize: '0.78rem', color: '#0F766E', fontWeight: 800, display: 'block', marginBottom: '16px' }}>
+                    Session Total: {currency}{billData.grandTotal} • {billData.totalRoundsCount} Rounds
+                  </span>
+                );
+              }
+              return (
+                <span id="payment-modal-order-summary" style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
+                  Order {billOrderModal.id} • Total: {currency}{billOrderModal.total_amount}
+                </span>
+              );
+            })()}
 
             <p style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', marginBottom: '12px' }}>
               Select Payment Method for Receipt:
@@ -3630,31 +3729,38 @@ export default function AdminDashboard({
               ].map(m => (
                 <button
                   key={m.id}
-                  onClick={() => {
-                    const orderToPrint = billOrderModal;
-                    setBillOrderModal(null);
-                    handlePrintCustomerBill(orderToPrint, m.id);
-                  }}
+                  id={`settle-payment-btn-${m.id.toLowerCase().replace(/[^a-z]/g, '')}`}
+                  disabled={isSettlingOrder}
+                  onClick={() => handleSettleAndCompleteOrder(billOrderModal, m.id)}
                   style={{
-                    background: m.bg,
+                    background: isSettlingOrder ? '#9CA3AF' : m.bg,
                     color: m.color,
                     border: 'none',
                     padding: '12px',
                     borderRadius: 'var(--radius-pill)',
                     fontWeight: 900,
                     fontSize: '0.88rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
+                    cursor: isSettlingOrder ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                    opacity: isSettlingOrder ? 0.7 : 1
                   }}
                 >
-                  {m.label}
+                  {isSettlingOrder ? '⏳ Processing Settlement...' : m.label}
                 </button>
               ))}
             </div>
 
             <button
-              onClick={() => setBillOrderModal(null)}
-              style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+              disabled={isSettlingOrder}
+              onClick={() => !isSettlingOrder && setBillOrderModal(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: isSettlingOrder ? '#D1D5DB' : '#9CA3AF',
+                fontSize: '0.8rem',
+                cursor: isSettlingOrder ? 'not-allowed' : 'pointer',
+                textDecoration: 'underline'
+              }}
             >
               Cancel
             </button>

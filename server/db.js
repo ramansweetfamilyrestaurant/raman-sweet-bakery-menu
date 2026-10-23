@@ -109,6 +109,20 @@ async function initDb(options = {}) {
         await seedData(options).catch(() => {});
       }
     } else {
+      // Vercel cold-start verification mode in test environment
+      if (dbType === 'postgres' && pgPool) {
+        try {
+          await assertPhase1SchemaPresence(pgPool);
+        } catch (schemaErr) {
+          isDbInitialized = false;
+          throw schemaErr;
+        }
+      } else {
+        isDbInitialized = false;
+        const err = new Error('Database initialization failed: Vercel serverless runtime requires an active PostgreSQL connection pool.');
+        err.code = 'VERCEL_POSTGRES_POOL_REQUIRED';
+        throw err;
+      }
       isDbInitialized = true;
     }
 
@@ -158,8 +172,96 @@ async function initDb(options = {}) {
       await seedData(options).catch(() => {});
     }
   } else {
+    // Vercel Serverless Runtime: Execute lightweight read-only schema verification on cold start (ZERO runtime DDL)
+    if (dbType !== 'postgres' || !pgPool) {
+      isDbInitialized = false;
+      const err = new Error('Database initialization failed: Vercel serverless runtime requires an active PostgreSQL connection pool.');
+      err.code = 'VERCEL_POSTGRES_POOL_REQUIRED';
+      throw err;
+    }
+    try {
+      await assertPhase1SchemaPresence(pgPool);
+    } catch (schemaErr) {
+      isDbInitialized = false;
+      console.error('Vercel cold-start schema check error:', schemaErr.message);
+      throw schemaErr;
+    }
     isDbInitialized = true;
   }
+}
+
+export async function assertPhase1SchemaPresence(pgClientOrPool) {
+  if (!pgClientOrPool || typeof pgClientOrPool.query !== 'function') {
+    throw new Error('assertPhase1SchemaPresence requires an active PostgreSQL client or pool');
+  }
+
+  // 0. Authoritatively resolve the exact relation schemas for 'orders' and 'restaurants' in the search path
+  let ordersSchema = 'public';
+  let restaurantsSchema = 'public';
+  try {
+    const { rows: regRows } = await pgClientOrPool.query(`
+      SELECT 
+        c.relname AS table_name,
+        n.nspname AS table_schema
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE c.oid IN (to_regclass('orders'), to_regclass('restaurants'))
+    `);
+    const relSchemaMap = new Map((regRows || []).map(r => [r.table_name, r.table_schema]));
+    ordersSchema = relSchemaMap.get('orders') || 'public';
+    restaurantsSchema = relSchemaMap.get('restaurants') || 'public';
+  } catch (_) {}
+
+  const { rows: columns } = await pgClientOrPool.query(`
+    SELECT table_schema, table_name, column_name
+    FROM information_schema.columns
+    WHERE (table_schema = $1 AND table_name = 'orders' AND column_name IN ('tracking_token_hash', 'terminal_at', 'updated_at'))
+       OR (table_schema = $2 AND table_name = 'restaurants' AND column_name = 'counter_ordering_enabled')
+  `, [ordersSchema, restaurantsSchema]);
+
+  const restoCols = (columns || []).filter(c => c.table_schema === restaurantsSchema && c.table_name === 'restaurants');
+  const orderCols = (columns || []).filter(c => c.table_schema === ordersSchema && c.table_name === 'orders');
+
+  const hasRestoCounter = restoCols.some(c => c.column_name === 'counter_ordering_enabled');
+  const hasOrderHash = orderCols.some(c => c.column_name === 'tracking_token_hash');
+  const hasOrderTerminal = orderCols.some(c => c.column_name === 'terminal_at');
+  const hasOrderUpdated = orderCols.some(c => c.column_name === 'updated_at');
+
+  const { rows: indexes } = await pgClientOrPool.query(`
+    SELECT schemaname, tablename, indexname, indexdef
+    FROM pg_indexes
+    WHERE schemaname = $1
+      AND tablename = 'orders'
+      AND indexname = 'idx_orders_tracking_hash'
+  `, [ordersSchema]);
+
+  const targetIndex = (indexes || []).find(i =>
+    i.schemaname === ordersSchema &&
+    i.tablename === 'orders' &&
+    i.indexname === 'idx_orders_tracking_hash'
+  );
+
+  const hasValidIndex = Boolean(
+    targetIndex &&
+    typeof targetIndex.indexdef === 'string' &&
+    /\(\s*"?restaurant_id"?\s*,\s*"?tracking_token_hash"?\s*\)/i.test(targetIndex.indexdef)
+  );
+
+  const missing = [];
+  if (!hasRestoCounter) missing.push('restaurants.counter_ordering_enabled');
+  if (!hasOrderHash) missing.push('orders.tracking_token_hash');
+  if (!hasOrderTerminal) missing.push('orders.terminal_at');
+  if (!hasOrderUpdated) missing.push('orders.updated_at');
+  if (!hasValidIndex) missing.push('orders.idx_orders_tracking_hash');
+
+  if (missing.length > 0) {
+    const err = new Error(`Database initialization failed: Phase 1 schema attributes missing in production PostgreSQL: ${missing.join(', ')}`);
+    err.code = 'PHASE1_SCHEMA_INCOMPLETE';
+    err.missing = missing;
+    throw err;
+  }
+
+  return { verified: true, missing: [] };
 }
 
 async function createTables(options = {}) {
@@ -744,7 +846,12 @@ async function createTables(options = {}) {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS grand_total_amount NUMERIC(10, 2) DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_rate NUMERIC(5, 2) DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_token_hash VARCHAR(64);`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS terminal_at TIMESTAMP DEFAULT NULL;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_idemp ON orders (restaurant_id, idempotency_key);`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_screen_enabled INT DEFAULT 1;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS city VARCHAR(100);`,
@@ -1479,7 +1586,15 @@ async function createTables(options = {}) {
       if (!orderCols.some(c => c.name === 'grand_total_amount')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN grand_total_amount REAL DEFAULT 0");
       if (!orderCols.some(c => c.name === 'gst_rate')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN gst_rate REAL DEFAULT 0");
       if (!orderCols.some(c => c.name === 'notes')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN notes TEXT");
+      if (!orderCols.some(c => c.name === 'tracking_token_hash')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN tracking_token_hash TEXT DEFAULT NULL");
+      if (!orderCols.some(c => c.name === 'terminal_at')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN terminal_at TEXT DEFAULT NULL");
+      if (!orderCols.some(c => c.name === 'updated_at')) {
+        sqliteDb.exec("ALTER TABLE orders ADD COLUMN updated_at TEXT DEFAULT NULL");
+        sqliteDb.exec("UPDATE orders SET updated_at = created_at WHERE updated_at IS NULL");
+      }
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash)");
 
+      if (!restoCols.some(c => c.name === 'counter_ordering_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN counter_ordering_enabled INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'kds_screen_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_screen_enabled INTEGER DEFAULT 1");
       if (!restoCols.some(c => c.name === 'kds_pin_hash')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_pin_hash TEXT DEFAULT NULL");
       if (!restoCols.some(c => c.name === 'kds_auth_version')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_auth_version INTEGER DEFAULT 1");
@@ -2609,8 +2724,12 @@ async function bootstrapSuperAdminUser({ username = 'superadmin', password } = {
   return { success: true, username: cleanUsername };
 }
 
+function isDatabaseInitialized() {
+  return isDbInitialized;
+}
+
 function getRawDb() {
   return { pgPool, sqliteDb };
 }
 
-export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting, getPaymentIndexStatus, getRawDb, isDemoSeedPermitted, bootstrapSuperAdminUser, seedData };
+export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting, getPaymentIndexStatus, isDatabaseInitialized, getRawDb, isDemoSeedPermitted, bootstrapSuperAdminUser, seedData };
