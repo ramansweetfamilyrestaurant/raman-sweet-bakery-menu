@@ -768,6 +768,7 @@ router.get('/info', async (req, res) => {
       total_rooms: resto.total_rooms !== undefined && resto.total_rooms !== null ? Number(resto.total_rooms) : 0,
       total_vip: resto.total_vip !== undefined && resto.total_vip !== null ? Number(resto.total_vip) : 0,
       table_prefix: resto.table_prefix || 'table',
+      counter_ordering_enabled: Boolean(resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1'),
       order_retention_days: resto.order_retention_days || 7,
       custom_domain: resto.custom_domain || '',
       kds_screen_enabled: resto.kds_screen_enabled !== undefined && resto.kds_screen_enabled !== null ? Number(resto.kds_screen_enabled) : 1,
@@ -1908,14 +1909,53 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     // Step 10: Idempotency & In-Flight Concurrency Mutex
     const customIdempKey = req.headers['x-idempotency-key'] || req.body?.idempotency_key;
     const itemsSig = crypto.createHash('sha256').update(JSON.stringify(verifiedItems.map(i => ({ id: i.dish_id, q: i.quantity, p: i.price })))).digest('hex').substring(0, 16);
+    
+    // Authoritative customer session binding:
+    // 1. Stable, high-entropy customer session scope (from X-Customer-Session header or body)
+    // 2. Cryptographic presence token (from table presence verification)
+    // Security Invariant: An unverified phone number alone is NEVER treated as proof of identity.
+    const rawPresenceToken = String(presence_token || location_token || '').trim();
+    const rawCustomerSession = String(
+      req.headers['x-customer-session'] || 
+      req.headers['x-session-id'] || 
+      req.body?.customer_session_token || 
+      req.body?.customer_session_id || 
+      ''
+    ).trim();
+
+    let customerIdentity = null;
+    if (rawCustomerSession) {
+      customerIdentity = `session:${crypto.createHash('sha256').update(`cust_session:${targetId}:${rawCustomerSession}`).digest('hex').substring(0, 24)}`;
+    } else if (rawPresenceToken) {
+      const presenceHash = crypto.createHash('sha256').update(rawPresenceToken).digest('hex').substring(0, 16);
+      if (customer_phone && String(customer_phone).trim()) {
+        const phoneHash = crypto.createHash('sha256').update(String(customer_phone).trim()).digest('hex').substring(0, 8);
+        customerIdentity = `presence:${presenceHash}:phone:${phoneHash}`;
+      } else if (resolvedSpaceType !== 'counter') {
+        customerIdentity = `presence:${presenceHash}`;
+      }
+    }
+
+    const customerBinding = customerIdentity
+      ? crypto.createHash('sha256').update(customerIdentity).digest('hex').substring(0, 16)
+      : `anon_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
+
     const idempKey = customIdempKey 
-      ? `${targetId}:${String(customIdempKey).trim().substring(0, 64)}` 
-      : `${targetId}:${cleanTable}:${itemsSig}`;
+      ? `${targetId}:${resolvedSpaceType}:${cleanTable}:${customerBinding}:${String(customIdempKey).trim().substring(0, 64)}` 
+      : (resolvedSpaceType === 'counter'
+          ? `${targetId}:counter:${customerBinding}:${itemsSig}`
+          : `${targetId}:${cleanTable}:${itemsSig}`);
     const idempTtl = customIdempKey ? 60000 : 3000;
 
     // Check idempotency cache (3s for debounce signature, 60s for explicit client idempotency key)
     const cachedIdemp = orderIdempotencyCache.get(idempKey);
     if (cachedIdemp && (Date.now() - cachedIdemp.timestamp < idempTtl)) {
+      if (cachedIdemp.customerBinding && customerBinding && cachedIdemp.customerBinding !== customerBinding) {
+        return res.status(409).json({
+          error: 'idempotency_conflict',
+          message: 'Idempotency key is bound to another customer.'
+        });
+      }
       return res.json({ ...cachedIdemp.response });
     }
 
@@ -1976,7 +2016,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
 
         // 🛡️ Step B: Durable Idempotency Check by customIdempKey (if supplied by client)
         if (customIdempKey) {
-          const storedKey = String(customIdempKey).trim().substring(0, 100);
+          const storedKey = `${customerBinding}:${String(customIdempKey).trim()}`.substring(0, 100);
           const existingByKey = await txQuery(`
             SELECT id, session_id, round_number, parent_order_id, status, total_amount, distance_meters 
             FROM orders 
@@ -2000,7 +2040,9 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
               distance_meters: ex.distance_meters,
               message: isAddon
                 ? `🎉 Round ${ex.round_number} (Add-on Order #${ex.id}) placed for Table #${cleanTable}!`
-                : `🎉 Order #${ex.id} placed successfully for Table #${cleanTable}!`
+                : (resolvedSpaceType === 'counter'
+                    ? `🎉 Counter Order #${ex.id} placed successfully!`
+                    : `🎉 Order #${ex.id} placed successfully for Table #${cleanTable}!`)
             };
           }
         }
@@ -2115,7 +2157,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true')
         );
         const taxBreakdown = calculateOrderTax(serverVerifiedTotal, isEffectiveGst);
-        const storedIdempKey = customIdempKey ? String(customIdempKey).trim().substring(0, 100) : null;
+        const storedIdempKey = customIdempKey ? `${customerBinding}:${String(customIdempKey).trim()}`.substring(0, 100) : null;
 
         // 🛡️ TouchQR Phase 1: 128-bit Random Customer Tracking Credential
         const rawTrackingToken = crypto.randomBytes(16).toString('hex');
@@ -2256,7 +2298,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         };
       });
 
-      orderIdempotencyCache.set(idempKey, { timestamp: Date.now(), response: responsePayload });
+      orderIdempotencyCache.set(idempKey, { timestamp: Date.now(), customerBinding, itemsSig, response: responsePayload });
       executionResolve(responsePayload);
       orderInFlightMutex.delete(idempKey);
 

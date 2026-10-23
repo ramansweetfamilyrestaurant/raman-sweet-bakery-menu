@@ -567,10 +567,38 @@ export async function fetchPresencePolicy(slug = '') {
   return handleResponse(res, 'Failed to fetch presence policy');
 }
 
-export async function createDirectOrder(orderData) {
+export async function createDirectOrder(orderData, idempotencyKey = null) {
+  const headers = { 'Content-Type': 'application/json' };
+
+  // High-entropy, stable customer session scope for safe idempotency & tracking
+  let sessionToken = '';
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      sessionToken = window.sessionStorage.getItem('tq_customer_session_token');
+      if (!sessionToken || sessionToken.length < 16) {
+        if (window.crypto && window.crypto.randomUUID) {
+          sessionToken = window.crypto.randomUUID().replace(/-/g, '');
+        } else {
+          sessionToken = Date.now().toString(36) + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+        }
+        window.sessionStorage.setItem('tq_customer_session_token', sessionToken);
+      }
+    }
+  } catch (e) {}
+
+  const effectiveSession = orderData?.customer_session_token || sessionToken;
+  if (effectiveSession) {
+    headers['X-Customer-Session'] = effectiveSession;
+  }
+
+  const effectiveIdempKey = idempotencyKey || orderData?.idempotency_key;
+  if (effectiveIdempKey) {
+    headers['X-Idempotency-Key'] = String(effectiveIdempKey).trim();
+  }
+
   const res = await fetch(`${API_BASE}/orders`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(orderData),
   });
   return handleResponse(res, 'Failed to place order');

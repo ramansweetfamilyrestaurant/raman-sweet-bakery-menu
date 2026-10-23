@@ -203,6 +203,17 @@ export default function App() {
       return false;
     }
 
+    if (currentSpaceType === 'counter' || initialSpaceInfo.type === 'counter') {
+      const isCanonicalCounter = String(currentTableNum).trim().toUpperCase() === 'COUNTER';
+      if (!isCanonicalCounter) return false;
+      // Fail-closed: Restaurant info must be loaded, and counter_ordering_enabled must be explicitly true
+      if (!info) return false;
+      const isCounterEnabled = info.counter_ordering_enabled === true || 
+                               info.counter_ordering_enabled === 1 || 
+                               info.counter_ordering_enabled === '1';
+      return Boolean(isCounterEnabled);
+    }
+
     if (currentSpaceType === 'cinema_seat' || initialSpaceInfo.type === 'cinema_seat') {
       const cMatch = String(currentTableNum).match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
       return Boolean(cMatch || String(currentTableNum).trim().length > 0);
@@ -694,6 +705,11 @@ export default function App() {
 
   const [activeOrderId, setActiveOrderId] = useState(getInitialActiveOrderId);
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
+  const trackingExpiredRef = useRef(false);
+
+  useEffect(() => {
+    trackingExpiredRef.current = false;
+  }, [activeOrderId]);
 
   // 5-Second Persistent Auto-Kill Session Protection after order completion, cancellation, or rejection
   useEffect(() => {
@@ -785,6 +801,9 @@ export default function App() {
 
     const checkTableStatus = async () => {
       try {
+        if (trackingExpiredRef.current) {
+          return;
+        }
         if (activeOrderId) {
           try {
             const trackingToken = typeof sessionStorage !== 'undefined'
@@ -796,6 +815,23 @@ export default function App() {
               return;
             }
           } catch (trackErr) {
+            // Order tracking expired (410) -> clean up stored token, halt polling, and preserve order status
+            if (trackErr?.status === 410 || trackErr?.message?.includes('expired') || trackErr?.error === 'tracking_expired') {
+              try {
+                sessionStorage.removeItem(`tq_track_${activeOrderId}`);
+                if (sessionStorage.getItem('tq_active_tracking_token') === trackingToken) {
+                  sessionStorage.removeItem('tq_active_tracking_token');
+                }
+              } catch (e) {}
+              trackingExpiredRef.current = true;
+              setActiveOrderTrack(prev => {
+                if (prev) {
+                  return { ...prev, tracking_expired: true };
+                }
+                return { id: activeOrderId, status: 'expired', tracking_expired: true };
+              });
+              return;
+            }
             // Order was rejected or purged by admin -> show cancelled state
             if (trackErr?.message?.includes('not found') || trackErr?.status === 404 || String(trackErr).includes('404')) {
               setActiveOrderTrack({
@@ -850,6 +886,13 @@ export default function App() {
       return;
     }
 
+    if (targetSpaceType === 'counter' && (!info || (info.counter_ordering_enabled !== true && info.counter_ordering_enabled !== 1 && info.counter_ordering_enabled !== '1'))) {
+      alert('Counter ordering is currently not enabled for this restaurant.');
+      setPlacingOrder(false);
+      isPlacingOrderRef.current = false;
+      return;
+    }
+
     const itemsPayload = cartItems.map(item => ({
       dish_id: item.isCombo ? item.dish.id : item.dish.id,
       name: item.dish.name,
@@ -860,6 +903,7 @@ export default function App() {
       ...(item.isCombo ? { type: 'combo', includes: item.comboIncludes || '' } : {})
     }));
     const grandTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const attemptIdempKey = `attempt_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
     const orderPayload = {
       slug,
@@ -870,6 +914,7 @@ export default function App() {
       customer_phone: customerPhoneInput || '',
       items: itemsPayload,
       total_amount: grandTotal,
+      idempotency_key: attemptIdempKey,
       ...(presenceTokenRef.current ? { presence_token: presenceTokenRef.current } : {})
     };
 
@@ -908,7 +953,8 @@ export default function App() {
           customer_name: customerNameInput || 'Dine-In Customer',
           customer_phone: customerPhoneInput || '',
           items: itemsPayload,
-          total_amount: grandTotal
+          total_amount: grandTotal,
+          idempotency_key: attemptIdempKey
         };
         setPresenceToken(null);
         presenceTokenRef.current = null;

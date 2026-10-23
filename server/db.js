@@ -195,25 +195,37 @@ export async function assertPhase1SchemaPresence(pgClientOrPool) {
     throw new Error('assertPhase1SchemaPresence requires an active PostgreSQL client or pool');
   }
 
+  // 0. Authoritatively resolve the exact relation schemas for 'orders' and 'restaurants' in the search path
+  let ordersSchema = 'public';
+  let restaurantsSchema = 'public';
+  try {
+    const { rows: regRows } = await pgClientOrPool.query(`
+      SELECT 
+        c.relname AS table_name,
+        n.nspname AS table_schema
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE c.oid IN (to_regclass('orders'), to_regclass('restaurants'))
+    `);
+    const relSchemaMap = new Map((regRows || []).map(r => [r.table_name, r.table_schema]));
+    ordersSchema = relSchemaMap.get('orders') || 'public';
+    restaurantsSchema = relSchemaMap.get('restaurants') || 'public';
+  } catch (_) {}
+
   const { rows: columns } = await pgClientOrPool.query(`
     SELECT table_schema, table_name, column_name
     FROM information_schema.columns
-    WHERE table_schema = ANY(current_schemas(false))
-      AND (
-        (table_name = 'restaurants' AND column_name = 'counter_ordering_enabled')
-        OR (table_name = 'orders' AND column_name IN ('tracking_token_hash', 'terminal_at', 'updated_at'))
-      )
-  `);
+    WHERE (table_schema = $1 AND table_name = 'orders' AND column_name IN ('tracking_token_hash', 'terminal_at', 'updated_at'))
+       OR (table_schema = $2 AND table_name = 'restaurants' AND column_name = 'counter_ordering_enabled')
+  `, [ordersSchema, restaurantsSchema]);
 
-  const restoCols = (columns || []).filter(c => c.table_name === 'restaurants');
-  const orderCols = (columns || []).filter(c => c.table_name === 'orders');
+  const restoCols = (columns || []).filter(c => c.table_schema === restaurantsSchema && c.table_name === 'restaurants');
+  const orderCols = (columns || []).filter(c => c.table_schema === ordersSchema && c.table_name === 'orders');
 
   const hasRestoCounter = restoCols.some(c => c.column_name === 'counter_ordering_enabled');
   const hasOrderHash = orderCols.some(c => c.column_name === 'tracking_token_hash');
   const hasOrderTerminal = orderCols.some(c => c.column_name === 'terminal_at');
   const hasOrderUpdated = orderCols.some(c => c.column_name === 'updated_at');
-
-  const ordersSchema = orderCols[0]?.table_schema || restoCols[0]?.table_schema || 'public';
 
   const { rows: indexes } = await pgClientOrPool.query(`
     SELECT schemaname, tablename, indexname, indexdef

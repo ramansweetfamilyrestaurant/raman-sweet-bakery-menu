@@ -2798,14 +2798,20 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
 
         if (!isCounterOrder && targetOrder.session_id) {
           // Settle dining table session conditionally (only unsettled rows transition)
+          // Preserves individual status, sent_to_kds, and kitchen_prepared flags of other rounds in the session
           settleSql = `
             UPDATE orders
-            SET status = $1, sent_to_kds = $2, kitchen_prepared = $3,
-                is_settled = 1, payment_method = $4, terminal_at = $5, updated_at = CURRENT_TIMESTAMP
-            WHERE restaurant_id = $6 AND session_id = $7 AND (is_settled = 0 OR is_settled IS NULL)
+            SET status = CASE WHEN id = $1 THEN $2 ELSE status END,
+                sent_to_kds = CASE WHEN id = $1 THEN $3 ELSE sent_to_kds END,
+                kitchen_prepared = CASE WHEN id = $1 THEN $4 ELSE kitchen_prepared END,
+                terminal_at = CASE WHEN id = $1 THEN $5 ELSE terminal_at END,
+                is_settled = 1,
+                payment_method = $6,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE restaurant_id = $7 AND session_id = $8 AND (is_settled = 0 OR is_settled IS NULL)
             RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
           `;
-          settleParams = [newStatus, kdsVal, prepVal, reqPaymentMethod, finalTerminalAt, targetId, targetOrder.session_id];
+          settleParams = [orderId, newStatus, kdsVal, prepVal, finalTerminalAt, reqPaymentMethod, targetId, targetOrder.session_id];
         } else {
           // Settle single order conditionally (only unsettled row transitions)
           settleSql = `
