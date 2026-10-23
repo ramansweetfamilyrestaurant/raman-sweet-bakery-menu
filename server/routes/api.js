@@ -1203,6 +1203,8 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
     if (resolvedSpaceType === 'cinema_seat') {
       const cMatch = String(resolvedSpaceNum).match(/^S?(\d+)-([A-Za-z]+)-(\d+)$/i);
       cleanTable = cMatch ? `Screen ${cMatch[1]} - Row ${cMatch[2].toUpperCase()} - Seat ${cMatch[3]}` : rawTable;
+    } else if (resolvedSpaceType === 'counter') {
+      cleanTable = 'Counter';
     }
 
     // Step 6: Validate Space Capacity & Cinema Seat Registration
@@ -1658,6 +1660,8 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     if (resolvedSpaceType === 'cinema_seat') {
       const cMatch = String(resolvedSpaceNum).match(/^S?(\d+)-([A-Za-z]+)-(\d+)$/i);
       cleanTable = cMatch ? `Screen ${cMatch[1]} - Row ${cMatch[2].toUpperCase()} - Seat ${cMatch[3]}` : rawTable;
+    } else if (resolvedSpaceType === 'counter') {
+      cleanTable = 'Counter';
     }
 
     // Step 6: Validate Space Capacity & Cinema Seat Registration
@@ -1926,31 +1930,33 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     }
 
     // Step 11: Multi-Round Table Session Detection
-    // 🛡️ Rapid Multi-Tap / Duplicate Submission Guard (3-Second Window)
-    try {
-      const recentOrder = await query(`
-        SELECT id, total_amount, created_at, session_id, round_number
-        FROM orders
-        WHERE restaurant_id = $1 AND table_number = $2 AND created_at >= $3
-        ORDER BY id DESC LIMIT 1
-      `, [targetId, cleanTable, new Date(Date.now() - 3000).toISOString()]);
+    // 🛡️ Rapid Multi-Tap / Duplicate Submission Guard (3-Second Window, table orders only)
+    if (resolvedSpaceType !== 'counter') {
+      try {
+        const recentOrder = await query(`
+          SELECT id, total_amount, created_at, session_id, round_number
+          FROM orders
+          WHERE restaurant_id = $1 AND table_number = $2 AND created_at >= $3
+          ORDER BY id DESC LIMIT 1
+        `, [targetId, cleanTable, new Date(Date.now() - 3000).toISOString()]);
 
-      if (recentOrder && recentOrder.length > 0) {
-        const prev = recentOrder[0];
-        if (Number(prev.total_amount) === serverVerifiedTotal) {
-          const debounceResp = {
-            success: true,
-            order_id: prev.id,
-            total_amount: prev.total_amount,
-            session_id: prev.session_id,
-            round_number: prev.round_number,
-            status: 'pending'
-          };
-          orderIdempotencyCache.set(idempKey, { timestamp: Date.now(), response: debounceResp });
-          return res.json(debounceResp);
+        if (recentOrder && recentOrder.length > 0) {
+          const prev = recentOrder[0];
+          if (Number(prev.total_amount) === serverVerifiedTotal) {
+            const debounceResp = {
+              success: true,
+              order_id: prev.id,
+              total_amount: prev.total_amount,
+              session_id: prev.session_id,
+              round_number: prev.round_number,
+              status: 'pending'
+            };
+            orderIdempotencyCache.set(idempKey, { timestamp: Date.now(), response: debounceResp });
+            return res.json(debounceResp);
+          }
         }
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
 
     // Create deferred execution promise for in-flight mutex lock
     let executionResolve, executionReject;
@@ -2000,71 +2006,75 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         }
 
         // 🛡️ Step C: Distributed Rapid Multi-Tap / Duplicate Submission Guard (3-Second Window inside Lock)
-        const threeSecAgo = new Date(Date.now() - 3000).toISOString();
-        const recentOrder = await txQuery(`
-          SELECT id, total_amount, created_at, session_id, round_number, parent_order_id, status, distance_meters
-          FROM orders
-          WHERE restaurant_id = $1 AND table_number = $2 AND created_at >= $3
-          ORDER BY id DESC LIMIT 1
-        `, [targetId, cleanTable, threeSecAgo]);
+        if (resolvedSpaceType !== 'counter') {
+          const threeSecAgo = new Date(Date.now() - 3000).toISOString();
+          const recentOrder = await txQuery(`
+            SELECT id, total_amount, created_at, session_id, round_number, parent_order_id, status, distance_meters
+            FROM orders
+            WHERE restaurant_id = $1 AND table_number = $2 AND created_at >= $3
+            ORDER BY id DESC LIMIT 1
+          `, [targetId, cleanTable, threeSecAgo]);
 
-        if (recentOrder && recentOrder.length > 0) {
-          const prev = recentOrder[0];
-          if (Number(prev.total_amount) === serverVerifiedTotal) {
-            const isAddon = (Number(prev.round_number) || 1) > 1;
-            return {
-              success: true,
-              order_id: prev.id,
-              primary_order_id: prev.parent_order_id || prev.id,
-              session_id: prev.session_id,
-              round_number: Number(prev.round_number) || 1,
-              is_addon: isAddon,
-              status: prev.status || 'pending',
-              table_number: cleanTable,
-              total_amount: Number(prev.total_amount),
-              distance_meters: prev.distance_meters,
-              message: isAddon
-                ? `🎉 Round ${prev.round_number} (Add-on Order #${prev.id}) placed for Table #${cleanTable}!`
-                : `🎉 Order #${prev.id} placed successfully for Table #${cleanTable}!`
-            };
+          if (recentOrder && recentOrder.length > 0) {
+            const prev = recentOrder[0];
+            if (Number(prev.total_amount) === serverVerifiedTotal) {
+              const isAddon = (Number(prev.round_number) || 1) > 1;
+              return {
+                success: true,
+                order_id: prev.id,
+                primary_order_id: prev.parent_order_id || prev.id,
+                session_id: prev.session_id,
+                round_number: Number(prev.round_number) || 1,
+                is_addon: isAddon,
+                status: prev.status || 'pending',
+                table_number: cleanTable,
+                total_amount: Number(prev.total_amount),
+                distance_meters: prev.distance_meters,
+                message: isAddon
+                  ? `🎉 Round ${prev.round_number} (Add-on Order #${prev.id}) placed for Table #${cleanTable}!`
+                  : `🎉 Order #${prev.id} placed successfully for Table #${cleanTable}!`
+              };
+            }
           }
         }
 
         // Step D: Open Orders Detection (Atomically under Lock)
-        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
         let openOrders = [];
-        try {
-          openOrders = await txQuery(`
-            SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
-            FROM orders
-            WHERE restaurant_id = $1 AND table_number = $2 
-              AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
-              AND (is_settled = 0 OR is_settled IS NULL)
-              AND created_at >= $3
-            ORDER BY id ASC
-          `, [targetId, cleanTable, twelveHoursAgo]);
-        } catch (openErr) {
-          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)'); } catch (e) {}
-          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1'); } catch (e) {}
-          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT'); } catch (e) {}
-          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0'); } catch (e) {}
-          openOrders = await txQuery(`
-            SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
-            FROM orders
-            WHERE restaurant_id = $1 AND table_number = $2 
-              AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
-              AND (is_settled = 0 OR is_settled IS NULL)
-              AND created_at >= $3
-            ORDER BY id ASC
-          `, [targetId, cleanTable, twelveHoursAgo]);
+        if (resolvedSpaceType !== 'counter') {
+          const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+          try {
+            openOrders = await txQuery(`
+              SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
+              FROM orders
+              WHERE restaurant_id = $1 AND table_number = $2
+                AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
+                AND (is_settled = 0 OR is_settled IS NULL)
+                AND created_at >= $3
+              ORDER BY id ASC
+            `, [targetId, cleanTable, twelveHoursAgo]);
+          } catch (openErr) {
+            try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)'); } catch (e) {}
+            try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1'); } catch (e) {}
+            try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT'); } catch (e) {}
+            try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0'); } catch (e) {}
+            openOrders = await txQuery(`
+              SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
+              FROM orders
+              WHERE restaurant_id = $1 AND table_number = $2
+                AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
+                AND (is_settled = 0 OR is_settled IS NULL)
+                AND created_at >= $3
+              ORDER BY id ASC
+            `, [targetId, cleanTable, twelveHoursAgo]);
+          }
         }
 
         let sessionId = null;
         let roundNumber = 1;
         let parentOrderId = null;
-        let customerName = String(customer_name || 'Dine-In Customer').trim().substring(0, 100);
+        let customerName = String(customer_name || (resolvedSpaceType === 'counter' ? 'Counter Customer' : 'Dine-In Customer')).trim().substring(0, 100);
         let customerPhone = String(customer_phone || '').trim().substring(0, 30);
-        const isAddonOrder = openOrders.length > 0;
+        const isAddonOrder = resolvedSpaceType !== 'counter' && openOrders.length > 0;
 
         if (isAddonOrder) {
           const primaryOrder = openOrders[0];
@@ -2082,7 +2092,9 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             } catch (e) {}
           }
         } else {
-          sessionId = `sess_${targetId}_${cleanTable}_${Date.now()}`;
+          sessionId = resolvedSpaceType === 'counter'
+            ? `sess_${targetId}_counter_${crypto.randomBytes(12).toString('hex')}`
+            : `sess_${targetId}_${cleanTable}_${Date.now()}`;
           roundNumber = 1;
           parentOrderId = null;
         }
@@ -2105,6 +2117,10 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         const taxBreakdown = calculateOrderTax(serverVerifiedTotal, isEffectiveGst);
         const storedIdempKey = customIdempKey ? String(customIdempKey).trim().substring(0, 100) : null;
 
+        // 🛡️ TouchQR Phase 1: 128-bit Random Customer Tracking Credential
+        const rawTrackingToken = crypto.randomBytes(16).toString('hex');
+        const trackingTokenHash = crypto.createHash('sha256').update(rawTrackingToken).digest('hex');
+
         let result = null;
         try {
           result = await txQuery(`
@@ -2114,8 +2130,8 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
               status, sent_to_kds, created_at,
               customer_latitude, customer_longitude, customer_accuracy, distance_meters,
               session_id, round_number, parent_order_id, is_settled, idempotency_key,
-              notes
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25) RETURNING id
+              notes, tracking_token_hash
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26) RETURNING id
           `, [
             targetId,
             cleanTable,
@@ -2141,18 +2157,19 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             parentOrderId,
             0,
             storedIdempKey,
-            cleanNotes
+            cleanNotes,
+            trackingTokenHash
           ]);
         } catch (insertErr) {
-          // If orders.notes column is unexpectedly missing, strictly reject auto-healing schema mutation.
-          // Dedicated migration (server/scripts/migrate_orders_notes.js) must be run prior to deployment.
-          const isNotesMissing = Boolean(
-            (insertErr.code === '42703' && String(insertErr.message).toLowerCase().includes('notes')) ||
+          // If orders.notes or tracking_token_hash column is unexpectedly missing, reject auto-healing schema mutation.
+          const isSchemaMissing = Boolean(
+            (insertErr.code === '42703' && (String(insertErr.message).toLowerCase().includes('notes') || String(insertErr.message).toLowerCase().includes('tracking_token_hash'))) ||
             String(insertErr.message).toLowerCase().includes('column "notes"') ||
+            String(insertErr.message).toLowerCase().includes('column "tracking_token_hash"') ||
             String(insertErr.message).toLowerCase().includes('has no column named notes')
           );
-          if (isNotesMissing) {
-            console.error('Database schema error: orders.notes column does not exist. Dedicated migration is required.');
+          if (isSchemaMissing && getDbType() === 'postgres') {
+            console.error('Database schema error: required Phase 1 columns do not exist. Dedicated migration is required.');
             throw insertErr;
           }
 
@@ -2174,6 +2191,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_accuracy INT'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS distance_meters INT'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128)'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_token_hash VARCHAR(64)'); } catch (e) {}
 
           result = await txQuery(`
             INSERT INTO orders (
@@ -2181,8 +2199,8 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
               total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate,
               status, sent_to_kds, created_at,
               session_id, round_number, parent_order_id, is_settled, idempotency_key,
-              notes
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id
+              notes, tracking_token_hash
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) RETURNING id
           `, [
             targetId,
             cleanTable,
@@ -2204,7 +2222,8 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             parentOrderId,
             0,
             storedIdempKey,
-            cleanNotes
+            cleanNotes,
+            trackingTokenHash
           ]);
         }
 
@@ -2219,6 +2238,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           is_addon: isAddonOrder,
           status: 'pending',
           table_number: cleanTable,
+          tracking_token: rawTrackingToken,
           total_amount: taxBreakdown.grand_total,
           subtotal_amount: taxBreakdown.subtotal,
           cgst_amount: taxBreakdown.cgst,
@@ -2230,7 +2250,9 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           notes: cleanNotes,
           message: isAddonOrder
             ? `🎉 Round ${roundNumber} (Add-on Order #${orderId}) placed for Table #${cleanTable}!`
-            : `🎉 Order #${orderId} placed successfully for Table #${cleanTable}!`
+            : (resolvedSpaceType === 'counter'
+                ? `🎉 Counter Order #${orderId} placed successfully!`
+                : `🎉 Order #${orderId} placed successfully for Table #${cleanTable}!`)
         };
       });
 
@@ -2250,7 +2272,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
   }
 });
 
-// GET Track Order Status (Public Customer Route - Strict Tenant Scoped)
+// GET Track Order Status (Public Customer Route - Strict Tenant Scoped & Token Protected)
 router.get('/orders/track/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -2273,7 +2295,7 @@ router.get('/orders/track/:id', async (req, res) => {
     const targetId = resto.id;
 
     const orders = await query(
-      'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at FROM orders WHERE id = $1 AND restaurant_id = $2',
+      'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, terminal_at, tracking_token_hash FROM orders WHERE id = $1 AND restaurant_id = $2',
       [orderId, targetId]
     );
 
@@ -2281,14 +2303,86 @@ router.get('/orders/track/:id', async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
     const order = orders[0];
+
+    // 🛡️ Step 1: Staff Authorization Exemption Check (Fail-closed)
+    let isStaffExempt = false;
+    if (req.headers && req.headers.authorization) {
+      try {
+        const authHeader = req.headers.authorization;
+        const authToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.split(' ')[1];
+        if (authToken && authToken !== 'undefined' && authToken !== 'null') {
+          const decoded = jwt.verify(authToken, JWT_SECRET);
+          if (decoded && (decoded.role === 'superadmin' || (decoded.role === 'restaurant_admin' && Number(decoded.restaurant_id) === Number(targetId)))) {
+            isStaffExempt = true;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 🛡️ Step 2: Customer Tracking Token Authentication (Headers ONLY - no URL query fallback)
+    if (!isStaffExempt) {
+      const providedTrackingToken = req.headers['x-order-tracking-token'];
+      if (!providedTrackingToken || typeof providedTrackingToken !== 'string' || !providedTrackingToken.trim()) {
+        return res.status(401).json({
+          error: 'missing_tracking_token',
+          message: 'Order tracking token required in X-Order-Tracking-Token header.'
+        });
+      }
+
+      const cleanToken = providedTrackingToken.trim();
+      if (!order.tracking_token_hash) {
+        return res.status(403).json({
+          error: 'invalid_tracking_token',
+          message: 'Invalid tracking token.'
+        });
+      }
+
+      const computedHash = crypto.createHash('sha256').update(cleanToken).digest('hex');
+      const expectedBuf = Buffer.from(order.tracking_token_hash, 'hex');
+      const providedBuf = Buffer.from(computedHash, 'hex');
+
+      if (expectedBuf.length !== providedBuf.length || !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
+        return res.status(403).json({
+          error: 'invalid_tracking_token',
+          message: 'Invalid tracking token.'
+        });
+      }
+    }
+
+    // 🛡️ Step 3: Server-Side Expiration Check
+    const nowMs = Date.now();
+    const isTerminal = ['completed', 'cancelled', 'rejected'].includes(order.status);
+    if (isTerminal) {
+      const terminalTime = order.terminal_at ? new Date(order.terminal_at).getTime() : new Date(order.created_at).getTime();
+      const TERMINAL_EXPIRY_MS = 2 * 60 * 60 * 1000; // 2 hours
+      if (isNaN(terminalTime) || (nowMs - terminalTime > TERMINAL_EXPIRY_MS)) {
+        return res.status(410).json({
+          error: 'tracking_expired',
+          message: 'Order tracking has expired for this completed or cancelled order.'
+        });
+      }
+    } else {
+      const createdTime = new Date(order.created_at).getTime();
+      const ACTIVE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+      if (isNaN(createdTime) || (nowMs - createdTime > ACTIVE_EXPIRY_MS)) {
+        return res.status(410).json({
+          error: 'tracking_expired',
+          message: 'Order tracking has expired.'
+        });
+      }
+    }
+
+    // 🛡️ Step 4: Parse items & strictly scrub tracking_token_hash from response
     let parsedItems = [];
     if (typeof order.items === 'string') {
       try { parsedItems = JSON.parse(order.items); } catch (e) { parsedItems = []; }
     } else if (Array.isArray(order.items)) {
       parsedItems = order.items;
     }
+
+    const { tracking_token_hash, ...safeOrder } = order;
     res.json({
-      ...order,
+      ...safeOrder,
       items: parsedItems
     });
   } catch (err) {
@@ -2309,6 +2403,11 @@ router.get('/orders/active-table', async (req, res) => {
     const rawTable = String(table_number).trim();
     const resolvedSpaceType = normalizeSpaceType(space_type || 'table');
     const resolvedSpaceNum = normalizeSpaceNumber(rawTable);
+
+    // 🛡️ TouchQR Phase 1: Counter orders never participate in active table sessions
+    if (resolvedSpaceType === 'counter' || rawTable.toLowerCase() === 'counter') {
+      return res.json(null);
+    }
 
     // 1. Authorize Request: Admin/Staff JWT OR Customer Valid Modern HMAC QR Token
     let isAuthorized = false;

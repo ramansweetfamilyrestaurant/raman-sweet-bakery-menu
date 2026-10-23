@@ -93,6 +93,7 @@ export default function AdminDashboard({
   const [analyticsData, setAnalyticsData] = useState(null);
   const [billOrderModal, setBillOrderModal] = useState(null);
   const [acceptRoutingModal, setAcceptRoutingModal] = useState(null); // { order, show: true }
+  const [isRoutingSubmitting, setIsRoutingSubmitting] = useState(false);
   const [kotFilter, setKotFilter] = useState('all');
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(() => getInitialAdminState('info', null));
@@ -1471,6 +1472,7 @@ export default function AdminDashboard({
         total_rooms: infoData.total_rooms !== undefined && infoData.total_rooms !== null ? Number(infoData.total_rooms) : 0,
         total_vip: infoData.total_vip !== undefined && infoData.total_vip !== null ? Number(infoData.total_vip) : 0,
         table_prefix: infoData.table_prefix || 'table',
+        counter_ordering_enabled: Boolean(infoData.counter_ordering_enabled === 1 || infoData.counter_ordering_enabled === true || infoData.counter_ordering_enabled === '1'),
         order_retention_days: infoData.order_retention_days || 7,
         custom_domain: infoData.custom_domain || '',
         watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
@@ -1504,6 +1506,7 @@ export default function AdminDashboard({
       total_rooms: 0,
       total_vip: 0,
       table_prefix: 'table',
+      counter_ordering_enabled: false,
       watermark_removal_enabled: false,
       custom_domain_enabled: false,
       analytics_export_enabled: false,
@@ -1747,6 +1750,7 @@ export default function AdminDashboard({
           total_rooms: infoData.total_rooms !== undefined && infoData.total_rooms !== null ? Number(infoData.total_rooms) : 0,
           total_vip: infoData.total_vip !== undefined && infoData.total_vip !== null ? Number(infoData.total_vip) : 0,
           table_prefix: (currentSlug && localStorage.getItem(`touchqr_table_prefix_${currentSlug}`)) || infoData.table_prefix || 'table',
+          counter_ordering_enabled: Boolean(infoData.counter_ordering_enabled === 1 || infoData.counter_ordering_enabled === true || infoData.counter_ordering_enabled === '1'),
           order_retention_days: infoData.order_retention_days || 7,
           custom_domain: infoData.custom_domain || '',
           watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
@@ -3082,10 +3086,11 @@ export default function AdminDashboard({
                 onUpdateStatus={handleUpdateStatus}
                 onOpenAcceptRouting={(order) => {
                   const isKdsEnabled = settingsForm.kds_screen_enabled !== 0 && settingsForm.kds_screen_enabled !== false && restaurantInfo?.kds_screen_enabled !== 0 && restaurantInfo?.kds_screen_enabled !== false;
-                  if (!isKdsEnabled) {
-                    handleUpdateStatus(order.id, 'accepted', { sent_to_kds: 0 });
-                  } else {
+                  const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
+                  if (isCounter || isKdsEnabled) {
                     setAcceptRoutingModal(order);
+                  } else {
+                    handleUpdateStatus(order.id, 'accepted', { sent_to_kds: 0 });
                   }
                 }}
                 onOpenBillModal={setBillOrderModal}
@@ -3517,12 +3522,34 @@ export default function AdminDashboard({
 
             <div style={{ background: 'var(--adm-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--adm-border)' }}>
               <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--adm-primary)' }}>
-                Table {acceptRoutingModal.table_number || 'Takeaway'} • Order {acceptRoutingModal.id}
+                {((String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter')) ? '⚡ Billing Counter' : `Table ${acceptRoutingModal.table_number || 'Takeaway'}`} • Order {acceptRoutingModal.id}
               </div>
               <div style={{ fontSize: '0.78rem', color: 'var(--adm-muted)', marginTop: '2px' }}>
-                Customer: {acceptRoutingModal.customer_name || 'Dine-In Guest'} • Total: {settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}{acceptRoutingModal.total_amount}
+                Customer: {acceptRoutingModal.customer_name || 'Guest'} • Total: {settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}{acceptRoutingModal.total_amount}
               </div>
             </div>
+
+            {acceptRoutingModal && ((String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter')) && (
+              <div style={{
+                background: '#FFFBEB',
+                border: '1.5px solid #F59E0B',
+                borderRadius: '12px',
+                padding: '12px 14px',
+                display: 'flex',
+                gap: '10px',
+                alignItems: 'flex-start'
+              }}>
+                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>⚡</span>
+                <div>
+                  <strong style={{ color: '#92400E', fontSize: '0.84rem', display: 'block', fontWeight: 800 }}>
+                    Counter Order Staff Confirmation
+                  </strong>
+                  <span style={{ color: '#B45309', fontSize: '0.74rem', lineHeight: 1.4, display: 'block', marginTop: '2px' }}>
+                    Confirm customer is physically present at the billing counter to authorize sending this order to the kitchen.
+                  </span>
+                </div>
+              </div>
+            )}
 
             <p style={{ fontSize: '0.82rem', color: 'var(--adm-text)', margin: 0, fontWeight: 700 }}>
               Where would you like to route this order for preparation?
@@ -3530,10 +3557,25 @@ export default function AdminDashboard({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
+                disabled={isRoutingSubmitting}
                 onClick={async () => {
-                  const targetId = acceptRoutingModal.id;
-                  setAcceptRoutingModal(null);
-                  await handleUpdateStatus(targetId, 'kitchen', { sent_to_kds: 1 });
+                  if (isRoutingSubmitting) return;
+                  setIsRoutingSubmitting(true);
+                  try {
+                    const targetId = acceptRoutingModal.id;
+                    const isCounter = (String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter');
+                    const extra = { sent_to_kds: 1 };
+                    if (isCounter) {
+                      extra.counter_acknowledgement = {
+                        confirmed: true,
+                        acknowledged_at: new Date().toISOString()
+                      };
+                    }
+                    await handleUpdateStatus(targetId, 'kitchen', extra);
+                    setAcceptRoutingModal(null);
+                  } finally {
+                    setIsRoutingSubmitting(false);
+                  }
                 }}
                 style={{
                   padding: '14px',
@@ -3543,7 +3585,8 @@ export default function AdminDashboard({
                   border: '1px solid #38BDF8',
                   fontWeight: 900,
                   fontSize: '0.92rem',
-                  cursor: 'pointer',
+                  cursor: isRoutingSubmitting ? 'not-allowed' : 'pointer',
+                  opacity: isRoutingSubmitting ? 0.7 : 1,
                   textAlign: 'left',
                   display: 'flex',
                   alignItems: 'center',
@@ -3558,10 +3601,25 @@ export default function AdminDashboard({
               </button>
 
               <button
+                disabled={isRoutingSubmitting}
                 onClick={async () => {
-                  const targetId = acceptRoutingModal.id;
-                  setAcceptRoutingModal(null);
-                  await handleUpdateStatus(targetId, 'kitchen', { sent_to_kds: 0 });
+                  if (isRoutingSubmitting) return;
+                  setIsRoutingSubmitting(true);
+                  try {
+                    const targetId = acceptRoutingModal.id;
+                    const isCounter = (String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter');
+                    const extra = { sent_to_kds: 0 };
+                    if (isCounter) {
+                      extra.counter_acknowledgement = {
+                        confirmed: true,
+                        acknowledged_at: new Date().toISOString()
+                      };
+                    }
+                    await handleUpdateStatus(targetId, 'kitchen', extra);
+                    setAcceptRoutingModal(null);
+                  } finally {
+                    setIsRoutingSubmitting(false);
+                  }
                 }}
                 style={{
                   padding: '14px',
@@ -3571,7 +3629,8 @@ export default function AdminDashboard({
                   border: '1px solid var(--adm-border)',
                   fontWeight: 800,
                   fontSize: '0.92rem',
-                  cursor: 'pointer',
+                  cursor: isRoutingSubmitting ? 'not-allowed' : 'pointer',
+                  opacity: isRoutingSubmitting ? 0.7 : 1,
                   textAlign: 'left',
                   display: 'flex',
                   alignItems: 'center',
@@ -3634,6 +3693,12 @@ export default function AdminDashboard({
                     const orderToPrint = billOrderModal;
                     setBillOrderModal(null);
                     handlePrintCustomerBill(orderToPrint, m.id);
+                    const settleMethod = m.id === 'CARD' ? 'card' : (m.id.startsWith('UPI') ? 'upi' : 'cash');
+                    handleUpdateStatus(orderToPrint.id, 'completed', {
+                      settle: {
+                        method: settleMethod
+                      }
+                    });
                   }}
                   style={{
                     background: m.bg,

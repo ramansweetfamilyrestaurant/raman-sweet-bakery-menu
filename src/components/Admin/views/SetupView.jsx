@@ -11505,6 +11505,58 @@ export default function SetupView({
             </div>
           </div>
 
+          {/* Card: Counter QR Ordering */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  ⚡
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Billing Counter QR Ordering</strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Enables walk-up customers to scan and place orders directly at the billing counter</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={Boolean(settingsForm.counter_ordering_enabled)}
+                aria-label="Toggle Billing Counter QR Ordering"
+                onClick={() => setSettingsForm({ ...settingsForm, counter_ordering_enabled: !settingsForm.counter_ordering_enabled })}
+                style={{
+                  width: '48px',
+                  height: '28px',
+                  minWidth: '48px',
+                  minHeight: '28px',
+                  padding: '2px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  background: settingsForm.counter_ordering_enabled ? '#059669' : '#CBD5E1',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  transition: 'background-color 0.2s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <span
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    background: '#FFFFFF',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    transform: settingsForm.counter_ordering_enabled ? 'translateX(20px)' : 'translateX(0px)',
+                    transition: 'transform 0.2s ease',
+                    display: 'block'
+                  }}
+                />
+              </button>
+            </div>
+          </div>
+
           {/* Card 3: GST Configuration */}
           <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: settingsForm.gst_enabled ? '12px' : '0' }}>

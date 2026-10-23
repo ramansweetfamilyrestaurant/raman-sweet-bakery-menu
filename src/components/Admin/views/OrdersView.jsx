@@ -151,6 +151,9 @@ export default function OrdersView({
     const raw = String(order.table_number || '').trim();
     const expType = order.space_type ? String(order.space_type).toLowerCase() : null;
 
+    if (raw.toLowerCase() === 'counter' || expType === 'counter') {
+      return { space_type: 'counter', space_number: 'COUNTER' };
+    }
     if (/^cabin\s*#?\s*(\d+)/i.test(raw)) {
       const m = raw.match(/^cabin\s*#?\s*(\d+)/i);
       return { space_type: 'cabin', space_number: String(m[1]) };
@@ -384,6 +387,9 @@ export default function OrdersView({
     if (!raw) return isCinema ? 'Screen 1 • Seat 1' : isHotel ? 'Room 101' : 'Table 1';
     const str = String(raw).trim();
     
+    if (spaceType === 'counter' || str.toLowerCase() === 'counter' || str.toLowerCase() === 'counter:counter') {
+      return '⚡ Counter';
+    }
     if (isCinema) {
       return `🎬 ${str.toLowerCase().startsWith('screen') ? str : `Screen 1 • Seat ${str}`}`;
     }
@@ -1055,7 +1061,18 @@ export default function OrdersView({
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
                           {isPending && (
                             <button
-                              onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'kitchen') : null}
+                              onClick={() => {
+                                const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
+                                if (isCounter) {
+                                  if (onOpenAcceptRouting) {
+                                    onOpenAcceptRouting(order);
+                                  }
+                                  return;
+                                }
+                                if (onUpdateStatus) {
+                                  onUpdateStatus(order.id, 'kitchen');
+                                }
+                              }}
                               style={{
                                 padding: '6px 12px',
                                 borderRadius: '8px',
@@ -1233,7 +1250,18 @@ export default function OrdersView({
                     <div style={{ display: 'flex', gap: '6px' }}>
                       {isPending && (
                         <button
-                          onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'kitchen') : null}
+                          onClick={() => {
+                            const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
+                            if (isCounter) {
+                              if (onOpenAcceptRouting) {
+                                onOpenAcceptRouting(order);
+                              }
+                              return;
+                            }
+                            if (onUpdateStatus) {
+                              onUpdateStatus(order.id, 'kitchen');
+                            }
+                          }}
                           style={{
                             padding: '8px 14px',
                             borderRadius: '10px',
@@ -2028,6 +2056,14 @@ export default function OrdersView({
               {(selectedOrder.status === 'pending' || selectedOrder.status === 'ordered') && (
                 <button
                   onClick={() => {
+                    const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
+                    if (isCounter) {
+                      if (onOpenAcceptRouting) {
+                        onOpenAcceptRouting(selectedOrder);
+                      }
+                      setSelectedOrder(null);
+                      return;
+                    }
                     if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'kitchen');
                     setSelectedOrder(null);
                   }}

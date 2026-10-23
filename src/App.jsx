@@ -112,6 +112,9 @@ export default function App() {
       const row = urlParams.get('row').trim().toUpperCase();
       const seat = (urlParams.get('seatno') || urlParams.get('seat_num') || '1').trim();
       num = `S${screen}-${row}-${seat}`;
+    } else if (urlParams.get('counter')) {
+      type = 'counter';
+      num = 'COUNTER';
     } else if (urlParams.get('cabin')) {
       type = 'cabin';
       num = urlParams.get('cabin').trim();
@@ -132,6 +135,9 @@ export default function App() {
         if (prevPart === 'cinema' || prevPart === 'seat') {
           type = 'cinema_seat';
           num = lastPart;
+        } else if (prevPart === 'counter') {
+          type = 'counter';
+          num = 'COUNTER';
         } else if (/^\d+$/.test(lastPart)) {
           if (prevPart === 'cabin') { type = 'cabin'; num = lastPart; }
           else if (prevPart === 'room') { type = 'room'; num = lastPart; }
@@ -160,6 +166,7 @@ export default function App() {
           badge = `🎬 Seat ${num}`;
         }
       }
+      else if (type === 'counter') { label = 'Billing Counter'; badge = '⚡ Billing Counter'; }
       else if (type === 'cabin') { label = `Cabin ${num}`; badge = `🛋️ Cabin ${num}`; }
       else if (type === 'room') { label = `Room ${num}`; badge = `🏨 Room ${num}`; }
       else if (type === 'vip') { label = `VIP ${num}`; badge = `👑 VIP ${num}`; }
@@ -780,7 +787,10 @@ export default function App() {
       try {
         if (activeOrderId) {
           try {
-            const data = await trackOrderStatus(activeOrderId, currentSlug);
+            const trackingToken = typeof sessionStorage !== 'undefined'
+              ? (sessionStorage.getItem(`tq_track_${activeOrderId}`) || sessionStorage.getItem('tq_active_tracking_token') || '')
+              : '';
+            const data = await trackOrderStatus(activeOrderId, currentSlug, trackingToken);
             if (data) {
               setActiveOrderTrack(data);
               return;
@@ -827,9 +837,11 @@ export default function App() {
     isPlacingOrderRef.current = true;
     setPlacingOrder(true);
 
-    const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
-    const targetTable = effectiveTableNum || currentTableNum || initialSpaceInfo.num || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1';
     const targetSpaceType = currentSpaceType || initialSpaceInfo.type || 'table';
+    const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
+    const targetTable = targetSpaceType === 'counter'
+      ? 'COUNTER'
+      : (effectiveTableNum || currentTableNum || initialSpaceInfo.num || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1');
 
     if (!targetTable || !effectiveQrToken) {
       alert('Invalid or missing Table QR. Please scan the official QR code at your dining table to place an order.');
@@ -865,6 +877,12 @@ export default function App() {
       const res = await createDirectOrder(orderPayload);
 
       if (res && res.order_id) {
+        if (res.tracking_token) {
+          try {
+            sessionStorage.setItem(`tq_track_${res.order_id}`, res.tracking_token);
+            sessionStorage.setItem('tq_active_tracking_token', res.tracking_token);
+          } catch (e) {}
+        }
         const storageKey = `touchqr_active_order_id_table_${targetTable}`;
         localStorage.setItem(storageKey, String(res.order_id));
         localStorage.removeItem(`touchqr_table_scan_time_${targetTable}`);
@@ -959,6 +977,12 @@ export default function App() {
       const res = await createDirectOrder(orderPayloadWithToken);
 
       if (res && res.order_id) {
+        if (res.tracking_token) {
+          try {
+            sessionStorage.setItem(`tq_track_${res.order_id}`, res.tracking_token);
+            sessionStorage.setItem('tq_active_tracking_token', res.tracking_token);
+          } catch (e) {}
+        }
         const storageKey = `touchqr_active_order_id_table_${payload.table_number}`;
         localStorage.setItem(storageKey, String(res.order_id));
         localStorage.removeItem(`touchqr_table_scan_time_${payload.table_number}`);

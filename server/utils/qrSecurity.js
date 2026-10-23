@@ -83,6 +83,7 @@ export function generateRestaurantQrSecret() {
  */
 export function normalizeSpaceType(type) {
   const t = String(type || '').trim().toLowerCase();
+  if (t === 'counter' || t === 'counter_ordering' || t.includes('counter')) return 'counter';
   if (t.includes('cinema') || t.includes('seat')) return 'cinema_seat';
   if (t.includes('cabin')) return 'cabin';
   if (t.includes('room')) return 'room';
@@ -103,6 +104,8 @@ export function normalizeSpaceNumber(num) {
   const s = String(num).trim();
   if (!s) return '';
 
+  if (s.toLowerCase() === 'counter') return 'COUNTER';
+
   // Standardize cinema seat pattern: Screen 1 - Row A - Seat 12, S1-A-12, Screen 1, Row A, Seat 12
   const cinemaMatch = s.match(/^(?:screen\s*(\d+)[\s\-_•|,]+row\s*([a-zA-Z]+)[\s\-_•|,]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
   if (cinemaMatch) {
@@ -113,7 +116,7 @@ export function normalizeSpaceNumber(num) {
   }
 
   // Strip common label prefixes
-  const cleaned = s.replace(/^(table|cabin|room|vip|tbl|🍽️|🛋️|🏨|👑|🎬|\s)+/i, '').trim();
+  const cleaned = s.replace(/^(table|cabin|room|vip|counter|tbl|🍽️|🛋️|🏨|👑|🎬|🧾|\s)+/i, '').trim();
 
   // If numeric, strip leading zeroes (e.g. "05" -> "5")
   if (/^\d+$/.test(cleaned)) {
@@ -241,6 +244,30 @@ export async function validateSpaceCapacity(resto, resolvedSpaceType, resolvedSp
       error: 'invalid_table_number',
       message: 'Space type and number are required'
     };
+  }
+
+  // 0. Counter Ordering Validation: Server-authoritative capability check
+  if (resolvedSpaceType === 'counter') {
+    if (resolvedSpaceNum !== 'COUNTER') {
+      return {
+        valid: false,
+        error: 'invalid_table_number',
+        message: 'Invalid counter identifier. Expected "COUNTER".'
+      };
+    }
+    const isCounterEnabled = Boolean(
+      resto.counter_ordering_enabled === 1 ||
+      resto.counter_ordering_enabled === true ||
+      resto.counter_ordering_enabled === '1'
+    );
+    if (!isCounterEnabled) {
+      return {
+        valid: false,
+        error: 'counter_ordering_disabled',
+        message: 'Counter QR ordering is disabled for this restaurant.'
+      };
+    }
+    return { valid: true };
   }
 
   // 1. Cinema Seat Validation: Authoritative database check against configured screens & seats

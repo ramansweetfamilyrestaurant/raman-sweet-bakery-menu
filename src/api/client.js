@@ -596,12 +596,17 @@ export async function updateOrderStatus(id, status, token, extraBody = {}) {
   return handleResponse(res, 'Failed to update order status');
 }
 
-export async function trackOrderStatus(id, slug = '') {
+export async function trackOrderStatus(id, slug = '', trackingToken = '') {
   const cleanSlug = slug ? String(slug).trim() : '';
   const url = cleanSlug
     ? `${API_BASE}/orders/track/${id}?slug=${encodeURIComponent(cleanSlug)}`
     : `${API_BASE}/orders/track/${id}`;
-  const res = await fetch(url);
+  const headers = {};
+  const cleanTrackingToken = trackingToken || (typeof window !== 'undefined' ? (window.sessionStorage?.getItem(`tq_track_${id}`) || window.sessionStorage?.getItem('tq_active_tracking_token')) : '');
+  if (cleanTrackingToken) {
+    headers['X-Order-Tracking-Token'] = cleanTrackingToken;
+  }
+  const res = await fetch(url, { headers });
   return handleResponse(res, 'Failed to track order');
 }
 

@@ -213,6 +213,29 @@ export default function QrGeneratorView({
           icon: '👑'
         });
       }
+
+      // Billing Counter (when counter ordering capability is enabled)
+      const isCounterEnabled = Boolean(
+        settingsForm?.counter_ordering_enabled === 1 ||
+        settingsForm?.counter_ordering_enabled === true ||
+        settingsForm?.counter_ordering_enabled === '1' ||
+        restaurantInfo?.counter_ordering_enabled === 1 ||
+        restaurantInfo?.counter_ordering_enabled === true ||
+        restaurantInfo?.counter_ordering_enabled === '1'
+      );
+      if (isCounterEnabled) {
+        spaces.push({
+          key: 'counter:COUNTER',
+          spaceType: 'counter',
+          spaceNumber: 'COUNTER',
+          paramName: 'counter',
+          label: 'Billing Counter',
+          badge: 'BILLING COUNTER',
+          category: 'counter',
+          categoryLabel: 'Billing Counter',
+          icon: '⚡'
+        });
+      }
     }
 
     return spaces;
@@ -224,10 +247,12 @@ export default function QrGeneratorView({
     settingsForm?.total_cabins, 
     settingsForm?.total_rooms, 
     settingsForm?.total_vip, 
+    settingsForm?.counter_ordering_enabled,
     restaurantInfo?.total_tables, 
     restaurantInfo?.total_cabins, 
     restaurantInfo?.total_rooms, 
-    restaurantInfo?.total_vip
+    restaurantInfo?.total_vip,
+    restaurantInfo?.counter_ordering_enabled
   ]);
 
   // Set Default Active Preview Space
