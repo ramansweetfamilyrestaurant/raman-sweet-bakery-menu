@@ -13,6 +13,7 @@ import ComboFormModal from './ComboFormModal';
 import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X, BarChart2, TrendingUp, Download, Award, MapPin, RefreshCw, CreditCard } from 'lucide-react';
 
 import PaymentModal from '../PaymentModal';
+import { calculateBillDetails } from '../../utils/billingHelper';
 
 import './styles/Admin.css';
 import AdminSidebar from './components/AdminSidebar';
@@ -1110,42 +1111,12 @@ export default function AdminDashboard({
     const selectedWidth = (paperWidth || settingsForm.printer_paper_width) === '58mm' ? '58mm' : '80mm';
     const bodyWidth = selectedWidth === '58mm' ? '48mm' : '72mm';
 
-    // Consolidate ONLY orders belonging to this exact dining session
-    let sessionOrders = [];
-    if (order.session_id) {
-      sessionOrders = (Array.isArray(orders) ? orders : []).filter(o =>
-        o.session_id === order.session_id &&
-        o.status !== 'rejected' && o.status !== 'cancelled'
-      );
-    } else if (order.parent_order_id) {
-      sessionOrders = (Array.isArray(orders) ? orders : []).filter(o =>
-        (o.id === order.parent_order_id || o.parent_order_id === order.parent_order_id || o.id === order.id) &&
-        o.status !== 'rejected' && o.status !== 'cancelled'
-      );
-    } else {
-      // Standalone single order (or parent order without session_id)
-      sessionOrders = (Array.isArray(orders) ? orders : []).filter(o =>
-        (o.id === order.id || o.parent_order_id === order.id) &&
-        o.status !== 'rejected' && o.status !== 'cancelled'
-      );
-    }
+    const billData = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
+    const { sessionOrders, totalRoundsCount, subtotal, cgst, sgst, grandTotal } = billData;
 
-    if (sessionOrders.length === 0) {
-      if (order.status !== 'rejected' && order.status !== 'cancelled') {
-        sessionOrders = [order];
-      } else {
-        sessionOrders = [];
-      }
-    }
-    sessionOrders.sort((a, b) => (Number(a.round_number) || Number(a.id)) - (Number(b.round_number) || Number(b.id)));
-
-    const targetOrders = sessionOrders;
-    const totalRoundsCount = targetOrders.length;
-
-    let subtotal = 0;
     let itemsHtml = '';
 
-    targetOrders.forEach((ord, oIdx) => {
+    sessionOrders.forEach((ord, oIdx) => {
       const parsed = safeParseItems(ord.items);
       if (totalRoundsCount > 1) {
         itemsHtml += `
@@ -1163,7 +1134,6 @@ export default function AdminDashboard({
           ? `<div style="font-size:11px;color:#555;font-weight:normal;padding-left:6px;margin-top:2px;">+ ${mods.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
           : '';
         const lineTotal = Number(i.price) * Number(i.quantity);
-        subtotal += lineTotal;
         itemsHtml += `
           <tr>
             <td style="padding:4px 0;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;">
@@ -1175,16 +1145,6 @@ export default function AdminDashboard({
         `;
       });
     });
-
-    let cgst = 0;
-    let sgst = 0;
-    let grandTotal = subtotal;
-
-    if (isGst) {
-      cgst = Math.round(subtotal * 0.025 * 100) / 100;
-      sgst = Math.round(subtotal * 0.025 * 100) / 100;
-      grandTotal = Math.round((subtotal + cgst + sgst) * 100) / 100;
-    }
 
     return `
       <!DOCTYPE html>
@@ -1374,6 +1334,74 @@ export default function AdminDashboard({
       setPrintingOrderId(null);
       setPrintingType(null);
       showPrintToast('error', '⚠ Printer unavailable', order, 'bill', paymentMode);
+    }
+  };
+
+  const [isSettlingOrder, setIsSettlingOrder] = useState(false);
+
+  const handleSettleAndCompleteOrder = async (order, paymentMode = 'CASH') => {
+    if (!order || isSettlingOrder) return;
+    setIsSettlingOrder(true);
+
+    const settleMethod = paymentMode === 'CARD' ? 'card' : (paymentMode.startsWith('UPI') ? 'upi' : 'cash');
+    const orderId = order.id;
+    const key = String(orderId);
+
+    try {
+      // 1. Execute authorized backend settlement transaction through existing API contract
+      const settleResult = await updateOrderStatus(orderId, 'completed', token, {
+        settle: {
+          method: settleMethod
+        }
+      });
+
+      if (!settleResult || settleResult.error) {
+        throw new Error(settleResult?.error || settleResult?.message || 'Settlement failed');
+      }
+
+      // 2. Settlement confirmed by backend: update local orders state & close modal
+      setOrders(prev => prev.map(o => {
+        if (order.session_id && o.session_id === order.session_id) {
+          // In multi-round session, all rounds are marked settled
+          return {
+            ...o,
+            status: String(o.id) === key ? 'completed' : o.status,
+            is_settled: 1,
+            payment_method: settleMethod
+          };
+        }
+        return String(o.id) === key
+          ? { ...o, status: 'completed', is_settled: 1, payment_method: settleMethod }
+          : o;
+      }));
+
+      setBillOrderModal(null);
+
+      // 3. Audio & Notification feedback
+      try {
+        playWaiterAlert();
+      } catch (soundErr) {
+        console.warn('[SOUND] Completion sound error:', soundErr);
+      }
+      const targetOrder = orders.find(o => String(o.id) === key) || order;
+      const tblNum = targetOrder?.table_number ? `Table ${targetOrder.table_number}` : `Order ${orderId}`;
+      setToastMessage(`💳 ${tblNum} Payment Settled & Order Completed!`);
+      setTimeout(() => setToastMessage(''), 4000);
+
+      // 4. Authoritative reload from server
+      await loadOrders();
+
+      // 5. Generate / Print Customer Bill (Safe, post-settlement distinct outcome)
+      try {
+        await handlePrintCustomerBill(order, paymentMode);
+      } catch (printErr) {
+        console.warn('Post-settlement print notice:', printErr);
+      }
+    } catch (err) {
+      console.error('Settlement error:', err);
+      alert(err.message || 'Payment settlement failed. Order remains unsettled.');
+    } finally {
+      setIsSettlingOrder(false);
     }
   };
 
@@ -3672,9 +3700,22 @@ export default function AdminDashboard({
             <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0A2315', marginBottom: '4px' }}>
               🧾 Print Final Customer Bill
             </h3>
-            <span style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
-              Order {billOrderModal.id} • Total: {(restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'))}{billOrderModal.total_amount}
-            </span>
+            {(() => {
+              const billData = calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
+              const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'));
+              if (billData.isMultiRound) {
+                return (
+                  <span id="payment-modal-order-summary" style={{ fontSize: '0.78rem', color: '#0F766E', fontWeight: 800, display: 'block', marginBottom: '16px' }}>
+                    Session Total: {currency}{billData.grandTotal} • {billData.totalRoundsCount} Rounds
+                  </span>
+                );
+              }
+              return (
+                <span id="payment-modal-order-summary" style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
+                  Order {billOrderModal.id} • Total: {currency}{billOrderModal.total_amount}
+                </span>
+              );
+            })()}
 
             <p style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', marginBottom: '12px' }}>
               Select Payment Method for Receipt:
@@ -3688,37 +3729,38 @@ export default function AdminDashboard({
               ].map(m => (
                 <button
                   key={m.id}
-                  onClick={() => {
-                    const orderToPrint = billOrderModal;
-                    setBillOrderModal(null);
-                    handlePrintCustomerBill(orderToPrint, m.id);
-                    const settleMethod = m.id === 'CARD' ? 'card' : (m.id.startsWith('UPI') ? 'upi' : 'cash');
-                    handleUpdateStatus(orderToPrint.id, 'completed', {
-                      settle: {
-                        method: settleMethod
-                      }
-                    });
-                  }}
+                  id={`settle-payment-btn-${m.id.toLowerCase().replace(/[^a-z]/g, '')}`}
+                  disabled={isSettlingOrder}
+                  onClick={() => handleSettleAndCompleteOrder(billOrderModal, m.id)}
                   style={{
-                    background: m.bg,
+                    background: isSettlingOrder ? '#9CA3AF' : m.bg,
                     color: m.color,
                     border: 'none',
                     padding: '12px',
                     borderRadius: 'var(--radius-pill)',
                     fontWeight: 900,
                     fontSize: '0.88rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
+                    cursor: isSettlingOrder ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                    opacity: isSettlingOrder ? 0.7 : 1
                   }}
                 >
-                  {m.label}
+                  {isSettlingOrder ? '⏳ Processing Settlement...' : m.label}
                 </button>
               ))}
             </div>
 
             <button
-              onClick={() => setBillOrderModal(null)}
-              style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+              disabled={isSettlingOrder}
+              onClick={() => !isSettlingOrder && setBillOrderModal(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: isSettlingOrder ? '#D1D5DB' : '#9CA3AF',
+                fontSize: '0.8rem',
+                cursor: isSettlingOrder ? 'not-allowed' : 'pointer',
+                textDecoration: 'underline'
+              }}
             >
               Cancel
             </button>
