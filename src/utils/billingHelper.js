@@ -180,8 +180,60 @@ export function calculateBillDetails(order, allOrders = [], restaurantInfo = {},
     cgst,
     sgst,
     grandTotal,
-    currency
+    currency,
+    spaceLabel: formatOrderLocation(order, restaurantInfo || settingsForm)
   };
+}
+
+/**
+ * Resolves a human-readable, multi-business destination label for an order.
+ * Accurately formats Counter orders, Cinema seats, Hotel rooms, Cabins, VIP, and Tables.
+ *
+ * @param {Object} order - Order record
+ * @param {Object} [restaurantInfo={}] - Business / outlet profile
+ * @returns {string} E.g., 'Billing Counter', 'Room 302', 'Seat B12', 'Table 4'
+ */
+export function formatOrderLocation(order = {}, restaurantInfo = {}) {
+  if (!order) return 'Takeaway / Counter';
+  const raw = String(order.table_number || order.delivery_location || '').trim();
+  const spaceType = String(order.space_type || '').toLowerCase();
+  const bizType = String(restaurantInfo?.business_type || '').toLowerCase();
+  const serviceModel = String(restaurantInfo?.service_model || '').toLowerCase();
+
+  if (spaceType === 'counter' || raw.toLowerCase() === 'counter' || raw.toLowerCase() === 'counter:counter' || /^counter/i.test(raw)) {
+    const cleanNum = raw.replace(/^counter\s*#?/i, '').trim();
+    return cleanNum && cleanNum.toUpperCase() !== 'COUNTER' ? `Counter ${cleanNum}` : 'Billing Counter';
+  }
+
+  const cMatch = raw.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
+                 raw.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
+  if (cMatch) {
+    return `Screen ${cMatch[1]} Row ${cMatch[2].toUpperCase()} Seat ${cMatch[3]}`;
+  }
+
+  if (bizType === 'cinema_theatre' || serviceModel === 'cinema' || spaceType === 'cinema_seat' || spaceType === 'cinema' || /^seat/i.test(raw)) {
+    return raw.toLowerCase().startsWith('screen') ? raw : `Seat ${raw.replace(/^seat\s*#?/i, '')}`;
+  }
+
+  if (bizType === 'hotel_resort' || serviceModel === 'hotel' || spaceType === 'room' || /^room/i.test(raw)) {
+    return `Room ${raw.replace(/^room\s*#?/i, '')}`;
+  }
+
+  if (spaceType === 'cabin' || /^cabin/i.test(raw)) {
+    return `Cabin ${raw.replace(/^cabin\s*#?/i, '')}`;
+  }
+
+  if (spaceType === 'vip' || /^vip/i.test(raw)) {
+    return `VIP ${raw.replace(/^vip\s*#?/i, '')}`;
+  }
+
+  if (/^(takeaway|parcel|pickup)/i.test(raw)) {
+    return 'Takeaway';
+  }
+
+  if (!raw) return 'Table 1';
+  if (/^table/i.test(raw)) return raw;
+  return `Table ${raw}`;
 }
 
 /**

@@ -14,6 +14,7 @@ import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, Q
 
 import PaymentModal from '../PaymentModal';
 import { calculateBillDetails } from '../../utils/billingHelper';
+import { formatOrderLocation } from '../../utils/billingHelper';
 
 import './styles/Admin.css';
 import AdminSidebar from './components/AdminSidebar';
@@ -766,7 +767,7 @@ export default function AdminDashboard({
           }
         }
         const targetOrder = orders.find(o => String(o.id) === key);
-        const tblNum = targetOrder?.table_number ? `Table ${targetOrder.table_number}` : `Order ${orderId}`;
+        const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || `Order ${orderId}`;
         setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
         setTimeout(() => setToastMessage(''), 5000);
       } else if (newStatus === 'served' || newStatus === 'completed') {
@@ -778,7 +779,7 @@ export default function AdminDashboard({
           }
         }
         const targetOrder = orders.find(o => String(o.id) === key);
-        const tblNum = targetOrder?.table_number ? `Table ${targetOrder.table_number}` : `Order ${orderId}`;
+        const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || `Order ${orderId}`;
         const msg = newStatus === 'served' ? `📦 ${tblNum} Marked SERVED at Counter` : `💳 ${tblNum} Served & Bill Completed!`;
         setToastMessage(msg);
         setTimeout(() => setToastMessage(''), 4000);
@@ -996,6 +997,12 @@ export default function AdminDashboard({
     const parsedItems = safeParseItems(order.items);
     const selectedWidth = (paperWidth || settingsForm.printer_paper_width) === '58mm' ? '58mm' : '80mm';
     const bodyWidth = selectedWidth === '58mm' ? '48mm' : '72mm';
+    const spaceLoc = formatOrderLocation(order, restaurantInfo || settingsForm);
+    const bizType = String(restaurantInfo?.business_type || '').toLowerCase();
+    const isHotel = bizType === 'hotel_resort';
+    const isCinema = bizType === 'cinema_theatre';
+    const isCounterBiz = ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(bizType);
+    const ticketTitle = isHotel ? 'IN-ROOM DINING TICKET' : isCinema ? 'CONCESSION DISPATCH TICKET' : isCounterBiz ? 'ORDER DISPATCH TICKET' : 'KITCHEN ORDER TICKET';
 
     parsedItems.forEach(i => {
       const q = Number(i.quantity) || 1;
@@ -1085,8 +1092,9 @@ export default function AdminDashboard({
         <body>
           ${isReprint ? `<div class="reprint-banner">*** [ REPRINT ] ***</div>` : ''}
           <div class="header">
-            <h2>KITCHEN ORDER TICKET</h2>
-            <div class="table-badge">KOT ${order.id}</div>
+            <h2>${ticketTitle}</h2>
+            <div class="table-badge">${spaceLoc.toUpperCase()}</div>
+            <div style="font-size:12px;font-weight:900;margin-top:2px;">KOT #${order.id}</div>
             ${isRoundAddon
         ? `<div class="round-badge">🔄 ROUND ${order.round_number} (ADD-ON ORDER)</div>`
         : `<div style="font-weight:900;font-size:12px;margin-top:2px;">ROUND 1 (NEW ORDER)</div>`
@@ -1094,14 +1102,15 @@ export default function AdminDashboard({
           </div>
 
           <div class="meta">
+            <div><strong>Location:</strong> ${spaceLoc}</div>
             <div><strong>Date & Time:</strong> ${formatDateTimeString(order.created_at)}</div>
-            <div><strong>Customer:</strong> ${order.customer_name || 'Dine-In Guest'}</div>
+            <div><strong>Customer:</strong> ${order.customer_name || (isHotel ? 'In-Room Guest' : isCounterBiz ? 'Counter Customer' : isCinema ? 'Cinema Guest' : 'Dine-In Guest')}</div>
           </div>
 
           <table>
             <thead>
               <tr style="border-bottom:2px solid #000;text-align:left;font-size:13px;">
-                <th style="padding-bottom:4px;">ITEMS TO COOK</th>
+                <th style="padding-bottom:4px;">${isCounterBiz ? 'ITEMS TO PACK' : 'ITEMS TO PREPARE'}</th>
               </tr>
             </thead>
             <tbody>
@@ -1110,12 +1119,12 @@ export default function AdminDashboard({
           </table>
 
           <div class="total-qty">
-            <span>TOTAL ITEMS IN THIS KOT:</span>
+            <span>TOTAL ITEMS IN THIS TICKET:</span>
             <span>${totalQty}</span>
           </div>
 
           <div class="footer">
-            *** COOK ONLY THE ITEMS LISTED IN THIS KOT ***
+            *** ${isCounterBiz ? 'PREPARE & PACK ONLY ITEMS LISTED IN THIS TICKET' : 'COOK ONLY THE ITEMS LISTED IN THIS KOT'} ***
           </div>
         </body>
       </html>
@@ -1130,8 +1139,13 @@ export default function AdminDashboard({
     const bodyWidth = selectedWidth === '58mm' ? '48mm' : '72mm';
 
     const billData = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
-    const { sessionOrders, totalRoundsCount, subtotal, cgst, sgst, grandTotal, serviceChargeAmount } = billData;
+    const { sessionOrders, totalRoundsCount, subtotal, cgst, sgst, grandTotal, serviceChargeAmount, spaceLabel } = billData;
+    const resolvedSpace = spaceLabel || formatOrderLocation(order, restaurantInfo || settingsForm);
     const isGst = Boolean((restaurantInfo?.gst_enabled ?? settingsForm?.gst_enabled) || (cgst > 0) || (sgst > 0));
+    const bizType = String(restaurantInfo?.business_type || '').toLowerCase();
+    const isHotel = bizType === 'hotel_resort';
+    const isCinema = bizType === 'cinema_theatre';
+    const isCounterBiz = ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(bizType);
 
     let itemsHtml = '';
 
@@ -1208,11 +1222,12 @@ export default function AdminDashboard({
 
           <div class="meta">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-              <strong>INVOICE ${order.id}</strong>
+              <strong>INVOICE #${order.id}</strong>
               <span class="badge">${paymentMode}</span>
             </div>
+            <div><strong>Location / Space:</strong> ${resolvedSpace}</div>
             <div><strong>Date:</strong> ${formatDateTimeString(order.created_at)}</div>
-            <div><strong>Guest:</strong> ${order.customer_name || 'Dine-In Customer'}</div>
+            <div><strong>Customer:</strong> ${order.customer_name ? `${order.customer_name} (${resolvedSpace})` : resolvedSpace}</div>
             ${totalRoundsCount > 1 ? `<div style="font-weight:bold;color:#0F766E;">Consolidated Bill: ${totalRoundsCount} Rounds</div>` : ''}
           </div>
 
@@ -1256,8 +1271,8 @@ export default function AdminDashboard({
           </div>
 
           <div class="footer">
-            <p style="margin:0;font-weight:bold;">Thank you for dining with us!</p>
-            <p style="margin:2px 0 0 0;">Please Visit Again 🙏</p>
+            <p style="margin:0;font-weight:bold;">${isHotel ? 'Thank you for choosing In-Room Dining!' : isCinema ? 'Enjoy the show and your snacks!' : isCounterBiz ? 'Thank you for your purchase!' : 'Thank you for dining with us!'}</p>
+            <p style="margin:2px 0 0 0;">${isHotel ? 'Have a wonderful stay 🙏' : 'Please Visit Again 🙏'}</p>
           </div>
         </body>
       </html>
@@ -1414,7 +1429,7 @@ export default function AdminDashboard({
         console.warn('[SOUND] Completion sound error:', soundErr);
       }
       const targetOrder = orders.find(o => String(o.id) === key) || order;
-      const tblNum = targetOrder?.table_number ? `Table ${targetOrder.table_number}` : `Order ${orderId}`;
+      const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || `Order ${orderId}`;
       setToastMessage(`💳 ${tblNum} Payment Settled & Order Completed!`);
       setTimeout(() => setToastMessage(''), 4000);
 
