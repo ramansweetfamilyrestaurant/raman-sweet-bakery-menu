@@ -1,8 +1,10 @@
 import React from 'react';
 import { ShieldCheck, Clock, Phone, Info } from 'lucide-react';
 import { getRestaurantLogoUrl } from '../utils/imageHelper';
+import { getBusinessTerminology } from '../utils/businessTaxonomy';
 
 export default function PhysicalMenuHeader({ info, categories, selectedCategory, onSelectCategory, onOpenInfoModal, onOpenAdmin }) {
+  const terminology = getBusinessTerminology(info);
   return (
     <header style={{
       background: 'var(--primary-emerald)',
@@ -39,11 +41,12 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
             fontWeight: 700
           }}>
             {(() => {
-              const isCin = (info?.business_type === 'cinema_theatre' || info?.service_model === 'cinema' || info?.service_model === 'seat_service') || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat';
-              const isHot = (info?.business_type === 'hotel_resort' || info?.service_model === 'hotel' || info?.service_model === 'in_room_dining') || String(info?.table_prefix || '').toLowerCase() === 'room';
-              if (isCin) return '🟢 CINEMA SEAT MENU CARD';
-              if (isHot) return '🟢 ROOM SERVICE MENU CARD';
-              return '🟢 TABLE QR MENU CARD';
+              if (terminology.businessType === 'cinema_theatre') return '🟢 CINEMA SEAT MENU CARD';
+              if (terminology.businessType === 'hotel_resort') return '🟢 ROOM SERVICE MENU CARD';
+              if (terminology.businessType === 'bakery_confectionery') return '🟢 BAKERY & PASTRY MENU CARD';
+              if (terminology.businessType === 'sweet_shop') return '🟢 SWEETS & MITHAI MENU CARD';
+              if (info?.table_prefix === 'counter') return '🟢 COUNTER QR MENU CARD';
+              return '🟢 DIGITAL QR MENU CARD';
             })()}
           </span>
 
@@ -92,7 +95,7 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
           lineHeight: 1.2,
           marginBottom: '4px'
         }}>
-          {info?.name || 'Digital Restaurant Menu'}
+          {info?.name || 'TouchQR Digital Menu'}
         </h1>
         {info?.tagline && (
           <p style={{
@@ -117,7 +120,7 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
           marginBottom: '12px'
         }}>
           <span>✦ ───</span>
-          <span>{info?.badge ? info.badge.toUpperCase() : 'QUALITY FOOD & SERVICE'}</span>
+          <span>{info?.badge ? info.badge.toUpperCase() : 'PREMIUM QUALITY & SERVICE'}</span>
           <span>─── ✦</span>
         </div>
 
