@@ -42,7 +42,7 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
       original_price: 1999,
       discountTag: '50% OFF',
       badge: '👑 PRO CHOICE',
-      description: 'Best for growing dine-in restaurants looking to boost orders and 5-star reviews.',
+      description: 'Best for growing restaurants, cafes, hotels & sweet shops looking to boost orders and 5-star reviews.',
       features: [
         'Everything in Basic Plan',
         '⭐ Smart AI Google Reviews Booster',
@@ -61,15 +61,15 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
       original_price: 3999,
       discountTag: '50% OFF',
       badge: '🚀 ENTERPRISE',
-      description: 'Complete restaurant management with live KOT kitchen siren, floor map & thermal printing.',
+      description: 'Complete multi-business operations with live dispatch sirens, multi-space ordering (tables/rooms/seats), and thermal printing.',
       features: [
         'Everything in Pro Plan',
-        '⚡ Direct Table QR Ordering System',
-        '📋 Live Kitchen Siren & KOT Tickets',
-        '📺 Live KDS Kitchen Display Screen',
+        '⚡ Multi-Space QR Ordering (Tables/Rooms/Seats/Counters)',
+        '📋 Live Dispatch Siren & Order Tickets',
+        '📺 Live KDS Operations Display Screen',
         '🖨️ Dual Thermal Printers (Kitchen + Counter)',
-        '🗺️ Hall Floor Table Map & Live Occupancy',
-        'Unlimited Combos & Thali Deals',
+        '🗺️ Table, Room & Seat Floor Layout',
+        'Unlimited Combos & Special Deals',
         'Dedicated VIP 24/7 Account Manager'
       ],
       popular: false
@@ -85,11 +85,11 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
     const featuresList = [];
 
     // Core catalog & QR features
-    featuresList.push('Digital QR Menu & Luxury Themes');
+    featuresList.push('Digital QR Menus, Catalogs & Luxury Themes');
     featuresList.push(
       p.max_dishes && Number(p.max_dishes) < 1000 
-        ? `Up to ${p.max_dishes} Dishes Catalog` 
-        : 'Unlimited Dishes & Categories'
+        ? `Up to ${p.max_dishes} Items Catalog` 
+        : 'Unlimited Items & Categories'
     );
     featuresList.push('Admin Dashboard & QR Standee Generator');
 
@@ -100,13 +100,13 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
 
     // Direct Table Ordering & Kitchen Siren
     if (p.direct_ordering_enabled) {
-      featuresList.push('⚡ Direct Table QR KOT Ordering');
-      featuresList.push('📋 Live Kitchen Siren & KOT Tickets');
+      featuresList.push('⚡ Multi-Space QR Ordering (Tables, Rooms, Seats, Counters)');
+      featuresList.push('📋 Live Dispatch Siren & Order Tickets');
     }
 
     // KDS
     if (p.kds_enabled) {
-      featuresList.push('📺 Live KDS Kitchen Display Screen');
+      featuresList.push('📺 Live KDS Operations Display Screen');
     }
 
     // Printers
@@ -123,7 +123,7 @@ export default function Pricing({ publicPlans = [], trialDays = 16, onSelectPlan
 
     // Floor Map
     if (p.direct_ordering_enabled) {
-      featuresList.push('🗺️ Dining Hall Table Floor Map');
+      featuresList.push('🗺️ Table, Room & Seat Floor Layout');
     }
 
     // GST

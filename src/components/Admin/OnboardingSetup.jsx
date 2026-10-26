@@ -365,10 +365,10 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
             <Store size={28} />
           </div>
           <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 6px' }}>
-            Complete Your Restaurant Setup
+            Complete Your Business Setup
           </h1>
           <p style={{ fontSize: '0.84rem', color: '#94A3B8', margin: 0 }}>
-            Add your basic restaurant information before continuing to your dashboard.
+            Add your basic business information before continuing to your dashboard.
           </p>
 
           {/* Stepper Indicator */}

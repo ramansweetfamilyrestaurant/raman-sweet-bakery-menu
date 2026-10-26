@@ -7,18 +7,18 @@ export default function Features() {
   const featureList = [
     {
       icon: <Smartphone size={24} />,
-      title: 'Digital QR Menu',
-      desc: 'Instant 0.3s smartphone menu loading with rich images, half/full pricing, categories, and luxury themes. No app download needed.'
+      title: 'Smart QR Catalogs & Menus',
+      desc: 'Instant 0.3s smartphone loading with rich images, half/full or weight-based pricing (250g/500g/1kg), categories, and luxury themes. No app download needed.'
     },
     {
       icon: <MessageSquare size={24} />,
-      title: 'WhatsApp Ordering',
-      desc: 'Send automated order confirmations and receipts directly to your customer’s WhatsApp for seamless customer retention.'
+      title: 'Multi-Space Ordering',
+      desc: 'Native QR ordering configured for Dining Tables, Hotel Rooms, Cinema Audi Seats, Private Cabins, or Takeaway Counters.'
     },
     {
       icon: <Flame size={24} />,
-      title: 'Live Kitchen KOT & Siren',
-      desc: 'Table QR orders trigger an instant loud audio siren alarm and KOT ticket in your kitchen dashboard with zero delay.'
+      title: 'Live Dispatch & Siren Alarms',
+      desc: 'Incoming orders trigger an instant loud audio siren alarm and visual ticket in your kitchen or service dispatch screen with zero delay.'
     },
     {
       icon: <Star size={24} />,
@@ -27,13 +27,13 @@ export default function Features() {
     },
     {
       icon: <Printer size={24} />,
-      title: 'Thermal Printing',
-      desc: 'Connect 2-inch and 3-inch Bluetooth or USB thermal printers from your mobile phone or PC for instant KOTs and GST invoices.'
+      title: 'Thermal Printing & KOT',
+      desc: 'Connect 2-inch and 3-inch Bluetooth or USB thermal printers from your mobile or PC for instant order tickets and GST tax invoices.'
     },
     {
       icon: <BarChart3 size={24} />,
-      title: 'Restaurant Analytics',
-      desc: 'Track daily sales revenue, top-selling dishes, peak dining hours, and customer order history from your phone.'
+      title: 'Business Sales Analytics',
+      desc: 'Track daily sales revenue, top-selling items, peak ordering hours, and customer order history from any device.'
     }
   ];
 
@@ -44,9 +44,9 @@ export default function Features() {
           <div className="km-badge">
             <span>⚡ POWERFUL FEATURES</span>
           </div>
-          <h2 className="km-title-lg">Everything Your Restaurant Needs to Go Digital</h2>
+          <h2 className="km-title-lg">Everything Your Business Needs to Go 100% Digital</h2>
           <p className="km-subtitle">
-            One simple platform for your menu, table orders, kitchen notifications, and revenue growth.
+            From dining tables and hotel room service to cinema seats and takeaway counters — one unified operations platform.
           </p>
         </div>
 

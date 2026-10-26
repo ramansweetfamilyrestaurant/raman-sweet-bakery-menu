@@ -5,18 +5,18 @@ export default function HowItWorks() {
   const steps = [
     {
       num: '01',
-      title: 'Create Your Restaurant',
-      desc: 'Sign up in 60 seconds. Set your restaurant name, logo, address, and total table count.'
+      title: 'Create Your Business Profile',
+      desc: 'Sign up in 60 seconds. Choose your venue type: Restaurant, Hotel, Cinema, Bakery, or Cafe, and set up your spaces.'
     },
     {
       num: '02',
-      title: 'Customize Your Digital Menu',
-      desc: 'Add categories, dishes, prices, half/full options, and upload mouthwatering photos.'
+      title: 'Customize Your Digital Catalog',
+      desc: 'Add categories, items, prices (Full/Half, By Weight, or Combos), and upload mouthwatering photos.'
     },
     {
       num: '03',
-      title: 'Start Receiving Orders',
-      desc: 'Print your table QR codes. Customers scan, order, and KOT rings live in your kitchen!'
+      title: 'Place QRs & Start Receiving Orders',
+      desc: 'Print QR standees for your tables, rooms, seats, or counters. Customers scan, order, and live alerts ring instantly!'
     }
   ];
 
@@ -29,7 +29,7 @@ export default function HowItWorks() {
           </div>
           <h2 className="km-title-lg">How TouchQR Works</h2>
           <p className="km-subtitle">
-            Get your restaurant digital and receiving table orders in under 3 minutes.
+            Get your business 100% digital and receiving QR orders in under 3 minutes.
           </p>
         </div>
 
@@ -62,19 +62,19 @@ export default function HowItWorks() {
           color: 'var(--km-text)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <QrCode size={18} color="#D4AF37" /> QR Menu Scan
+            <QrCode size={18} color="#D4AF37" /> 1. QR Code Scan
           </div>
           <ArrowRight size={16} color="#64748B" />
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <UserCheck size={18} color="#10B981" /> Customer Order
+            <UserCheck size={18} color="#10B981" /> 2. Order (Table / Room / Seat / Counter)
           </div>
           <ArrowRight size={16} color="#64748B" />
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <ChefHat size={18} color="#F59E0B" /> Kitchen KOT Siren
+            <ChefHat size={18} color="#F59E0B" /> 3. Live Alert & Dispatch
           </div>
           <ArrowRight size={16} color="#64748B" />
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Store size={18} color="#6366F1" /> Served & Printed
+            <Store size={18} color="#6366F1" /> 4. Served & Invoiced
           </div>
         </div>
       </div>

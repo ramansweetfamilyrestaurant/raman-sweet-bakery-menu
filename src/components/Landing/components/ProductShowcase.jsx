@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Smartphone, Bell, TrendingUp, CheckCircle, Star } from 'lucide-react';
+import { Smartphone, Bell, TrendingUp, CheckCircle, Star, Building2 } from 'lucide-react';
 
 export default function ProductShowcase() {
   const [activeTab, setActiveTab] = useState('qr');
@@ -13,7 +13,15 @@ export default function ProductShowcase() {
           onClick={() => setActiveTab('qr')}
         >
           <Smartphone size={16} />
-          <span>QR Menu</span>
+          <span>Dine-In & Counter</span>
+        </button>
+
+        <button
+          className={`km-showcase-tab ${activeTab === 'hotel_cinema' ? 'active' : ''}`}
+          onClick={() => setActiveTab('hotel_cinema')}
+        >
+          <Building2 size={16} />
+          <span>Hotels & Cinemas</span>
         </button>
 
         <button
@@ -21,7 +29,7 @@ export default function ProductShowcase() {
           onClick={() => setActiveTab('kot')}
         >
           <Bell size={16} />
-          <span>Live KOT</span>
+          <span>Live Dispatch</span>
         </button>
 
         <button
@@ -29,22 +37,22 @@ export default function ProductShowcase() {
           onClick={() => setActiveTab('growth')}
         >
           <TrendingUp size={16} />
-          <span>Reviews & Growth</span>
+          <span>Growth & Reviews</span>
         </button>
       </div>
 
-      {/* Showcase Section A: Table Ordering */}
+      {/* Showcase Section A: Table & Counter Ordering */}
       <section className={`km-showcase-section ${activeTab === 'qr' ? 'tab-active' : 'tab-hidden-mobile'}`}>
         <div className="km-container">
           <div className="km-showcase-grid">
             <div>
               <div className="km-badge">
                 <Smartphone size={14} color="#D4AF37" />
-                <span>CUSTOMER QR DINE-IN</span>
+                <span>CUSTOMER QR ORDERING</span>
               </div>
-              <h2 className="km-title-lg">Turn Any Table Into a Digital Ordering Point</h2>
+              <h2 className="km-title-lg">Turn Any Table or Counter Into a Digital Point of Sale</h2>
               <p className="km-subtitle">
-                Eliminate physical menu degradation and ordering delays. Customers scan the table QR code, browse rich dish photos, select half/full portions, and place orders directly from their phone browser.
+                Eliminate physical menu degradation and ordering delays. Customers scan the QR code on tables or counters, browse rich item photos, select half/full or weight portions, and order directly from their phone browser.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -52,15 +60,15 @@ export default function ProductShowcase() {
                   <CheckCircle size={18} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
                     <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>0.3-Second Load Speed</strong>
-                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>No app download required. Instant high-speed menu rendering.</span>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>No app download required. Instant high-speed catalog rendering.</span>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                   <CheckCircle size={18} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
-                    <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Multi-Portion Half & Full Pricing</strong>
-                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Tailored for Indian restaurant menus (Momos, Paneer, Chinese, Dal, Rice).</span>
+                    <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Flexible Pricing (Portion & Weight)</strong>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Full/Half portions for restaurants, or 250g/500g/1kg for sweet shops and bakeries.</span>
                   </div>
                 </div>
 
@@ -106,6 +114,81 @@ export default function ProductShowcase() {
                   <button className="km-btn-gold" style={{ padding: '10px 18px', fontSize: '0.85rem' }}>
                     Place Order Now →
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Showcase Section A2: Hotel Room Service & Cinema Seat Ordering */}
+      <section className={`km-showcase-section ${activeTab === 'hotel_cinema' ? 'tab-active' : 'tab-hidden-mobile'}`} style={{ background: '#F8FAFC' }}>
+        <div className="km-container">
+          <div className="km-showcase-grid reverse">
+            <div>
+              <div className="km-badge">
+                <Building2 size={14} color="#6366F1" />
+                <span>HOTELS, RESORTS & CINEMAS</span>
+              </div>
+              <h2 className="km-title-lg">Room Service & Seat Concessions Made Frictionless</h2>
+              <p className="km-subtitle">
+                Hotel guests scan room QR standees for 24x7 In-Room Dining without dialing reception. Moviegoers scan seat QRs for hot snacks delivered directly to their cinema audi seat.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <CheckCircle size={18} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Hotel In-Room Dining QR</strong>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Each room receives a custom branded QR linked directly to their room number.</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <CheckCircle size={18} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Cinema Screen & Audi Seat Delivery</strong>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Orders automatically include Audi number, Row, and Seat number for quick usher delivery.</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <CheckCircle size={18} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Zero Phone Calls & Automated Billing</strong>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Reduce front-desk congestion with digital payment or bill-to-room settlement.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Visual Box A2 */}
+            <div className="km-showcase-box">
+              <div style={{ background: '#0F172A', borderRadius: '16px', padding: '20px', color: '#FFF' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: 900, color: '#60A5FA' }}>Room 408 • Grand Suite</div>
+                    <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Hotel In-Room Dining Service</div>
+                  </div>
+                  <span style={{ background: 'rgba(96,165,250,0.2)', color: '#60A5FA', fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '50px' }}>
+                    DISPATCHED
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '8px', fontSize: '0.84rem' }}>
+                    <span>Grilled Chicken Club Sandwich x2</span>
+                    <strong style={{ color: '#60A5FA' }}>₹520</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '8px', fontSize: '0.84rem' }}>
+                    <span>Fresh Watermelon Juice x2</span>
+                    <strong style={{ color: '#60A5FA' }}>₹240</strong>
+                  </div>
+                </div>
+
+                <div style={{ background: '#1E293B', borderRadius: '8px', padding: '10px', fontSize: '0.75rem', color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>🎬 Also works for: <strong>Audi 3 • Seat D-12</strong></span>
+                  <span style={{ color: '#F59E0B', fontWeight: 800 }}>Popcorn & Coke</span>
                 </div>
               </div>
             </div>

@@ -32,13 +32,13 @@ export default function Footer({ logoUrl, onOpenLogin, onStartTrial }) {
                   style={{ width: '30px', height: '30px', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }}
                 />
               ) : (
-                <div className="km-logo-icon">🍱</div>
+                <div className="km-logo-icon">⚡</div>
               )}
               <span className="km-logo-text" style={{ color: '#FFF' }}>TouchQR</span>
               <span className="km-logo-tag">SaaS</span>
             </div>
             <p>
-              India’s Premier Smart Digital Menu, Live Kitchen KOT, and Restaurant Management SaaS Platform.
+              India’s Premier Smart QR Ordering & Operations Platform for Restaurants, Hotels, Cinemas, Bakeries & Retail.
             </p>
           </div>
 
@@ -46,17 +46,17 @@ export default function Footer({ logoUrl, onOpenLogin, onStartTrial }) {
           <div>
             <h4 className="km-footer-title">Product</h4>
             <ul className="km-footer-links">
-              <li><a onClick={() => scrollToSection('features')}>Digital QR Menu</a></li>
-              <li><a onClick={() => scrollToSection('features')}>Live Kitchen KOT</a></li>
+              <li><a onClick={() => scrollToSection('features')}>Smart QR Catalogs</a></li>
+              <li><a onClick={() => scrollToSection('features')}>Multi-Space Ordering</a></li>
+              <li><a onClick={() => scrollToSection('features')}>Live Dispatch & KOT</a></li>
               <li><a onClick={() => scrollToSection('features')}>Smart Google Reviews</a></li>
-              <li><a onClick={() => scrollToSection('features')}>Thermal Printing</a></li>
-              <li><a onClick={() => scrollToSection('features')}>WhatsApp Integration</a></li>
+              <li><a onClick={() => scrollToSection('features')}>Thermal Invoicing</a></li>
             </ul>
           </div>
 
-          {/* Restaurant Owners */}
+          {/* Business Owners */}
           <div>
-            <h4 className="km-footer-title">Restaurant Owners</h4>
+            <h4 className="km-footer-title">Business Owners</h4>
             <ul className="km-footer-links">
               <li><a onClick={onOpenLogin}>Owner Login</a></li>
               <li><a onClick={onStartTrial}>Start Free Trial</a></li>

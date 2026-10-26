@@ -7,23 +7,23 @@ export default function FAQ({ trialDays = 16 }) {
   const faqItems = [
     {
       q: `What is included in the ${trialDays}-Day Free Trial?`,
-      a: `You get full access to all SaaS features for ${trialDays} days, including Digital QR Menu Creation, Direct Table Ordering, ⭐ Smart AI Google Reviews Booster, Live Kitchen Siren Alarm, and Thermal Printing. No credit card required!`
+      a: `You get full access to all SaaS features for ${trialDays} days, including Digital QR Menu & Catalog Creation, Multi-Space Ordering (Tables, Rooms, Seats, Counters), ⭐ Smart AI Google Reviews Booster, Live Dispatch Siren Alarm, and Thermal Printing. No credit card required!`
     },
     {
-      q: 'Do customers need to download an app to scan the QR Menu?',
-      a: 'No app download is required! Customers simply scan your Table QR code using their smartphone camera, and your instant digital menu loads in less than 0.3 seconds.'
+      q: 'Do customers need to download an app to scan the QR Code?',
+      a: 'No app download is required! Customers simply scan the QR code on a dining table, hotel room standee, cinema seat, or counter using their smartphone camera, and your digital catalog loads in less than 0.3 seconds.'
     },
     {
-      q: 'How does Direct Table QR Ordering & Kitchen KOT work?',
-      a: 'When a customer scans a table QR code and places an order, the itemized order details immediately sound a loud siren alarm in your kitchen dashboard and auto-print a KOT receipt.'
+      q: 'Does TouchQR work for Hotels, Cinemas, and Bakeries too?',
+      a: 'Yes! TouchQR is natively engineered for multi-business operations. You can configure Dine-in Tables, Hotel Guest Rooms (24x7 in-room dining), Cinema Audi Seats (concession delivery), or Express Counters with portion or weight-based pricing (250g, 500g, 1kg).'
+    },
+    {
+      q: 'How does Live Ordering & Kitchen/Dispatch KOT work?',
+      a: 'When an order is placed, it immediately triggers an audio siren alert on your kitchen, room service, or concession dispatch screen and auto-prints a thermal receipt with complete itemization.'
     },
     {
       q: 'Can I connect Bluetooth or USB Thermal Receipt Printers?',
-      a: 'Yes! TouchQR supports 2-inch and 3-inch Bluetooth and USB thermal printers directly from mobile phones or desktop PCs for 0.5-second instant KOT & GST billing.'
-    },
-    {
-      q: 'How does the Smart AI Google Reviews Booster work?',
-      a: 'Happy customers rating 4 or 5 stars are automatically prompted to post their review directly on your Google Maps business profile, boosting your local search ranking.'
+      a: 'Yes! TouchQR supports 2-inch and 3-inch Bluetooth and USB thermal printers directly from mobile phones or desktop PCs for instant 0.5-second order chits & GST billing.'
     },
     {
       q: 'Can I change or upgrade my plan anytime?',

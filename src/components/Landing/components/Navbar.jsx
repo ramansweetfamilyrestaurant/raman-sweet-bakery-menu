@@ -30,7 +30,7 @@ export default function Navbar({ onOpenLogin, onStartTrial, logoUrl }) {
           {resolvedUrl && !logoErr ? (
             <img key={resolvedUrl} src={resolvedUrl} alt="TouchQR Logo" referrerPolicy="no-referrer" onError={() => setLogoErr(true)} style={{ maxHeight: '36px', maxWidth: '140px', width: 'auto', height: 'auto', borderRadius: '8px', objectFit: 'contain', background: '#FFF', padding: '2px', flexShrink: 0 }} />
           ) : (
-            <div className="km-logo-icon">🍱</div>
+            <div className="km-logo-icon">⚡</div>
           )}
           <span className="km-logo-text">TouchQR</span>
           <span className="km-logo-tag">SaaS</span>

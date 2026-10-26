@@ -5,14 +5,14 @@ export default function Comparison() {
   const [activeMobileTab, setActiveMobileTab] = useState('pro');
 
   const comparisonRows = [
-    { feature: 'Digital QR Menu & Themes', basic: true, pro: true, enterprise: true },
-    { feature: 'Unlimited Dishes & Categories', basic: true, pro: true, enterprise: true },
+    { feature: 'Digital QR Menus, Catalogs & Themes', basic: true, pro: true, enterprise: true },
+    { feature: 'Unlimited Items, Products & Categories', basic: true, pro: true, enterprise: true },
     { feature: 'Smart AI Google Reviews Booster', basic: false, pro: true, enterprise: true },
     { feature: 'WhatsApp Order Confirmations', basic: false, pro: true, enterprise: true },
-    { feature: 'Live Kitchen Siren & KOT Tickets', basic: false, pro: false, enterprise: true },
-    { feature: 'Thermal Printer Billing (USB/Bluetooth)', basic: false, pro: false, enterprise: true },
-    { feature: 'Dining Hall Floor Map & Grid', basic: false, pro: false, enterprise: true },
-    { feature: 'Waiter Call Bell System', basic: false, pro: false, enterprise: true },
+    { feature: 'Live Dispatch Siren & KOT Tickets', basic: false, pro: false, enterprise: true },
+    { feature: 'Thermal Printer Invoicing (USB/Bluetooth)', basic: false, pro: false, enterprise: true },
+    { feature: 'Table, Room & Seat Layout Floor Map', basic: false, pro: false, enterprise: true },
+    { feature: 'Staff Call Bell System', basic: false, pro: false, enterprise: true },
     { feature: 'Combo Deals Limit', basic: 'Up to 3', pro: 'Up to 10', enterprise: 'Unlimited' }
   ];
 
@@ -33,7 +33,7 @@ export default function Comparison() {
         <div className="km-section-header" style={{ marginBottom: '24px' }}>
           <h2 className="km-title-lg" style={{ fontSize: '1.8rem' }}>Compare Plan Features</h2>
           <p className="km-subtitle" style={{ marginBottom: 0 }}>
-            Choose the perfect tier for your restaurant’s operational scale.
+            Choose the perfect tier for your business’s operational scale.
           </p>
         </div>
 

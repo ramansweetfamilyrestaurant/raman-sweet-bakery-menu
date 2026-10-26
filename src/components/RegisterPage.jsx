@@ -109,7 +109,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
     setError('');
 
     if (!formData.name.trim()) {
-      setError('Please enter your Restaurant Name');
+      setError('Please enter your Business / Outlet Name');
       return;
     }
     if (!formData.owner_name.trim()) {
@@ -251,7 +251,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
             Registration Submitted!
           </h2>
           <p style={{ color: '#E2E8F0', fontSize: '0.88rem', lineHeight: 1.5, marginBottom: '20px' }}>
-            Your restaurant <strong>'{pendingApprovalData.restaurant?.name}'</strong> has been submitted for Super Admin verification.
+            Your business <strong>'{pendingApprovalData.restaurant?.name}'</strong> has been submitted for Super Admin verification.
           </p>
 
           <div style={{
@@ -267,7 +267,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
               onClick={() => {
-                const msg = `Hello Super Admin, I registered my restaurant '${pendingApprovalData.restaurant?.name}' (Username: ${pendingApprovalData.username}). Please approve my account.`;
+                const msg = `Hello Super Admin, I registered my business '${pendingApprovalData.restaurant?.name}' (Username: ${pendingApprovalData.username}). Please approve my account.`;
                 window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
               }}
               style={{
@@ -385,15 +385,15 @@ export default function RegisterPage({ onRegisterSuccess }) {
           </h1>
 
           <p style={{ color: '#9CA3AF', fontSize: '0.88rem', lineHeight: 1.5, marginBottom: '22px' }}>
-            Join hundreds of modern restaurants & cafes automating digital QR table ordering, live KOT alerts, and WhatsApp orders with TouchQR.
+            Join hundreds of modern restaurants, cafes, hotels, cinemas & bakeries automating digital QR ordering with TouchQR.
           </p>
 
           {/* Feature Highlights */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[
-              'Instant Digital QR Menu & Table Standees',
-              'Live Kitchen Order Display (KOT) & Siren Alarms',
-              'Dynamic Thali & Combo Deals Builder',
+              'Instant Digital QR Menus & Space Standees (Tables/Rooms/Seats/Counters)',
+              'Live Dispatch Display & Siren Audio Alarms',
+              'Dynamic Thali, Combo & Weight Deals Builder',
               'Direct WhatsApp Orders & Customer Feedback'
             ].map((feature, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -431,10 +431,10 @@ export default function RegisterPage({ onRegisterSuccess }) {
           )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Restaurant Name */}
+            {/* Business / Outlet Name */}
             <div>
               <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
-                RESTAURANT / BAKERY NAME *
+                BUSINESS / OUTLET NAME *
               </label>
               <div style={{ position: 'relative' }}>
                 <Store size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />

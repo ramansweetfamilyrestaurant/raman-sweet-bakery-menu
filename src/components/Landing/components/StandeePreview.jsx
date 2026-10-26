@@ -12,9 +12,9 @@ export default function StandeePreview() {
               <Sparkles size={14} color="#D4AF37" />
               <span>HARDWARE & STANDEES READY</span>
             </div>
-            <h2 className="km-title-lg">Table QR Standees & Bluetooth KOT Receipts</h2>
+            <h2 className="km-title-lg">Smart QR Standees for Tables, Rooms, Seats & Counters</h2>
             <p className="km-subtitle">
-              Print ready-to-use QR standees for your dining tables and pair 2-inch or 3-inch Bluetooth thermal printers in 1 tap.
+              Print ready-to-use branded QR standees for your dining tables, hotel guest rooms, cinema audi seats, or takeaway billing counters — with instant thermal printer integration.
             </p>
 
             <div className="km-standee-features">
