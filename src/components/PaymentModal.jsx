@@ -126,7 +126,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
             Subscription & Billing
           </h3>
           <span style={{ fontSize: '0.78rem', color: '#E2E8F0' }}>
-            {restoInfo?.name || 'Restaurant'} — {planTier.toUpperCase()} Plan
+            {restoInfo?.name || 'Your Business'} — {planTier.toUpperCase()} Plan
           </span>
         </div>
 

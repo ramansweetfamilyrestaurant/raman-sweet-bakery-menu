@@ -254,6 +254,10 @@ export default function App() {
     const activeType = (overrideSpaceType || currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
     const isCinema = activeType === 'cinema_seat' || activeType === 'cinema' || target.toLowerCase().includes('screen') || target.toLowerCase().includes('seat');
 
+    if (activeType === 'counter' || target.toLowerCase().includes('counter')) {
+      return '🧾 Counter Order';
+    }
+
     const cMatch = target.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
                    target.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
     if (cMatch) {
@@ -641,7 +645,7 @@ export default function App() {
     const rawPhone = info.whatsapp_number || info.phone || '';
     const phone = rawPhone.replace(/[^0-9]/g, '');
     if (!phone) {
-      alert('WhatsApp number is not configured for this restaurant yet.');
+      alert('WhatsApp number is not configured for this business yet.');
       return;
     }
     let msg = `👋 Hello *${info.name}*!\nI would like to place an order from ${getDynamicSpaceLabel() || formatCustomerLocation(effectiveTableNum || '1')}:\n\n`;
@@ -880,14 +884,15 @@ export default function App() {
       : (effectiveTableNum || currentTableNum || initialSpaceInfo.num || (new URLSearchParams(window.location.search).get('table') || '').trim() || '1');
 
     if (!targetTable || !effectiveQrToken) {
-      alert('Invalid or missing Table QR. Please scan the official QR code at your dining table to place an order.');
+      const spaceAlertName = targetSpaceType === 'room' ? 'room' : targetSpaceType === 'cinema_seat' ? 'seat' : targetSpaceType === 'counter' ? 'counter' : 'table';
+      alert(`Invalid or missing QR. Please scan the official QR code at your ${spaceAlertName} to place an order.`);
       setPlacingOrder(false);
       isPlacingOrderRef.current = false;
       return;
     }
 
     if (targetSpaceType === 'counter' && (!info || (info.counter_ordering_enabled !== true && info.counter_ordering_enabled !== 1 && info.counter_ordering_enabled !== '1'))) {
-      alert('Counter ordering is currently not enabled for this restaurant.');
+      alert('Counter ordering is currently not enabled for this business.');
       setPlacingOrder(false);
       isPlacingOrderRef.current = false;
       return;
@@ -910,7 +915,7 @@ export default function App() {
       table_number: targetTable,
       space_type: targetSpaceType,
       table_token: effectiveQrToken,
-      customer_name: customerNameInput || 'Dine-In Customer',
+      customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
       customer_phone: customerPhoneInput || '',
       items: itemsPayload,
       total_amount: grandTotal,
@@ -950,7 +955,7 @@ export default function App() {
           table_number: targetTable,
           space_type: targetSpaceType,
           table_token: effectiveQrToken,
-          customer_name: customerNameInput || 'Dine-In Customer',
+          customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
           customer_phone: customerPhoneInput || '',
           items: itemsPayload,
           total_amount: grandTotal,
@@ -971,7 +976,7 @@ export default function App() {
           table_number: targetTable,
           space_type: targetSpaceType,
           table_token: effectiveQrToken,
-          customer_name: customerNameInput || 'Dine-In Customer',
+          customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
           customer_phone: customerPhoneInput || '',
           items: itemsPayload,
           total_amount: grandTotal
@@ -981,7 +986,8 @@ export default function App() {
       }
 
       if (errCode === 'invalid_qr' || errMsg.toLowerCase().includes('qr')) {
-        alert(errMsg || 'Invalid or unverified Table QR code. Please scan the official QR code at your dining table.');
+        const spaceAlertName = targetSpaceType === 'room' ? 'room' : targetSpaceType === 'cinema_seat' ? 'seat' : targetSpaceType === 'counter' ? 'counter' : 'table';
+        alert(errMsg || `Invalid or unverified QR code. Please scan the official QR code at your ${spaceAlertName}.`);
       } else {
         alert(errMsg || 'Failed to place order. Please try again.');
       }
@@ -1920,7 +1926,7 @@ export default function App() {
           TouchQR Digital Menu
         </div>
         <p style={{ fontSize: '0.84rem', color: '#E2E8F0', marginTop: '6px', fontWeight: 600 }}>
-          Verifying restaurant details & loading menu...
+          Verifying business details & loading menu...
         </p>
       </div>
     );
@@ -1997,10 +2003,10 @@ export default function App() {
       }}>
         <div style={{ fontSize: '4.5rem', marginBottom: '16px' }}>🔒</div>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#FFD700', margin: '0 0 8px 0' }}>
-          Restaurant Temporarily Offline
+          Outlet Temporarily Offline
         </h1>
         <p style={{ fontSize: '0.92rem', color: '#E2E8F0', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
-          <strong>{info?.name || 'Yeh restaurant'}</strong> ki digital menu service filhal suspended hai. Kripya restaurant manager se sampark karein.
+          <strong>{info?.name || 'Yeh business'}</strong> ki digital menu service filhal suspended hai. Kripya business administration se sampark karein.
         </p>
       </div>
     );
@@ -2042,7 +2048,7 @@ export default function App() {
           🎉 Welcome to TouchQR!
         </div>
         <p style={{ fontSize: '0.88rem', color: '#E2E8F0', marginTop: '8px', fontWeight: 600, maxWidth: '380px', lineHeight: 1.5 }}>
-          Setting up your restaurant security & launching Admin Dashboard...
+          Setting up your portal security & launching Admin Dashboard...
         </p>
       </div>
     );
@@ -2062,7 +2068,7 @@ export default function App() {
             borderTopColor: '#DFBA67', borderRadius: '50%', marginBottom: '16px',
             animation: 'spin 0.8s linear infinite'
           }} />
-          <span style={{ fontSize: '0.92rem' }}>🔑 Verifying Restaurant Security...</span>
+          <span style={{ fontSize: '0.92rem' }}>🔑 Verifying Portal Security...</span>
         </div>
       );
     }
@@ -2191,7 +2197,7 @@ export default function App() {
           </div>
 
           <p style={{ fontSize: '0.86rem', color: '#666157', marginBottom: '24px', lineHeight: 1.4 }}>
-            The Digital Menu service for this restaurant is currently suspended or past subscription renewal. Please contact restaurant administration.
+            The Digital Menu service for this business is currently suspended or past subscription renewal. Please contact business administration.
           </p>
 
           <a
@@ -2209,7 +2215,7 @@ export default function App() {
               fontSize: '0.9rem'
             }}
           >
-            <Phone size={16} /> Contact Restaurant Management
+            <Phone size={16} /> Contact Business Management
           </a>
         </div>
       </div>
@@ -2299,14 +2305,18 @@ export default function App() {
                       ? 'Food Served to Seat 🎬 Enjoy your movie!'
                       : (info?.business_type === 'hotel_resort' || String(activeOrderTrack.table_number).toLowerCase().includes('room'))
                         ? 'Food Delivered to Room 🏨 Enjoy your meal!'
-                        : 'Food Served to Table 🍽️ Enjoy your meal!'
+                        : (String(activeOrderTrack.table_number).toLowerCase().includes('counter') || ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(String(info?.business_type || '').toLowerCase()))
+                          ? 'Order Handed Over at Counter 🧾 Thank you!'
+                          : 'Food Served to Table 🍽️ Enjoy your meal!'
                   ) :
                   (activeOrderTrack.kitchen_prepared === 1 || activeOrderTrack.kitchen_prepared === '1' || activeOrderTrack.kitchen_prepared === true) ? (
                     (info?.business_type === 'cinema_theatre' || String(activeOrderTrack.table_number).toLowerCase().includes('screen') || String(activeOrderTrack.table_number).toLowerCase().includes('seat'))
                       ? '🎉 Food Prepared! Staff bringing to seat 🎬'
                       : (info?.business_type === 'hotel_resort' || String(activeOrderTrack.table_number).toLowerCase().includes('room'))
                         ? '🎉 Food Prepared! Staff delivering to room 🏨'
-                        : '🎉 Food Prepared! Waiter bringing to table 🛎️'
+                        : (String(activeOrderTrack.table_number).toLowerCase().includes('counter') || ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(String(info?.business_type || '').toLowerCase()))
+                          ? '🎉 Order Prepared! Ready for pickup at counter ⚡'
+                          : '🎉 Food Prepared! Staff bringing to table 🛎️'
                   ) :
                   (activeOrderTrack.status === 'accepted' || activeOrderTrack.status === 'kitchen' || activeOrderTrack.status === 'preparing') ? 'Order Accepted - Chef Preparing 👨‍🍳' :
                   activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
@@ -3037,7 +3047,7 @@ export default function App() {
                   <span style={{ background: '#FFFFFF', color: '#059669', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900 }}>
                     {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
                   </span>
-                  <span>{isAddon ? `+ Add to ${getDynamicSpaceLabel() || 'Table'} (Round ${nextRound})` : (lang === 'hi' ? 'कार्ट देखें' : 'View Cart')}</span>
+                  <span>{isAddon ? `+ Add to ${getDynamicSpaceLabel() || 'Order'} (Round ${nextRound})` : (lang === 'hi' ? 'कार्ट देखें' : 'View Cart')}</span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -3176,8 +3186,10 @@ export default function App() {
                     <span>
                       {(() => {
                         const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                        const isCounter = activeType === 'counter' || String(effectiveTableNum).toLowerCase().includes('counter');
                         const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum).toLowerCase().includes('screen') || String(effectiveTableNum).toLowerCase().includes('seat');
                         const isRoom = activeType === 'room' || String(effectiveTableNum).toLowerCase().includes('room');
+                        if (isCounter) return <>These new items will be sent as <strong>Round {nextRound} Dispatch</strong> and added to your counter order.</>;
                         if (isCin) return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running seat order/bill.</>;
                         if (isRoom) return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running room order/bill.</>;
                         return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running table bill.</>;
@@ -3190,7 +3202,7 @@ export default function App() {
                   <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)' }}>
                     <MessageSquare size={40} color="#10B981" style={{ marginBottom: '10px', opacity: 0.6 }} />
                     <p style={{ fontSize: '0.95rem', margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-dark)' }}>Your order cart is empty.</p>
-                    <p style={{ fontSize: '0.8rem', opacity: 0.75, margin: 0 }}>Tap <strong>"+ ADD"</strong> on any dish to add items!</p>
+                    <p style={{ fontSize: '0.8rem', opacity: 0.75, margin: 0 }}>Tap <strong>"+ ADD"</strong> on any item to add items!</p>
                   </div>
                 ) : (
                   <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
@@ -3253,10 +3265,14 @@ export default function App() {
                             <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
                               {(() => {
                                 const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                                const isCounter = activeType === 'counter' || String(effectiveTableNum || '').toLowerCase().includes('counter');
                                 const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
                                 const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
                                 const isCabin = activeType === 'cabin' || String(effectiveTableNum || '').toLowerCase().includes('cabin');
                                 const isVip = activeType === 'vip' || String(effectiveTableNum || '').toLowerCase().includes('vip');
+                                if (isCounter) {
+                                  return getDynamicSpaceLabel() ? 'SCANNED COUNTER 🔒' : 'COUNTER';
+                                }
                                 if (isCin) {
                                   return getDynamicSpaceLabel() ? 'SCANNED SEAT 🔒' : 'SEAT';
                                 }
@@ -3492,9 +3508,11 @@ export default function App() {
             <p style={{ fontSize: '0.86rem', color: '#E5E7EB', lineHeight: 1.5, marginBottom: '20px' }}>
               {(() => {
                 const activeSpace = (orderSuccessModal?.space_type || currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                const isCounter = activeSpace === 'counter' || String(orderSuccessModal.table_number).toLowerCase().includes('counter');
                 const isCin = activeSpace === 'cinema_seat' || activeSpace === 'cinema' || String(orderSuccessModal.table_number).toLowerCase().includes('screen') || String(orderSuccessModal.table_number).toLowerCase().includes('seat');
                 const isRoom = activeSpace === 'room' || String(orderSuccessModal.table_number).toLowerCase().includes('room');
                 const isCabin = activeSpace === 'cabin' || String(orderSuccessModal.table_number).toLowerCase().includes('cabin');
+                if (isCounter) return 'Your order has been received! Our staff will prepare it and notify you for pickup at the counter shortly.';
                 if (isCin) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and bring it to your seat shortly.';
                 if (isRoom) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and deliver it to your room shortly.';
                 if (isCabin) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and deliver it to your cabin shortly.';
