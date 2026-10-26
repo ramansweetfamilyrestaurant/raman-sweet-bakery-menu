@@ -957,7 +957,7 @@ async function runTestSuite() {
     // Test 4.4: Static Component Verification: OrdersView.jsx routes all counter Kitchen actions through onOpenAcceptRouting without unconfirmed fallback
     test('OrdersView.jsx: All counter Kitchen actions strictly route through onOpenAcceptRouting', () => {
       const ordersViewPath = path.resolve('src/components/Admin/views/OrdersView.jsx');
-      const ordersViewContent = fs.readFileSync(ordersViewPath, 'utf8');
+      const ordersViewContent = fs.readFileSync(ordersViewPath, 'utf8').replace(/\r\n/g, '\n');
 
       // 1. Table View inline accept
       assert.ok(
