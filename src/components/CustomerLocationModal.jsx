@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { verifyCustomerLocationApi } from '../api/client';
 import { isValidQrTokenFormat } from '../utils/qrSecurity';
+import { getBusinessTerminology } from '../utils/businessTaxonomy';
 
 export default function CustomerLocationModal({
   isOpen,
@@ -27,6 +28,7 @@ export default function CustomerLocationModal({
   onLocationVerified,
   allowDismiss = true
 }) {
+  const terminology = getBusinessTerminology(restaurantInfo);
   // State Machine:
   // 'idle' | 'requesting_location' | 'verifying_with_server' | 'verified' |
   // 'outside_boundary' | 'permission_denied' | 'permission_permanently_blocked' |
@@ -367,7 +369,13 @@ export default function CustomerLocationModal({
             )}
 
             <p style={{ fontSize: '0.86rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 20px 0' }}>
-              To place an order from this table, we need to verify that you are currently inside the restaurant.
+              {spaceType === 'room'
+                ? 'To place an order from this room, we need to verify that you are currently at the hotel.'
+                : spaceType === 'cinema_seat' || spaceType === 'cinema'
+                ? 'To place an order from this seat, we need to verify that you are currently inside the theatre.'
+                : spaceType === 'counter'
+                ? 'To place an order at this counter, we need to verify that you are currently at the store.'
+                : 'To place an order from this table, we need to verify that you are currently at the premises.'}
             </p>
 
             <button
@@ -512,11 +520,11 @@ export default function CustomerLocationModal({
             </div>
 
             <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#991B1B', margin: '0 0 8px 0' }}>
-              You appear to be outside the restaurant's ordering area.
+              You appear to be outside the ordering area.
             </h3>
 
             <p style={{ fontSize: '0.82rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              {errorMsg || 'Table orders can only be placed while physically seated inside the dining area.'}
+              {errorMsg || 'Orders can only be placed while physically present at the premises.'}
             </p>
 
             <button

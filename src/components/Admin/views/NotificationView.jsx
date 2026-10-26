@@ -28,6 +28,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
+import { formatOrderLocation } from '../../../utils/billingHelper';
 
 export default function NotificationView({
   orders = [],
@@ -44,6 +46,7 @@ export default function NotificationView({
   onBackToDashboard
 }) {
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
+  const terminology = getBusinessTerminology(restaurantInfo);
 
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'orders' | 'payments' | 'system' | 'reviews' | 'security'
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -87,7 +90,7 @@ export default function NotificationView({
           type: 'orders',
           priority: 'urgent',
           title: `New Live Order #${ord.id || ord.order_number || '101'}`,
-          description: `Received from ${ord.table_label || 'Table ' + (ord.table_no || '1')} · ${ord.items?.length || 2} items · ₹${ord.total_amount || 450}`,
+          description: `Received from ${formatOrderLocation(ord, restaurantInfo)} · ${ord.items?.length || 2} items · ₹${ord.total_amount || 450}`,
           timestamp: '2 min ago',
           group: 'today',
           read: false,
@@ -103,7 +106,7 @@ export default function NotificationView({
         type: 'orders',
         priority: 'normal',
         title: 'Order Feed Operational',
-        description: 'All live dining orders processed and synchronized with kitchen.',
+        description: `All live orders processed and synchronized with ${terminology.serviceStation?.toLowerCase() || 'kitchen'}.`,
         timestamp: '15 min ago',
         group: 'today',
         read: true,
@@ -120,12 +123,12 @@ export default function NotificationView({
         id: `notif-call-${call.id}`,
         type: 'orders',
         priority: 'important',
-        title: `Waiter Service Call · ${call.table_label || 'Table 3'}`,
-        description: `Customer requested assistance: ${call.request_type || 'Waiter / Water Assistance'}.`,
+        title: `${terminology.callStaffLabel || 'Staff Service'} Call · ${formatOrderLocation(call, restaurantInfo)}`,
+        description: `Customer requested assistance: ${call.request_type || 'Staff Assistance'}.`,
         timestamp: '5 min ago',
         group: 'today',
         read: false,
-        source: 'Table Service',
+        source: `${terminology.spaceSingular || 'Guest'} Service`,
         actionLabel: 'Resolve Call',
         actionTab: 'orders',
         serviceCallData: call
@@ -156,7 +159,7 @@ export default function NotificationView({
         id: 'notif-menu-soldout',
         type: 'system',
         priority: 'important',
-        title: `${soldOutDishes.length} Dish${soldOutDishes.length > 1 ? 'es' : ''} Marked Sold Out`,
+        title: `${soldOutDishes.length} ${soldOutDishes.length > 1 ? (terminology.itemPlural || 'Items') : (terminology.itemSingular || 'Item')} Marked Sold Out`,
         description: `Items currently unavailable for customers: ${dishNames}${soldOutDishes.length > 2 ? ' and others' : ''}.`,
         timestamp: 'Today, 11:30 AM',
         group: 'today',

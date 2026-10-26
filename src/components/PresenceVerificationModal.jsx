@@ -39,24 +39,31 @@ export default function PresenceVerificationModal({
   const activeSpace = (spaceType || String(restaurantInfo?.table_prefix || 'table')).toLowerCase();
   const isCin = activeSpace === 'cinema_seat' || activeSpace === 'cinema' || String(tableNumber || '').toLowerCase().includes('screen') || String(tableNumber || '').toLowerCase().includes('seat');
   const isHot = activeSpace === 'room' || String(tableNumber || '').toLowerCase().includes('room');
+  const isCnt = activeSpace === 'counter' || String(tableNumber || '').toLowerCase().includes('counter');
 
   const modalTitle = isCin
     ? 'Cinema Seat Verification'
     : isHot
       ? 'Room Presence Verification'
-      : 'Table Presence Verification';
+      : isCnt
+        ? 'Counter Presence Verification'
+        : 'Table Presence Verification';
 
   const confirmSubtitle = isCin
     ? 'Confirm your presence at your seat'
     : isHot
       ? 'Confirm your presence in the room'
-      : 'Confirm your table presence';
+      : isCnt
+        ? 'Confirm your presence at the counter'
+        : 'Confirm your table presence';
 
   const orderPlacingText = isCin
     ? 'Placing your seat order now...'
     : isHot
       ? 'Placing your room order now...'
-      : 'Placing your table order now...';
+      : isCnt
+        ? 'Placing your counter order now...'
+        : 'Placing your table order now...';
 
   // State Machine:
   // 'GPS_PROMPT' | 'GPS_ACQUIRING' | 'GPS_FAILED' | 'STAFF_REQUESTING' | 'STAFF_WAITING' | 'STAFF_REJECTED' | 'STAFF_EXPIRED' | 'VERIFIED'
@@ -396,7 +403,7 @@ export default function PresenceVerificationModal({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const currentLabel = tableLabel || `${spaceType === 'cabin' ? 'Cabin' : (spaceType === 'room' ? 'Room' : (spaceType === 'vip' ? 'VIP' : 'Table'))} ${tableNumber || '1'}`;
+  const currentLabel = tableLabel || (spaceType === 'counter' ? (tableNumber ? `Counter ${tableNumber}` : 'Counter') : `${spaceType === 'cabin' ? 'Cabin' : (spaceType === 'room' ? 'Room' : (spaceType === 'vip' ? 'VIP' : (spaceType === 'cinema_seat' || spaceType === 'cinema' ? 'Seat' : 'Table')))} ${tableNumber || '1'}`);
 
   return (
     <div style={{
@@ -541,7 +548,7 @@ export default function PresenceVerificationModal({
                   }}
                 >
                   <UserCheck size={18} color="#64748B" />
-                  <span>Ask Staff / Waiter to Verify</span>
+                  <span>{isHot ? 'Ask Front Desk to Verify' : (isCin ? 'Ask Theatre Usher to Verify' : (isCnt ? 'Ask Counter Staff to Verify' : 'Ask Staff to Verify'))}</span>
                 </button>
               )}
             </div>
