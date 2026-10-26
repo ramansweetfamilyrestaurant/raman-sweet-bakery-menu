@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Upload, Sparkles, AlertCircle, Trash2, Tag, Globe, Sliders, Flame, Layers, Utensils, Check } from 'lucide-react';
 import { uploadImage, deleteImageApi } from '../../api/client';
 import { getDishImageUrl } from '../../utils/imageHelper';
+import { getBusinessTerminology } from '../../utils/businessTaxonomy';
 
 const resolveImageUrl = (url) => {
   if (!url || url === '/uploads/logo.jpg') return '';
@@ -12,7 +13,10 @@ const resolveImageUrl = (url) => {
   return url;
 };
 
-export default function DishFormModal({ dish, categories, token, modifiersEnabled = true, currencySymbol = '₹', onSave, onClose }) {
+export default function DishFormModal({ dish, categories, token, modifiersEnabled = true, currencySymbol = '₹', restaurantInfo = {}, onSave, onClose }) {
+  const terminology = getBusinessTerminology(restaurantInfo);
+  const itemLabel = terminology.dishSingular || 'Item';
+
   const [activeTab, setActiveTab] = useState('basic'); // 'basic' | 'pricing' | 'details'
   const [categoryId, setCategoryId] = useState(dish?.category_id || categories?.[0]?.id || '');
 
@@ -115,7 +119,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
     const trimmedName = name.trim();
     if (!trimmedName || price === '' || price === null || categoryId === '' || categoryId === null) {
       setActiveTab('basic');
-      setError('Category, Dish Name, and Full Price are required.');
+      setError(`Category, ${itemLabel} Name, and Full Price are required.`);
       return;
     }
 
@@ -285,7 +289,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
             <Sparkles size={15} color="#D4AF37" />
             <h3 style={{ fontSize: '0.94rem', fontWeight: 700, margin: 0, letterSpacing: '0.1px', lineHeight: 1.2 }}>
-              {dish ? 'Edit Dish Details' : 'Add New Dish'}
+              {dish ? `Edit ${itemLabel} Details` : `Add New ${itemLabel}`}
             </h3>
           </div>
           <button 
@@ -451,7 +455,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}>
-                    Dish Name (English) *
+                    {itemLabel} Name (English) *
                   </label>
                   <button
                     type="button"
@@ -859,7 +863,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
               <div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
                   <Globe size={11} color="#64748B" />
-                  Hindi Dish Name (हिंदी नाम)
+                  Hindi {itemLabel} Name (हिंदी नाम)
                 </label>
                 <input
                   type="text"
@@ -1040,7 +1044,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                 cursor: (saving || uploading) ? 'not-allowed' : 'pointer'
               }}
             >
-              {saving ? 'Saving...' : (dish ? '✓ Update Dish' : '✓ Save Dish')}
+              {saving ? 'Saving...' : (dish ? `✓ Update ${itemLabel}` : `✓ Save ${itemLabel}`)}
             </button>
           </div>
         </form>

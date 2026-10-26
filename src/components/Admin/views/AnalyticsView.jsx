@@ -20,6 +20,7 @@ import {
   Package
 } from 'lucide-react';
 import { getDishImageUrl } from '../../../utils/imageHelper';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 
 /**
  * generateSparklinePath
@@ -107,8 +108,13 @@ export default function AnalyticsView({
   categories = [],
   dishes = [],
   orders = [],
+  restaurantInfo = {},
   onViewOrders
 }) {
+  const terminology = getBusinessTerminology(restaurantInfo);
+  const itemPlural = terminology.itemPlural || 'Items';
+  const itemSingular = terminology.itemSingular || 'Item';
+
   const [activeTab, setActiveTab] = useState('overview');
   const [chartHoverIndex, setChartHoverIndex] = useState(null);
   const [refreshCountdown, setRefreshCountdown] = useState(30);
@@ -1036,7 +1042,7 @@ export default function AnalyticsView({
             <div className="analytics-card analytics-kpi-card">
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span className="analytics-kpi-title" style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Active Dishes Sold</span>
+                  <span className="analytics-kpi-title" style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Active {itemPlural} Sold</span>
                   <div className="analytics-kpi-icon" style={{
                     width: '30px',
                     height: '30px',
@@ -1652,11 +1658,11 @@ export default function AnalyticsView({
               </div>
             </div>
 
-            {/* 3. Top Dishes (By Quantity) */}
+            {/* 3. Top Items (By Quantity) */}
             <div className="analytics-card">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                 <h3 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                  Top Dishes (By Quantity)
+                  Top {itemPlural} (By Quantity)
                 </h3>
                 <button
                   onClick={() => setActiveTab('top_items')}
@@ -1733,7 +1739,7 @@ export default function AnalyticsView({
                   ))
                 ) : (
                   <div style={{ padding: '24px 0', textAlign: 'center', color: '#94A3B8', fontSize: '0.74rem' }}>
-                    No dish activity recorded yet.
+                    No {itemSingular.toLowerCase()} sales recorded yet.
                   </div>
                 )}
               </div>
@@ -1754,7 +1760,7 @@ export default function AnalyticsView({
                     gap: '4px'
                   }}
                 >
-                  <span>See all dishes</span>
+                  <span>See all {itemPlural.toLowerCase()}</span>
                   <ChevronRight size={13} />
                 </button>
               </div>
@@ -2020,10 +2026,10 @@ export default function AnalyticsView({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                  Dish Sales &amp; Velocity Ranking
+                  {itemSingular} Sales &amp; Velocity Ranking
                 </h3>
                 <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                  Authoritative ranking of dishes sold in {activeDateRangeLabel}
+                  Authoritative ranking of {itemPlural.toLowerCase()} sold in {activeDateRangeLabel}
                 </span>
               </div>
             </div>

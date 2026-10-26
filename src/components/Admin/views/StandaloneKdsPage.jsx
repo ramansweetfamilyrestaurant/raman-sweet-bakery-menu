@@ -40,6 +40,7 @@ import {
   setKdsSoundPreference,
   shouldShowKdsSoundPrompt
 } from '../../../utils/kdsHelpers';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 
 export default function StandaloneKdsPage({ slug = '' }) {
   const [orders, setOrders] = useState([]);
@@ -76,6 +77,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
     return typeof isNotificationSoundReady === 'function' ? isNotificationSoundReady() : false;
   });
   const [restaurantMeta, setRestaurantMeta] = useState(null);
+  const terminology = getBusinessTerminology(restaurantMeta);
   const [checkedItemsMap, setCheckedItemsMap] = useState({});
   const [showPrepSummary, setShowPrepSummary] = useState(true);
   const [recentlyCompleted, setRecentlyCompleted] = useState([]);
@@ -829,11 +831,19 @@ export default function StandaloneKdsPage({ slug = '' }) {
     if (cleanSpaceType === 'room') return `🏨 ROOM ${str.replace(/^room\s*#?/i, '')}`;
     if (cleanSpaceType === 'cabin') return `🛋️ CABIN ${str.replace(/^cabin\s*#?/i, '')}`;
     if (cleanSpaceType === 'vip') return `👑 VIP ${str.replace(/^vip\s*#?/i, '')}`;
+    if (cleanSpaceType === 'counter') {
+      const num = str.replace(/^counter\s*#?/i, '').trim();
+      return num ? `🧾 COUNTER ${num}` : `🧾 COUNTER`;
+    }
     if (cleanSpaceType === 'table') {
       const numOnly = str.replace(/^table\s*#?/i, '');
       return `TABLE ${numOnly}`;
     }
 
+    if (/^counter/i.test(str)) {
+      const num = str.replace(/^counter\s*#?/i, '').trim();
+      return num ? `🧾 COUNTER ${num}` : `🧾 COUNTER`;
+    }
     if (/^room\s*#?\d+/i.test(str)) return `🏨 ROOM ${str.replace(/^room\s*#?/i, '')}`;
     if (/^cabin\s*#?\d+/i.test(str)) return `🛋️ CABIN ${str.replace(/^cabin\s*#?/i, '')}`;
     if (/^vip\s*#?\d+/i.test(str)) return `👑 VIP ${str.replace(/^vip\s*#?/i, '')}`;
@@ -843,6 +853,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
     if (fallbackPrefix) {
       const cleanFallback = String(fallbackPrefix).trim().toLowerCase();
+      if (cleanFallback === 'counter') return `🧾 COUNTER ${str}`;
       if (cleanFallback === 'room') return `🏨 ROOM ${str}`;
       if (cleanFallback === 'cabin') return `🛋️ CABIN ${str}`;
       if (cleanFallback === 'vip') return `👑 VIP ${str}`;
@@ -1129,7 +1140,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
             {restaurantName}
           </h2>
           <span style={{ fontSize: '0.82rem', color: '#94A3B8', fontWeight: 700, display: 'block', marginBottom: '20px' }}>
-            🍳 Kitchen Display System (KDS) Screen Locked
+            {terminology.spaceIcon || '🍳'} {terminology.kdsTitle || 'Kitchen Display System (KDS)'} Screen Locked
           </span>
 
           {pinError && (
@@ -1357,7 +1368,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '1.5rem', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)', flexShrink: 0
           }}>
-            🍳
+            {terminology.spaceIcon || '🍳'}
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -1368,16 +1379,16 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                 }}
               >
-                {restaurantName} — KDS
+                {restaurantName} — {terminology.kdsTitle || 'KDS'}
               </h1>
               <span style={{ fontSize: '0.66rem', fontWeight: 900, background: '#10B981', color: '#022C22', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
-                LIVE CHEF SCREEN
+                {terminology.serviceStation?.toUpperCase() || 'LIVE CHEF SCREEN'}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '0.74rem', color: '#94A3B8', flexWrap: 'wrap' }}>
               <span>Active Tickets: <strong style={{ color: '#38BDF8' }}>{orders.length}</strong></span>
               <span>•</span>
-              <span>Total Dishes: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
+              <span>Total {terminology.itemPlural || 'Dishes'}: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
               {rushCount > 0 && (
                 <>
                   <span>•</span>

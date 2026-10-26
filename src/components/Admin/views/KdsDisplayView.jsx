@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { playKdsChime } from '../../../utils/soundManager';
 import { filterActiveKitchenOrders } from '../../../utils/kdsQueueFilter';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 
 export default function KdsDisplayView({
   orders = [],
@@ -33,6 +34,7 @@ export default function KdsDisplayView({
   restaurantInfo = {},
   kdsEnabled = true
 }) {
+  const terminology = getBusinessTerminology(restaurantInfo);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -145,8 +147,16 @@ export default function KdsDisplayView({
     if (cleanSpaceType === 'room') return `🏨 ROOM ${str.replace(/^room\s*#?/i, '')}`;
     if (cleanSpaceType === 'cabin') return `🛋️ CABIN ${str.replace(/^cabin\s*#?/i, '')}`;
     if (cleanSpaceType === 'vip') return `👑 VIP ${str.replace(/^vip\s*#?/i, '')}`;
+    if (cleanSpaceType === 'counter') {
+      const num = str.replace(/^counter\s*#?/i, '').trim();
+      return num ? `🧾 COUNTER ${num}` : `🧾 COUNTER`;
+    }
     if (cleanSpaceType === 'table') return `TABLE ${str.replace(/^table\s*#?/i, '')}`;
 
+    if (/^counter/i.test(str)) {
+      const num = str.replace(/^counter\s*#?/i, '').trim();
+      return num ? `🧾 COUNTER ${num}` : `🧾 COUNTER`;
+    }
     if (/^room\s*#?\d+/i.test(str)) return `🏨 ROOM ${str.replace(/^room\s*#?/i, '')}`;
     if (/^cabin\s*#?\d+/i.test(str)) return `🛋️ CABIN ${str.replace(/^cabin\s*#?/i, '')}`;
     if (/^vip\s*#?\d+/i.test(str)) return `👑 VIP ${str.replace(/^vip\s*#?/i, '')}`;
@@ -154,6 +164,7 @@ export default function KdsDisplayView({
 
     if (fallbackPrefix) {
       const cleanFallback = String(fallbackPrefix).trim().toLowerCase();
+      if (cleanFallback === 'counter') return `🧾 COUNTER ${str}`;
       if (cleanFallback === 'room') return `🏨 ROOM ${str}`;
       if (cleanFallback === 'cabin') return `🛋️ CABIN ${str}`;
       if (cleanFallback === 'vip') return `👑 VIP ${str}`;
@@ -290,12 +301,12 @@ export default function KdsDisplayView({
             fontSize: '1.5rem',
             boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
           }}>
-            🍳
+            {terminology.spaceIcon || '🍳'}
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h2 style={{ fontSize: '1.24rem', fontWeight: 900, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>
-                Kitchen Display System (KDS)
+                {terminology.kdsTitle || 'Kitchen Display System (KDS)'}
               </h2>
               <span style={{
                 fontSize: '0.66rem',
@@ -307,13 +318,13 @@ export default function KdsDisplayView({
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase'
               }}>
-                LIVE PREP SCREEN
+                {terminology.serviceStation?.toUpperCase() || 'LIVE PREP SCREEN'}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '0.74rem', color: '#94A3B8' }}>
               <span>Active Tickets: <strong style={{ color: '#38BDF8' }}>{activeKitchenOrders.length}</strong></span>
               <span>•</span>
-              <span>Total Dishes: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
+              <span>Total {terminology.itemPlural || 'Dishes'}: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
               {rushCount > 0 && (
                 <>
                   <span>•</span>

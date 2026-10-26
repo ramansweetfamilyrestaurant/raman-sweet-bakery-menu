@@ -3213,6 +3213,7 @@ export default function AdminDashboard({
                   categories={safeCategories}
                   dishes={safeDishes}
                   orders={orders}
+                  restaurantInfo={restaurantInfo}
                   onViewOrders={() => setActiveTab('orders')}
                 />
               )}
@@ -3486,6 +3487,7 @@ export default function AdminDashboard({
               : (restaurantInfo?.modifiers_enabled !== undefined ? Boolean(restaurantInfo.modifiers_enabled) : true)
           }
           currencySymbol={restaurantInfo?.currency_symbol || settingsForm?.currency_symbol || '₹'}
+          restaurantInfo={restaurantInfo}
           onSave={handleSaveDish}
           onClose={() => setDishModalData(null)}
         />
