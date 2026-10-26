@@ -675,8 +675,8 @@ export default function LocationPickerModal({
                 onChange={(e) => setRadiusMeters(Number(e.target.value))}
                 style={{ width: '100%', background: 'transparent', border: 'none', color: '#FFF', fontSize: '0.86rem', fontWeight: 800, outline: 'none', cursor: 'pointer' }}
               >
-                <option value={50} style={{ background: '#0B2014', color: '#FFF' }}>50 meters (Strict Dining Hall)</option>
-                <option value={100} style={{ background: '#0B2014', color: '#FFF' }}>100 meters (Restaurant Campus)</option>
+                <option value={50} style={{ background: '#0B2014', color: '#FFF' }}>50 meters (Strict Indoor / Outlet)</option>
+                <option value={100} style={{ background: '#0B2014', color: '#FFF' }}>100 meters (Premises / Campus)</option>
                 <option value={250} style={{ background: '#0B2014', color: '#FFF' }}>250 meters (Compound & Parking)</option>
                 <option value={500} style={{ background: '#0B2014', color: '#FFF' }}>500 meters (Neighborhood / Complex)</option>
                 <option value={1000} style={{ background: '#0B2014', color: '#FFF' }}>1,000 meters (1 km Zone)</option>

@@ -773,7 +773,7 @@ export default function CustomersView({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by customer name, phone, table number, or order ID..."
+            placeholder={`Search by customer name, phone, ${terms.locationNoun?.toLowerCase() || 'space'}, or order ID...`}
             style={{
               width: '100%',
               height: '38px',

@@ -54,7 +54,7 @@ export default function LegalFooter({ onOpenLogin, onStartTrial }) {
 
           {/* Owner Actions */}
           <div>
-            <h4 className="km-legal-footer-title">Restaurant Owners</h4>
+            <h4 className="km-legal-footer-title">Business Owners</h4>
             <ul className="km-legal-footer-links">
               <li><a onClick={onOpenLogin || (() => navigateRoute('/admin'))}>🔑 Owner Login</a></li>
               <li><a onClick={handleStartTrial}>🚀 Start 16-Day Free Trial</a></li>

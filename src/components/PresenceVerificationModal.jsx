@@ -620,7 +620,7 @@ export default function PresenceVerificationModal({
               Location Verification Required
             </h3>
             <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, marginBottom: '16px' }}>
-              {errorMessage || 'Unable to verify dining presence via device GPS.'}
+              {errorMessage || 'Unable to verify presence via device GPS.'}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -669,7 +669,7 @@ export default function PresenceVerificationModal({
                   }}
                 >
                   <UserCheck size={18} />
-                  <span>Ask Staff / Waiter to Verify</span>
+                  <span>Ask Staff to Verify</span>
                 </button>
               )}
 

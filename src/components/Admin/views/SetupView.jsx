@@ -3833,7 +3833,7 @@ export default function SetupView({
                   </div>
                   <div>
                     <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Customer Experience</strong>
-                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Interactive dietary filters & one-click waiter call</span>
+                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Interactive dietary filters & one-click service call</span>
                   </div>
                 </div>
                 <ChevronDown
@@ -3856,8 +3856,8 @@ export default function SetupView({
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
-                      <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>One-Click Waiter Call</strong>
-                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Floating button for diners to call service or ask for bill</span>
+                      <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>One-Click Service Call</strong>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Floating button for guests to call service or ask for bill</span>
                     </div>
                     <ToggleSwitch checked={prefWaiterCall} onChange={setPrefWaiterCall} />
                   </div>
@@ -9501,7 +9501,7 @@ export default function SetupView({
               <div>
                 <div style={{ marginBottom: '10px' }}>
                   <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>More Settings</strong>
-                  <span style={{ fontSize: '0.74rem', color: '#64748B' }}>Additional settings and tools for your restaurant.</span>
+                  <span style={{ fontSize: '0.74rem', color: '#64748B' }}>Additional settings and tools for your business.</span>
                 </div>
 
                 {/* Desktop 5-col Grid */}

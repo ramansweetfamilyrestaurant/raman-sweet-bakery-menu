@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
 import { MOBILE_DRAWER_ITEMS, isNavItemActive } from '../adminNavigation';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 
 export default function AdminHeader({
   restaurantInfo,
@@ -26,6 +27,7 @@ export default function AdminHeader({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
+  const terms = getBusinessTerminology(restaurantInfo);
 
   useEffect(() => {
     if (!showUserMenu) return;
@@ -249,7 +251,7 @@ export default function AdminHeader({
           }}>
             <div style={{ padding: '6px 10px', borderBottom: '1px solid #F1F5F9', marginBottom: '4px' }}>
               <strong style={{ fontSize: '0.80rem', color: '#0F172A', display: 'block' }}>{username}</strong>
-              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Restaurant Admin</span>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{terms.businessNoun ? `${terms.businessNoun} Admin` : 'Business Admin'}</span>
             </div>
 
             <button

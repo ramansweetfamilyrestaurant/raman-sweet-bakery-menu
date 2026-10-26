@@ -2968,7 +2968,7 @@ export default function AdminDashboard({
               Subscription Plan Expired!
             </h2>
             <p style={{ color: '#9CA3AF', fontSize: '0.88rem', lineHeight: 1.5, margin: '0 0 24px 0' }}>
-              The free trial or subscription plan for <strong>'{restaurantInfo?.name || 'your restaurant'}'</strong> has ended.
+              The free trial or subscription plan for <strong>'{restaurantInfo?.name || 'your business'}'</strong> has ended.
               Renew your plan to reactivate your Digital Menu & QR Orders.
             </p>
 
@@ -3919,7 +3919,7 @@ export default function AdminDashboard({
                 </div>
                 <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.82rem', color: '#D1D5DB', lineHeight: 1.6 }}>
                   <li>Go to <strong>Setup Tab ➔ Settings</strong> to update Logo, Phone Number, FSSAI License, & Currency.</li>
-                  <li>Click <strong>"Enable Location"</strong> to auto-save GPS coordinates so customers outside your restaurant hall cannot place fake orders.</li>
+                  <li>Click <strong>"Enable Location"</strong> to auto-save GPS coordinates so customers outside your premises cannot place fake orders.</li>
                 </ul>
               </div>
 

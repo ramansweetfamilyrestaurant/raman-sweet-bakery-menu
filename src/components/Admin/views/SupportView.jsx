@@ -32,6 +32,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 import { 
   createTenantSupportTicket, 
   fetchTenantSupportTickets, 
@@ -49,6 +50,7 @@ export default function SupportView({
   onBackToSettings
 }) {
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
+  const terms = getBusinessTerminology(restaurantInfo || settingsForm);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -1675,7 +1677,7 @@ export default function SupportView({
                           gap: '6px'
                         }}>
                           {isTenant ? (
-                            <span>You (Restaurant Admin)</span>
+                            <span>You ({terms.businessNoun ? `${terms.businessNoun} Admin` : 'Business Admin'})</span>
                           ) : isSuperAdmin ? (
                             <>
                               <ShieldCheck size={12} color="#059669" />

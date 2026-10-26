@@ -879,7 +879,17 @@ export default function KdsDisplayView({
                     }}
                   >
                     <BellRing size={17} />
-                    <span>🔔 READY • NOTIFY WAITER</span>
+                    <span>🔔 READY • {
+                      order.order_type === 'counter' || order.table_number === 'Counter'
+                        ? 'CALL TO COUNTER'
+                        : terminology.isHotel
+                        ? 'NOTIFY ROOM SERVICE'
+                        : terminology.isCinema
+                        ? 'NOTIFY USHER'
+                        : terminology.isQsr || terminology.isBakery
+                        ? 'CALL TO COUNTER'
+                        : 'NOTIFY WAITER'
+                    }</span>
                   </button>
                 </div>
               </div>

@@ -906,7 +906,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           <table className="sa-table">
             <thead>
               <tr>
-                <th style={{ minWidth: '240px' }}>SHOP / RESTAURANT</th>
+                <th style={{ minWidth: '240px' }}>BUSINESS / OUTLET</th>
                 <th style={{ minWidth: '120px' }}>CATEGORY</th>
                 <th style={{ minWidth: '160px' }}>OWNER / CONTACT</th>
                 <th style={{ minWidth: '130px' }}>PLAN</th>
@@ -2116,7 +2116,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <table className="sa-table">
                     <thead>
                       <tr>
-                        <th style={{ minWidth: '240px' }}>SHOP / RESTAURANT</th>
+                        <th style={{ minWidth: '240px' }}>BUSINESS / OUTLET</th>
                         <th style={{ minWidth: '160px' }}>OWNER / CONTACT</th>
                         <th style={{ minWidth: '140px' }}>PLAN & BILLING</th>
                         <th style={{ minWidth: '110px' }}>STATUS</th>
@@ -3166,8 +3166,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               >
                 <Edit3 size={18} color="#475569" />
                 <div>
-                  <strong style={{ display: 'block' }}>Edit Restaurant Details</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Update shop name, contact, slug and owner info</span>
+                  <strong style={{ display: 'block' }}>Edit Business Details</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Update business name, contact, slug and owner info</span>
                 </div>
               </button>
 
@@ -3182,7 +3182,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 <ExternalLink size={18} color="#475569" />
                 <div>
                   <strong style={{ display: 'block' }}>Open Live Customer Menu</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Preview live digital menu seen by diners</span>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Preview live digital menu seen by customers</span>
                 </div>
               </a>
 
@@ -3232,8 +3232,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               >
                 <Trash2 size={18} color="#DC2626" />
                 <div>
-                  <strong style={{ display: 'block' }}>Delete Restaurant</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#EF4444', fontWeight: 600 }}>Permanently remove shop, menus and staff</span>
+                  <strong style={{ display: 'block' }}>Delete Business Account</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#EF4444', fontWeight: 600 }}>Permanently remove business, menus and staff</span>
                 </div>
               </button>
             </div>

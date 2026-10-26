@@ -956,7 +956,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
             <input
               id="kds-slug-input"
               type="text"
-              placeholder="Enter restaurant slug (e.g. ramansweet)"
+              placeholder="Enter business slug (e.g. ramansweet)"
               value={tenantSlugInput}
               onChange={(e) => setTenantSlugInput(e.target.value)}
               style={{
@@ -1943,7 +1943,17 @@ export default function StandaloneKdsPage({ slug = '' }) {
                     }}
                   >
                     <BellRing size={17} />
-                    <span>🔔 READY • NOTIFY WAITER</span>
+                    <span>🔔 READY • {
+                      order.order_type === 'counter' || order.table_number === 'Counter'
+                        ? 'CALL TO COUNTER'
+                        : terminology.isHotel
+                        ? 'NOTIFY ROOM SERVICE'
+                        : terminology.isCinema
+                        ? 'NOTIFY USHER'
+                        : terminology.isQsr || terminology.isBakery
+                        ? 'CALL TO COUNTER'
+                        : 'NOTIFY WAITER'
+                    }</span>
                   </button>
                 </div>
               </div>

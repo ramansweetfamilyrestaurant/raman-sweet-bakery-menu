@@ -144,10 +144,10 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--km-text)', marginBottom: '4px' }}>Restaurant Name (Optional)</label>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--km-text)', marginBottom: '4px' }}>Business / Outlet Name (Optional)</label>
                 <input
                   type="text"
-                  placeholder="e.g. Royal Spice Restaurant"
+                  placeholder="e.g. Royal Sweets, Grand Hotel, Star Cinema"
                   value={formData.restaurantName}
                   onChange={(e) => setFormData({ ...formData, restaurantName: e.target.value })}
                   style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }}
@@ -174,7 +174,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
                 <textarea
                   required
                   rows={4}
-                  placeholder="How can our support team assist your restaurant?"
+                  placeholder="How can our support team assist your business?"
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem', resize: 'vertical' }}

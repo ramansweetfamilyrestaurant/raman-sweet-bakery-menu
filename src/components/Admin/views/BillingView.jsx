@@ -1663,7 +1663,7 @@ export default function BillingView({
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#475569' }}>
               <div>
                 <strong>Billed To:</strong>
-                <div>{restaurantInfo?.name || 'Restaurant Partner'}</div>
+                <div>{restaurantInfo?.name || 'Business Partner'}</div>
                 <div>Ph: {restaurantInfo?.phone || 'N/A'}</div>
                 {restaurantInfo?.gstin_number && <div>GSTIN: {restaurantInfo.gstin_number}</div>}
               </div>

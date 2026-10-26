@@ -523,7 +523,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               Activate {calcDays}-Day Free Trial 🚀
             </h1>
             <p style={{ fontSize: '0.84rem', color: '#A7F3D0', margin: '0 0 16px 0', lineHeight: 1.4 }}>
-              Account <strong>{activeResto?.name || localStorage.getItem('touchqr_admin_user') || 'Restaurant'}</strong> ready! Authorize UPI AutoPay to start.
+              Account <strong>{activeResto?.name || localStorage.getItem('touchqr_admin_user') || 'Business'}</strong> ready! Authorize UPI AutoPay to start.
             </p>
           </>
         )}

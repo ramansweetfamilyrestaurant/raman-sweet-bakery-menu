@@ -787,7 +787,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
           {currentStep === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '8px' }}>Restaurant Logo</label>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '8px' }}>Brand / Outlet Logo</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{
                     width: '74px', height: '74px', borderRadius: '16px', background: '#071A0E',
