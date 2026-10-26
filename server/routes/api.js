@@ -772,6 +772,8 @@ router.get('/info', async (req, res) => {
       counter_ordering_enabled: Boolean(resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1'),
       order_retention_days: resto.order_retention_days || 7,
       custom_domain: resto.custom_domain || '',
+      table_verification_mode: resto.table_verification_mode || 'GPS_WITH_STAFF_FALLBACK',
+      staff_verification_timeout_seconds: Number(resto.staff_verification_timeout_seconds) || 120,
       kds_screen_enabled: resto.kds_screen_enabled !== undefined && resto.kds_screen_enabled !== null ? Number(resto.kds_screen_enabled) : 1,
       kds_pin_configured: Boolean(resto.kds_pin_hash),
       onboarding_completed: resto.onboarding_completed !== undefined && resto.onboarding_completed !== null ? (resto.onboarding_completed === true || resto.onboarding_completed === 1 || resto.onboarding_completed === 'true') : true,
@@ -1778,7 +1780,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
 
     // Step 10: Check cart + price + availability on SERVER (Server is the SOLE price authority)
     const [dbDishes, dbCombos, rawOffers, rawOfferItems] = await Promise.all([
-      query('SELECT id, name, price, price_half, available FROM dishes WHERE restaurant_id = $1', [targetId]),
+      query('SELECT id, name, price, price_half, available, modifiers FROM dishes WHERE restaurant_id = $1', [targetId]),
       query('SELECT id, name, price, available, description FROM combos WHERE restaurant_id = $1', [targetId]),
       query("SELECT * FROM offers WHERE restaurant_id = $1 AND (active IS NOT FALSE AND active::text NOT IN ('0', 'false', 'f')) ORDER BY id DESC", [targetId]).catch(() => []),
       query("SELECT * FROM offer_items WHERE restaurant_id = $1 ORDER BY id DESC", [targetId]).catch(() => [])
@@ -1906,13 +1908,47 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         }
       }
 
+      // 🛡️ Calculate & verify dish modifiers / add-ons pricing
+      let modifierExtraPrice = 0;
+      let rawDbMods = [];
+      try {
+        rawDbMods = typeof dbItem.modifiers === 'string' ? JSON.parse(dbItem.modifiers) : (dbItem.modifiers || []);
+      } catch (_) {
+        rawDbMods = [];
+      }
+      const verifiedModifiersList = [];
+      if (Array.isArray(item.modifiers) && item.modifiers.length > 0) {
+        for (const mod of item.modifiers) {
+          if (!mod) continue;
+          const modName = typeof mod === 'string' ? mod : (mod.name || '');
+          const matchedDbMod = Array.isArray(rawDbMods)
+            ? rawDbMods.find(m => m && m.name && m.name.toLowerCase().trim() === String(modName).toLowerCase().trim())
+            : null;
+          if (!matchedDbMod || isNaN(Number(matchedDbMod.price))) {
+            return res.status(400).json({
+              error: 'invalid_modifier',
+              message: `Add-on "${modName}" is not available or not priced for "${dbItem.name}".`
+            });
+          }
+          const modPrice = Number(matchedDbMod.price);
+          modifierExtraPrice += modPrice;
+          verifiedModifiersList.push({
+            name: matchedDbMod.name || modName,
+            price: modPrice
+          });
+        }
+      }
+
+      baseRegularPrice += modifierExtraPrice;
+      effectiveItemPrice += modifierExtraPrice;
+
       serverVerifiedTotal += effectiveItemPrice * qty;
 
       verifiedItems.push({
         dish_id: item.dish_id,
         name: dbItem.name,
         portion: portionLabel,
-        modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
+        modifiers: verifiedModifiersList.length > 0 ? verifiedModifiersList : (Array.isArray(item.modifiers) ? item.modifiers : []),
         price: effectiveItemPrice,
         regular_price: baseRegularPrice,
         discount_amount: appliedDiscount,
@@ -2219,14 +2255,15 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             trackingTokenHash
           ]);
         } catch (insertErr) {
-          // If orders.notes or tracking_token_hash column is unexpectedly missing, reject auto-healing schema mutation.
           const isSchemaMissing = Boolean(
             (insertErr.code === '42703' && (String(insertErr.message).toLowerCase().includes('notes') || String(insertErr.message).toLowerCase().includes('tracking_token_hash'))) ||
             String(insertErr.message).toLowerCase().includes('column "notes"') ||
             String(insertErr.message).toLowerCase().includes('column "tracking_token_hash"') ||
-            String(insertErr.message).toLowerCase().includes('has no column named notes')
+            String(insertErr.message).toLowerCase().includes('has no column named notes') ||
+            String(insertErr.message).toLowerCase().includes('no such column: notes') ||
+            String(insertErr.message).toLowerCase().includes('no such column: tracking_token_hash')
           );
-          if (isSchemaMissing && getDbType() === 'postgres') {
+          if (isSchemaMissing) {
             console.error('Database schema error: required Phase 1 columns do not exist. Dedicated migration is required.');
             throw insertErr;
           }

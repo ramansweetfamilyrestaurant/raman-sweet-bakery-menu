@@ -98,6 +98,7 @@ async function runInvestigation() {
       direct_ordering_enabled, order_retention_days, trial_started_at, trial_ends_at, grace_period_expires_at,
       gst_enabled, gstin_number
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+    RETURNING id
   `, [
     'Billing Investigation Restaurant', 'billing-demo', 'Taste & Track', '+919876543210',
     '101 Dining Lane', 1, 'enterprise', 1999,
@@ -105,7 +106,7 @@ async function runInvestigation() {
     1, 90, now.toISOString(), trialEnd.toISOString(), graceEnd.toISOString(),
     1, '29ABCDE1234F1Z5'
   ]);
-  const restoId = restoRes.lastInsertRowid || 1;
+  const restoId = (restoRes.rows || restoRes)[0]?.id || restoRes.lastInsertRowid;
 
   await query(`
     INSERT INTO subscriptions (
@@ -122,16 +123,16 @@ async function runInvestigation() {
     VALUES ($1, $2, $3, $4)
   `, [restoId, 'billing_admin', adminPasswordHash, 'restaurant_admin']);
 
-  const catRes = await query('INSERT INTO categories (restaurant_id, name, active) VALUES ($1, $2, $3)', [restoId, 'Main', 1]);
-  const catId = catRes.lastInsertRowid || 1;
+  const catRes = await query('INSERT INTO categories (restaurant_id, name, active) VALUES ($1, $2, $3) RETURNING id', [restoId, 'Main', 1]);
+  const catId = (catRes.rows || catRes)[0]?.id || catRes.lastInsertRowid;
 
-  const dish1 = await query(`INSERT INTO dishes (restaurant_id, category_id, name, price, available) VALUES ($1, $2, $3, $4, 1)`, [restoId, catId, 'Paneer Tikka', 200]);
-  const dish2 = await query(`INSERT INTO dishes (restaurant_id, category_id, name, price, available) VALUES ($1, $2, $3, $4, 1)`, [restoId, catId, 'Butter Naan', 50]);
-  const dish3 = await query(`INSERT INTO dishes (restaurant_id, category_id, name, price, available) VALUES ($1, $2, $3, $4, 1)`, [restoId, catId, 'Gulab Jamun', 100]);
+  const dish1 = await query(`INSERT INTO dishes (restaurant_id, category_id, name, price, available) VALUES ($1, $2, $3, $4, 1) RETURNING id`, [restoId, catId, 'Paneer Tikka', 200]);
+  const dish2 = await query(`INSERT INTO dishes (restaurant_id, category_id, name, price, available) VALUES ($1, $2, $3, $4, 1) RETURNING id`, [restoId, catId, 'Butter Naan', 50]);
+  const dish3 = await query(`INSERT INTO dishes (restaurant_id, category_id, name, price, available) VALUES ($1, $2, $3, $4, 1) RETURNING id`, [restoId, catId, 'Gulab Jamun', 100]);
 
-  const dish1Id = dish1.lastInsertRowid || 1;
-  const dish2Id = dish2.lastInsertRowid || 2;
-  const dish3Id = dish3.lastInsertRowid || 3;
+  const dish1Id = (dish1.rows || dish1)[0]?.id || dish1.lastInsertRowid;
+  const dish2Id = (dish2.rows || dish2)[0]?.id || dish2.lastInsertRowid;
+  const dish3Id = (dish3.rows || dish3)[0]?.id || dish3.lastInsertRowid;
 
   const server = await new Promise((resolve) => {
     const s = app.listen(5055, () => {
@@ -413,6 +414,7 @@ async function runInvestigation() {
   if (failed > 0) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runInvestigation().catch(err => {

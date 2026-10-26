@@ -5,7 +5,7 @@ import ExcelJS from 'exceljs';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { query, runAutoDataSummarization, saveImageToDb, saveR2ImageToDb, getImageRecordFromDb, deleteImageRecordFromDb, withTransaction, logAudit } from '../db.js';
+import { query, runAutoDataSummarization, saveImageToDb, saveR2ImageToDb, getImageRecordFromDb, deleteImageRecordFromDb, withTransaction, logAudit, getDbType } from '../db.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2, getR2Diagnostics, purgeOrphanedR2Objects } from '../services/r2ImageService.js';
 import { authenticateToken, requireAdminRole, requireActiveSubscription, checkSubscriptionStatus } from '../middleware/auth.js';
 import { isAuthoritativeComplimentaryTenant } from '../services/subscriptionState.js';
@@ -1830,33 +1830,34 @@ const handleUpdateSettings = async (req, res) => {
       ]);
     } catch (sqlErr) {
       if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column') || sqlErr.message.includes('verification') || sqlErr.message.includes('print') || sqlErr.message.includes('business_type') || sqlErr.message.includes('food_type') || sqlErr.message.includes('service_model') || sqlErr.message.includes('owner_email') || sqlErr.message.includes('business_category'))) {
-        try {
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_cabins INT DEFAULT 0");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_rooms INT DEFAULT 0");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_vip INT DEFAULT 0");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_prefix VARCHAR(50) DEFAULT 'table'");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_verification_mode VARCHAR(50) DEFAULT 'GPS_WITH_STAFF_FALLBACK'");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS staff_verification_timeout_seconds INT DEFAULT 120");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS printer_mode VARCHAR(20) DEFAULT 'single'");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_kot INT DEFAULT 0");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_bill INT DEFAULT 0");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS printer_paper_width VARCHAR(10) DEFAULT '80mm'");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_type VARCHAR(50)");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS food_type VARCHAR(50)");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50)");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_email VARCHAR(255) DEFAULT NULL");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_category VARCHAR(50) DEFAULT 'dine_in'");
-          await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 0");
-          await query(`
-            UPDATE restaurants 
-            SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds),
-                printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width),
-                business_type = COALESCE($39, business_type), food_type = COALESCE($40, food_type), service_model = COALESCE($41, service_model),
-                owner_email = CASE WHEN $42::boolean THEN $43 ELSE owner_email END,
-                business_category = COALESCE($44, business_category),
-                counter_ordering_enabled = COALESCE($45, counter_ordering_enabled)
-            WHERE id = $46
-          `, [
+        if (getDbType() === 'postgres') {
+          try {
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_cabins INT DEFAULT 0");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_rooms INT DEFAULT 0");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_vip INT DEFAULT 0");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_prefix VARCHAR(50) DEFAULT 'table'");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_verification_mode VARCHAR(50) DEFAULT 'GPS_WITH_STAFF_FALLBACK'");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS staff_verification_timeout_seconds INT DEFAULT 120");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS printer_mode VARCHAR(20) DEFAULT 'single'");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_kot INT DEFAULT 0");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_bill INT DEFAULT 0");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS printer_paper_width VARCHAR(10) DEFAULT '80mm'");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_type VARCHAR(50)");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS food_type VARCHAR(50)");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50)");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_email VARCHAR(255) DEFAULT NULL");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_category VARCHAR(50) DEFAULT 'dine_in'");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 0");
+            await query(`
+              UPDATE restaurants 
+              SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds),
+                  printer_mode = COALESCE($35, printer_mode), auto_print_kot = COALESCE($36, auto_print_kot), auto_print_bill = COALESCE($37, auto_print_bill), printer_paper_width = COALESCE($38, printer_paper_width),
+                  business_type = COALESCE($39, business_type), food_type = COALESCE($40, food_type), service_model = COALESCE($41, service_model),
+                  owner_email = CASE WHEN $42::boolean THEN $43 ELSE owner_email END,
+                  business_category = COALESCE($44, business_category),
+                  counter_ordering_enabled = COALESCE($45, counter_ordering_enabled)
+              WHERE id = $46
+            `, [
             name !== undefined ? name : null,
             tagline !== undefined ? tagline : null,
             processedLogo !== null ? processedLogo : (logo !== undefined ? '' : null),
@@ -1906,10 +1907,12 @@ const handleUpdateSettings = async (req, res) => {
           ]);
         } catch (innerErr) {
           console.error('Failed auto-adding presence/printer columns:', innerErr);
+          throw sqlErr;
         }
       } else {
         throw sqlErr;
       }
+    }
     }
 
     clearRestoResolveCache();
@@ -2812,16 +2815,36 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
             RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
           `;
           settleParams = [orderId, newStatus, kdsVal, prepVal, finalTerminalAt, reqPaymentMethod, targetId, targetOrder.session_id];
-        } else {
-          // Settle single order conditionally (only unsettled row transitions)
+        } else if (!isCounterOrder && targetOrder.parent_order_id) {
+          // Settle dining table session linked via parent_order_id
           settleSql = `
             UPDATE orders
-            SET status = $1, sent_to_kds = $2, kitchen_prepared = $3,
-                is_settled = 1, payment_method = $4, terminal_at = $5, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $6 AND restaurant_id = $7 AND (is_settled = 0 OR is_settled IS NULL)
+            SET status = CASE WHEN id = $1 THEN $2 ELSE status END,
+                sent_to_kds = CASE WHEN id = $1 THEN $3 ELSE sent_to_kds END,
+                kitchen_prepared = CASE WHEN id = $1 THEN $4 ELSE kitchen_prepared END,
+                terminal_at = CASE WHEN id = $1 THEN $5 ELSE terminal_at END,
+                is_settled = 1,
+                payment_method = $6,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE restaurant_id = $7 AND (id = $8 OR parent_order_id = $8) AND (is_settled = 0 OR is_settled IS NULL)
             RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
           `;
-          settleParams = [newStatus, kdsVal, prepVal, reqPaymentMethod, finalTerminalAt, orderId, targetId];
+          settleParams = [orderId, newStatus, kdsVal, prepVal, finalTerminalAt, reqPaymentMethod, targetId, targetOrder.parent_order_id];
+        } else {
+          // Settle single order conditionally (and any attached child rounds)
+          settleSql = `
+            UPDATE orders
+            SET status = CASE WHEN id = $1 THEN $2 ELSE status END,
+                sent_to_kds = CASE WHEN id = $1 THEN $3 ELSE sent_to_kds END,
+                kitchen_prepared = CASE WHEN id = $1 THEN $4 ELSE kitchen_prepared END,
+                terminal_at = CASE WHEN id = $1 THEN $5 ELSE terminal_at END,
+                is_settled = 1,
+                payment_method = $6,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE restaurant_id = $7 AND (id = $1 OR parent_order_id = $1) AND (is_settled = 0 OR is_settled IS NULL)
+            RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
+          `;
+          settleParams = [orderId, newStatus, kdsVal, prepVal, finalTerminalAt, reqPaymentMethod, targetId];
         }
 
         const settleRes = await txQuery(settleSql, settleParams);

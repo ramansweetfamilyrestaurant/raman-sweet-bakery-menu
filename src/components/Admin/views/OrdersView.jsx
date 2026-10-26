@@ -33,6 +33,7 @@ import KdsDisplayView from './KdsDisplayView';
 import PlanLockedCard from '../components/PlanLockedCard';
 import { resolveBusinessProfile } from '../../../utils/businessTaxonomy';
 import { fetchCinemaScreens, fetchCinemaSeats } from '../../../api/client';
+import { triggerBillAction, safeParseModifiers, safeParseItems } from '../../../utils/billingHelper';
 
 export default function OrdersView({
   orders = [],
@@ -66,44 +67,8 @@ export default function OrdersView({
     ? Boolean(capabilities.kds_enabled)
     : Boolean(restaurantInfo?.kds_enabled);
 
-  const safeParseItems = (rawItems) => {
-    if (!rawItems) return [];
-    if (Array.isArray(rawItems)) return rawItems;
-    if (typeof rawItems === 'string') {
-      try {
-        const parsed = JSON.parse(rawItems);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  };
-
-  const safeParseModifiers = (rawModifiers) => {
-    if (!rawModifiers) return [];
-    if (Array.isArray(rawModifiers)) return rawModifiers;
-    if (typeof rawModifiers === 'string') {
-      try {
-        const parsed = JSON.parse(rawModifiers);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  };
-
   const handleTriggerBillAction = (order) => {
-    if (!order) return;
-    if (typeof onOpenBillModal === 'function') {
-      onOpenBillModal(order);
-    } else {
-      console.error('[BILLING SAFETY] Bill modal handler is unavailable. Refusing to complete order without explicit payment settlement.');
-      if (typeof alert === 'function') {
-        alert('Billing modal is unavailable. Orders cannot be completed without explicit payment settlement.');
-      }
-    }
+    triggerBillAction(order, onOpenBillModal);
   };
 
   const profile = resolveBusinessProfile(restaurantInfo || settingsForm || {});

@@ -819,7 +819,7 @@ export default function AdminDashboard({
   };
 
   // ⚡ RawBT Direct Thermal Printer ESC/POS Generator
-  const generateRawBTText = (order, type = 'kot', restoInfo = {}, isReprint = false) => {
+  const generateRawBTText = (order, type = 'kot', restoInfo = {}, isReprint = false, paymentMode = 'CASH') => {
     let text = '';
     const orderItems = safeParseItems(order.items);
     const currency = getCurrencySymbol(restoInfo?.currency_symbol);
@@ -851,9 +851,12 @@ export default function AdminDashboard({
       text += "================================" + "\n";
       text += "  *** READY FOR KITCHEN ***\n\n\n";
     } else {
-      const isGst = Boolean(restoInfo?.gst_enabled);
       const gstin = restoInfo?.gstin_number || '';
       const fssai = restoInfo?.fssai_lic_no || '';
+
+      const billData = calculateBillDetails(order, orders, restoInfo, settingsForm);
+      const { sessionOrders, totalRoundsCount, subtotal, cgst, sgst, grandTotal, serviceChargeAmount } = billData;
+      const isGst = Boolean(cgst > 0 || sgst > 0);
 
       text += "================================" + "\n";
       text += `   ${(restoInfo?.name || 'RESTAURANT').toUpperCase()}\n`;
@@ -869,34 +872,50 @@ export default function AdminDashboard({
       text += `Bill No: INV-${order.id}\n`;
       text += `Date: ${new Date(order.created_at || Date.now()).toLocaleString('en-IN')}\n`;
       text += `Customer: ${order.customer_name || 'Dine-In Guest'}\n`;
+      if (paymentMode) {
+        text += `Payment: ${paymentMode}\n`;
+      }
+      if (totalRoundsCount > 1) {
+        text += `Consolidated: ${totalRoundsCount} Dining Rounds\n`;
+      }
       text += "--------------------------------" + "\n";
       text += "QTY  ITEM NAME            AMOUNT" + "\n";
       text += "--------------------------------" + "\n";
-      let subtotal = 0;
-      orderItems.forEach(i => {
-        const itemLineTotal = Number(i.price) * Number(i.quantity);
-        subtotal += itemLineTotal;
-        const name = (i.name + (i.portion ? ` (${i.portion})` : '')).padEnd(20).substring(0, 20);
-        const qty = String(i.quantity).padEnd(4);
-        const amt = `${currency}${formatPriceNumber(itemLineTotal)}`.padStart(7);
-        text += `${qty}${name}${amt}\n`;
-        const mods = safeParseModifiers(i.modifiers);
-        if (mods.length > 0) {
-          text += `    ↳ + ${mods.map(m => m.name).join(', ')}\n`;
+      sessionOrders.forEach((ord, oIdx) => {
+        const ordItems = safeParseItems(ord.items);
+        if (totalRoundsCount > 1) {
+          text += `--- ROUND ${ord.round_number || (oIdx + 1)} (KOT ${ord.id}) ---\n`;
         }
+        ordItems.forEach(i => {
+          const itemLineTotal = Number(i.price) * Number(i.quantity);
+          const name = (i.name + (i.portion ? ` (${i.portion})` : '')).padEnd(20).substring(0, 20);
+          const qty = String(i.quantity).padEnd(4);
+          const amt = `${currency}${formatPriceNumber(itemLineTotal)}`.padStart(7);
+          text += `${qty}${name}${amt}\n`;
+          const mods = safeParseModifiers(i.modifiers);
+          if (mods.length > 0) {
+            text += `    ↳ + ${mods.map(m => m.name).join(', ')}\n`;
+          }
+        });
       });
       text += "--------------------------------" + "\n";
       if (isGst) {
-        const cgst = Math.round(subtotal * 0.025 * 100) / 100;
-        const sgst = Math.round(subtotal * 0.025 * 100) / 100;
-        const grandTotal = Math.round((subtotal + cgst + sgst) * 100) / 100;
         text += `Subtotal:      ${(currency + formatPriceNumber(subtotal)).padStart(17)}\n`;
         text += `CGST (2.5%):   ${(currency + formatPriceNumber(cgst)).padStart(17)}\n`;
         text += `SGST (2.5%):   ${(currency + formatPriceNumber(sgst)).padStart(17)}\n`;
+        if (serviceChargeAmount > 0) {
+          text += `Service Charge:${(currency + formatPriceNumber(serviceChargeAmount)).padStart(17)}\n`;
+        }
         text += "--------------------------------\n";
         text += `Grand Total:   ${(currency + formatPriceNumber(grandTotal)).padStart(17)}\n`;
       } else {
-        text += `Grand Total:   ${(currency + formatPriceNumber(subtotal)).padStart(17)}\n`;
+        if (subtotal !== grandTotal) {
+          text += `Subtotal:      ${(currency + formatPriceNumber(subtotal)).padStart(17)}\n`;
+        }
+        if (serviceChargeAmount > 0) {
+          text += `Service Charge:${(currency + formatPriceNumber(serviceChargeAmount)).padStart(17)}\n`;
+        }
+        text += `Grand Total:   ${(currency + formatPriceNumber(grandTotal)).padStart(17)}\n`;
       }
       text += "================================" + "\n";
       text += "   Thank you! Visit Again 🙏\n\n\n";
@@ -905,13 +924,13 @@ export default function AdminDashboard({
   };
 
   // 🖨️ Silent Thermal Printer Engine (Zero-Popup Hidden Iframe / RawBT Printer)
-  const silentIframePrint = (htmlContent, order = null, type = 'kot', isReprint = false) => {
+  const silentIframePrint = (htmlContent, order = null, type = 'kot', isReprint = false, paymentMode = 'CASH') => {
     return new Promise((resolve, reject) => {
       try {
         const isAndroid = /Android/i.test(navigator.userAgent);
         if (isAndroid && order) {
           try {
-            const rawText = generateRawBTText(order, type, restaurantInfo, isReprint);
+            const rawText = generateRawBTText(order, type, restaurantInfo, isReprint, paymentMode);
             const b64Data = btoa(unescape(encodeURIComponent(rawText)));
             window.location.href = `intent:base64,${b64Data}#Intent;scheme=rawbt;package=ru.a2o.rawbtprinter;end;`;
             resolve(true);
@@ -1104,7 +1123,6 @@ export default function AdminDashboard({
   };
 
   const getBillHTML = (order, paymentMode = 'CASH', isReprint = false, paperWidth = '80mm') => {
-    const isGst = restaurantInfo?.gst_enabled;
     const gstin = restaurantInfo?.gstin_number || '';
     const fssai = restaurantInfo?.fssai_lic_no || '';
     const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null) ? restaurantInfo.currency_symbol : '₹';
@@ -1112,7 +1130,8 @@ export default function AdminDashboard({
     const bodyWidth = selectedWidth === '58mm' ? '48mm' : '72mm';
 
     const billData = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
-    const { sessionOrders, totalRoundsCount, subtotal, cgst, sgst, grandTotal } = billData;
+    const { sessionOrders, totalRoundsCount, subtotal, cgst, sgst, grandTotal, serviceChargeAmount } = billData;
+    const isGst = Boolean((restaurantInfo?.gst_enabled ?? settingsForm?.gst_enabled) || (cgst > 0) || (sgst > 0));
 
     let itemsHtml = '';
 
@@ -1224,6 +1243,12 @@ export default function AdminDashboard({
                 <span>${currency}${sgst}</span>
               </div>
             ` : ''}
+            ${serviceChargeAmount > 0 ? `
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:#333;">
+                <span>Service Charge:</span>
+                <span>${currency}${serviceChargeAmount}</span>
+              </div>
+            ` : ''}
             <div class="grand-total">
               <span>GRAND TOTAL:</span>
               <span>${currency}${grandTotal}</span>
@@ -1324,7 +1349,7 @@ export default function AdminDashboard({
       }
 
       const htmlContent = getBillHTML(order, paymentMode, isReprint, paperWidth);
-      await silentIframePrint(htmlContent, order, 'bill', isReprint);
+      await silentIframePrint(htmlContent, order, 'bill', isReprint, paymentMode);
       setPrintedOrdersMap(prev => ({ ...prev, [printKey]: (prev[printKey] || 0) + 1 }));
       setPrintingOrderId(null);
       setPrintingType(null);
@@ -1361,7 +1386,12 @@ export default function AdminDashboard({
 
       // 2. Settlement confirmed by backend: update local orders state & close modal
       setOrders(prev => prev.map(o => {
-        if (order.session_id && o.session_id === order.session_id) {
+        const matchesSession = Boolean(order.session_id && o.session_id === order.session_id);
+        const matchesParent = Boolean(
+          (order.parent_order_id && (o.id === order.parent_order_id || o.parent_order_id === order.parent_order_id)) ||
+          (!order.session_id && (o.parent_order_id === order.id || o.id === order.id))
+        );
+        if (matchesSession || matchesParent) {
           // In multi-round session, all rounds are marked settled
           return {
             ...o,
@@ -1500,6 +1530,7 @@ export default function AdminDashboard({
         total_rooms: infoData.total_rooms !== undefined && infoData.total_rooms !== null ? Number(infoData.total_rooms) : 0,
         total_vip: infoData.total_vip !== undefined && infoData.total_vip !== null ? Number(infoData.total_vip) : 0,
         table_prefix: infoData.table_prefix || 'table',
+        counter_ordering_enabled: Boolean(infoData.counter_ordering_enabled === 1 || infoData.counter_ordering_enabled === true || infoData.counter_ordering_enabled === '1'),
         order_retention_days: infoData.order_retention_days || 7,
         custom_domain: infoData.custom_domain || '',
         watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
@@ -1512,6 +1543,9 @@ export default function AdminDashboard({
         kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
         dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1',
         theme_color: infoData.theme_color || 'gold',
+        table_verification_mode: infoData.table_verification_mode || 'GPS_WITH_STAFF_FALLBACK',
+        staff_verification_timeout_seconds: infoData.staff_verification_timeout_seconds !== undefined ? Number(infoData.staff_verification_timeout_seconds) : 120,
+        order_alarm_enabled: infoData.order_alarm_enabled !== undefined ? (infoData.order_alarm_enabled !== false && infoData.order_alarm_enabled !== 0 && infoData.order_alarm_enabled !== '0') : true,
         filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
       };
     }
@@ -1549,6 +1583,9 @@ export default function AdminDashboard({
       gst_enabled: false,
       gstin_number: '',
       order_retention_days: 7,
+      table_verification_mode: 'GPS_WITH_STAFF_FALLBACK',
+      staff_verification_timeout_seconds: 120,
+      order_alarm_enabled: true,
       filters_visibility: defaultVis
     };
   });
@@ -1790,6 +1827,9 @@ export default function AdminDashboard({
           kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
           dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1',
           theme_color: infoData.theme_color || 'gold',
+          table_verification_mode: infoData.table_verification_mode || 'GPS_WITH_STAFF_FALLBACK',
+          staff_verification_timeout_seconds: infoData.staff_verification_timeout_seconds !== undefined ? Number(infoData.staff_verification_timeout_seconds) : 120,
+          order_alarm_enabled: infoData.order_alarm_enabled !== undefined ? (infoData.order_alarm_enabled !== false && infoData.order_alarm_enabled !== 0 && infoData.order_alarm_enabled !== '0') : true,
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       } else {

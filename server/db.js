@@ -1603,6 +1603,8 @@ async function createTables(options = {}) {
 
       if (!planCols.some(c => c.name === 'presence_verification_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN presence_verification_enabled INTEGER DEFAULT 1");
       if (!planCols.some(c => c.name === 'allowed_verification_modes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN allowed_verification_modes TEXT DEFAULT 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY'");
+      if (!planCols.some(c => c.name === 'theme_color')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN theme_color TEXT DEFAULT 'gold'");
+      if (!planCols.some(c => c.name === 'allowed_themes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN allowed_themes TEXT DEFAULT 'ALL'");
 
       const locCols = sqliteDb.pragma("table_info(table_location_verifications)");
       if (!locCols.some(c => c.name === 'space_type')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN space_type TEXT DEFAULT 'table'");

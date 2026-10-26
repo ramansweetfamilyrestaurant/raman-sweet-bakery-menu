@@ -70,10 +70,13 @@ export function calculateBillDetails(order, allOrders = [], restaurantInfo = {},
     };
   }
 
+  const effectiveGst = (restaurantInfo?.gst_enabled !== undefined && restaurantInfo?.gst_enabled !== null)
+    ? restaurantInfo.gst_enabled
+    : settingsForm?.gst_enabled;
   const isGst = Boolean(
-    restaurantInfo?.gst_enabled === 1 ||
-    restaurantInfo?.gst_enabled === '1' ||
-    restaurantInfo?.gst_enabled === true
+    effectiveGst === 1 ||
+    effectiveGst === '1' ||
+    effectiveGst === true
   );
 
   const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null)
@@ -123,6 +126,12 @@ export function calculateBillDetails(order, allOrders = [], restaurantInfo = {},
     } else {
       sessionOrders = [];
     }
+  } else if (order.status !== 'rejected' && order.status !== 'cancelled') {
+    // Ensure the target order itself is guaranteed to be in sessionOrders if not already present
+    const hasTarget = sessionOrders.some(o => String(o.id) === String(order.id));
+    if (!hasTarget) {
+      sessionOrders.push(order);
+    }
   }
 
   sessionOrders.sort((a, b) => (Number(a.round_number) || Number(a.id)) - (Number(b.round_number) || Number(b.id)));
@@ -133,10 +142,24 @@ export function calculateBillDetails(order, allOrders = [], restaurantInfo = {},
   let subtotal = 0;
   sessionOrders.forEach(ord => {
     const parsed = safeParseItems(ord.items);
-    parsed.forEach(i => {
-      const lineTotal = Number(i.price || 0) * Number(i.quantity || 1);
-      subtotal += lineTotal;
-    });
+    if (parsed.length > 0) {
+      parsed.forEach(i => {
+        const lineTotal = Number(i.price || 0) * Number(i.quantity || 1);
+        subtotal += lineTotal;
+      });
+    } else if (Number(ord.subtotal_amount) > 0) {
+      subtotal += Number(ord.subtotal_amount);
+    } else if (Number(ord.total_amount) > 0) {
+      const tot = Number(ord.total_amount);
+      const tax = Number(ord.tax_amount || (Number(ord.cgst_amount || 0) + Number(ord.sgst_amount || 0)));
+      if (tax > 0 && tot >= tax) {
+        subtotal += (tot - tax);
+      } else if (isGst) {
+        subtotal += Math.round((tot / 1.05) * 100) / 100;
+      } else {
+        subtotal += tot;
+      }
+    }
   });
 
   let cgst = 0;
@@ -159,4 +182,24 @@ export function calculateBillDetails(order, allOrders = [], restaurantInfo = {},
     grandTotal,
     currency
   };
+}
+
+/**
+ * Safely triggers the billing/settlement modal action for an order.
+ * If onOpenBillModal is missing or not a function, alerts the user and refuses to settle.
+ *
+ * @param {Object} order - Order to open billing modal for
+ * @param {Function} onOpenBillModal - Callback to open billing modal
+ * @param {Function} [alertFn] - Optional alert implementation (defaults to global alert)
+ */
+export function triggerBillAction(order, onOpenBillModal, alertFn = (typeof alert === 'function' ? alert : console.error)) {
+  if (!order) return;
+  if (typeof onOpenBillModal === 'function') {
+    onOpenBillModal(order);
+  } else {
+    console.error('[BILLING SAFETY] Bill modal handler is unavailable. Refusing to complete order without explicit payment settlement.');
+    if (typeof alertFn === 'function') {
+      alertFn('Billing modal is unavailable. Orders cannot be completed without explicit payment settlement.');
+    }
+  }
 }

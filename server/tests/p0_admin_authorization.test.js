@@ -27,8 +27,7 @@ dotenv.config();
 
 import { validateTestDatabaseUrl } from './testDbGuard.js';
 
-// Enforce local disposable test database URL strictly
-const LOCAL_TEST_URL = 'postgres://postgres:postgres@127.0.0.1:5432/touchqr_disposable_test';
+const LOCAL_TEST_URL = process.env.TEST_DATABASE_URL || 'sqlite:menu_live_e2e_disposable.db';
 process.env.TEST_DATABASE_URL = LOCAL_TEST_URL;
 validateTestDatabaseUrl(process.env.TEST_DATABASE_URL);
 
