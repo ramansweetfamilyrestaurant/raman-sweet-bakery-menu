@@ -42,6 +42,7 @@ import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl, getComboImageUrl
 import { formatQuota } from '../../../utils/planCapabilities';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
 import { createDish } from '../../../api/client';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 
 export default function MenuView({
   token = '',
@@ -104,6 +105,7 @@ export default function MenuView({
   const [pageSize, setPageSize] = useState(12);
 
   const categoryScrollRef = useRef(null);
+  const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || {}), [restaurantInfo]);
 
   const safeDishes = Array.isArray(dishes) ? dishes : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
@@ -510,7 +512,7 @@ export default function MenuView({
             </h1>
           </div>
           <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '4px 0 0 0' }}>
-            Create, manage and organize your dishes, categories and combos.
+            Create, manage and organize your {terminology.dishPlural?.toLowerCase() || 'items'}, categories and combos.
           </p>
         </div>
 
@@ -549,7 +551,7 @@ export default function MenuView({
               >
                 <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
                 <span>
-                  {activeSubTab === 'combos' ? 'Add Combo' : activeSubTab === 'categories' ? 'Add Category' : 'Add Dish'}
+                  {activeSubTab === 'combos' ? 'Add Combo' : activeSubTab === 'categories' ? 'Add Category' : 'Add ' + (terminology.dishSingular || 'Item')}
                 </span>
               </button>
               <button
@@ -660,7 +662,7 @@ export default function MenuView({
         </div>
 
         <p style={{ fontSize: '0.74rem', color: '#94A3B8', margin: '0 0 14px 0', lineHeight: 1.3 }}>
-          Create, manage and organize your dishes, categories and combos.
+          Create, manage and organize your {terminology.dishPlural?.toLowerCase() || 'items'}, categories and combos.
         </p>
 
         {/* 3 Metric Pills on Mobile */}
@@ -677,7 +679,7 @@ export default function MenuView({
             }}
           >
             <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFFFFF' }}>{safeDishes.length}</div>
-            <div style={{ fontSize: '0.64rem', color: activeSubTab === 'dishes' ? '#FB923C' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>Dishes</div>
+            <div style={{ fontSize: '0.64rem', color: activeSubTab === 'dishes' ? '#FB923C' : '#94A3B8', fontWeight: 700, marginTop: '2px' }}>{terminology.dishPlural || 'Dishes'}</div>
           </div>
 
           <div
@@ -733,7 +735,7 @@ export default function MenuView({
           >
             <Plus size={16} color="#FB923C" strokeWidth={3} />
             <span>
-              {activeSubTab === 'combos' ? '+ Add Combo' : activeSubTab === 'categories' ? '+ Add Category' : '+ Add Dish'}
+              {activeSubTab === 'combos' ? '+ Add Combo' : activeSubTab === 'categories' ? '+ Add Category' : '+ Add ' + (terminology.dishSingular || 'Item')}
             </span>
           </button>
           <button
@@ -862,14 +864,14 @@ export default function MenuView({
               fontSize: '1.2rem',
               flexShrink: 0
             }}>
-              🍽️
+              {terminology.spaceIcon || '🍽️'}
             </div>
             <div>
               <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
                 {safeDishes.length}
               </div>
               <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, marginTop: '2px' }}>
-                Total Dishes
+                Total {terminology.dishPlural || 'Dishes'}
               </div>
             </div>
           </div>
@@ -1246,7 +1248,7 @@ export default function MenuView({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search dishes, ingredients..."
+              placeholder={`Search ${terminology.dishPlural?.toLowerCase() || 'items'}, ingredients...`}
               style={{
                 width: '100%',
                 padding: '10px 30px 10px 34px',

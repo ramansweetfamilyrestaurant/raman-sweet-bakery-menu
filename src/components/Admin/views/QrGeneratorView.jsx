@@ -214,14 +214,15 @@ export default function QrGeneratorView({
         });
       }
 
-      // Billing Counter (when counter ordering capability is enabled)
       const isCounterEnabled = Boolean(
         settingsForm?.counter_ordering_enabled === 1 ||
         settingsForm?.counter_ordering_enabled === true ||
         settingsForm?.counter_ordering_enabled === '1' ||
         restaurantInfo?.counter_ordering_enabled === 1 ||
         restaurantInfo?.counter_ordering_enabled === true ||
-        restaurantInfo?.counter_ordering_enabled === '1'
+        restaurantInfo?.counter_ordering_enabled === '1' ||
+        ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck', 'ice_cream_dessert', 'juice_beverage'].includes(effectiveBiz) ||
+        (tablesCount === 0 && cabinsCount === 0 && vipCount === 0)
       );
       if (isCounterEnabled) {
         spaces.push({
@@ -911,7 +912,7 @@ export default function QrGeneratorView({
                     ? 'No cinema screens or seats found in database. Configure seats in Cinema Setup.'
                     : isHotel
                     ? 'No hotel guest rooms configured. Set your Total Guest Rooms in Business Profile to generate room QR codes.'
-                    : 'Set your total tables, cabins, or VIP spaces in Restaurant Setup to generate standees.'
+                    : 'Set your total tables, cabins, or counters in Business Setup to generate standees.'
                   }
                 </p>
                 {onBackToSetup && (

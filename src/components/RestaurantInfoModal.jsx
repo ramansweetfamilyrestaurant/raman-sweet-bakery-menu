@@ -72,7 +72,7 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
                 {info?.name || 'Digital Menu'}
               </h3>
               <span style={{ fontSize: '0.74rem', color: '#4ADE80', fontWeight: 700 }}>
-                {info?.badge || info?.tagline || 'Digital Restaurant Menu'}
+                {info?.badge || info?.tagline || 'Digital Menu & Ordering'}
               </span>
             </div>
           </div>
@@ -155,7 +155,7 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                 <MapPin size={16} color="var(--primary-emerald)" />
                 <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-                  Restaurant Address
+                  Business / Outlet Address
                 </span>
               </div>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '24px', marginBottom: '8px' }}>

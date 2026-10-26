@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import KdsDisplayView from './KdsDisplayView';
 import PlanLockedCard from '../components/PlanLockedCard';
-import { resolveBusinessProfile } from '../../../utils/businessTaxonomy';
+import { resolveBusinessProfile, getBusinessTerminology } from '../../../utils/businessTaxonomy';
 import { fetchCinemaScreens, fetchCinemaSeats } from '../../../api/client';
 import { triggerBillAction, safeParseModifiers, safeParseItems } from '../../../utils/billingHelper';
 
@@ -72,6 +72,7 @@ export default function OrdersView({
   };
 
   const profile = resolveBusinessProfile(restaurantInfo || settingsForm || {});
+  const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || settingsForm || {}), [restaurantInfo, settingsForm]);
   const effectiveBiz = profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type;
   const effectiveService = profile?.service_model || settingsForm?.service_model || restaurantInfo?.service_model;
   const isCinema = effectiveBiz === 'cinema_theatre' || effectiveService === 'cinema' || effectiveService === 'seat_service';
@@ -268,8 +269,32 @@ export default function OrdersView({
       });
     }
 
+    // 4. Billing Counter (when enabled or for counter-first verticals)
+    const isCounterEnabled = Boolean(
+      settingsForm?.counter_ordering_enabled === 1 ||
+      settingsForm?.counter_ordering_enabled === true ||
+      settingsForm?.counter_ordering_enabled === '1' ||
+      restaurantInfo?.counter_ordering_enabled === 1 ||
+      restaurantInfo?.counter_ordering_enabled === true ||
+      restaurantInfo?.counter_ordering_enabled === '1' ||
+      ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(effectiveBiz)
+    );
+
+    if (isCounterEnabled) {
+      spaces.push({
+        id: 'counter_COUNTER',
+        space_type: 'counter',
+        space_number: 'COUNTER',
+        category: 'counter',
+        label: 'COUNTER',
+        displayLabel: '🧾 COUNTER',
+        icon: '🧾',
+        prefix: 'Counter'
+      });
+    }
+
     return spaces;
-  }, [isCinema, isHotel, restaurantInfo?.total_tables, settingsForm?.total_tables, restaurantInfo?.total_cabins, settingsForm?.total_cabins, restaurantInfo?.total_vip, settingsForm?.total_vip, restaurantInfo?.total_rooms, settingsForm?.total_rooms]);
+  }, [isCinema, isHotel, effectiveBiz, restaurantInfo?.total_tables, settingsForm?.total_tables, restaurantInfo?.total_cabins, settingsForm?.total_cabins, restaurantInfo?.total_vip, settingsForm?.total_vip, restaurantInfo?.total_rooms, settingsForm?.total_rooms, restaurantInfo?.counter_ordering_enabled, settingsForm?.counter_ordering_enabled]);
 
   // Operational State mapping per physical space
   const spaceGrid = useMemo(() => {
@@ -546,7 +571,9 @@ export default function OrdersView({
               ? 'Manage seat-based snacks and beverage deliveries.' 
               : isHotel 
                 ? 'Manage in-room dining orders and room service.' 
-                : 'Manage table orders, kitchen preparation, and customer bills.'}
+                : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz)
+                  ? 'Manage counter takeaway, packing, and customer billing.'
+                  : 'Manage space orders, kitchen preparation, and customer bills.'}
           </p>
         </div>
 
@@ -735,7 +762,7 @@ export default function OrdersView({
               {kitchenCount}
             </div>
             <span style={{ fontSize: '0.68rem', color: '#0284C7', fontWeight: 700 }}>
-              In kitchen prep
+              In prep / kitchen
             </span>
           </div>
         </div>

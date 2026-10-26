@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { formatQuota } from '../../../utils/planCapabilities';
 import { getDishImageUrl } from '../../../utils/imageHelper';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 
 const safeParseItems = (items) => {
   if (!items) return [];
@@ -76,6 +77,13 @@ const formatLocation = (raw, spaceType) => {
   const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
                  str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
   if (cMatch) return `Screen ${cMatch[1]} Row ${cMatch[2].toUpperCase()} Seat ${cMatch[3]}`;
+  if (spaceType === 'counter' || str.toLowerCase() === 'counter' || str.toLowerCase() === 'counter:counter' || /^counter/i.test(str)) {
+    const cleanNum = str.replace(/^counter\s*#?/i, '').trim();
+    return cleanNum && cleanNum.toUpperCase() !== 'COUNTER' ? `Counter ${cleanNum}` : 'Billing Counter';
+  }
+  if (spaceType === 'cinema_seat' || spaceType === 'cinema' || /^seat/i.test(str)) {
+    return str.toLowerCase().startsWith('screen') ? str : `Seat ${str.replace(/^seat\s*#?/i, '')}`;
+  }
   if (spaceType === 'room' || /^room/i.test(str)) return `Room ${str.replace(/^room\s*#?/i, '')}`;
   if (spaceType === 'cabin' || /^cabin/i.test(str)) return `Cabin ${str.replace(/^cabin\s*#?/i, '')}`;
   if (spaceType === 'vip' || /^vip/i.test(str)) return `VIP ${str.replace(/^vip\s*#?/i, '')}`;
@@ -105,6 +113,7 @@ export default function HomeView({
   currencySymbol = '₹'
 }) {
   const [hoveredPointIdx, setHoveredPointIdx] = useState(null);
+  const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || settingsForm || {}), [restaurantInfo, settingsForm]);
 
   // 1. Sanitize Orders & Service Requests
   const safeOrders = useMemo(() => {
@@ -963,10 +972,10 @@ export default function HomeView({
                   }}>
                     <Utensils size={28} color="#94A3B8" style={{ margin: '0 auto 8px auto' }} />
                     <strong style={{ fontSize: '0.82rem', color: '#475569', display: 'block' }}>
-                      No dish sales recorded yet
+                      No sales recorded yet
                     </strong>
                     <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-                      Top-selling item rankings will appear here as guests place orders.
+                      Top-selling item rankings will appear here as orders are placed.
                     </span>
                   </div>
                 )}
@@ -1126,7 +1135,7 @@ export default function HomeView({
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Plus size={16} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Add Dish</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Add {terminology.dishSingular || 'Item'}</span>
                 </button>
 
                 <button
@@ -1418,7 +1427,7 @@ export default function HomeView({
               {/* Dishes */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>
-                  <span style={{ color: '#0F172A', fontWeight: 600 }}>Dishes</span>
+                  <span style={{ color: '#0F172A', fontWeight: 600 }}>{terminology.dishPlural || 'Dishes'}</span>
                   <strong style={{ color: dishQuota.isAtLimit ? '#DC2626' : '#0F172A' }}>{dishQuota.display}</strong>
                 </div>
                 <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>

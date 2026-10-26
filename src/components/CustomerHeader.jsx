@@ -1,8 +1,11 @@
 import React from 'react';
 import { ShieldCheck, Globe, Star, Info, Clock, Phone, MapPin } from 'lucide-react';
 import { getRestaurantLogoUrl } from '../utils/imageHelper';
+import { getBusinessTerminology } from '../utils/businessTaxonomy';
 
 export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onToggleLang, onOpenInfoModal, onOpenAdmin, onCallStaff, onOpenReviewModal, locationVerified, onOpenLocationModal }) {
+  const terminology = getBusinessTerminology(info || {});
+
   const getDisplayBadge = () => {
     if (!tableNum) return '';
     if (spaceLabel) return spaceLabel;
@@ -12,19 +15,35 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
     if (cMatch) {
       return `🎬 Screen ${cMatch[1]} • Row ${cMatch[2].toUpperCase()} • Seat ${cMatch[3]}`;
     }
-    const prefix = String(info?.table_prefix || 'table').toLowerCase();
-    if (prefix === 'cinema_seat' || prefix === 'cinema' || prefix === 'seat') {
-      return str.toLowerCase().startsWith('screen') ? `🎬 ${str}` : `🎬 Seat ${str}`;
+    const prefix = String(info?.table_prefix || '').toLowerCase();
+    const bizType = String(info?.business_type || '').toLowerCase();
+    const serviceModel = String(info?.service_model || '').toLowerCase();
+
+    // 1. Counter / Takeaway
+    if (prefix === 'counter' || str.toLowerCase() === 'counter' || str.toLowerCase() === 'counter:counter' || /^counter/i.test(str)) {
+      const cleanNum = str.replace(/^counter\s*#?/i, '').trim();
+      return cleanNum && cleanNum.toUpperCase() !== 'COUNTER' ? `🧾 Counter ${cleanNum}` : '🧾 Billing Counter';
     }
+
+    // 2. Cinema Seats
+    if (bizType === 'cinema_theatre' || serviceModel === 'cinema' || prefix === 'cinema_seat' || prefix === 'cinema' || prefix === 'seat') {
+      return str.toLowerCase().startsWith('screen') ? `🎬 ${str}` : `🎬 Seat ${str.replace(/^seat\s*#?/i, '')}`;
+    }
+
+    // 3. Hotel Rooms
+    if (bizType === 'hotel_resort' || serviceModel === 'hotel' || prefix === 'room' || /^room\s*#?\d+/i.test(str)) {
+      return `🏨 Room ${str.replace(/^room\s*#?/i, '')}`;
+    }
+
+    // 4. Cabins & VIP Lounges
     if (prefix === 'cabin' || /^cabin\s*#?\d+/i.test(str)) {
       return `🛋️ ${str.toLowerCase().startsWith('cabin') ? str : `Cabin ${str}`}`;
-    }
-    if (prefix === 'room' || /^room\s*#?\d+/i.test(str)) {
-      return `🏨 ${str.toLowerCase().startsWith('room') ? str : `Room ${str}`}`;
     }
     if (prefix === 'vip' || /^vip\s*#?\d+/i.test(str)) {
       return `👑 ${str.toUpperCase()}`;
     }
+
+    // 5. Default Dining Table
     return `🍽️ Table ${str.replace(/^table\s*#?/i, '')}`;
   };
   return (
@@ -134,7 +153,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                     boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)'
                   }}
                 >
-                  🛎️ Call Staff
+                  <span style={{ fontSize: '0.74rem' }}>🛎️</span> {terminology.callStaffLabel || 'Call Staff'}
                 </button>
               )}
             </>

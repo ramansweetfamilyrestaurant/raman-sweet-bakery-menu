@@ -378,6 +378,159 @@ export function getSpaceConfig(prefix = 'table') {
   return { id: 'table', label: '🍽️ Dining Table', singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' };
 }
 
+/**
+ * Dynamic business terminology based on business_type and service_model.
+ * Adapts UI labels so hotels, cinemas, bakeries, sweet shops, cafes, and restaurants
+ * each have native, industry-standard language.
+ * 
+ * @param {object} restaurant 
+ * @returns {object} Terminology mappings
+ */
+export function getBusinessTerminology(restaurant = {}) {
+  const profile = resolveBusinessProfile(restaurant);
+  const bType = profile.business_type || 'restaurant';
+  const sModel = profile.service_model || 'dine_in';
+
+  if (bType === 'hotel_resort' || sModel === 'hotel') {
+    return {
+      businessType: bType,
+      serviceModel: sModel,
+      venueName: 'Hotel & Resort',
+      itemSingular: 'Item',
+      itemPlural: 'Items',
+      dishSingular: 'Menu Item',
+      dishPlural: 'In-Room Menu',
+      spaceSingular: 'Room',
+      spacePlural: 'Rooms',
+      spaceIcon: '🏨',
+      serviceStation: 'In-Room Dining Kitchen',
+      kdsTitle: 'In-Room Dining Dispatch',
+      callStaffLabel: 'Room Service',
+      standeeLabel: 'Room QR Standee',
+      catalogTitle: 'In-Room Dining Catalog'
+    };
+  }
+
+  if (bType === 'cinema_theatre' || sModel === 'cinema') {
+    return {
+      businessType: bType,
+      serviceModel: sModel,
+      venueName: 'Cinema & Multiplex',
+      itemSingular: 'Snack & Beverage',
+      itemPlural: 'Snacks & Concessions',
+      dishSingular: 'Concession Item',
+      dishPlural: 'Concessions & Snacks',
+      spaceSingular: 'Seat',
+      spacePlural: 'Seats',
+      spaceIcon: '🎬',
+      serviceStation: 'Concession Pantry',
+      kdsTitle: 'Seat Dispatch Terminal',
+      callStaffLabel: 'Help & Usher',
+      standeeLabel: 'Seat QR Sticker',
+      catalogTitle: 'Concessions Menu'
+    };
+  }
+
+  if (bType === 'bakery_confectionery') {
+    return {
+      businessType: bType,
+      serviceModel: sModel,
+      venueName: 'Bakery & Confectionery',
+      itemSingular: 'Bakery Item',
+      itemPlural: 'Bakery & Cakes',
+      dishSingular: 'Cake / Pastry',
+      dishPlural: 'Cakes & Bakery Items',
+      spaceSingular: 'Counter',
+      spacePlural: 'Counters / Tables',
+      spaceIcon: '🍰',
+      serviceStation: 'Bakehouse / Packing Counter',
+      kdsTitle: 'Bakery Dispatch Display',
+      callStaffLabel: 'Store Staff',
+      standeeLabel: 'Counter QR Standee',
+      catalogTitle: 'Bakery & Pastry Catalog'
+    };
+  }
+
+  if (bType === 'sweet_shop') {
+    return {
+      businessType: bType,
+      serviceModel: sModel,
+      venueName: 'Sweet Shop & Mithai',
+      itemSingular: 'Mithai / Sweet',
+      itemPlural: 'Sweets & Namkeen',
+      dishSingular: 'Mithai Item',
+      dishPlural: 'Sweets & Farsan',
+      spaceSingular: 'Counter',
+      spacePlural: 'Counters / Tables',
+      spaceIcon: '🍬',
+      serviceStation: 'Packing / Mithai Counter',
+      kdsTitle: 'Packing & Order Display',
+      callStaffLabel: 'Store Staff',
+      standeeLabel: 'Counter QR Standee',
+      catalogTitle: 'Mithai & Sweets Catalog'
+    };
+  }
+
+  if (bType === 'cafe') {
+    return {
+      businessType: bType,
+      serviceModel: sModel,
+      venueName: 'Cafe & Roastery',
+      itemSingular: 'Cafe Item',
+      itemPlural: 'Cafe Items & Brews',
+      dishSingular: 'Beverage / Bite',
+      dishPlural: 'Cafe Menu',
+      spaceSingular: 'Table',
+      spacePlural: 'Tables',
+      spaceIcon: '☕',
+      serviceStation: 'Barista & Kitchen',
+      kdsTitle: 'Barista & Kitchen Display',
+      callStaffLabel: 'Call Server',
+      standeeLabel: 'Table QR Standee',
+      catalogTitle: 'Cafe & Beverage Menu'
+    };
+  }
+
+  if (bType === 'fast_food_qsr' || bType === 'cloud_kitchen') {
+    return {
+      businessType: bType,
+      serviceModel: sModel,
+      venueName: 'Quick Service / Takeaway',
+      itemSingular: 'Food Item',
+      itemPlural: 'Menu Items',
+      dishSingular: 'Item',
+      dishPlural: 'Dishes & Combos',
+      spaceSingular: 'Counter / Table',
+      spacePlural: 'Counters / Tables',
+      spaceIcon: '🍔',
+      serviceStation: 'Kitchen & Dispatch',
+      kdsTitle: 'QSR Kitchen & Packing Display',
+      callStaffLabel: 'Staff Support',
+      standeeLabel: 'Counter QR Standee',
+      catalogTitle: 'QSR Menu'
+    };
+  }
+
+  // Default Restaurant / Family Dining / Dhaba
+  return {
+    businessType: bType,
+    serviceModel: sModel,
+    venueName: 'Restaurant & Dining',
+    itemSingular: 'Dish',
+    itemPlural: 'Dishes',
+    dishSingular: 'Dish',
+    dishPlural: 'Dishes',
+    spaceSingular: 'Table',
+    spacePlural: 'Tables',
+    spaceIcon: '🍽️',
+    serviceStation: 'Kitchen',
+    kdsTitle: 'Kitchen Display (KDS)',
+    callStaffLabel: 'Call Waiter',
+    standeeLabel: 'Table QR Standee',
+    catalogTitle: 'Restaurant Menu'
+  };
+}
+
 export default {
   BUSINESS_TYPES,
   FOOD_TYPES,
@@ -399,5 +552,6 @@ export default {
   resolveBusinessProfile,
   resolveBannerBadge,
   getAvailableSpaceTypesForBusiness,
-  getSpaceConfig
+  getSpaceConfig,
+  getBusinessTerminology
 };

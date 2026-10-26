@@ -17,16 +17,16 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
 
   const requestOptions = [
     { id: 'water', label: 'Drinking Water 💧', icon: <Droplets size={20} color="#0284C7" />, desc: 'Bring fresh drinking water' },
-    { id: 'bill', label: 'Request Final Bill 🧾', icon: <Receipt size={20} color="#D97706" />, desc: 'Send printed bill to table' },
-    { id: 'clean', label: 'Clean Table 🧹', icon: <Sparkles size={20} color="#059669" />, desc: 'Wipe or clean table surface' },
-    { id: 'waiter', label: 'Call Waiter / Help ❓', icon: <UserCheck size={20} color="#7C3AED" />, desc: 'Staff needed at table' }
+    { id: 'bill', label: isHotel ? 'Room Folio / Bill 🧾' : 'Request Final Bill 🧾', icon: <Receipt size={20} color="#D97706" />, desc: isHotel ? 'Send folio / bill to room' : 'Send printed bill to table' },
+    { id: 'clean', label: isHotel ? 'Housekeeping Clean Up 🧹' : 'Clean Surface / Table 🧹', icon: <Sparkles size={20} color="#059669" />, desc: isHotel ? 'Request room housekeeping' : 'Wipe or clean table surface' },
+    { id: 'waiter', label: isHotel ? 'Room Service Attendant 🛎️' : 'Call Staff / Waiter ❓', icon: <UserCheck size={20} color="#7C3AED" />, desc: isHotel ? 'Staff attendant needed at room' : 'Staff needed at table' }
   ];
 
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
       const selectedObj = requestOptions.find(o => o.id === selectedType);
-      const reqLabel = selectedObj ? selectedObj.label : (isCinema ? 'Staff Assistance' : isHotel ? 'Room Service' : 'Call Waiter');
+      const reqLabel = selectedObj ? selectedObj.label : (isCinema ? 'Staff Assistance' : isHotel ? 'Room Service' : 'Call Staff');
       const res = await createServiceRequest({
         slug: slug || '',
         table_number: tableNum || '1',
@@ -37,7 +37,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
       });
 
       if (onSuccess) {
-        onSuccess(res?.message || `🛎️ Staff notified for ${tableNum || 'Table 1'}!`);
+        onSuccess(res?.message || `🛎️ Staff notified for ${tableNum || 'Space'}!`);
       }
       onClose();
     } catch (err) {
@@ -76,10 +76,10 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
             </div>
             <div>
               <strong style={{ fontSize: '1.05rem', color: '#0A2315', display: 'block' }}>
-                Call Table Staff / Waiter
+                {isHotel ? 'Room Service & Assistance' : 'Call Staff / Attendant'}
               </strong>
               <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800 }}>
-                {tableNum || 'Table 1'}
+                {tableNum || 'Space 1'}
               </span>
             </div>
           </div>
