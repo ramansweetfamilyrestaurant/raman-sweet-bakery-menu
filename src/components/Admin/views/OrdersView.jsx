@@ -1436,14 +1436,16 @@ export default function OrdersView({
               justifyContent: 'center',
               gap: '12px'
             }}>
-              <span style={{ fontSize: '2.5rem' }}>{isHotel ? '🏨' : '🍽️'}</span>
+              <span style={{ fontSize: '2.5rem' }}>{isHotel ? '🏨' : isCinema ? '🎬' : '🍽️'}</span>
               <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                {isHotel ? 'No Guest Rooms Configured' : 'No Physical Spaces Configured'}
+                {isHotel ? 'No Guest Rooms Configured' : isCinema ? 'No Cinema Screens Configured' : 'No Physical Spaces Configured'}
               </h4>
               <p style={{ fontSize: '0.8rem', color: '#64748B', margin: 0, maxWidth: '420px', lineHeight: 1.5 }}>
                 {isHotel
                   ? 'Set your Total Guest Rooms in Business Profile or Physical Space settings to start tracking room service and live occupancy.'
-                  : 'Configure dining tables, cabins, or VIP sections in Settings to view live floor occupancy.'}
+                  : isCinema
+                    ? 'Configure cinema screens and seats in Settings to track live in-seat ordering occupancy.'
+                    : 'Configure dining tables, cabins, or service spaces in Settings to view live floor occupancy.'}
               </p>
               {onNavigateToSetup && (
                 <button
