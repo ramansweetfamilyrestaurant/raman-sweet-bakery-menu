@@ -1045,8 +1045,8 @@ export default function App() {
       if (errCode === 'presence_expired' || errCode === 'invalid_presence') {
         setPresenceToken(null);
         presenceTokenRef.current = null;
-        alert('Table presence verification expired. Please verify again to place your order.');
-        setPresenceModalOpen(true);
+        pendingOrderPayloadRef.current = null;
+        alert(errMsg || 'Table presence verification expired or was invalid. Please tap Send Order to verify again.');
       } else {
         alert(errMsg || 'Failed to place order after verification. Please try again.');
       }

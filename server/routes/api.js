@@ -28,7 +28,8 @@ import {
   isValidVerificationMode,
   VERIFICATION_MODES,
   GPS_TOLERANCE,
-  calculateEffectiveGpsTolerance
+  calculateEffectiveGpsTolerance,
+  hasRestaurantConfiguredGps
 } from '../utils/presenceVerification.js';
 import { 
   resolveBusinessProfile, 
@@ -1053,7 +1054,8 @@ router.get('/orders/presence-policy', async (req, res) => {
     // 3. Resolve effective structured policy
     const policy = resolveEffectiveVerificationPolicy({
       directOrderingEnabled: isDirectOrderingActive,
-      staffTimeoutSeconds: resto.staff_verification_timeout_seconds
+      staffTimeoutSeconds: resto.staff_verification_timeout_seconds,
+      resto
     });
 
     return res.json({
@@ -1250,19 +1252,7 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
     const qrContextHash = generateQrContextHash(resto.slug, resolvedSpaceType, resolvedSpaceNum, receivedQrToken);
 
     // Step 8: Authoritative Server-Side Geofence Validation (AFTER QR Verification)
-    const restoLat = Number(resto.latitude);
-    const restoLng = Number(resto.longitude);
-    const isLocInitialized = Boolean(
-      resto.location_initialized === true || 
-      resto.location_initialized === 1 || 
-      resto.location_initialized === 'true'
-    );
-    const hasRestaurantLocation = Boolean(
-      isLocInitialized &&
-      resto.latitude != null && resto.longitude != null &&
-      !isNaN(restoLat) && !isNaN(restoLng) &&
-      restoLat !== 0 && restoLng !== 0
-    );
+    const hasRestaurantLocation = hasRestaurantConfiguredGps(resto);
 
     // If restaurant has not configured GPS coordinates, verification is not required
     if (!hasRestaurantLocation) {
@@ -1279,6 +1269,30 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
         qrContextHash,
         expiryMinutes
       });
+
+      try {
+        const nowIso = new Date().toISOString();
+        const expiresIso = expiresAt.toISOString();
+        try {
+          await query(
+            `INSERT INTO table_location_verifications (
+               restaurant_id, table_number, space_type, space_number, verification_token,
+               distance_meters, accuracy_meters, verification_method, status, qr_context_hash,
+               requested_at, verified_at, expires_at
+             ) VALUES ($1, $2, $3, $4, $5, 0, 0, 'QR', 'verified', $6, $7, $7, $8)`,
+            [resto.id, cleanTable, resolvedSpaceType, resolvedSpaceNum, verificationToken, qrContextHash, nowIso, expiresIso]
+          );
+        } catch (colErr) {
+          await query(
+            `INSERT INTO table_location_verifications (
+               restaurant_id, table_number, verification_token, distance_meters, accuracy_meters, status, verified_at, expires_at
+             ) VALUES ($1, $2, $3, 0, 0, 'verified', $4, $5)`,
+            [resto.id, cleanTable, verificationToken, nowIso, expiresIso]
+          );
+        }
+      } catch (dbErr) {
+        console.warn('Could not persist table verification record:', dbErr.message);
+      }
 
       return res.json({
         success: true,
@@ -1496,7 +1510,8 @@ router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (
 
     const effectivePolicy = resolveEffectiveVerificationPolicy({
       directOrderingEnabled: isDirectOrderingActive,
-      staffTimeoutSeconds: resto.staff_verification_timeout_seconds
+      staffTimeoutSeconds: resto.staff_verification_timeout_seconds,
+      resto
     });
 
     // 8. Policy Check: Is Staff Verification Allowed?
@@ -1704,23 +1719,24 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       });
     }
 
-    // Step 8: Presence Verification Enforcement under GPS_WITH_STAFF_FALLBACK
+    // Step 8: Presence Verification Enforcement under Effective Policy
     const effectivePolicy = resolveEffectiveVerificationPolicy({
       directOrderingEnabled: isDirectOrderingActive,
-      staffTimeoutSeconds: resto.staff_verification_timeout_seconds
+      staffTimeoutSeconds: resto.staff_verification_timeout_seconds,
+      resto
     });
 
     if (effectivePolicy.enabled) {
       const suppliedPresenceToken = String(presence_token || location_token || '').trim();
-      const allowedMethods = ['GPS', 'STAFF'];
+      const allowedMethods = effectivePolicy.allowedMethods;
 
       if (!suppliedPresenceToken) {
         return res.status(403).json({
           success: false,
           error: 'presence_required',
-          mode: 'GPS_WITH_STAFF_FALLBACK',
+          mode: effectivePolicy.mode,
           allowed_methods: allowedMethods,
-          staff_fallback_allowed: true,
+          staff_fallback_allowed: effectivePolicy.staffFallbackAllowed,
           staff_timeout_seconds: effectivePolicy.staffTimeoutSeconds,
           message: 'Table presence verification is required to place table orders.'
         });
@@ -1741,7 +1757,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           return res.status(403).json({
             success: false,
             error: 'presence_expired',
-            mode: 'GPS_WITH_STAFF_FALLBACK',
+            mode: effectivePolicy.mode,
             allowed_methods: allowedMethods,
             message: 'Your table presence authorization has expired. Please re-verify to place an order.'
           });
@@ -1750,7 +1766,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           success: false,
           error: 'invalid_presence',
           reason: verifCheck.reason || 'unverified_location',
-          mode: 'GPS_WITH_STAFF_FALLBACK',
+          mode: effectivePolicy.mode,
           allowed_methods: allowedMethods,
           message: 'Table presence verification failed or was issued for a different table/restaurant. Please verify your presence again.'
         });

@@ -132,6 +132,47 @@ export default function PresenceVerificationModal({
       return;
     }
 
+    const hasConfiguredGps = Boolean(
+      restaurantInfo?.location_initialized &&
+      restaurantInfo?.latitude &&
+      restaurantInfo?.longitude
+    );
+
+    // If restaurant has not configured GPS, verify immediately via authoritative QR presence token
+    if (!hasConfiguredGps) {
+      setViewState('GPS_ACQUIRING');
+      setErrorMessage('');
+      const slug = restaurantInfo?.slug || '';
+      verifyCustomerLocationApi({
+        slug,
+        table_number: tableNumber || '1',
+        space_type: spaceType || 'table',
+        table_token: cleanToken
+      }).then((verifyRes) => {
+        if (!isMountedRef.current) return;
+        if (verifyRes && verifyRes.verified && verifyRes.presence_token) {
+          setDistanceVal(verifyRes.distance_meters || 0);
+          setViewState('VERIFIED');
+          isAcquiringGpsRef.current = false;
+          setTimeout(() => {
+            if (isMountedRef.current && onVerified) {
+              onVerified(verifyRes.presence_token, verifyRes.method || 'QR');
+            }
+          }, 400);
+        } else {
+          isAcquiringGpsRef.current = false;
+          setViewState('GPS_FAILED');
+          setErrorMessage(verifyRes?.message || 'Table presence verification failed.');
+        }
+      }).catch((err) => {
+        if (!isMountedRef.current) return;
+        isAcquiringGpsRef.current = false;
+        setViewState('GPS_FAILED');
+        setErrorMessage(err.message || 'Could not verify table QR with restaurant.');
+      });
+      return;
+    }
+
     if (!navigator.geolocation) {
       isAcquiringGpsRef.current = false;
       setViewState('GPS_FAILED');
@@ -192,7 +233,7 @@ export default function PresenceVerificationModal({
 
             setTimeout(() => {
               if (isMountedRef.current && onVerified) {
-                onVerified(verifyRes.presence_token, 'GPS');
+                onVerified(verifyRes.presence_token, verifyRes.method || 'GPS');
               }
             }, 600);
           } else {

@@ -66,11 +66,30 @@ export function generateQrContextHash(slug, spaceType, spaceNumber, qrToken) {
 }
 
 /**
- * Resolves the authoritative effective verification policy across SuperAdmin global controls,
+ * Determines whether a restaurant has configured and initialized valid GPS coordinates.
+ * @param {Object} resto
+ * @returns {boolean}
+ */
+export function hasRestaurantConfiguredGps(resto = {}) {
+  if (!resto || typeof resto !== 'object') return false;
+  const lat = Number(resto.latitude);
+  const lng = Number(resto.longitude);
+  const isLocInitialized = Boolean(
+    resto.location_initialized === true ||
+    resto.location_initialized === 1 ||
+    resto.location_initialized === 'true'
+  );
+  return Boolean(
+    isLocInitialized &&
+    resto.latitude != null && resto.longitude != null &&
+    !isNaN(lat) && !isNaN(lng) &&
+    lat !== 0 && lng !== 0
+  );
+}
+
 /**
- * Resolves the authoritative effective verification policy.
- * Under the unified architecture, direct_ordering_enabled is the single master entitlement.
- * When enabled, table presence verification is active under GPS_WITH_STAFF_FALLBACK mode.
+ * Resolves the authoritative effective verification policy across SuperAdmin global controls,
+ * plan permissions, and tenant GPS readiness.
  *
  * @param {Object} params
  * @param {boolean} [params.directOrderingEnabled=true] - Authoritative resolved direct ordering capability
@@ -120,6 +139,23 @@ export function resolveEffectiveVerificationPolicy({
     };
   }
 
+  const hasGps = hasRestaurantConfiguredGps(resto);
+  if (!hasGps) {
+    return {
+      enabled: true,
+      mode: VERIFICATION_MODES.QR_ONLY,
+      allowedModes: [VERIFICATION_MODES.QR_ONLY],
+      allowedMethods: ['QR', 'STAFF', 'GPS'],
+      staffFallbackAllowed: true,
+      staffTimeoutSeconds: boundedTimeout,
+      source: {
+        applied: 'restaurant_gps_unconfigured',
+        directOrderingEnabled: true,
+        hasGps: false
+      }
+    };
+  }
+
   return {
     enabled: true,
     mode: VERIFICATION_MODES.GPS_WITH_STAFF_FALLBACK,
@@ -129,7 +165,8 @@ export function resolveEffectiveVerificationPolicy({
     staffTimeoutSeconds: boundedTimeout,
     source: {
       applied: 'direct_ordering_active',
-      directOrderingEnabled: true
+      directOrderingEnabled: true,
+      hasGps: true
     }
   };
 }
@@ -261,8 +298,22 @@ export function verifyPresenceToken({
       return { valid: false, reason: 'table_number_mismatch' };
     }
 
+    const method = String(decoded.method || 'GPS').toUpperCase();
+
     // 3. Physical QR Context Hash Binding Check (Anti-Replay / Anti-Tamper)
-    if (qrToken && decoded.qr_hash) {
+    // For QR verification method, both physical qrToken and qr_hash are strictly mandatory.
+    if (method === 'QR') {
+      if (!decoded.qr_hash) {
+        return { valid: false, reason: 'missing_qr_context_hash' };
+      }
+      if (!qrToken) {
+        return { valid: false, reason: 'missing_qr_token' };
+      }
+      const expectedHash = generateQrContextHash(slug, spaceType, spaceNumber, qrToken);
+      if (decoded.qr_hash !== expectedHash) {
+        return { valid: false, reason: 'qr_context_mismatch' };
+      }
+    } else if (qrToken && decoded.qr_hash) {
       const expectedHash = generateQrContextHash(slug, spaceType, spaceNumber, qrToken);
       if (decoded.qr_hash !== expectedHash) {
         return { valid: false, reason: 'qr_context_mismatch' };
@@ -271,7 +322,6 @@ export function verifyPresenceToken({
 
     // 4. Allowed Verification Method Check (GPS vs STAFF vs QR)
     if (Array.isArray(allowedMethods) && allowedMethods.length > 0) {
-      const method = String(decoded.method || 'GPS').toUpperCase();
       const normalizedAllowed = allowedMethods.map(m => String(m).toUpperCase());
       if (!normalizedAllowed.includes(method)) {
         return { valid: false, reason: 'method_not_allowed', method, allowedMethods: normalizedAllowed };
@@ -297,6 +347,7 @@ export default {
   isValidVerificationMode,
   normalizeVerificationMode,
   generateQrContextHash,
+  hasRestaurantConfiguredGps,
   resolveEffectiveVerificationPolicy,
   generatePresenceToken,
   verifyPresenceToken,
