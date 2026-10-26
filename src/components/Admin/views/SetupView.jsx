@@ -13,7 +13,8 @@ import {
   SERVICE_MODEL_METADATA,
   resolveBusinessProfile,
   resolveBannerBadge,
-  resolveServiceModelForBusinessType
+  resolveServiceModelForBusinessType,
+  getBusinessTerminology
 } from '../../../utils/businessTaxonomy';
 import {
   fetchCinemaScreens,
@@ -95,7 +96,7 @@ function EmbeddedLocationMap({ lat, lng, radius, restaurantName, onLocationChang
       }).addTo(map);
 
       if (restaurantName) {
-        marker.bindPopup(`<strong>${restaurantName}</strong><br><span style="font-size:11px;color:#64748B">Restaurant Location</span>`);
+        marker.bindPopup(`<strong>${restaurantName}</strong><br><span style="font-size:11px;color:#64748B">Business Location</span>`);
       }
 
       const circle = L.circle([safeLat, safeLng], {
@@ -1129,13 +1130,15 @@ export default function SetupView({
   const passedChecks = [isProfileConfigured, isLogoConfigured, isGpsConfigured, isSecurityConfigured].filter(Boolean).length;
   const isFullySetup = passedChecks === totalChecks;
 
+  const terms = getBusinessTerminology(restaurantInfo || settingsForm);
+
   const showAll = settingsTab === 'general';
   const showRestaurant = showAll || settingsTab === 'restaurant';
   const showOperations = showAll || settingsTab === 'operations';
   const showMenuBilling = showAll || settingsTab === 'menu-billing';
   const navTabs = [
     { id: 'general', label: 'General', icon: Home },
-    { id: 'restaurant', label: 'Restaurant', icon: Store },
+    { id: 'restaurant', label: terms.businessNoun ? `${terms.businessNoun} Profile` : 'Business Profile', icon: Store },
     { id: 'operations', label: 'Operations', icon: Sliders },
     { id: 'menu-billing', label: 'Menu & Billing', icon: Utensils },
     { id: 'security', label: 'Security', icon: Lock },
@@ -6451,7 +6454,7 @@ export default function SetupView({
 
               {/* Status Row 2: Distance */}
               <div style={{ background: '#FAF8F5', padding: '10px 12px', borderRadius: '10px', border: '1px solid #EAE5DF' }}>
-                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Distance from Restaurant</span>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 700, display: 'block' }}>Distance from Location</span>
                 <strong style={{ fontSize: '0.88rem', color: '#064E3B', fontWeight: 900 }}>
                   {testLocationState.tested ? `${testLocationState.distance} m` : '42 m (Estimated on-premise)'}
                 </strong>
@@ -9205,7 +9208,7 @@ export default function SetupView({
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Edit Profile</strong>
-                        <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Update restaurant details</span>
+                        <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Update business details</span>
                       </div>
                     </div>
                     <ChevronRight size={16} color="#94A3B8" />
@@ -9218,7 +9221,7 @@ export default function SetupView({
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Generate QR</strong>
-                        <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Create table QR codes</span>
+                        <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Create QR standees</span>
                       </div>
                     </div>
                     <ChevronRight size={16} color="#94A3B8" />
@@ -9270,13 +9273,13 @@ export default function SetupView({
                 </div>
               </div>
 
-              {/* SECTION 2: RESTAURANT HEALTH BANNER */}
+              {/* SECTION 2: BUSINESS HEALTH BANNER */}
               <div className="restaurant-health-banner">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <ShieldCheck size={17} color="#16A34A" />
-                      <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>Restaurant Health</strong>
+                      <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>Business Health</strong>
                     </div>
                     <p style={{ fontSize: '0.74rem', color: '#64748B', margin: '2px 0 0 0' }}>
                       All core settings are configured and ready.
@@ -9298,7 +9301,7 @@ export default function SetupView({
                   <div className="health-item-card">
                     <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: isLogoConfigured ? '#DCFCE7' : '#F1F5F9', color: isLogoConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 900 }}>✓</span>
                     <div>
-                      <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A' }}>Restaurant Logo</div>
+                      <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A' }}>Brand Logo</div>
                       <div style={{ fontSize: '0.68rem', color: isLogoConfigured ? '#15803D' : '#64748B', fontWeight: 600 }}>{isLogoConfigured ? 'Configured' : 'Pending'}</div>
                     </div>
                   </div>
@@ -9328,7 +9331,7 @@ export default function SetupView({
                   </div>
                   <div className="health-item-row-mobile">
                     <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isLogoConfigured ? '#DCFCE7' : '#F1F5F9', color: isLogoConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
-                    <span>Restaurant Logo</span>
+                    <span>Brand Logo</span>
                   </div>
                   <div className="health-item-row-mobile">
                     <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isGpsConfigured ? '#DCFCE7' : '#F1F5F9', color: isGpsConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
@@ -9341,7 +9344,7 @@ export default function SetupView({
                 </div>
 
                 <div style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 700, background: '#F0FDF4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #DCFCE7' }}>
-                  Your restaurant is ready to go 🎉
+                  Your business is ready to go 🎉
                 </div>
               </div>
 
@@ -9364,7 +9367,7 @@ export default function SetupView({
                     <div>
                       <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Business Profile</strong>
                       <span style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
-                        Restaurant name, logo, contact details and address
+                        Business name, logo, contact details and address
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
@@ -9677,7 +9680,7 @@ export default function SetupView({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
-                  🏪 Restaurant Settings
+                  🏪 {terms.businessNoun || 'Business'} Settings
                 </h3>
                 <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
                   Manage your business profile, branding logo, physical address and customer location geofence.
@@ -9693,7 +9696,7 @@ export default function SetupView({
                   <div>
                     <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Business Profile</strong>
                     <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Restaurant business name, contact phone number, address, and FSSAI license details.
+                      Business name, contact phone number, address, and license details.
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
@@ -9704,15 +9707,15 @@ export default function SetupView({
                   </div>
                 </div>
 
-                {/* Card 2: Restaurant Logo & Branding */}
+                {/* Card 2: Brand Logo & Banner */}
                 <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Upload size={22} />
                   </div>
                   <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Restaurant Logo & Banner</strong>
+                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Brand Logo & Banner</strong>
                     <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Upload your official restaurant logo icon and high-resolution header banner.
+                      Upload your official brand logo icon and high-resolution header banner.
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
@@ -10096,7 +10099,7 @@ export default function SetupView({
         isOpen={openDrawer === 'profile'}
         onClose={() => setOpenDrawer(null)}
         title="Business Profile"
-        subtitle="Restaurant identity & contact details"
+        subtitle="Business identity & contact details"
         footer={(
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
             <button
@@ -10130,7 +10133,7 @@ export default function SetupView({
       >
         <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.84rem' }}>
           
-          {/* 1. RESTAURANT IDENTITY */}
+          {/* 1. BUSINESS IDENTITY */}
           <div style={{
             background: '#FFFFFF',
             borderRadius: '16px',
@@ -10143,7 +10146,7 @@ export default function SetupView({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '1rem' }}>🏪</span>
-              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>1. Restaurant Identity</strong>
+              <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>1. Business Identity</strong>
             </div>
 
             <div>
@@ -10155,7 +10158,7 @@ export default function SetupView({
                   <img src={settingsForm.logo || restaurantInfo?.logo} alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '14px', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0, background: '#FFFFFF' }} />
                 ) : (
                   <div style={{ width: '80px', height: '80px', borderRadius: '14px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.8rem', border: '2px solid #F59E0B', flexShrink: 0, boxShadow: '0 4px 10px rgba(124, 29, 29, 0.2)' }}>
-                    {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
+                    {(settingsForm.name || restaurantInfo?.name || terms.businessNoun || 'Business').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <label style={{
@@ -10847,7 +10850,7 @@ export default function SetupView({
               color: '#92400E'
             }}>
               <span>💡</span>
-              <span>This is how your customers will see your digital menu and restaurant information.</span>
+              <span>This is how your customers will see your digital menu and business information.</span>
             </div>
 
             <button

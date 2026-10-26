@@ -222,12 +222,25 @@ export function getCustomerReviewProfile(businessType, restoType) {
     return {
       typeKey: 'sweet_bakery',
       title: 'Customer Rating & Google Review',
-      question: 'How was your dining experience today?',
+      question: 'How was your bakery & sweets experience today?',
       highlights: HIGHLIGHT_CHIPS.sweet_bakery,
-      placeholder: 'Mention a sweet or snack (e.g. Kaju Katli was awesome...)',
-      ctaText: 'Rate Your Dining Experience',
-      aiContext: 'restaurant',
+      placeholder: 'Mention a sweet, pastry or snack (e.g. Kaju Katli, Truffle Cake was awesome...)',
+      ctaText: 'Rate Your Experience',
+      aiContext: 'bakery',
       defaultChips: ['🍬 Fresh Sweets', '🧹 Clean & Hygienic']
+    };
+  }
+
+  if (effectiveType === 'fast_food') {
+    return {
+      typeKey: 'fast_food',
+      title: 'Customer Rating & Google Review',
+      question: 'How was your quick bite & cafe experience today?',
+      highlights: HIGHLIGHT_CHIPS.fast_food,
+      placeholder: 'Mention a favorite snack or burger (e.g. Crispy Burger, Cold Coffee was awesome...)',
+      ctaText: 'Rate Your Experience',
+      aiContext: 'cafe',
+      defaultChips: ['🍟 Crispy & Fresh', '⚡ Lightning Fast']
     };
   }
 

@@ -218,7 +218,7 @@ export default function OffersView({
       return;
     }
     if (selectedDishIds.length === 0 && selectedComboIds.length === 0) {
-      alert('Please select at least one menu dish or combo deal for this offer.');
+      alert('Please select at least one menu item or combo deal for this offer.');
       return;
     }
 
@@ -1315,7 +1315,7 @@ export default function OffersView({
                       type="text"
                       value={itemSearchQuery}
                       onChange={(e) => setItemSearchQuery(e.target.value)}
-                      placeholder="Search dish name..."
+                      placeholder="Search menu item..."
                       style={{
                         flex: 1,
                         height: '36px',

@@ -33,6 +33,7 @@ import {
   HeartHandshake
 } from 'lucide-react';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 
 export default function ReviewView({ 
   settingsForm = {}, 
@@ -73,7 +74,8 @@ export default function ReviewView({
   const [copiedToast, setCopiedToast] = useState(false);
   const [expandedReviews, setExpandedReviews] = useState({});
 
-  const restoName = settingsForm?.name || restaurantInfo?.name || 'our restaurant';
+  const terms = getBusinessTerminology(restaurantInfo || settingsForm);
+  const restoName = settingsForm?.name || restaurantInfo?.name || (terms.businessNoun ? `our ${terms.businessNoun.toLowerCase()}` : 'our business');
   const isGoogleConnected = Boolean(settingsForm?.google_review_url && settingsForm.google_review_url.trim());
 
   // Base Review Feed Data
@@ -86,10 +88,16 @@ export default function ReviewView({
       date: 'Yesterday',
       timestamp: '28 May 2026',
       platform: 'Google',
-      text: 'Amazing food and top-notch hospitality! The Paneer Butter Masala and Garlic Naan were exceptionally delicious, freshly made and piping hot. Definitely our new favorite family dining spot in town.',
+      text: terms.isHotel
+        ? 'Exceptional stay and prompt room service! The room was spotless, peaceful, and the amenities were top quality. Definitely our preferred place to stay.'
+        : terms.isCinema
+        ? 'Fantastic movie experience! Crisp sound, ultra-clear screen, and delicious snacks ordered right to our seat.'
+        : terms.isBakery || terms.isSweetShop
+        ? 'Mouth-watering sweets and freshly baked pastries! Excellent quality, authentic taste, and very clean counter.'
+        : 'Amazing food and top-notch hospitality! The Paneer Butter Masala and Garlic Naan were exceptionally delicious, freshly made and piping hot. Definitely our new favorite family dining spot in town.',
       status: 'needs_reply', // 'replied' | 'needs_reply'
       reply: null,
-      tags: ['Food Quality', 'Paneer', 'Family Dining']
+      tags: terms.isHotel ? ['Clean Room', 'Room Service', 'Hospitality'] : terms.isCinema ? ['Dolby Atmos', 'Seat Snacks', 'Comfort'] : terms.isBakery || terms.isSweetShop ? ['Fresh Sweets', 'Bakery', 'Hygiene'] : ['Food Quality', 'Paneer', 'Family Dining']
     },
     {
       id: 'rev-2',
@@ -99,10 +107,10 @@ export default function ReviewView({
       date: '3 days ago',
       timestamp: '26 May 2026',
       platform: 'Google',
-      text: 'Loved the digital QR ordering system! We placed our order directly from table 4, and the food arrived in under 12 minutes. The Dal Makhani and Gulab Jamun were heavenly.',
+      text: `Loved the digital QR ordering system! We placed our order directly in seconds, and it arrived in under 12 minutes. Smooth and seamless experience.`,
       status: 'replied',
-      reply: `Dear Priya, thank you so much for the glowing 5-star review! 🌟 We're thrilled that you enjoyed our fast QR table ordering and loved the Dal Makhani and Gulab Jamun. Looking forward to welcoming you again soon! 🙏`,
-      tags: ['QR Ordering', 'Desserts', 'Fast Service']
+      reply: `Dear Priya, thank you so much for the glowing 5-star review! 🌟 We're thrilled that you enjoyed our fast QR ordering. Looking forward to welcoming you again soon! 🙏`,
+      tags: ['QR Ordering', 'Fast Service', 'Hospitality']
     },
     {
       id: 'rev-3',
@@ -112,10 +120,10 @@ export default function ReviewView({
       date: '5 days ago',
       timestamp: '24 May 2026',
       platform: 'Google',
-      text: 'Great food quality and clean hygiene. The ambiance was pleasant, though service was slightly busy during Sunday dinner rush. Overall a very good experience and value for money.',
+      text: 'Great quality and clean hygiene. The ambiance was pleasant, though service was slightly busy during peak hours. Overall a very good experience and value for money.',
       status: 'needs_reply',
       reply: null,
-      tags: ['Ambiance', 'Sunday Rush', 'Hygiene']
+      tags: ['Ambiance', 'Peak Rush', 'Hygiene']
     },
     {
       id: 'rev-4',
@@ -125,10 +133,10 @@ export default function ReviewView({
       date: '1 week ago',
       timestamp: '21 May 2026',
       platform: 'Google',
-      text: 'We had to wait over 35 minutes for our main course on Saturday night. While the food was tasty once it arrived, the waiting time needs serious improvement.',
+      text: 'We had to wait over 30 minutes for our order. While the items were good once they arrived, the turnaround time needs serious improvement.',
       status: 'needs_reply',
       reply: null,
-      tags: ['Wait Time', 'Saturday Rush']
+      tags: ['Wait Time', 'Rush Hour']
     }
   ]);
 
@@ -144,17 +152,69 @@ export default function ReviewView({
 
   const activeReview = reviewsList[activeReviewIndex] || reviewsList[0];
 
-  // Helper to generate AI response
+  // Helper to generate AI response tailored to business profile
   const generateAiResponseText = (review, tone, lang) => {
-    const dish = review.tags?.find(t => t.toLowerCase().includes('paneer') || t.toLowerCase().includes('dal') || t.toLowerCase().includes('dessert')) || 'dishes';
+    const dish = review.tags?.find(t => t.toLowerCase().includes('paneer') || t.toLowerCase().includes('dal') || t.toLowerCase().includes('sweet') || t.toLowerCase().includes('room') || t.toLowerCase().includes('snack') || t.toLowerCase().includes('dessert')) || '';
     
+    // HOTEL / RESORT PROFILE
+    if (terms.isHotel) {
+      if (review.rating >= 4) {
+        if (tone === 'warm') {
+          return `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}! 🌟 We're delighted you had a relaxing stay and enjoyed our hospitality${dish ? `, especially our ${dish}` : ''}. Ensuring your comfort and seamless service is our greatest pleasure. We can't wait to welcome you back to ${restoName}! 🙏✨`;
+        } else if (tone === 'professional') {
+          return `Dear ${review.author}, thank you for taking the time to share your feedback and ${review.rating}-star rating for ${restoName}. We take pride in delivering exceptional accommodations and warm hospitality. We look forward to your next visit. Warm regards, Management Team.`;
+        } else if (tone === 'concise') {
+          return `Thank you for the fantastic ${review.rating}-star review, ${review.author}! We're thrilled you enjoyed your stay at ${restoName}. See you again soon!`;
+        } else {
+          return `We are deeply grateful for your generous ${review.rating}-star rating, ${review.author}! Your appreciation brings huge smiles to our front desk and housekeeping staff. Thank you for choosing ${restoName}! ❤️`;
+        }
+      } else {
+        return `Dear ${review.author}, we sincerely apologize for falling short during your stay. Providing a peaceful, flawless guest experience is our top priority. Please reach out to our front desk at ${settingsForm?.phone || 'our reception'} so we can assist and make this right on your next visit. 🙏`;
+      }
+    }
+
+    // CINEMA / THEATRE PROFILE
+    if (terms.isCinema) {
+      if (review.rating >= 4) {
+        if (tone === 'warm') {
+          return `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}! 🌟 We're thrilled you had an amazing movie experience and enjoyed our concession snacks. Bringing you great entertainment is our joy. See you at the movies soon at ${restoName}! 🎬🍿`;
+        } else if (tone === 'professional') {
+          return `Dear ${review.author}, thank you for sharing your feedback and ${review.rating}-star rating for ${restoName}. We strive to provide premium audiovisuals and comfort for all our moviegoers. Warm regards, Management Team.`;
+        } else if (tone === 'concise') {
+          return `Thank you for the fantastic ${review.rating}-star review, ${review.author}! We're glad you enjoyed your show at ${restoName}. See you next time! 🎬`;
+        } else {
+          return `Thank you for your generous ${review.rating}-star review, ${review.author}! Your support means the world to our cinema team. Enjoy the movies at ${restoName}! ❤️`;
+        }
+      } else {
+        return `Dear ${review.author}, thank you for your candid feedback. We apologize for the wait time during the interval rush. We are streamlining our concession counters for faster service. We hope to see you again soon at ${restoName}.`;
+      }
+    }
+
+    // BAKERY / SWEET SHOP PROFILE
+    if (terms.isBakery || terms.isSweetShop) {
+      if (review.rating >= 4) {
+        if (tone === 'warm') {
+          return `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}! 🌟 We're delighted you loved our fresh bakes and sweets${dish ? `, especially our ${dish}` : ''}. Baking fresh happiness for you every day is our passion. We can't wait to serve you again soon at ${restoName}! 🍰✨`;
+        } else if (tone === 'professional') {
+          return `Dear ${review.author}, thank you for taking the time to share your feedback and ${review.rating}-star rating for ${restoName}. We take pride in delivering authentic taste, freshness, and high hygiene standards. We look forward to your next visit. Warm regards, Management Team.`;
+        } else if (tone === 'concise') {
+          return `Thank you for the fantastic ${review.rating}-star review, ${review.author}! We're thrilled you enjoyed our treats at ${restoName}. See you again soon!`;
+        } else {
+          return `We are deeply grateful for your generous ${review.rating}-star rating, ${review.author}! Your appreciation brings huge smiles to our bakery and sweet master team. Thank you for choosing ${restoName}! ❤️`;
+        }
+      } else {
+        return `Dear ${review.author}, thank you for your candid feedback. We apologize for falling short during your visit. Freshness and quick service are our top priorities. Please contact us at ${settingsForm?.phone || 'our counter'} so we can make this right on your next visit. 🙏`;
+      }
+    }
+
+    // RESTAURANT / CAFE / DEFAULT PROFILE
     if (review.rating >= 4) {
       if (tone === 'warm') {
         return `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}! 🌟 We're delighted you loved our food and service${dish ? `, especially our ${dish}` : ''}. Serving you fresh, memorable meals is our greatest pleasure. We can't wait to serve you again soon at ${restoName}! 🙏✨`;
       } else if (tone === 'professional') {
         return `Dear ${review.author}, thank you for taking the time to share your feedback and ${review.rating}-star rating for ${restoName}. We take pride in delivering exceptional dining experiences and high culinary standards. We look forward to your next visit. Warm regards, Management Team.`;
       } else if (tone === 'concise') {
-        return `Thank you for the fantastic ${review.rating}-star review, ${review.author}! We're thrilled you enjoyed your dining experience at ${restoName}. See you again soon!`;
+        return `Thank you for the fantastic ${review.rating}-star review, ${review.author}! We're thrilled you enjoyed your experience at ${restoName}. See you again soon!`;
       } else {
         return `We are deeply grateful for your generous ${review.rating}-star rating, ${review.author}! Your appreciation brings huge smiles to our kitchen and service staff. Thank you for choosing ${restoName}! ❤️`;
       }
@@ -735,7 +795,7 @@ export default function ReviewView({
               ) : (
                 <>
                   <p style={{ margin: '0 0 10px 0' }}>
-                    No Google Review link is connected yet. Connect your Google Business review link so diners can leave reviews after dining.
+                    No Google Review link is connected yet. Connect your Google Business review link so customers can leave reviews after ordering.
                   </p>
                   <button
                     type="button"
@@ -1485,7 +1545,7 @@ export default function ReviewView({
               <div style={{ padding: '10px 12px', borderRadius: '8px', background: '#FAF8F5', border: '1px solid #EAE5DF', fontSize: '0.72rem', color: '#64748B', lineHeight: 1.45 }}>
                 💡 <strong>How to find your Google review link:</strong>
                 <ol style={{ margin: '4px 0 0', paddingLeft: '18px' }}>
-                  <li>Search your restaurant name on Google Maps.</li>
+                  <li>Search your business name on Google Maps.</li>
                   <li>Click <strong>Share</strong> or <strong>Ask for reviews</strong>.</li>
                   <li>Copy and paste the short link above.</li>
                 </ol>

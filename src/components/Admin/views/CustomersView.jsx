@@ -32,6 +32,8 @@ import {
 import { fetchAdminOrders } from '../../../api/client';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
+import { formatOrderLocation } from '../../../utils/billingHelper';
 import PlanLockedCard from '../components/PlanLockedCard';
 
 export default function CustomersView({
@@ -45,6 +47,7 @@ export default function CustomersView({
   currencySymbol = '₹'
 }) {
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
+  const terms = getBusinessTerminology(restaurantInfo || settingsForm);
   const sym = getCurrencySymbol(settingsForm?.currency_symbol !== undefined ? settingsForm.currency_symbol : (restaurantInfo?.currency_symbol || currencySymbol));
   
   // SuperAdmin-configured data retention policy (Dynamic)
@@ -1249,7 +1252,7 @@ export default function CustomersView({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <CheckCircle2 size={12} color="#059669" />
-                <span>Isolated to your restaurant business</span>
+                <span>Isolated to your business profile</span>
               </div>
             </div>
           </div>
@@ -1273,7 +1276,7 @@ export default function CustomersView({
               {/* QR Orders */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '3px' }}>
-                  <span style={{ fontWeight: 700, color: '#0F172A' }}>📱 QR Table Orders</span>
+                  <span style={{ fontWeight: 700, color: '#0F172A' }}>📱 QR {terms.isHotel ? 'Room Service' : terms.isCinema ? 'Seat Orders' : terms.isQsr ? 'Counter Orders' : 'Table Orders'}</span>
                   <span style={{ fontWeight: 800, color: '#064E3B' }}>
                     {metrics.qrCount} ({metrics.totalOrders > 0 ? Math.round((metrics.qrCount / metrics.totalOrders) * 100) : 0}%)
                   </span>
@@ -1653,9 +1656,9 @@ export default function CustomersView({
                           </span>
                         </div>
 
-                        {/* Order Meta: Table + Time */}
+                        {/* Order Meta: Location + Time */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.68rem', color: '#64748B', marginBottom: '8px' }}>
-                          <span>📍 Table: {ord.table_number || 'Dine-In'}</span>
+                          <span>📍 {formatOrderLocation(ord, restaurantInfo)}</span>
                           <span>•</span>
                           <span>🕒 {formatActivityTime(ordTime)}</span>
                         </div>

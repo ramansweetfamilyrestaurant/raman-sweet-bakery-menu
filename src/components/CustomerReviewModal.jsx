@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Star, Sparkles, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
 import { generateSmartReview, getCustomerReviewProfile } from '../utils/aiReviewGenerator';
+import { getBusinessTerminology } from '../utils/businessTaxonomy';
 
 export default function CustomerReviewModal({ info, onClose }) {
-  const restoName = info?.name || 'Restaurant';
+  const terms = getBusinessTerminology(info);
+  const restoName = info?.name || terms.businessNoun || 'Business';
   const profile = getCustomerReviewProfile(info?.business_type, info?.resto_type);
   const availableChips = profile.highlights || [];
 
