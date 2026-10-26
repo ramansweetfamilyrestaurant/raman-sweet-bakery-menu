@@ -777,7 +777,7 @@ export default function SupportTicketsView({ token }) {
                               <span>TouchQR Support Desk ({msg.sender_id ? `Admin #${msg.sender_id}` : 'Official'})</span>
                             </>
                           ) : (
-                            <span>Restaurant Client ({activeTicketData.ticket.restaurant_name})</span>
+                            <span>Business Client ({activeTicketData.ticket.restaurant_name})</span>
                           )}
                         </div>
                         {msg.message}

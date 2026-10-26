@@ -1084,9 +1084,9 @@ export default function TenantDetailsView({
               style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', borderRadius: '12px' }}
             >
               {tenant.active === false ? (
-                <><CheckCircle size={18} /> 🟢 Unsuspend & Activate Restaurant</>
+                <><CheckCircle size={18} /> 🟢 Unsuspend & Activate Business</>
               ) : (
-                <><XCircle size={18} /> 🔴 Suspend Shop Access</>
+                <><XCircle size={18} /> 🔴 Suspend Business Access</>
               )}
             </button>
 

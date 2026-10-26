@@ -38,7 +38,7 @@ export default function RevokeFreeAccessModal({ resto, isOpen, onClose, onConfir
           </div>
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>Revoke Free Access?</h3>
-            <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Restaurant: <strong>{resto.name}</strong></span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Business: <strong>{resto.name}</strong></span>
           </div>
         </div>
 

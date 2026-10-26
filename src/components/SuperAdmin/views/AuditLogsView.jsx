@@ -713,7 +713,7 @@ export default function AuditLogsView({
           >
             <option value="all">👥 All Actors</option>
             <option value="superadmin">👑 Super Admin</option>
-            <option value="admin">🏢 Restaurant Admin</option>
+            <option value="admin">🏢 Business Admin</option>
             <option value="payment_gateway">💳 Cashfree Gateway</option>
             <option value="system">⚙️ System Engine</option>
           </select>
@@ -1168,7 +1168,7 @@ export default function AuditLogsView({
                 </div>
 
                 <div>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>RESTAURANT / TENANT</span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>BUSINESS / TENANT</span>
                   <strong style={{ color: '#0F766E', marginTop: '2px', display: 'block' }}>
                     {(() => {
                       const modalTenant = resolveTenantDisplay(selectedEvent, restaurants);

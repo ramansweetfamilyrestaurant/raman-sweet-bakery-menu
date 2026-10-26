@@ -53,7 +53,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
         <table className="sa-table">
           <thead>
             <tr>
-              <th>RESTAURANT</th>
+              <th>BUSINESS / TENANT</th>
               <th>CURRENT PLAN</th>
               <th>STATUS</th>
               <th>AUTO-RENEW</th>

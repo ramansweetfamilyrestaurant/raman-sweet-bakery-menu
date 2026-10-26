@@ -48,23 +48,23 @@ export default function TermsOfService({ onOpenLogin, onStartTrial }) {
       </section>
 
       <section id="owner-accounts" className="km-legal-section">
-        <h2 className="km-legal-h2">3. Restaurant Owner Accounts</h2>
+        <h2 className="km-legal-h2">3. Business Owner & Merchant Accounts</h2>
         <p className="km-legal-p">
-          To use TouchQR, you must create a restaurant owner account. You agree to provide accurate, current, and complete information during registration and to keep your account credentials confidential. You are responsible for all activities occurring under your restaurant account.
+          To use TouchQR, you must create a business owner account. You agree to provide accurate, current, and complete information during registration and to keep your account credentials confidential. You are responsible for all activities occurring under your business account.
         </p>
       </section>
 
       <section id="services" className="km-legal-section">
         <h2 className="km-legal-h2">4. Digital Menu & QR Services</h2>
         <p className="km-legal-p">
-          TouchQR grants you a non-exclusive, non-transferable, revocable license to create and host digital menus, generate QR codes, and present your items to restaurant diners during the term of your active subscription.
+          TouchQR grants you a non-exclusive, non-transferable, revocable license to create and host digital menus, generate QR codes, and present your items to customers during the term of your active subscription.
         </p>
       </section>
 
       <section id="kot-features" className="km-legal-section">
-        <h2 className="km-legal-h2">5. Kitchen KOT & Thermal Printing</h2>
+        <h2 className="km-legal-h2">5. Live Order Tickets & Thermal Printing</h2>
         <p className="km-legal-p">
-          Hardware integration features (such as USB or Bluetooth 2-inch/3-inch thermal printers) require compatible device hardware. While TouchQR supports standard thermal printing protocols, local device drivers and browser permissions remain the responsibility of the restaurant operator.
+          Hardware integration features (such as USB or Bluetooth 2-inch/3-inch thermal printers) require compatible device hardware. While TouchQR supports standard thermal printing protocols, local device drivers and browser permissions remain the responsibility of the business operator.
         </p>
       </section>
 
@@ -78,7 +78,7 @@ export default function TermsOfService({ onOpenLogin, onStartTrial }) {
       <section id="free-trial" className="km-legal-section">
         <h2 className="km-legal-h2">7. Free Trial Terms</h2>
         <p className="km-legal-p">
-          New accounts are eligible for a zero-risk 16-Day Free Trial without entering credit card details. Upon expiration of the free trial period, continued access to public digital menus and kitchen tools requires selecting an active subscription plan.
+          New accounts are eligible for a zero-risk 16-Day Free Trial without entering credit card details. Upon expiration of the free trial period, continued access to public digital menus and management tools requires selecting an active subscription plan.
         </p>
       </section>
 
@@ -93,8 +93,8 @@ export default function TermsOfService({ onOpenLogin, onStartTrial }) {
         <h2 className="km-legal-h2">9. Acceptable Use Policy</h2>
         <p className="km-legal-p">You agree not to:</p>
         <ul className="km-legal-list">
-          <li>Upload illegal, defamatory, or fraudulent content or illegal food offerings.</li>
-          <li>Attempt to breach tenant isolation or disrupt service performance for other restaurants.</li>
+          <li>Upload illegal, defamatory, or fraudulent content or unauthorized catalog offerings.</li>
+          <li>Attempt to breach tenant isolation or disrupt service performance for other businesses.</li>
           <li>Reverse-engineer or scrape software code or API endpoints.</li>
         </ul>
       </section>
@@ -102,7 +102,7 @@ export default function TermsOfService({ onOpenLogin, onStartTrial }) {
       <section id="ip-rights" className="km-legal-section">
         <h2 className="km-legal-h2">10. Intellectual Property</h2>
         <p className="km-legal-p">
-          TouchQR retains all rights, title, and interest in the software platform, code, logos, and UI designs. Restaurant owners retain ownership of their proprietary menu text, dish images, and business trade names.
+          TouchQR retains all rights, title, and interest in the software platform, code, logos, and UI designs. Business owners retain ownership of their proprietary menu text, item photographs, and business trade names.
         </p>
       </section>
 

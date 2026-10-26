@@ -111,7 +111,7 @@ export default function GrantFreeAccessModal({ resto, plansList, isOpen, onClose
               <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>ADMIN NOTE (INTERNAL):</label>
               <input
                 type="text"
-                placeholder="e.g. Partner restaurant, Promotional sponsor..."
+                placeholder="e.g. Partner venue, Promotional sponsor..."
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)' }}

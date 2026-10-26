@@ -66,7 +66,7 @@ export default function RefundPolicy({ onOpenLogin, onStartTrial }) {
         <p className="km-legal-p">Refunds will not be issued for:</p>
         <ul className="km-legal-list">
           <li>Partial month usage following voluntary account cancellation.</li>
-          <li>Lack of restaurant hardware compatibility (e.g., non-standard printer models).</li>
+          <li>Lack of merchant hardware compatibility (e.g., non-standard printer models).</li>
           <li>Accounts suspended due to violations of our Acceptable Use Policy.</li>
         </ul>
       </section>
@@ -89,7 +89,7 @@ export default function RefundPolicy({ onOpenLogin, onStartTrial }) {
         <h2 className="km-legal-h2">8. How to Submit a Refund Request</h2>
         <p className="km-legal-p">To request a billing review or refund:</p>
         <ol className="km-legal-list">
-          <li>Gather your registered restaurant username, registered phone number, and payment ID.</li>
+          <li>Gather your registered business username, registered phone number, and payment ID.</li>
           <li>Submit a request through our official <a href="/contact" style={{ color: 'var(--km-green)', fontWeight: 700 }}>Contact Page</a>.</li>
           <li>Our billing team will inspect transaction logs and respond within 24 to 48 business hours.</li>
         </ol>

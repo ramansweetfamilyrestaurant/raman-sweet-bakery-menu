@@ -47,35 +47,35 @@ export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
       <section id="info-collected" className="km-legal-section">
         <h2 className="km-legal-h2">2. Information We Collect</h2>
         <p className="km-legal-p">
-          We collect information directly provided by restaurant owners during account setup, as well as data generated when customers browse digital menus or place orders.
+          We collect information directly provided by business owners during account setup, as well as data generated when customers browse digital menus or place orders.
         </p>
       </section>
 
       <section id="owner-account" className="km-legal-section">
-        <h2 className="km-legal-h2">3. Restaurant / Owner Account Information</h2>
+        <h2 className="km-legal-h2">3. Business & Owner Account Information</h2>
         <p className="km-legal-p">
-          When a restaurant owner registers for a TouchQR account or starts a free trial, we collect:
+          When a business owner registers for a TouchQR account or starts a free trial, we collect:
         </p>
         <ul className="km-legal-list">
-          <li>Restaurant business name, owner username, and contact phone number.</li>
+          <li>Business profile name, owner username, and contact phone number.</li>
           <li>Account authentication credentials (passwords stored via secure salted hashing).</li>
-          <li>Restaurant menu data including categories, dish names, pricing, portions, and dish photographs.</li>
+          <li>Menu and catalog data including categories, item names, pricing, portions, and photographs.</li>
           <li>UPI payment details or Cashfree subscription identifiers for automated billing.</li>
         </ul>
       </section>
 
       <section id="customer-data" className="km-legal-section">
-        <h2 className="km-legal-h2">4. Customer & Restaurant Order Data</h2>
+        <h2 className="km-legal-h2">4. Customer & Business Order Data</h2>
         <p className="km-legal-p">
-          When restaurant customers scan a table QR code to browse menus or place direct orders:
+          When customers scan a QR code to browse menus or place direct orders:
         </p>
         <ul className="km-legal-list">
-          <li>Order details such as items selected, portion choices, table numbers, and special kitchen instructions.</li>
+          <li>Order details such as items selected, portion choices, room, seat, or table numbers, and fulfillment instructions.</li>
           <li>Customer phone numbers or WhatsApp contact details if optionally entered for order notifications.</li>
           <li>Customer star ratings submitted via the Smart Review Prompter tool.</li>
         </ul>
         <div className="km-legal-callout">
-          <strong>Notice for Customers:</strong> TouchQR acts as a data processor on behalf of the respective restaurant owner. Individual restaurants manage their own customer interactions.
+          <strong>Notice for Customers:</strong> TouchQR acts as a data processor on behalf of the respective business owner. Individual businesses manage their own customer interactions.
         </div>
       </section>
 
@@ -94,9 +94,9 @@ export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
         <h2 className="km-legal-h2">6. How We Use Information</h2>
         <p className="km-legal-p">We use collected data strictly to:</p>
         <ul className="km-legal-list">
-          <li>Render high-speed digital menus and route KOT tickets to kitchen displays in real time.</li>
+          <li>Render high-speed digital menus and route order tickets to fulfillment displays in real time.</li>
           <li>Process monthly or annual SaaS subscription plan renewals.</li>
-          <li>Generate sales analytics, dish popularity insights, and revenue reports for restaurant owners.</li>
+          <li>Generate sales analytics, item popularity insights, and revenue reports for business owners.</li>
           <li>Provide customer support, WhatsApp order notifications, and technical troubleshooting.</li>
         </ul>
       </section>

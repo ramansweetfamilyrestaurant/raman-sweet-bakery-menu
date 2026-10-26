@@ -637,7 +637,7 @@ export default function AddBusinessModal({
                     style={{ width: '18px', height: '18px', marginTop: '2px', flexShrink: 0 }}
                   />
                   <span>
-                    GST APPLICABLE <span style={{ color: '#64748B', fontWeight: 700 }}>(5% Restaurant / Service GST)</span>
+                    GST APPLICABLE <span style={{ color: '#64748B', fontWeight: 700 }}>(5% F&B / Service GST)</span>
                   </span>
                 </label>
                 {formData.is_gst_applicable && (
