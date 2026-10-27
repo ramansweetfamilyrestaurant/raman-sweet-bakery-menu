@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Minus, Trash2, Search, Upload, ShoppingBag, ArrowUpDown, Sparkles, AlertCircle, Utensils, Check } from 'lucide-react';
 import { uploadImage } from '../../api/client';
+import { getBusinessTerminology } from '../../utils/businessTaxonomy';
 
-export default function ComboFormModal({ combo, dishes, token, onSave, onClose }) {
+export default function ComboFormModal({ combo, dishes, token, onSave, onClose, restaurantInfo = {} }) {
   const isEdit = !!combo;
+  const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || {}), [restaurantInfo]);
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'dishes'
 
   const [name, setName] = useState('');
@@ -279,7 +281,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
             onClick={() => setActiveTab('dishes')}
           >
             <Utensils size={12} color={activeTab === 'dishes' ? '#0A2315' : '#64748B'} />
-            <span>2. Included Dishes ({selectedItems.length})</span>
+            <span>2. Included {terminology.dishPlural || 'Items'} ({selectedItems.length})</span>
             {selectedItems.length >= 2 && (
               <Check size={11} color="#16A34A" />
             )}
@@ -313,13 +315,13 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
               {/* Name */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                  Combo / Thali Name *
+                  Combo / Bundle Name *
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  placeholder="e.g. Special Maharaja Thali, Family Pack"
+                  placeholder="e.g. Value Combo Deal, Family Bundle Pack"
                   style={{
                     width: '100%',
                     padding: '8px 11px',
@@ -516,7 +518,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                   marginTop: '2px'
                 }}
               >
-                <span>🍱 Next: Select Included Dishes ({selectedItems.length} added)</span>
+                <span>🍱 Next: Select Included {terminology.dishPlural || 'Items'} ({selectedItems.length} added)</span>
                 <span>➔</span>
               </button>
             </div>
@@ -578,7 +580,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                 </div>
               ) : (
                 <div style={{ padding: '10px', background: '#F8FAFC', borderRadius: '7px', textAlign: 'center', fontSize: '0.72rem', color: '#64748B', border: '1px dashed #CBD5E1' }}>
-                  No dishes added to combo yet. Tap below to add items.
+                  No {terminology.dishPlural?.toLowerCase() || 'items'} added to combo yet. Tap below to add items.
                 </div>
               )}
 
@@ -590,7 +592,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose }
                   className="combo-dish-search-input"
                   value={dishSearch}
                   onChange={e => setDishSearch(e.target.value)}
-                  placeholder="Search dishes to add..."
+                  placeholder={`Search ${terminology.dishPlural?.toLowerCase() || 'items'} to add...`}
                   style={{
                     width: '100%',
                     padding: '9px 12px 9px 40px',

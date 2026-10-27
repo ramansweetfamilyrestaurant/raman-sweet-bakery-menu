@@ -36,6 +36,7 @@ import {
 } from '../../../api/client';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 import PlanLockedCard from '../components/PlanLockedCard';
 
 export default function OffersView({
@@ -51,6 +52,7 @@ export default function OffersView({
 }) {
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
   const currencySym = getCurrencySymbol(settingsForm?.currency_symbol !== undefined ? settingsForm.currency_symbol : restaurantInfo?.currency_symbol);
+  const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || {}), [restaurantInfo]);
 
   // Live Offers State
   const [offersList, setOffersList] = useState([]);
@@ -1029,7 +1031,7 @@ export default function OffersView({
 
           <div style={{ fontSize: '0.68rem', color: '#64748B', background: '#FAF8F5', padding: '6px 8px', borderRadius: '6px', border: '1px solid #EAE5DF', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Sparkles size={13} color="#D97706" />
-            <span>Active promotions automatically display strike-through prices and discount badges on table QR menus.</span>
+            <span>Active promotions automatically display strike-through prices and discount badges on digital QR menus.</span>
           </div>
         </div>
 
@@ -1054,7 +1056,7 @@ export default function OffersView({
               </h3>
             </div>
             <p style={{ fontSize: '0.72rem', color: '#64748B', margin: 0 }}>
-              Step-by-step promotion lifecycle from setup to diner checkout.
+              Step-by-step promotion lifecycle from setup to customer checkout.
             </p>
           </div>
 
@@ -1090,7 +1092,7 @@ export default function OffersView({
               <div style={{ minWidth: 0 }}>
                 <strong style={{ fontSize: '0.76rem', color: '#0F172A', display: 'block' }}>Live on Digital Menu</strong>
                 <span style={{ fontSize: '0.68rem', color: '#64748B', lineHeight: 1.3, display: 'block' }}>
-                  Promotional tags and strike-through pricing appear on table QR menus.
+                  Promotional tags and strike-through pricing appear on digital QR menus.
                 </span>
               </div>
             </div>
@@ -1138,7 +1140,7 @@ export default function OffersView({
               🎯 Keep It Simple
             </strong>
             <span style={{ fontSize: '0.70rem', color: '#475569', lineHeight: 1.35, display: 'block' }}>
-              Clear percentage or flat discounts convert faster with diners than complex deals.
+              Clear percentage or flat discounts convert faster with customers than complex deals.
             </span>
           </div>
 
@@ -1147,7 +1149,7 @@ export default function OffersView({
               ⭐ Promote Bestsellers
             </strong>
             <span style={{ fontSize: '0.70rem', color: '#475569', lineHeight: 1.35, display: 'block' }}>
-              Discounts on popular appetizers and combo thalis increase overall table basket size.
+              Discounts on popular items and combos increase overall customer basket size.
             </span>
           </div>
 
@@ -1156,7 +1158,7 @@ export default function OffersView({
               ⏳ Create Urgency
             </strong>
             <span style={{ fontSize: '0.70rem', color: '#475569', lineHeight: 1.35, display: 'block' }}>
-              Schedule weekend specials and happy hour timeframes to drive repeat dine-in visits.
+              Schedule weekend specials and promotional timeframes to drive repeat customer visits.
             </span>
           </div>
         </div>
@@ -1305,7 +1307,7 @@ export default function OffersView({
                       }}
                       style={{ background: 'none', border: 'none', color: '#064E3B', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer' }}
                     >
-                      {selectedDishIds.length === dishes.length ? 'Deselect All' : 'Select All Dishes'}
+                      {selectedDishIds.length === dishes.length ? 'Deselect All' : `Select All ${terminology.dishPlural || 'Dishes'}`}
                     </button>
                   </div>
 
@@ -1315,7 +1317,7 @@ export default function OffersView({
                       type="text"
                       value={itemSearchQuery}
                       onChange={(e) => setItemSearchQuery(e.target.value)}
-                      placeholder="Search menu item..."
+                      placeholder={`Search ${terminology.dishSingular?.toLowerCase() || 'item'}...`}
                       style={{
                         flex: 1,
                         height: '36px',
@@ -1487,7 +1489,7 @@ export default function OffersView({
                     </span>
 
                     {selectedDishIds.length > 0 && (() => {
-                      const sampleDish = dishes.find(d => d.id === selectedDishIds[0]) || dishes[0] || { name: 'Paneer Tikka', price: 220 };
+                      const sampleDish = dishes.find(d => d.id === selectedDishIds[0]) || dishes[0] || { name: 'Featured Item', price: 220 };
                       const calc = previewCalculation(sampleDish.price);
                       return (
                         <div style={{
@@ -1507,7 +1509,7 @@ export default function OffersView({
                                 🔥 {calc.badge}
                               </span>
                             </div>
-                            <span style={{ fontSize: '0.70rem', color: '#059669', fontWeight: 700 }}>✓ Available for Table Order</span>
+                            <span style={{ fontSize: '0.70rem', color: '#059669', fontWeight: 700 }}>✓ Available for Digital Ordering</span>
                           </div>
 
                           <div style={{ textAlign: 'right' }}>

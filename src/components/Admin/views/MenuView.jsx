@@ -276,7 +276,7 @@ export default function MenuView({
 
   const handleBulkDelete = async () => {
     if (selectedDishIds.length === 0 || !onDeleteDish) return;
-    if (!window.confirm(`Are you sure you want to delete ${selectedDishIds.length} selected dishes?`)) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedDishIds.length} selected ${terminology.dishPlural?.toLowerCase() || 'items'}?`)) return;
     for (const id of selectedDishIds) {
       await onDeleteDish(id);
     }
@@ -436,7 +436,7 @@ export default function MenuView({
         imagesUploaded: false,
         categoriesOrganized: false,
         readyForCustomers: false,
-        statusText: 'Add dishes to start'
+        statusText: `Add ${terminology.dishPlural?.toLowerCase() || 'items'} to start`
       };
     }
 
@@ -609,7 +609,7 @@ export default function MenuView({
                     style={{ width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: '8px', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
                     <Plus size={14} color="#16A34A" />
-                    <span>+ Add Dish</span>
+                    <span>+ Add {terminology.dishSingular || 'Item'}</span>
                   </button>
                   <button
                     onClick={() => { onOpenAddCategory(); setShowAddMenuDropdown(false); }}
@@ -795,8 +795,8 @@ export default function MenuView({
                   <Plus size={16} />
                 </div>
                 <div>
-                  <strong>+ Add Dish</strong>
-                  <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Add single food item</span>
+                  <strong>+ Add {terminology.dishSingular || 'Item'}</strong>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Add single {terminology.dishSingular?.toLowerCase() || 'item'}</span>
                 </div>
               </button>
               <button
@@ -1768,7 +1768,7 @@ export default function MenuView({
                       maxWidth: '120px',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
                     }}
-                    title="Sort Dishes"
+                    title={`Sort ${terminology.dishPlural || 'Items'}`}
                   >
                     <option value="recent">⚡ Default</option>
                     <option value="name_asc">🔤 Name (A-Z)</option>
@@ -1805,7 +1805,7 @@ export default function MenuView({
                   <span style={{ background: '#D4AF37', color: '#0A2315', fontWeight: 900, padding: '2px 8px', borderRadius: '6px', fontSize: '0.74rem' }}>
                     {selectedDishIds.length}
                   </span>
-                  <strong style={{ fontSize: '0.82rem' }}>Dishes Selected</strong>
+                  <strong style={{ fontSize: '0.82rem' }}>{terminology.dishPlural || 'Items'} Selected</strong>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -1857,13 +1857,13 @@ export default function MenuView({
                 textAlign: 'center'
               }}>
                 <Utensils size={34} color="#94A3B8" style={{ margin: '0 auto 10px auto' }} />
-                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>No dishes found</h3>
-                <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 16px 0' }}>Try clearing filters or add your first dish.</p>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>No {terminology.dishPlural?.toLowerCase() || 'items'} found</h3>
+                <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 16px 0' }}>Try clearing filters or add your first {terminology.dishSingular?.toLowerCase() || 'item'}.</p>
                 <button
                   onClick={onOpenAddDish}
                   style={{ padding: '9px 18px', borderRadius: '10px', background: '#0A2315', color: '#FFFFFF', border: 'none', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
                 >
-                  + Add Dish
+                  + Add {terminology.dishSingular || 'Item'}
                 </button>
               </div>
             ) : viewMode === 'grid' ? (
@@ -2207,10 +2207,10 @@ export default function MenuView({
                             checked={isAllVisibleSelected}
                             onChange={toggleSelectAllVisible}
                             style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#0A2315' }}
-                            title="Select all visible dishes"
+                            title={`Select all visible ${terminology.dishPlural?.toLowerCase() || 'items'}`}
                           />
                         </th>
-                        <th style={{ padding: '12px 14px' }}>DISH</th>
+                        <th style={{ padding: '12px 14px' }}>{(terminology.dishSingular || 'ITEM').toUpperCase()}</th>
                         <th style={{ padding: '12px 14px' }}>CATEGORY</th>
                         <th style={{ padding: '12px 14px' }}>PRICE (CLICK TO EDIT)</th>
                         <th style={{ padding: '12px 14px' }}>STATUS</th>
@@ -2632,7 +2632,7 @@ export default function MenuView({
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 {[
-                  { label: '+ Add Dish', icon: Plus, color: '#16A34A', onClick: onOpenAddDish },
+                  { label: `+ Add ${terminology.dishSingular || 'Item'}`, icon: Plus, color: '#16A34A', onClick: onOpenAddDish },
                   { label: 'Bulk Upload', icon: UploadCloud, color: '#0284C7', onClick: () => setShowBulkUploadModal(true) },
                   { label: 'Manage Categories', icon: FolderPlus, color: '#D97706', onClick: () => setActiveSubTab && setActiveSubTab('categories') },
                   { label: 'Create Combo', icon: Package, color: '#9333EA', onClick: onOpenAddCombo },
@@ -2882,7 +2882,7 @@ export default function MenuView({
                           {cat.name}
                         </h4>
                         <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
-                          {dishCount} {dishCount === 1 ? 'dish' : 'dishes'}
+                          {dishCount} {dishCount === 1 ? (terminology.dishSingular?.toLowerCase() || 'item') : (terminology.dishPlural?.toLowerCase() || 'items')}
                         </span>
                       </div>
                     </div>
@@ -3610,7 +3610,7 @@ export default function MenuView({
       {deleteConfirmDish && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
           <div style={{ background: '#FFFFFF', borderRadius: '18px', padding: '24px', maxWidth: '340px', width: '100%', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 8px 0' }}>Delete Dish</h3>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 8px 0' }}>Delete {terminology.dishSingular || 'Item'}</h3>
             <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 18px 0' }}>
               Permanently delete <strong>'{deleteConfirmDish.name}'</strong>?
             </p>

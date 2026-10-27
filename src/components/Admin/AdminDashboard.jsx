@@ -3497,6 +3497,7 @@ export default function AdminDashboard({
         <CategoryFormModal
           category={catModalData === 'new' ? null : catModalData}
           token={token}
+          restaurantInfo={restaurantInfo}
           onSave={handleSaveCategory}
           onClose={() => setCatModalData(null)}
         />
@@ -3507,6 +3508,7 @@ export default function AdminDashboard({
           combo={comboModalData === 'new' ? null : comboModalData}
           dishes={dishes}
           token={token}
+          restaurantInfo={restaurantInfo}
           onSave={async (data) => {
             if (comboModalData === 'new') {
               await createCombo(data, token);
