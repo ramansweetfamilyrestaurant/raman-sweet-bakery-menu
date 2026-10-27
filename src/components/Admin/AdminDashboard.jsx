@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { fetchCategories, fetchDishes, toggleDishAvailability, toggleCategoryActive, reorderCategories, deleteDish, deleteCategory, fetchRestaurantInfo, updateDishPrice, fetchAnnouncements, fetchAdminOrders, updateOrderStatus, uploadImage, fetchServiceRequests, resolveServiceRequest, approvePresenceRequest, rejectPresenceRequest, fetchAdminAnalytics, exportAdminAnalyticsCSV, exportAdminAnalyticsXLSX, fetchAdminCombos, createCombo, updateCombo, deleteCombo, toggleComboAvailability, optimizeDatabase, updateTenantSettings, generateQrTokensApi } from '../../api/client';
 import { getPlanDetails } from '../../config/plans';
 import { normalizeSpaceType, normalizeSpaceNumber } from '../../utils/qrSecurity';
