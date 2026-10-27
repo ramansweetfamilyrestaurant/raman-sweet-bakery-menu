@@ -40,7 +40,7 @@ export async function fetchRestaurantInfo(slugOrToken = '') {
   }
 
   const res = await fetch(url, { headers, cache: 'no-store' });
-  return handleResponse(res, 'Failed to fetch restaurant info');
+  return handleResponse(res, 'Failed to fetch business info');
 }
 
 export async function fetchCategories({ adminView = false, slug = '', token = '' } = {}) {
@@ -84,7 +84,7 @@ export async function fetchSuperAdminRestaurants(token) {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store'
   });
-  return handleResponse(res, 'Failed to fetch tenant restaurants');
+  return handleResponse(res, 'Failed to fetch tenant businesses');
 }
 
 export async function createTenantRestaurant(restaurantData, token) {
@@ -96,7 +96,7 @@ export async function createTenantRestaurant(restaurantData, token) {
     },
     body: JSON.stringify(restaurantData),
   });
-  return handleResponse(res, 'Failed to create tenant restaurant');
+  return handleResponse(res, 'Failed to create tenant business');
 }
 
 export async function createSuperAdminBusinessCheckout(businessData, token) {
@@ -120,7 +120,7 @@ export async function toggleTenantRestaurantActive(id, active, token) {
     },
     body: JSON.stringify({ active }),
   });
-  return handleResponse(res, 'Failed to update restaurant status');
+  return handleResponse(res, 'Failed to update business status');
 }
 
 export async function impersonateTenantRestaurant(id, token) {
@@ -140,7 +140,7 @@ export async function updateTenantRestaurant(id, data, token) {
     },
     body: JSON.stringify(data),
   });
-  return handleResponse(res, 'Failed to update tenant restaurant');
+  return handleResponse(res, 'Failed to update tenant business');
 }
 
 export async function deleteTenantRestaurant(id, token) {
@@ -148,7 +148,7 @@ export async function deleteTenantRestaurant(id, token) {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
-  return handleResponse(res, 'Failed to delete tenant restaurant');
+  return handleResponse(res, 'Failed to delete tenant business');
 }
 
 export async function grantFreeAccess(id, payload, token) {

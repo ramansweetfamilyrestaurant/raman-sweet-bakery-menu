@@ -596,7 +596,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                 <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', color: '#DFBA67', marginBottom: '4px' }}>
                   <Navigation size={18} /> High-Precision GPS Location Setup
                 </strong>
-                Accurate coordinates ensure customers can only place orders when physically dining at your restaurant. You can detect via live device GPS or search your address.
+                Accurate coordinates ensure customers can only place orders when physically present at your business premises. You can detect via live device GPS or search your address.
               </div>
 
               {/* Action Buttons: Auto GPS + Address Search */}

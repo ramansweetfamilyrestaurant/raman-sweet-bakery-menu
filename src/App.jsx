@@ -1631,7 +1631,7 @@ export default function App() {
         ? info.google_review_url.trim()
         : (info?.google_maps_url && typeof info.google_maps_url === 'string' && info.google_maps_url.trim())
           ? info.google_maps_url.trim()
-          : `https://www.google.com/search?q=${encodeURIComponent((info?.name || 'Restaurant') + ' ' + (info?.address || ''))}`;
+          : `https://www.google.com/search?q=${encodeURIComponent((info?.name || 'TouchQR Store') + ' ' + (info?.address || ''))}`;
       
       window.open(targetUrl, '_blank');
     }
@@ -2590,10 +2590,10 @@ export default function App() {
           }}>
             <div style={{ fontSize: '4rem', marginBottom: '14px' }}>❌</div>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#DC2626', margin: '0 0 8px 0' }}>
-              Restaurant Not Found / Deleted
+              Business / Outlet Not Found
             </h2>
             <p style={{ fontSize: '0.88rem', color: '#64748B', maxWidth: '420px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
-              Yeh restaurant ab platform par active nahi hai ya iska link delete kar diya gaya hai.
+              Yeh outlet ab platform par active nahi hai ya iska link delete kar diya gaya hai.
             </p>
             <button
               onClick={() => { window.location.href = '/'; }}
@@ -2624,10 +2624,10 @@ export default function App() {
           }}>
             <div style={{ fontSize: '4rem', marginBottom: '14px' }}>🔒</div>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#B45309', margin: '0 0 8px 0' }}>
-              Restaurant Temporarily Offline
+              Business Temporarily Offline
             </h2>
             <p style={{ fontSize: '0.88rem', color: '#64748B', maxWidth: '420px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
-              <strong>{info?.name || 'Yeh restaurant'}</strong> ki digital menu service filhal suspended hai. Kripya restaurant owner se sampark karein.
+              <strong>{info?.name || 'Yeh outlet'}</strong> ki digital menu service filhal suspended hai. Kripya business owner se sampark karein.
             </p>
           </div>
         ) : groupedDishes.length === 0 ? (
@@ -2641,10 +2641,10 @@ export default function App() {
           }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🍽️</div>
             <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark)', margin: '0 0 6px 0' }}>
-              {searchQuery ? (lang === 'hi' ? 'कोई व्यंजन नहीं मिला' : 'No dishes found') : (lang === 'hi' ? '✨ मेनू जल्द ही आ रहा है' : '✨ Digital Menu Coming Soon')}
+              {searchQuery ? (lang === 'hi' ? 'कोई आइटम नहीं मिला' : 'No items found') : (lang === 'hi' ? '✨ मेनू जल्द ही आ रहा है' : '✨ Digital Menu Coming Soon')}
             </p>
             <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-              {searchQuery ? (lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें' : 'Try searching for something else') : (lang === 'hi' ? 'रेस्टोरेंट अपने स्वादिष्ट व्यंजन जोड़ रहा है।' : 'The restaurant is preparing delicious dishes for you!')}
+              {searchQuery ? (lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें' : 'Try searching for something else') : (lang === 'hi' ? 'आउटलेट अपने मेनू आइटम्स जोड़ रहा है।' : 'The outlet is preparing exciting items for you!')}
             </p>
           </div>
         ) : (
