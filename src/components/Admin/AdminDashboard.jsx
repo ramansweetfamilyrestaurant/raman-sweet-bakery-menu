@@ -453,8 +453,11 @@ export default function AdminDashboard({
       isInitialServiceReqFetchRef.current = false;
       prevServiceReqIdsRef.current = new Set(safeReqs.map(r => String(r.id)));
 
-      // Total active live orders (pending + kitchen + accepted)
-      const activeOrderCount = safeData.filter(o => ['pending', 'kitchen', 'accepted', 'preparing'].includes(o.status)).length;
+      // Total active live orders (pending + kitchen + accepted, strictly excluding already-settled orders)
+      const activeOrderCount = safeData.filter(o => {
+        const isSettled = Boolean(o.is_settled === 1 || o.is_settled === '1' || o.is_settled === true);
+        return !isSettled && ['pending', 'kitchen', 'accepted', 'preparing'].includes(o.status);
+      }).length;
       if (activeOrderCount > prevPendingCount) {
         triggerBackgroundNotification(activeOrderCount);
         if (!pendingLoopRef.current) {
@@ -1407,10 +1410,10 @@ export default function AdminDashboard({
           (!order.session_id && (o.parent_order_id === order.id || o.id === order.id))
         );
         if (matchesSession || matchesParent) {
-          // In multi-round session, all rounds are marked settled
+          // In multi-round session, all rounds are marked settled & completed
           return {
             ...o,
-            status: String(o.id) === key ? 'completed' : o.status,
+            status: 'completed',
             is_settled: 1,
             payment_method: settleMethod
           };

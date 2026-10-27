@@ -110,6 +110,16 @@ export default function OrdersView({
   const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
   const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
 
+  const isOrderCompleted = (order) => {
+    if (!order) return false;
+    return Boolean(
+      order.status === 'completed' ||
+      order.is_settled === 1 ||
+      order.is_settled === '1' ||
+      order.is_settled === true
+    );
+  };
+
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'direct' | 'whatsapp' | 'manual'
   const [spaceCategoryFilter, setSpaceCategoryFilter] = useState('all');
@@ -307,7 +317,7 @@ export default function OrdersView({
   const spaceGrid = useMemo(() => {
     return spaceInventory.map(space => {
       const activeOrder = validOrders.find(o => {
-        if (o.status === 'completed' || o.status === 'rejected' || o.status === 'cancelled') return false;
+        if (isOrderCompleted(o) || o.status === 'rejected' || o.status === 'cancelled') return false;
         const loc = parseOrderSpaceLocation(o);
         return loc.space_type === space.space_type && String(loc.space_number) === String(space.space_number);
       });
@@ -428,12 +438,12 @@ export default function OrdersView({
     return `${diffHr}h ago`;
   };
 
-  // Metrics
-  const pendingCount = validOrders.filter(o => o.status === 'pending' || o.status === 'ordered').length;
-  const kitchenCount = validOrders.filter(o => o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing').length;
-  const servedCount = validOrders.filter(o => o.status === 'served' || o.status === 'ready').length;
-  const completedCount = validOrders.filter(o => o.status === 'completed').length;
-  const completedSales = validOrders.filter(o => o.status === 'completed').reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+  // Metrics (Strictly unifies multi-round session settlement)
+  const pendingCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'pending' || o.status === 'ordered')).length;
+  const kitchenCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing')).length;
+  const servedCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'served' || o.status === 'ready')).length;
+  const completedCount = validOrders.filter(o => isOrderCompleted(o)).length;
+  const completedSales = validOrders.filter(o => isOrderCompleted(o)).reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
 
   const getOrderSourceDisplay = (order) => {
     const src = String(order?.order_source || order?.order_type || '').toLowerCase();
@@ -444,11 +454,12 @@ export default function OrdersView({
 
   // Filtered Orders
   const filteredOrders = validOrders.filter(o => {
+    const isDone = isOrderCompleted(o);
     // Status Filter
-    if (kotFilter === 'pending' && !(o.status === 'pending' || o.status === 'ordered')) return false;
-    if (kotFilter === 'kitchen' && !(o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing')) return false;
-    if (kotFilter === 'served' && !(o.status === 'served' || o.status === 'ready')) return false;
-    if (kotFilter === 'completed' && o.status !== 'completed') return false;
+    if (kotFilter === 'pending' && (isDone || !(o.status === 'pending' || o.status === 'ordered'))) return false;
+    if (kotFilter === 'kitchen' && (isDone || !(o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing'))) return false;
+    if (kotFilter === 'served' && (isDone || !(o.status === 'served' || o.status === 'ready'))) return false;
+    if (kotFilter === 'completed' && !isDone) return false;
 
     // Source Filter
     const src = String(o.order_source || o.order_type || '').toLowerCase();
@@ -467,7 +478,13 @@ export default function OrdersView({
     return true;
   });
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (orderOrStatus) => {
+    const isObj = orderOrStatus && typeof orderOrStatus === 'object';
+    const status = isObj ? orderOrStatus.status : orderOrStatus;
+    const isSettled = isObj && Boolean(orderOrStatus.is_settled === 1 || orderOrStatus.is_settled === '1' || orderOrStatus.is_settled === true);
+    if (isSettled || status === 'completed') {
+      return { label: 'COMPLETED', bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
+    }
     switch (status?.toLowerCase()) {
       case 'pending':
       case 'ordered':
@@ -1002,10 +1019,11 @@ export default function OrdersView({
                   const items = safeParseItems(order.items);
                   const spaceInfo = parseOrderSpaceLocation(order);
                   const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type);
-                  const statusInfo = getStatusBadge(order.status);
-                  const isPending = order.status === 'pending' || order.status === 'ordered';
-                  const isKitchen = order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing';
-                  const isReady = order.status === 'served' || order.status === 'ready';
+                  const isDone = isOrderCompleted(order);
+                  const statusInfo = getStatusBadge(order);
+                  const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
+                  const isKitchen = !isDone && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
+                  const isReady = !isDone && (order.status === 'served' || order.status === 'ready');
 
                   return (
                     <tr 
@@ -1203,10 +1221,11 @@ export default function OrdersView({
               const items = safeParseItems(order.items);
               const spaceInfo = parseOrderSpaceLocation(order);
               const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type);
-              const statusInfo = getStatusBadge(order.status);
-              const isPending = order.status === 'pending' || order.status === 'ordered';
-              const isKitchen = order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing';
-              const isReady = order.status === 'served' || order.status === 'ready';
+              const isDone = isOrderCompleted(order);
+              const statusInfo = getStatusBadge(order);
+              const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
+              const isKitchen = !isDone && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
+              const isReady = !isDone && (order.status === 'served' || order.status === 'ready');
 
               return (
                 <div
@@ -2199,7 +2218,7 @@ export default function OrdersView({
                 </button>
               )}
 
-              {(selectedOrder.status === 'served' || selectedOrder.status === 'ready') && (
+              {!isOrderCompleted(selectedOrder) && (selectedOrder.status === 'served' || selectedOrder.status === 'ready') && (
                 <button
                   onClick={() => {
                     if (typeof onOpenBillModal === 'function') {
