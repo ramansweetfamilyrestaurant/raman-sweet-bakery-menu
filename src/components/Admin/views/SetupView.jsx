@@ -4679,10 +4679,10 @@ export default function SetupView({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', minHeight: '52px' }}>
                   <div>
                     <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>
-                      Auto-print Bill on table settlement
+                      Auto-print Bill on order settlement
                     </strong>
                     <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
-                      Automatically print the bill when a table is settled
+                      Automatically print the bill when an order is settled
                     </span>
                   </div>
                   <ToggleSwitch checked={deviceAutoPrintBill} onChange={setDeviceAutoPrintBill} />
@@ -4915,8 +4915,8 @@ export default function SetupView({
         badge: '⚡ Starter',
         description: 'Essential digital menu & QR ordering for cafes & quick food joints',
         features: [
-          '5 Tables & physical spaces',
-          '50 Dishes & 10 categories',
+          '5 Spaces & counters',
+          '50 Items & 10 categories',
           'Full digital QR menu',
           'GST compliant billing'
         ]
@@ -4928,8 +4928,8 @@ export default function SetupView({
         badge: '✨ Professional',
         description: 'Full-featured ordering, WhatsApp direct orders & live analytics',
         features: [
-          '20 Tables & dining spaces',
-          '200 Dishes & categories',
+          '20 Spaces & dining areas',
+          '200 Items & categories',
           'WhatsApp direct ordering',
           'Custom brand domain & analytics'
         ]
@@ -4941,9 +4941,9 @@ export default function SetupView({
         badge: '👑 Enterprise',
         description: 'High-volume dining, Kitchen Display System (KDS) & dual printers',
         features: [
-          'Unlimited tables & physical spaces',
-          'Unlimited dishes & categories',
-          'Kitchen Display System (KDS)',
+          'Unlimited spaces & counters',
+          'Unlimited items & categories',
+          'Kitchen / Dispatch Display System (KDS)',
           'Thermal printer auto-routing',
           'Priority 24/7 dedicated support'
         ]
@@ -5269,9 +5269,9 @@ export default function SetupView({
                 {[
                   'Full Digital QR Menu',
                   'Unlimited Menu Items',
-                  'Orders & Table Management',
+                  'Live Orders & Space Management',
                   'Thermal Printer Support',
-                  'Kitchen Display System',
+                  'Kitchen / Dispatch Display System',
                   'Advanced Analytics',
                   'Priority Support'
                 ].map((feature, i) => (
@@ -6259,10 +6259,10 @@ export default function SetupView({
                 }}>
                   <div>
                     <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
-                      Verify location before table ordering
+                      Verify location before ordering
                     </strong>
                     <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                      Cross-check device coordinates whenever a customer places a live dine-in food order.
+                      Cross-check device coordinates whenever a customer places a live food order.
                     </span>
                   </div>
                   <ToggleSwitch
@@ -9528,7 +9528,7 @@ export default function SetupView({
                       <Printer size={18} />
                     </div>
                     <div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>QR Standees & Table Stickers</strong>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>QR Standees & Space Stickers</strong>
                       <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
                         Generate & manage QR codes
                       </span>
@@ -9614,7 +9614,7 @@ export default function SetupView({
                       <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Printer size={18} />
                       </div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>QR Standees & Table Stickers</strong>
+                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>QR Standees & Space Stickers</strong>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
@@ -9758,7 +9758,7 @@ export default function SetupView({
                   ⚙️ Operations & Devices
                 </h3>
                 <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                  Manage incoming order siren sounds, notifications, thermal receipt printers, and table standees.
+                  Manage incoming order siren sounds, notifications, thermal receipt printers, and QR standees.
                 </span>
               </div>
 
@@ -9782,15 +9782,15 @@ export default function SetupView({
                   </div>
                 </div>
 
-                {/* Card 2: QR Standees & Table Stickers */}
+                {/* Card 2: QR Standees & Space Stickers */}
                 <div className="settings-card-primary" onClick={() => onNavigate && onNavigate('qr-generator')}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Printer size={22} />
                   </div>
                   <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>QR Standees & Table Stickers</strong>
+                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>QR Standees & Space Stickers</strong>
                     <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Generate and print high-resolution QR table standees, tent cards, and stickers.
+                      Generate and print high-resolution QR standees, tent cards, and stickers.
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
@@ -10966,7 +10966,7 @@ export default function SetupView({
               />
             </div>
             <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 12px 0', lineHeight: 1.45, paddingLeft: '46px' }}>
-              Plays a loud ringing alarm automatically whenever a new customer table order arrives.
+              Plays a loud ringing alarm automatically whenever a new customer order arrives.
             </p>
             <div style={{ display: 'flex', gap: '10px', paddingLeft: '46px' }}>
               <button
@@ -11180,7 +11180,7 @@ export default function SetupView({
                               checked={settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true}
                               onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_bill: e.target.checked ? 1 : 0 })}
                             />
-                            <span>Auto-prompt Bill print on table settlement</span>
+                            <span>Auto-prompt Bill print on order settlement</span>
                           </label>
                         </div>
                       </div>
@@ -11324,11 +11324,14 @@ export default function SetupView({
             const serviceModelMeta = SERVICE_MODEL_METADATA[currentServiceModel] || SERVICE_MODEL_METADATA.dine_in;
             const bannerBadgeText = resolveBannerBadge(settingsForm);
 
+            const isCounterOnly = ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck', 'ice_cream_dessert', 'juice_beverage'].includes(currentBusinessType);
             const serviceModeDescription = currentServiceModel === 'hotel'
               ? '🏨 In-Room Guest Dining'
               : currentServiceModel === 'cinema'
               ? '🎬 Cinema Seat Ordering'
-              : '🍽️ Table QR Ordering';
+              : isCounterOnly
+              ? '🧾 Counter Pickup & Takeaway'
+              : '🍽️ Table & Counter QR Ordering';
 
             return (
               <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
