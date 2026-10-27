@@ -474,12 +474,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   };
 
   const handleDeleteRestaurant = async (id, name) => {
-    if (!window.confirm(`⚠️ WARNING: Are you sure you want to delete '${name}'? This will permanently delete all dishes, categories, and owner accounts for this restaurant!`)) return;
+    if (!window.confirm(`⚠️ WARNING: Are you sure you want to delete '${name}'? This will permanently delete all items, categories, and owner accounts for this business!`)) return;
     try {
       await deleteTenantRestaurant(id, token);
       setRestaurants(restaurants.filter(r => r.id !== id));
     } catch (err) {
-      alert(err.message || 'Failed to delete restaurant');
+      alert(err.message || 'Failed to delete business');
     }
   };
 
@@ -1180,7 +1180,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     onClick={() => handleImpersonate(r.id, r.name)}
                     className="sa-btn sa-btn-sm"
                     style={{ background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFD700', border: '1px solid #D4AF37', fontWeight: 900, fontSize: '0.75rem', padding: '7px 12px', flex: '1.2 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                    title="1-Click Log In as Restaurant Owner"
+                    title="1-Click Log In as Business Owner"
                   >
                     <Crown size={13} color="#FFD700" /> Manage Menu
                   </button>

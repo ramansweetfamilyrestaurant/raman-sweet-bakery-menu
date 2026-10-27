@@ -888,7 +888,7 @@ export default function KdsDisplayView({
                         ? 'NOTIFY USHER'
                         : terminology.isQsr || terminology.isBakery
                         ? 'CALL TO COUNTER'
-                        : 'NOTIFY WAITER'
+                        : 'NOTIFY STAFF'
                     }</span>
                   </button>
                 </div>

@@ -76,7 +76,7 @@ export default function ProductShowcase() {
                   <CheckCircle size={18} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
                     <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Dine-In Cart & Special Instructions</strong>
-                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Add custom spice levels, less oil instructions, or waiter call requests.</span>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Add custom preparation notes, special instructions, or staff assistance requests.</span>
                   </div>
                 </div>
               </div>

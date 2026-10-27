@@ -128,7 +128,7 @@ export function parseRecallErrorResponse(status, data = {}, orderId = '') {
   if (status === 403) {
     const detail = data?.error === 'KDS_DISABLED'
       ? 'Kitchen Display System is not included in the current subscription plan.'
-      : data?.message || 'Access denied due to subscription entitlement or restaurant status.';
+      : data?.message || 'Access denied due to subscription entitlement or business account status.';
     return {
       success: false,
       message: `Kitchen recall unavailable: ${detail}`,

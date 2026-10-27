@@ -363,7 +363,7 @@ export default function HomeView({
       const loc = formatLocation(r.table_number || '1', r.space_type);
       activities.push({
         id: `req_${r.id}`,
-        title: r.request_type === 'presence_verification' ? 'GPS Presence Verified' : 'Waiter Service Call',
+        title: r.request_type === 'presence_verification' ? 'GPS Presence Verified' : 'Staff Service Call',
         subtitle: `${loc} • ${r.message || 'Assistance requested'}`,
         time: getRelativeTime(r.created_at),
         timestamp: r.created_at ? new Date(r.created_at).getTime() : 0,

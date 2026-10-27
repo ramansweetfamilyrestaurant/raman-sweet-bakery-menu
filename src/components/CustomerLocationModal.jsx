@@ -86,7 +86,7 @@ export default function CustomerLocationModal({
     if (!cleanToken || !isValidQrTokenFormat(cleanToken)) {
       isAcquiringRef.current = false;
       setStatus('invalid_qr');
-      setErrorMsg('Invalid or unverified Table QR code. Please scan the QR code printed on your table to verify and place orders.');
+      setErrorMsg(`Invalid or unverified ${terminology.spaceLabel} QR code. Please scan the QR code printed at your ${terminology.spaceLabel.toLowerCase()} to verify and place orders.`);
       return;
     }
 
@@ -246,7 +246,7 @@ export default function CustomerLocationModal({
       if (err.code === 1) {
         // GeolocationPositionError.PERMISSION_DENIED
         setStatus('permission_denied');
-        setErrorMsg('Location access was denied. Please allow location permissions to order from this table.');
+        setErrorMsg(`Location access was denied. Please allow location permissions to order from ${tableLabel || `this ${terminology.spaceLabel.toLowerCase()}`}.`);
       } else if (err.code === 2) {
         // GeolocationPositionError.POSITION_UNAVAILABLE
         setStatus('location_services_off');
@@ -375,7 +375,7 @@ export default function CustomerLocationModal({
                 ? 'To place an order from this seat, we need to verify that you are currently inside the theatre.'
                 : spaceType === 'counter'
                 ? 'To place an order at this counter, we need to verify that you are currently at the store.'
-                : 'To place an order from this table, we need to verify that you are currently at the premises.'}
+                : `To place an order from ${tableLabel || `this ${terminology.spaceLabel.toLowerCase()}`}, we need to verify that you are currently at the premises.`}
             </p>
 
             <button
@@ -643,11 +643,11 @@ export default function CustomerLocationModal({
             </div>
 
             <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
-              Location permission is required for table ordering
+              Location permission is required for live ordering
             </h3>
 
             <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              To place an order from this table, please grant location access when prompted by your browser.
+              To place an order from {tableLabel || `this ${terminology.spaceLabel.toLowerCase()}`}, please grant location access when prompted by your browser.
             </p>
 
             <button
@@ -866,11 +866,11 @@ export default function CustomerLocationModal({
             </div>
 
             <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
-              Invalid Table QR
+              Invalid {terminology.spaceLabel} QR
             </h3>
 
             <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 18px 0' }}>
-              {errorMsg || 'This QR code is incomplete or has been changed. Please scan the QR code on your table again.'}
+              {errorMsg || `This QR code is incomplete or has been changed. Please scan the QR code at your ${terminology.spaceLabel.toLowerCase()} again.`}
             </p>
 
             <button

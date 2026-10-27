@@ -76,7 +76,7 @@ export function verifyCustomerLocation(targetLat, targetLng, maxRadiusMeters = 1
           accuracy,
           customerLat: userLat,
           customerLng: userLng,
-          message: `📍 Order Rejected: Aap restaurant se ${displayDist} door hain (Allowed radius: ${radius}m). Table order sirf restaurant ke dining area ke andar se ho sakta hai.`
+          message: `📍 Order Rejected: Aap premises se ${displayDist} door hain (Allowed radius: ${radius}m). Live order sirf premises ke andar se hi place kiya ja sakta hai.`
         });
       }
     };

@@ -525,9 +525,9 @@ export function getBusinessTerminology(restaurant = {}) {
     spaceIcon: '🍽️',
     serviceStation: 'Kitchen',
     kdsTitle: 'Kitchen Display (KDS)',
-    callStaffLabel: 'Call Waiter',
+    callStaffLabel: 'Call Staff',
     standeeLabel: 'Table QR Standee',
-    catalogTitle: 'Restaurant Menu'
+    catalogTitle: 'Digital Menu'
   };
 }
 

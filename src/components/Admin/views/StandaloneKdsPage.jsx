@@ -1952,7 +1952,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                         ? 'NOTIFY USHER'
                         : terminology.isQsr || terminology.isBakery
                         ? 'CALL TO COUNTER'
-                        : 'NOTIFY WAITER'
+                        : 'NOTIFY STAFF'
                     }</span>
                   </button>
                 </div>

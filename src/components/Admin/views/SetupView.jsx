@@ -1964,7 +1964,7 @@ export default function SetupView({
                   }}
                 />
                 <span style={{ fontSize: '0.68rem', color: '#166534', lineHeight: 1.4 }}>
-                  Total active guest rooms (Room 1 to Room {Number(settingsForm.total_rooms) || 0}) available for in-room QR menu ordering, waiter assistance calls, and live room status tracking.
+                  Total active guest rooms (Room 1 to Room {Number(settingsForm.total_rooms) || 0}) available for in-room QR menu ordering, room service / staff calls, and live room status tracking.
                 </span>
               </div>
             )}

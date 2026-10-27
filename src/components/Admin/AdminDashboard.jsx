@@ -437,7 +437,7 @@ export default function AdminDashboard({
           console.log('[SOUND_DEBUG] presence_request_detected', { id: latestCall.id, table: formattedTbl });
           playPresenceAlert();
           triggerPresenceVerificationNotification(formattedTbl, latestCall.id);
-          setToastMessage(`🛡️ ${formattedTbl}: Table Presence Verification Requested!`);
+          setToastMessage(`🛡️ ${formattedTbl}: Presence Verification Requested!`);
         } else if (waiterCalls.length > 0) {
           const latestCall = waiterCalls[0];
           const rawTbl = String(latestCall.table_number || '1');
@@ -446,7 +446,7 @@ export default function AdminDashboard({
             : `Table ${rawTbl}`;
           console.log('[SOUND_DEBUG] waiter_request_detected', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
           playWaiterAlert();
-          setToastMessage(`🛎️ ${formattedTbl} Calling Waiter: "${latestCall.request_type}"!`);
+          setToastMessage(`🛎️ ${formattedTbl} Calling Staff: "${latestCall.request_type}"!`);
         }
         setTimeout(() => setToastMessage(''), 7000);
       }
@@ -834,7 +834,7 @@ export default function AdminDashboard({
       text += "================================" + "\n";
       text += `KOT No: ${order.id}\n`;
       text += `Time: ${new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN')}\n`;
-      text += `Waiter/Guest: ${order.customer_name || 'Dine-In'}\n`;
+      text += `Server/Guest: ${order.customer_name || 'Walk-In'}\n`;
       text += "--------------------------------" + "\n";
       text += "QTY  ITEM NAME\n";
       text += "--------------------------------" + "\n";
@@ -2865,7 +2865,7 @@ export default function AdminDashboard({
                 Enable Alert Sounds
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#94A3B8', fontWeight: 600 }}>
-                Enable sound alerts for orders, kitchen and waiter notifications.
+                Enable sound alerts for orders, kitchen, and staff service notifications.
               </span>
             </div>
           </div>

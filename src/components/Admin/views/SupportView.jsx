@@ -316,7 +316,7 @@ export default function SupportView({
       category: 'orders',
       icon: <ShoppingBag size={18} color="#D97706" />,
       title: 'Accepting, Preparing & Serving Orders',
-      desc: 'Manage live counter orders, kitchen tickets, waiter calls, and counter bill completions.',
+      desc: 'Manage live counter orders, kitchen tickets, staff service calls, and counter bill completions.',
       actionTab: 'orders'
     },
     {

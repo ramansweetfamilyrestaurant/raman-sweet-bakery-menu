@@ -623,7 +623,7 @@ export default function TenantDetailsView({
                 className="sa-btn sa-btn-secondary"
                 style={{ padding: '10px 14px', fontSize: '0.80rem', fontWeight: 800 }}
               >
-                <Edit3 size={14} /> Edit Restaurant Info
+                <Edit3 size={14} /> Edit Business Info
               </button>
             </div>
           </div>
@@ -1045,7 +1045,7 @@ export default function TenantDetailsView({
               className="sa-btn sa-btn-accent"
               style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', borderRadius: '12px' }}
             >
-              <Crown size={18} /> 1-Click Log In as Restaurant Owner (Manage Menu)
+              <Crown size={18} /> 1-Click Log In as Business Owner (Manage Menu)
             </button>
 
             <button
@@ -1054,7 +1054,7 @@ export default function TenantDetailsView({
               className="sa-btn sa-btn-secondary"
               style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', borderRadius: '12px' }}
             >
-              <Edit3 size={18} /> Edit Restaurant Details, Owner Email & Credentials
+              <Edit3 size={18} /> Edit Business Details, Owner Email & Credentials
             </button>
 
             {sub.is_complimentary ? (
@@ -1102,12 +1102,12 @@ export default function TenantDetailsView({
                   marginTop: '10px'
                 }}
               >
-                <Trash2 size={16} /> Delete Restaurant Account
+                <Trash2 size={16} /> Delete Business Account
               </button>
             ) : (
               <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', padding: '14px', borderRadius: '14px', marginTop: '10px' }}>
                 <span style={{ fontSize: '0.82rem', color: '#991B1B', fontWeight: 900, display: 'block', marginBottom: '10px' }}>
-                  ⚠️ DANGER: This permanently deletes all dishes, categories, orders & tenant data!
+                  ⚠️ DANGER: This permanently deletes all items, categories, orders & tenant data!
                 </span>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button

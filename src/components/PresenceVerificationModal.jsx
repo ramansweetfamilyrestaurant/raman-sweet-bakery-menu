@@ -743,7 +743,7 @@ export default function PresenceVerificationModal({
               Verification Sent to Staff
             </h3>
             <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.5, marginBottom: '14px' }}>
-              Please ask any waiter or staff member to confirm your presence at <strong>{currentLabel}</strong>.
+              Please ask any staff member or attendant to confirm your presence at <strong>{currentLabel}</strong>.
             </p>
 
             {/* Countdown timer badge */}

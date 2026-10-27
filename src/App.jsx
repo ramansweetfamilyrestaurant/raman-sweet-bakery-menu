@@ -2381,8 +2381,10 @@ export default function App() {
                 const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
                 const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(currentTableNum || '').toLowerCase().includes('screen') || String(currentTableNum || '').toLowerCase().includes('seat');
                 const isRoom = activeType === 'room' || String(currentTableNum || '').toLowerCase().includes('room');
+                const isCounter = activeType === 'counter' || String(currentTableNum || '').toLowerCase().includes('counter');
                 if (isCin) return 'Seat session ended. Naya order place karne ke liye seat QR code dubara scan karein!';
                 if (isRoom) return 'Room session ended. Naya order place karne ke liye room QR code dubara scan karein!';
+                if (isCounter) return 'Counter session ended. Naya order place karne ke liye counter QR code dubara scan karein!';
                 return 'Table session ended. Naya order place karne ke liye table QR code dubara scan karein!';
               })()}
             </span>
@@ -2417,12 +2419,15 @@ export default function App() {
                 const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
                 const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(currentTableNum || '').toLowerCase().includes('screen') || String(currentTableNum || '').toLowerCase().includes('seat');
                 const isRoom = activeType === 'room' || String(currentTableNum || '').toLowerCase().includes('room');
-                const spaceTitle = isCin ? 'Invalid Seat QR:' : isRoom ? 'Invalid Room QR:' : 'Invalid Table QR:';
+                const isCounter = activeType === 'counter' || String(currentTableNum || '').toLowerCase().includes('counter');
+                const spaceTitle = isCin ? 'Invalid Seat QR:' : isRoom ? 'Invalid Room QR:' : isCounter ? 'Invalid Counter QR:' : 'Invalid Table QR:';
                 const scanPrompt = isCin
                   ? 'Please scan the official QR code at your cinema seat to order.'
                   : isRoom
                     ? 'Please scan the official QR code in your room to order.'
-                    : 'Please scan the official QR code at your dining table to order.';
+                    : isCounter
+                      ? 'Please scan the official QR code at the counter to order.'
+                      : 'Please scan the official QR code at your dining table to order.';
                 const locationDisplay = formatCustomerLocation(currentTableNum);
 
                 return (
