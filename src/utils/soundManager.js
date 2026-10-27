@@ -9,6 +9,8 @@ class NotificationSoundService {
     this.waiterInterval = null;
     this.activeSirenGain = null;
     this.activeSirenOscillators = [];
+    this.sirenIsPlaying = false;
+    this.sirenStartTime = 0;
     this.listeners = new Set();
 
     if (typeof window !== 'undefined') {
@@ -126,10 +128,18 @@ class NotificationSoundService {
    * Instant cancellable via stopKitchenSiren()
    */
   async playKitchenSiren() {
+    const now = Date.now();
+    if (this.sirenIsPlaying && (now - (this.sirenStartTime || 0) < 2350)) {
+      // Guard against rapid re-entrant calls: active siren cycle is already playing smoothly
+      return;
+    }
+
     const ctx = await this._ensureContextRunning();
     if (!ctx) return;
 
     this.stopKitchenSiren();
+    this.sirenStartTime = Date.now();
+    this.sirenIsPlaying = true;
 
     try {
       const masterGain = ctx.createGain();
@@ -157,12 +167,13 @@ class NotificationSoundService {
         osc1.type = 'sawtooth';
         osc1.frequency.setValueAtTime(p.freq1, t);
         osc1.frequency.linearRampToValueAtTime(p.freq2, t + 0.14);
-        gain1.gain.setValueAtTime(1.0, t);
-        gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        gain1.gain.setValueAtTime(0.0001, t);
+        gain1.gain.linearRampToValueAtTime(0.85, t + 0.01);
+        gain1.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
         osc1.connect(gain1);
         gain1.connect(masterGain);
         osc1.start(t);
-        osc1.stop(t + 0.28);
+        osc1.stop(t + 0.29);
         this.activeSirenOscillators.push(osc1);
 
         // High Alarm Resonance Tone 2 (Square)
@@ -171,12 +182,13 @@ class NotificationSoundService {
         osc2.type = 'square';
         osc2.frequency.setValueAtTime(p.freq2, t + 0.10);
         osc2.frequency.linearRampToValueAtTime(p.freq1, t + 0.24);
-        gain2.gain.setValueAtTime(0.9, t + 0.10);
-        gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        gain2.gain.setValueAtTime(0.0001, t + 0.10);
+        gain2.gain.linearRampToValueAtTime(0.75, t + 0.11);
+        gain2.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
         osc2.connect(gain2);
         gain2.connect(masterGain);
         osc2.start(t + 0.10);
-        osc2.stop(t + 0.28);
+        osc2.stop(t + 0.29);
         this.activeSirenOscillators.push(osc2);
       });
 
@@ -191,28 +203,51 @@ class NotificationSoundService {
         if (this.activeSirenGain === masterGain) {
           this.activeSirenGain = null;
           this.activeSirenOscillators = [];
+          this.sirenIsPlaying = false;
         }
-      }, 2500);
+      }, 2450);
     } catch (e) {
       console.warn('[SOUND_DEBUG] kitchen_siren_error', e?.message || e);
+      this.sirenIsPlaying = false;
     }
   }
 
   /**
-   * Instantly stops any active kitchen siren sound and smoothly fades out to prevent click/beep sound artifacts
+   * Instantly stops any active kitchen siren sound with zero audio clicks/pops
    */
   stopKitchenSiren() {
+    this.sirenIsPlaying = false;
+    this.sirenStartTime = 0;
     const ctx = this.audioCtx;
+
     if (this.activeSirenGain && ctx) {
       try {
-        const stopTime = ctx.currentTime + 0.015;
-        this.activeSirenGain.gain.cancelScheduledValues(ctx.currentTime);
-        this.activeSirenGain.gain.setValueAtTime(Math.max(0.0001, this.activeSirenGain.gain.value || 1.0), ctx.currentTime);
-        this.activeSirenGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
-        const gainNode = this.activeSirenGain;
-        setTimeout(() => {
-          try { gainNode.disconnect(); } catch (_) {}
-        }, 20);
+        const now = ctx.currentTime;
+        let currentGain = 0;
+        try {
+          currentGain = Number(this.activeSirenGain.gain.value);
+        } catch (_) {
+          currentGain = 0;
+        }
+
+        if (!Number.isFinite(currentGain) || currentGain <= 0.001) {
+          // Already inaudible - disconnect immediately without setting any gain values
+          try {
+            this.activeSirenGain.gain.cancelScheduledValues(now);
+            this.activeSirenGain.gain.setValueAtTime(0.0001, now);
+            this.activeSirenGain.disconnect();
+          } catch (_) {}
+        } else {
+          // Smooth fade-down ramp over 15ms. NEVER increase volume!
+          const stopTime = now + 0.015;
+          this.activeSirenGain.gain.cancelScheduledValues(now);
+          this.activeSirenGain.gain.setValueAtTime(currentGain, now);
+          this.activeSirenGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+          const gainNode = this.activeSirenGain;
+          setTimeout(() => {
+            try { gainNode.disconnect(); } catch (_) {}
+          }, 20);
+        }
       } catch (e) {}
       this.activeSirenGain = null;
     }
@@ -220,11 +255,16 @@ class NotificationSoundService {
     if (this.activeSirenOscillators.length > 0) {
       const oscs = [...this.activeSirenOscillators];
       this.activeSirenOscillators = [];
-      setTimeout(() => {
-        oscs.forEach(osc => {
-          try { osc.stop(); } catch (e) {}
-        });
-      }, 25);
+      const stopAt = ctx ? ctx.currentTime + 0.02 : 0;
+      oscs.forEach(osc => {
+        try {
+          if (ctx) {
+            osc.stop(stopAt);
+          } else {
+            osc.stop();
+          }
+        } catch (e) {}
+      });
     }
   }
 

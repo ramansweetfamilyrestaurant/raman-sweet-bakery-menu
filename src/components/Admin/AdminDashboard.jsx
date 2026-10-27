@@ -306,12 +306,14 @@ export default function AdminDashboard({
     }
   };
 
-  useEffect(() => {
-    const hasPendingOrders = Array.isArray(orders) && orders.some(o => {
+  const hasPendingOrders = useMemo(() => {
+    return Array.isArray(orders) && orders.some(o => {
       const st = String(o.status || '').toLowerCase();
       return st === 'pending' || st === 'placed' || st === 'new';
     });
+  }, [orders]);
 
+  useEffect(() => {
     if (hasPendingOrders && orderAlarmEnabledRef.current) {
       if (!pendingLoopRef.current) {
         playKitchenChime();
@@ -325,7 +327,7 @@ export default function AdminDashboard({
     return () => {
       stopPendingAlarm();
     };
-  }, [orders]);
+  }, [hasPendingOrders]);
 
   const triggerPresenceVerificationNotification = (tableLabel, requestId) => {
     try {
@@ -460,9 +462,6 @@ export default function AdminDashboard({
       }).length;
       if (activeOrderCount > prevPendingCount) {
         triggerBackgroundNotification(activeOrderCount);
-        if (!pendingLoopRef.current) {
-          playKitchenChime();
-        }
       }
       setPrevPendingCount(activeOrderCount);
 
@@ -746,9 +745,6 @@ export default function AdminDashboard({
     pendingUpdatesRef.current.set(key, { status: newStatus, ...extraParams });
 
     // ⚡ Optimistic UI update (0ms lag, zero flickering)
-    if (newStatus === 'accepted' || newStatus === 'kitchen' || newStatus === 'preparing') {
-      stopPendingAlarm();
-    }
     if (newStatus === 'rejected' || newStatus === 'cancelled') {
       setOrders(prev => prev.filter(o => String(o.id) !== key));
     } else {
@@ -1613,8 +1609,13 @@ export default function AdminDashboard({
     orderAlarmEnabledRef.current = isAlarmOn;
     if (!isAlarmOn) {
       stopPendingAlarm();
+    } else if (hasPendingOrders && !pendingLoopRef.current) {
+      playKitchenChime();
+      pendingLoopRef.current = setInterval(() => {
+        playKitchenChime();
+      }, 2600);
     }
-  }, [settingsForm?.order_alarm_enabled]);
+  }, [settingsForm?.order_alarm_enabled, hasPendingOrders]);
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
   const toastTimeoutRef = useRef(null);
 
