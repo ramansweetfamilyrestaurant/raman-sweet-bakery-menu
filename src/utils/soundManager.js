@@ -199,24 +199,32 @@ class NotificationSoundService {
   }
 
   /**
-   * Instantly stops any active kitchen siren sound and cuts off oscillator output
+   * Instantly stops any active kitchen siren sound and smoothly fades out to prevent click/beep sound artifacts
    */
   stopKitchenSiren() {
     const ctx = this.audioCtx;
     if (this.activeSirenGain && ctx) {
       try {
+        const stopTime = ctx.currentTime + 0.015;
         this.activeSirenGain.gain.cancelScheduledValues(ctx.currentTime);
-        this.activeSirenGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-        this.activeSirenGain.disconnect();
+        this.activeSirenGain.gain.setValueAtTime(Math.max(0.0001, this.activeSirenGain.gain.value || 1.0), ctx.currentTime);
+        this.activeSirenGain.gain.exponentialRampToValueAtTime(0.0001, stopTime);
+        const gainNode = this.activeSirenGain;
+        setTimeout(() => {
+          try { gainNode.disconnect(); } catch (_) {}
+        }, 20);
       } catch (e) {}
       this.activeSirenGain = null;
     }
 
     if (this.activeSirenOscillators.length > 0) {
-      this.activeSirenOscillators.forEach(osc => {
-        try { osc.stop(); } catch (e) {}
-      });
+      const oscs = [...this.activeSirenOscillators];
       this.activeSirenOscillators = [];
+      setTimeout(() => {
+        oscs.forEach(osc => {
+          try { osc.stop(); } catch (e) {}
+        });
+      }, 25);
     }
   }
 

@@ -1892,11 +1892,23 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       if (isCombo) {
         baseRegularPrice = Number(dbItem.price) || 0;
       } else {
-        const isHalfPortion = String(item.portion || item.portion_type || '').toLowerCase().trim() === 'half';
+        const rawPortion = String(item.portion || item.portion_type || '').toLowerCase().trim();
+        const rawPortionType = String(item.portion_type || '').toLowerCase().trim();
+        const dbHalfLabel = String(dbItem.portion_half_label || '').toLowerCase().trim();
         const hasHalfPrice = dbItem.price_half !== null && dbItem.price_half !== undefined && Number(dbItem.price_half) > 0;
-        if (isHalfPortion && hasHalfPrice) {
+        
+        const isHalfPortion = hasHalfPrice && (
+          rawPortionType === 'half' ||
+          rawPortion === 'half' ||
+          rawPortion === 'half portion' ||
+          rawPortion.includes('half') ||
+          rawPortion.includes('हाफ') ||
+          (dbHalfLabel && rawPortion === dbHalfLabel)
+        );
+
+        if (isHalfPortion) {
           baseRegularPrice = Number(dbItem.price_half);
-          portionLabel = 'Half';
+          portionLabel = item.portion || dbItem.portion_half_label || 'Half';
         } else {
           baseRegularPrice = Number(dbItem.price) || 0;
         }

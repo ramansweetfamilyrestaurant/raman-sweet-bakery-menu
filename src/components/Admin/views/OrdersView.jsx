@@ -120,6 +120,16 @@ export default function OrdersView({
     );
   };
 
+  const handleRejectOrder = (order) => {
+    if (!order) return;
+    const loc = formatCleanTableLabel(order.table_number, order.space_type) || `Order #${order.id}`;
+    const confirmed = window.confirm(`Are you sure you want to REJECT and cancel Order #${order.id} (${loc})?`);
+    if (!confirmed) return;
+    if (onUpdateStatus) {
+      onUpdateStatus(order.id, 'rejected');
+    }
+  };
+
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'direct' | 'whatsapp' | 'manual'
   const [spaceCategoryFilter, setSpaceCategoryFilter] = useState('all');
@@ -1059,7 +1069,7 @@ export default function OrdersView({
                           {items.length} item{items.length > 1 ? 's' : ''}
                         </div>
                         <div style={{ fontSize: '0.72rem', color: '#64748B', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {items.map(i => `${i.quantity || 1}x ${i.name}`).join(', ')}
+                          {items.map(i => `${i.quantity || 1}x ${i.name}${i.portion ? ` (${i.portion})` : ''}`).join(', ')}
                         </div>
                       </td>
 
@@ -1089,32 +1099,50 @@ export default function OrdersView({
                       <td style={{ padding: '14px 18px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
                           {isPending && (
-                            <button
-                              onClick={() => {
-                                const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
-                                if (isCounter) {
-                                  if (onOpenAcceptRouting) {
-                                    onOpenAcceptRouting(order);
+                            <>
+                              <button
+                                onClick={() => {
+                                  const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
+                                  if (isCounter) {
+                                    if (onOpenAcceptRouting) {
+                                      onOpenAcceptRouting(order);
+                                    }
+                                    return;
                                   }
-                                  return;
-                                }
-                                if (onUpdateStatus) {
-                                  onUpdateStatus(order.id, 'kitchen');
-                                }
-                              }}
-                              style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                background: '#16A34A',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                fontSize: '0.74rem',
-                                fontWeight: 800,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              ⚡ Accept
-                            </button>
+                                  if (onUpdateStatus) {
+                                    onUpdateStatus(order.id, 'kitchen');
+                                  }
+                                }}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
+                                  background: '#16A34A',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                ⚡ Accept
+                              </button>
+                              <button
+                                onClick={() => handleRejectOrder(order)}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  background: '#FEE2E2',
+                                  color: '#DC2626',
+                                  border: '1px solid #FCA5A5',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                                title="Reject & Cancel Order"
+                              >
+                                ✕ Reject
+                              </button>
+                            </>
                           )}
 
                           {isKitchen && (
@@ -1282,8 +1310,15 @@ export default function OrdersView({
                     gap: '4px'
                   }}>
                     {items.map((it, idx) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{it.quantity || 1}x {it.name}</span>
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{it.quantity || 1}x {it.name}</span>
+                          {it.portion && (
+                            <span style={{ fontSize: '0.66rem', color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                              {it.portion}
+                            </span>
+                          )}
+                        </div>
                         <strong style={{ color: '#0F172A' }}>{currencySymbol}{Math.round((it.price || 0) * (it.quantity || 1))}</strong>
                       </div>
                     ))}
@@ -1300,32 +1335,50 @@ export default function OrdersView({
 
                     <div style={{ display: 'flex', gap: '6px' }}>
                       {isPending && (
-                        <button
-                          onClick={() => {
-                            const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
-                            if (isCounter) {
-                              if (onOpenAcceptRouting) {
-                                onOpenAcceptRouting(order);
+                        <>
+                          <button
+                            onClick={() => {
+                              const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
+                              if (isCounter) {
+                                if (onOpenAcceptRouting) {
+                                  onOpenAcceptRouting(order);
+                                }
+                                return;
                               }
-                              return;
-                            }
-                            if (onUpdateStatus) {
-                              onUpdateStatus(order.id, 'kitchen');
-                            }
-                          }}
-                          style={{
-                            padding: '8px 14px',
-                            borderRadius: '10px',
-                            background: '#16A34A',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            fontSize: '0.78rem',
-                            fontWeight: 800,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          ⚡ Accept
-                        </button>
+                              if (onUpdateStatus) {
+                                onUpdateStatus(order.id, 'kitchen');
+                              }
+                            }}
+                            style={{
+                              padding: '8px 14px',
+                              borderRadius: '10px',
+                              background: '#16A34A',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              fontSize: '0.78rem',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ⚡ Accept
+                          </button>
+                          <button
+                            onClick={() => handleRejectOrder(order)}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: '10px',
+                              background: '#FEE2E2',
+                              color: '#DC2626',
+                              border: '1px solid #FCA5A5',
+                              fontSize: '0.78rem',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                            title="Reject Order"
+                          >
+                            ✕ Reject
+                          </button>
+                        </>
                       )}
 
                       {isKitchen && (
@@ -2149,8 +2202,13 @@ export default function OrdersView({
                     return (
                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>{itemQty}x {item.name}</strong>
+                            {item.portion && (
+                              <span style={{ fontSize: '0.66rem', color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                {item.portion}
+                              </span>
+                            )}
                             {hasOffer && (
                               <span style={{ fontSize: '0.64rem', color: '#16A34A', background: '#DCFCE7', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
                                 {item.offer_badge || 'OFFER'}
@@ -2261,34 +2319,55 @@ export default function OrdersView({
             {/* Bottom State Transition CTA */}
             <div style={{ padding: '18px 24px', borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
               {(selectedOrder.status === 'pending' || selectedOrder.status === 'ordered') && (
-                <button
-                  onClick={() => {
-                    const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
-                    if (isCounter) {
-                      if (onOpenAcceptRouting) {
-                        onOpenAcceptRouting(selectedOrder);
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                  <button
+                    onClick={() => {
+                      const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
+                      if (isCounter) {
+                        if (onOpenAcceptRouting) {
+                          onOpenAcceptRouting(selectedOrder);
+                        }
+                        setSelectedOrder(null);
+                        return;
                       }
+                      if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'kitchen');
                       setSelectedOrder(null);
-                      return;
-                    }
-                    if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'kitchen');
-                    setSelectedOrder(null);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: '#16A34A',
-                    color: '#FFFFFF',
-                    fontSize: '0.84rem',
-                    fontWeight: 900,
-                    border: 'none',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
-                  }}
-                >
-                  {isCinema ? 'Accept & Send to Concession' : isHotel ? 'Accept & Send to Room Service Kitchen' : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? 'Accept & Send to Prep Counter' : 'Accept & Send to Kitchen'}
-                </button>
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: '#16A34A',
+                      color: '#FFFFFF',
+                      fontSize: '0.84rem',
+                      fontWeight: 900,
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
+                    }}
+                  >
+                    {isCinema ? 'Accept & Send to Concession' : isHotel ? 'Accept & Send to Room Service Kitchen' : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? 'Accept & Send to Prep Counter' : 'Accept & Send to Kitchen'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleRejectOrder(selectedOrder);
+                      setSelectedOrder(null);
+                    }}
+                    style={{
+                      padding: '12px 18px',
+                      borderRadius: '12px',
+                      background: '#FEE2E2',
+                      color: '#DC2626',
+                      border: '1px solid #FCA5A5',
+                      fontSize: '0.84rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                    title="Reject and cancel this order"
+                  >
+                    ✕ Reject
+                  </button>
+                </div>
               )}
 
               {(selectedOrder.status === 'kitchen' || selectedOrder.status === 'accepted' || selectedOrder.status === 'preparing') && (
