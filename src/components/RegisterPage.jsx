@@ -102,7 +102,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/[\s_]+/g, '-')
         .replace(/-+/g, '-')
-    : 'your-restaurant-slug';
+    : 'your-business-slug';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -441,7 +441,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Royal Sweets & Restaurant"
+                  placeholder="e.g. Royal Sweets & Bakery, Cafe Mocha, Grand Palace"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   style={{

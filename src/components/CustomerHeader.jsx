@@ -195,7 +195,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
         }}>
           <img 
             src={getRestaurantLogoUrl(info?.logo)} 
-            alt={info?.name || 'Restaurant Logo'}
+            alt={info?.name || 'Brand Logo'}
             style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
             onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
           />

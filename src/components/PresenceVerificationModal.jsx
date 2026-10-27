@@ -169,13 +169,13 @@ export default function PresenceVerificationModal({
         } else {
           isAcquiringGpsRef.current = false;
           setViewState('GPS_FAILED');
-          setErrorMessage(verifyRes?.message || 'Table presence verification failed.');
+          setErrorMessage(verifyRes?.message || 'Presence verification failed.');
         }
       }).catch((err) => {
         if (!isMountedRef.current) return;
         isAcquiringGpsRef.current = false;
         setViewState('GPS_FAILED');
-        setErrorMessage(err.message || 'Could not verify table QR with restaurant.');
+        setErrorMessage(err.message || 'Could not verify QR code with server.');
       });
       return;
     }
@@ -246,13 +246,13 @@ export default function PresenceVerificationModal({
           } else {
             isAcquiringGpsRef.current = false;
             setViewState('GPS_FAILED');
-            setErrorMessage(verifyRes?.message || 'Location verification was outside the dining boundary.');
+            setErrorMessage(verifyRes?.message || 'Location verification was outside the premises boundary.');
           }
         } catch (err) {
           if (!isMountedRef.current) return;
           isAcquiringGpsRef.current = false;
           setViewState('GPS_FAILED');
-          setErrorMessage(err.message || 'Could not verify location with restaurant.');
+          setErrorMessage(err.message || 'Could not verify location with server.');
         }
       },
       (err) => {
@@ -340,7 +340,7 @@ export default function PresenceVerificationModal({
       if (!isMountedRef.current) return;
       isRequestingStaffRef.current = false;
       setViewState('GPS_FAILED');
-      setErrorMessage(err.message || 'Failed to connect to restaurant staff service.');
+      setErrorMessage(err.message || 'Failed to connect to staff service.');
     }
   };
 
@@ -370,7 +370,7 @@ export default function PresenceVerificationModal({
         } else if (statusRes.status === 'rejected') {
           cleanupAllTimers();
           setViewState('STAFF_REJECTED');
-          setRejectionReason(statusRes.rejection_reason || 'Verification was rejected by restaurant staff.');
+          setRejectionReason(statusRes.rejection_reason || 'Verification was rejected by on-site staff.');
           return;
         } else if (statusRes.status === 'expired') {
           cleanupAllTimers();
@@ -453,7 +453,7 @@ export default function PresenceVerificationModal({
                 {modalTitle}
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 800 }}>
-                {currentLabel} • {restaurantInfo?.name || 'Your Restaurant'}
+                {currentLabel} • {restaurantInfo?.name || 'TouchQR Store'}
               </span>
             </div>
           </div>
@@ -712,7 +712,7 @@ export default function PresenceVerificationModal({
               <UserCheck size={36} />
             </div>
             <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
-              Contacting restaurant staff...
+              Contacting on-site staff...
             </h3>
             <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5 }}>
               Sending verification request for <strong>{currentLabel}</strong>.

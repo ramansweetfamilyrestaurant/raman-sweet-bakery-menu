@@ -206,7 +206,7 @@ export default function CustomerLocationModal({
             radius: verifyRes.allowed_radius
           });
           setStatus('outside_boundary');
-          setErrorMsg(verifyRes.message || 'You appear to be outside the restaurant ordering area.');
+          setErrorMsg(verifyRes.message || 'You appear to be outside the premises ordering area.');
         }
       } catch (apiErr) {
         isAcquiringRef.current = false;
@@ -216,16 +216,16 @@ export default function CustomerLocationModal({
 
         if (errCode === 'invalid_qr' || errMsg.toLowerCase().includes('qr')) {
           setStatus('invalid_qr');
-          setErrorMsg('Invalid or unverified Table QR code. Please scan the QR code printed on your table again.');
+          setErrorMsg('Invalid or unverified QR code. Please scan the QR code at your location again.');
         } else if (errCode === 'table_mismatch' || errCode === 'space_mismatch') {
           setStatus('invalid_qr');
-          setErrorMsg('Table verification mismatch. Please scan the QR code printed on your table again.');
+          setErrorMsg('Location verification mismatch. Please scan the QR code at your location again.');
         } else if (errMsg.toLowerCase().includes('accuracy') || errCode === 'low_accuracy') {
           setStatus('low_accuracy');
           setErrorMsg(errMsg || 'GPS signal accuracy is too weak.');
         } else if (errMsg.toLowerCase().includes('outside') || apiErr.status === 403 || errCode === 'outside_boundary') {
           setStatus('outside_boundary');
-          setErrorMsg(errMsg || 'You appear to be outside the restaurant dining area.');
+          setErrorMsg(errMsg || 'You appear to be outside the premises ordering area.');
         } else {
           setStatus('error');
           setErrorMsg(errMsg || 'Location verification failed. Please try again.');
@@ -442,13 +442,13 @@ export default function CustomerLocationModal({
             </div>
 
             <h3 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
-              {status === 'requesting_location' ? 'Acquiring GPS location...' : 'Verifying with restaurant...'}
+              {status === 'requesting_location' ? 'Acquiring GPS location...' : 'Verifying premises boundary...'}
             </h3>
 
             <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 18px 0' }}>
               {status === 'requesting_location'
                 ? 'Please tap "Allow" if your browser displays a permission prompt.'
-                : 'Validating dining table boundary with server...'}
+                : 'Validating premises ordering boundary with server...'}
             </p>
 
             <div style={{
@@ -495,7 +495,7 @@ export default function CustomerLocationModal({
             </h3>
 
             <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5, margin: 0 }}>
-              You are inside the dining area. Table ordering is now enabled.
+              You are on premises. Digital ordering is now enabled.
             </p>
           </>
         )}

@@ -850,7 +850,7 @@ export default function AdminDashboard({
       text += "--------------------------------" + "\n";
       text += `TOTAL BILL: ${currency}${formatPriceNumber(order.total_amount)}\n`;
       text += "================================" + "\n";
-      text += "  *** READY FOR KITCHEN ***\n\n\n";
+      text += "  *** READY FOR PREPARATION / DISPATCH ***\n\n\n";
     } else {
       const gstin = restoInfo?.gstin_number || '';
       const fssai = restoInfo?.fssai_lic_no || '';
@@ -860,7 +860,7 @@ export default function AdminDashboard({
       const isGst = Boolean(cgst > 0 || sgst > 0);
 
       text += "================================" + "\n";
-      text += `   ${(restoInfo?.name || 'RESTAURANT').toUpperCase()}\n`;
+      text += `   ${(restoInfo?.name || 'TOUCHQR OUTLET').toUpperCase()}\n`;
       if (restoInfo?.address) text += `   ${restoInfo.address}\n`;
       if (restoInfo?.phone) text += `   Ph: ${restoInfo.phone}\n`;
       if (fssai) text += `   FSSAI Lic: ${fssai}\n`;
@@ -872,12 +872,12 @@ export default function AdminDashboard({
       text += "================================" + "\n";
       text += `Bill No: INV-${order.id}\n`;
       text += `Date: ${new Date(order.created_at || Date.now()).toLocaleString('en-IN')}\n`;
-      text += `Customer: ${order.customer_name || 'Dine-In Guest'}\n`;
+      text += `Customer: ${order.customer_name || (order.order_type === 'counter' ? 'Counter Guest' : 'Valued Guest')}\n`;
       if (paymentMode) {
         text += `Payment: ${paymentMode}\n`;
       }
       if (totalRoundsCount > 1) {
-        text += `Consolidated: ${totalRoundsCount} Dining Rounds\n`;
+        text += `Consolidated: ${totalRoundsCount} Ordering Rounds\n`;
       }
       text += "--------------------------------" + "\n";
       text += "QTY  ITEM NAME            AMOUNT" + "\n";
@@ -1213,7 +1213,7 @@ export default function AdminDashboard({
         <body>
           ${isReprint ? `<div class="reprint-banner">*** [ REPRINT ] ***</div>` : ''}
           <div class="header">
-            <h2>${restaurantInfo?.name || 'Restaurant'}</h2>
+            <h2>${restaurantInfo?.name || 'TouchQR Store'}</h2>
             ${restaurantInfo?.address ? `<p>${restaurantInfo.address}</p>` : ''}
             ${restaurantInfo?.phone ? `<p>Tel: ${restaurantInfo.phone}</p>` : ''}
             ${gstin ? `<p style="font-weight:bold;">GSTIN: ${gstin}</p>` : ''}
@@ -2937,7 +2937,7 @@ export default function AdminDashboard({
               💳 Pay & Renew Instant
             </button>
             <a
-              href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, I want to renew/upgrade my restaurant subscription plan for '${restaurantInfo?.name || 'my restaurant'}'.`)}`}
+              href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, I want to renew/upgrade my business subscription plan for '${restaurantInfo?.name || 'my business'}'.`)}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -2990,7 +2990,7 @@ export default function AdminDashboard({
                   <strong style={{ color: '#DFBA67' }}>₹999/mo</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>🚀 <strong>Enterprise Plan:</strong> KOT + Table Orders</span>
+                  <span>🚀 <strong>Enterprise Plan:</strong> KOT / Dispatch + Live Orders</span>
                   <strong style={{ color: '#DFBA67' }}>₹1,999/mo</strong>
                 </div>
               </div>
@@ -3011,7 +3011,7 @@ export default function AdminDashboard({
               </button>
 
               <a
-                href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, my restaurant subscription for '${restaurantInfo?.name || username}' has expired. Please renew my plan.`)}`}
+                href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, my business subscription for '${restaurantInfo?.name || username}' has expired. Please renew my plan.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -3064,7 +3064,7 @@ export default function AdminDashboard({
               <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span>You are impersonating:</span>
                 <span style={{ color: '#FDE68A', textDecoration: 'underline', fontWeight: 900 }}>
-                  {impersonatedRestoName || restaurantInfo?.name || 'Restaurant Tenant'}
+                  {impersonatedRestoName || restaurantInfo?.name || 'Business Outlet'}
                 </span>
               </div>
               <div style={{ fontSize: '0.78rem', color: '#FCD34D', fontWeight: 600 }}>
@@ -3981,7 +3981,7 @@ export default function AdminDashboard({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.84rem', color: '#E2E8F0' }}>
               <div style={{ background: '#1F2937', padding: '12px 14px', borderRadius: '12px', border: '1px solid #38BDF8' }}>
                 <strong style={{ color: '#38BDF8', display: 'block', marginBottom: '4px', fontSize: '0.9rem' }}>💻 Counter Laptop / PC Setup:</strong>
-                For zero-dialog instant printing on Windows/macOS/Linux: Launch Chrome with <code>--kiosk-printing</code> flag pointing to your restaurant admin URL.
+                For zero-dialog instant printing on Windows/macOS/Linux: Launch Chrome with <code>--kiosk-printing</code> flag pointing to your admin URL.
               </div>
 
               <div style={{ background: '#1F2937', padding: '12px 14px', borderRadius: '12px', border: '1px solid #DFBA67' }}>
