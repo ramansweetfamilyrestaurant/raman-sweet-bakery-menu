@@ -1241,49 +1241,97 @@ export default function OrdersView({
                                 fontWeight: 800,
                                 cursor: 'pointer'
                               }}
+                              title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : 'Mark order ready / served to table'}
                             >
-                              ✓ Ready
+                              {isCinema ? '🎬 Deliver' : isHotel ? '🏨 Deliver' : '✓ Ready'}
                             </button>
                           )}
 
                           {isReady && (
+                            <>
+                              {isCinema ? (
+                                <button
+                                  onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'completed') : null}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    background: '#16A34A',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Complete Seat Delivery"
+                                >
+                                  ✓ Done
+                                </button>
+                              ) : (
+                                <>
+                                  {/* Quick Table Check Slip Print (Guest bill review before payment) */}
+                                  <button
+                                    onClick={() => onPrintBill ? onPrintBill(order, 'CHECK_SLIP') : null}
+                                    style={{
+                                      padding: '6px 9px',
+                                      borderRadius: '8px',
+                                      border: '1px solid #DDD6FE',
+                                      background: '#F5F3FF',
+                                      color: '#7E22CE',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                    title="Print Table Check Slip (Guest bill review before settlement)"
+                                  >
+                                    <Receipt size={13} /> Slip
+                                  </button>
+
+                                  {/* Settle Bill Button */}
+                                  <button
+                                    onClick={() => handleTriggerBillAction(order)}
+                                    disabled={!onOpenBillModal}
+                                    title={!onOpenBillModal ? 'Billing modal unavailable' : isMultiRoundSession ? `Combined Bill for all ${sessionInfo.totalRoundsCount} rounds of this session (${currencySymbol}${Math.round(sessionInfo.grandTotal)})` : 'Open Bill & Settle Payment'}
+                                    style={{
+                                      padding: '6px 12px',
+                                      borderRadius: '8px',
+                                      background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
+                                      color: '#FFFFFF',
+                                      border: 'none',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 800,
+                                      cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
+                                      opacity: onOpenBillModal ? 1 : 0.6
+                                    }}
+                                  >
+                                    {isMultiRoundSession ? `💳 Settle (${sessionInfo.totalRoundsCount} Rds)` : '💳 Settle'}
+                                  </button>
+                                </>
+                              )}
+                            </>
+                          )}
+
+                          {/* Print KOT: ONLY during pending or kitchen stage (not on served or completed orders) */}
+                          {(isPending || isKitchen) && (
                             <button
-                              onClick={() => handleTriggerBillAction(order)}
-                              disabled={!onOpenBillModal}
-                              title={!onOpenBillModal ? 'Billing modal unavailable' : isMultiRoundSession ? `Combined Bill for all ${sessionInfo.totalRoundsCount} rounds of this session (${currencySymbol}${Math.round(sessionInfo.grandTotal)})` : 'Open Bill & Settle Payment'}
+                              onClick={() => onDirectPrint ? onDirectPrint(order, 'kot') : null}
                               style={{
-                                padding: '6px 12px',
+                                padding: '6px 8px',
                                 borderRadius: '8px',
-                                background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                fontSize: '0.74rem',
-                                fontWeight: 800,
-                                cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
-                                opacity: onOpenBillModal ? 1 : 0.6
+                                border: '1px solid #E2E8F0',
+                                background: '#FFFFFF',
+                                color: '#334155',
+                                cursor: 'pointer'
                               }}
+                              title="Print KOT to Kitchen"
                             >
-                              {isMultiRoundSession ? `💳 Bill (${sessionInfo.totalRoundsCount} Rds)` : '💳 Bill'}
+                              <Printer size={14} />
                             </button>
                           )}
 
-                          {/* Print KOT */}
-                          <button
-                            onClick={() => onDirectPrint ? onDirectPrint(order, 'kot') : null}
-                            style={{
-                              padding: '6px 8px',
-                              borderRadius: '8px',
-                              border: '1px solid #E2E8F0',
-                              background: '#FFFFFF',
-                              color: '#334155',
-                              cursor: 'pointer'
-                            }}
-                            title="Print KOT"
-                          >
-                            <Printer size={14} />
-                          </button>
-
-                          {/* Print Bill (for completed/settled orders) */}
+                          {/* Print Bill Receipt (for completed/settled orders) */}
                           {(order.status === 'completed' || order.is_settled === 1) && (
                             <button
                               onClick={() => onPrintBill ? onPrintBill(order, order.payment_method || 'CASH') : null}
@@ -1530,29 +1578,95 @@ export default function OrdersView({
                             fontWeight: 800,
                             cursor: 'pointer'
                           }}
+                          title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : 'Mark order ready / served to table'}
                         >
-                          ✓ Ready
+                          {isCinema ? '🎬 Deliver' : isHotel ? '🏨 Deliver' : '✓ Ready'}
                         </button>
                       )}
 
                       {isReady && (
+                        <>
+                          {isCinema ? (
+                            <button
+                              onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'completed') : null}
+                              style={{
+                                padding: '8px 14px',
+                                borderRadius: '10px',
+                                background: '#16A34A',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                fontSize: '0.78rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                              title="Complete Seat Delivery"
+                            >
+                              ✓ Done
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => onPrintBill ? onPrintBill(order, 'CHECK_SLIP') : null}
+                                style={{
+                                  padding: '8px 12px',
+                                  borderRadius: '10px',
+                                  border: '1px solid #DDD6FE',
+                                  background: '#F5F3FF',
+                                  color: '#7E22CE',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="Print Table Check Slip"
+                              >
+                                <Receipt size={14} /> Slip
+                              </button>
+                              <button
+                                onClick={() => handleTriggerBillAction(order)}
+                                disabled={!onOpenBillModal}
+                                title={!onOpenBillModal ? 'Billing modal unavailable' : isMultiRoundSession ? `Combined Bill for all ${sessionInfo.totalRoundsCount} rounds (${currencySymbol}${Math.round(sessionInfo.grandTotal)})` : 'Open Bill & Settle Payment'}
+                                style={{
+                                  padding: '8px 14px',
+                                  borderRadius: '10px',
+                                  background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 800,
+                                  cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
+                                  opacity: onOpenBillModal ? 1 : 0.6
+                                }}
+                              >
+                                {isMultiRoundSession ? `💳 Settle (${sessionInfo.totalRoundsCount} Rds)` : '💳 Settle'}
+                              </button>
+                            </>
+                          )}
+                        </>
+                      )}
+
+                      {/* Print KOT on mobile ONLY if in pending or kitchen */}
+                      {(isPending || isKitchen) && (
                         <button
-                          onClick={() => handleTriggerBillAction(order)}
-                          disabled={!onOpenBillModal}
-                          title={!onOpenBillModal ? 'Billing modal unavailable' : isMultiRoundSession ? `Combined Bill for all ${sessionInfo.totalRoundsCount} rounds (${currencySymbol}${Math.round(sessionInfo.grandTotal)})` : 'Open Bill & Settle Payment'}
+                          onClick={() => onDirectPrint ? onDirectPrint(order, 'kot') : null}
                           style={{
-                            padding: '8px 14px',
+                            padding: '8px 12px',
                             borderRadius: '10px',
-                            background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
-                            color: '#FFFFFF',
-                            border: 'none',
+                            border: '1px solid #E2E8F0',
+                            background: '#FFFFFF',
+                            color: '#334155',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
                             fontSize: '0.78rem',
-                            fontWeight: 800,
-                            cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
-                            opacity: onOpenBillModal ? 1 : 0.6
+                            fontWeight: 700
                           }}
+                          title="Print KOT"
                         >
-                          {isMultiRoundSession ? `💳 Bill (${sessionInfo.totalRoundsCount} Rds)` : '💳 Bill'}
+                          <Printer size={14} /> KOT
                         </button>
                       )}
 
@@ -1574,7 +1688,7 @@ export default function OrdersView({
                           }}
                           title="Print / Re-print Bill Receipt"
                         >
-                          <Receipt size={14} /> Bill
+                          <Receipt size={14} /> Receipt
                         </button>
                       )}
 
@@ -1863,6 +1977,27 @@ export default function OrdersView({
                         >
                           Details
                         </button>
+                        {!space.activeOrder?.is_settled && space.activeOrder?.status !== 'completed' && (
+                          <button
+                            onClick={() => onPrintBill ? onPrintBill(space.activeOrder, 'CHECK_SLIP') : null}
+                            style={{
+                              padding: '6px 8px',
+                              borderRadius: '8px',
+                              background: '#F5F3FF',
+                              border: '1px solid #DDD6FE',
+                              color: '#7E22CE',
+                              fontSize: '0.70rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '2px'
+                            }}
+                            title="Print Table Check Slip (Guest bill review before settlement)"
+                          >
+                            <Receipt size={12} /> Slip
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             if (space.activeOrder?.is_settled === 1 || space.activeOrder?.status === 'completed') {
@@ -1877,7 +2012,7 @@ export default function OrdersView({
                             flex: 1,
                             padding: '6px 8px',
                             borderRadius: '8px',
-                            background: space.activeOrder?.is_settled ? '#0F766E' : (onOpenBillModal ? '#261B14' : '#9CA3AF'),
+                            background: space.activeOrder?.is_settled ? '#0F766E' : (onOpenBillModal ? '#7E22CE' : '#9CA3AF'),
                             color: '#FFFFFF',
                             border: 'none',
                             fontSize: '0.70rem',
@@ -1885,7 +2020,7 @@ export default function OrdersView({
                             cursor: 'pointer'
                           }}
                         >
-                          {space.activeOrder?.is_settled ? 'Print Bill' : (space.activeOrders && space.activeOrders.length > 1 ? `Bill (${space.activeOrders.length} Rds)` : 'Bill')}
+                          {space.activeOrder?.is_settled ? 'Print Bill' : (space.activeOrders && space.activeOrders.length > 1 ? `Settle (${space.activeOrders.length} Rds)` : 'Settle')}
                         </button>
                       </>
                     )}
@@ -2526,46 +2661,100 @@ export default function OrdersView({
 
               {/* Print Actions */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <button
-                  onClick={() => onDirectPrint ? onDirectPrint(selectedOrder, 'kot') : null}
-                  style={{
-                    padding: '10px',
-                    borderRadius: '10px',
-                    border: '1px solid #E2E8F0',
-                    background: '#FFFFFF',
-                    color: '#0F172A',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <Printer size={15} />
-                  <span>Print KOT</span>
-                </button>
-                <button
-                  onClick={() => onPrintBill ? onPrintBill(selectedOrder, 'cash') : null}
-                  style={{
-                    padding: '10px',
-                    borderRadius: '10px',
-                    border: '1px solid #E2E8F0',
-                    background: '#FFFFFF',
-                    color: '#0F172A',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <Receipt size={15} />
-                  <span>Print Bill</span>
-                </button>
+                {(!isOrderCompleted(selectedOrder) && selectedOrder.status !== 'served' && selectedOrder.status !== 'ready') && (
+                  <button
+                    onClick={() => onDirectPrint ? onDirectPrint(selectedOrder, 'kot') : null}
+                    style={{
+                      gridColumn: '1 / -1',
+                      padding: '10px',
+                      borderRadius: '10px',
+                      border: '1px solid #E2E8F0',
+                      background: '#FFFFFF',
+                      color: '#0F172A',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Printer size={15} />
+                    <span>Print KOT</span>
+                  </button>
+                )}
+
+                {(selectedOrder.status === 'served' || selectedOrder.status === 'ready') && (
+                  <>
+                    <button
+                      onClick={() => onDirectPrint ? onDirectPrint(selectedOrder, 'kot') : null}
+                      style={{
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: '1px solid #E2E8F0',
+                        background: '#FFFFFF',
+                        color: '#64748B',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                      title="Re-print Kitchen Order Ticket"
+                    >
+                      <Printer size={15} />
+                      <span>Re-print KOT</span>
+                    </button>
+                    <button
+                      onClick={() => onPrintBill ? onPrintBill(selectedOrder, 'CHECK_SLIP') : null}
+                      style={{
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: '1px solid #DDD6FE',
+                        background: '#F5F3FF',
+                        color: '#7E22CE',
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                      title="Print Table Check Slip for customer review"
+                    >
+                      <Receipt size={15} />
+                      <span>Print Bill Slip</span>
+                    </button>
+                  </>
+                )}
+
+                {isOrderCompleted(selectedOrder) && (
+                  <button
+                    onClick={() => onPrintBill ? onPrintBill(selectedOrder, selectedOrder.payment_method || 'CASH') : null}
+                    style={{
+                      gridColumn: '1 / -1',
+                      padding: '10px',
+                      borderRadius: '10px',
+                      border: '1px solid #DDD6FE',
+                      background: '#F5F3FF',
+                      color: '#7E22CE',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Receipt size={15} />
+                    <span>Re-print Bill Receipt</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -2624,68 +2813,112 @@ export default function OrdersView({
               )}
 
               {(selectedOrder.status === 'kitchen' || selectedOrder.status === 'accepted' || selectedOrder.status === 'preparing') && (
-                <button
-                  onClick={() => {
-                    if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'served');
-                    setSelectedOrder(null);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: '#0284C7',
-                    color: '#FFFFFF',
-                    fontSize: '0.84rem',
-                    fontWeight: 900,
-                    border: 'none',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
-                  }}
-                >
-                  {(() => {
-                    const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
-                    if (isCounter || ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen'].includes(effectiveBiz)) {
-                      return 'Mark Ready for Pickup at Counter';
-                    }
-                    if (isCinema) {
-                      return 'Mark Ready & Deliver to Seat';
-                    }
-                    if (isHotel) {
-                      return 'Mark Ready & Deliver to Room';
-                    }
-                    return 'Mark Order as Ready / Served';
-                  })()}
-                </button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                  <button
+                    onClick={() => {
+                      if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'served');
+                      setSelectedOrder(null);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: '#0284C7',
+                      color: '#FFFFFF',
+                      fontSize: '0.84rem',
+                      fontWeight: 900,
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
+                    }}
+                  >
+                    {(() => {
+                      const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
+                      if (isCounter || ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen'].includes(effectiveBiz)) {
+                        return 'Mark Ready for Pickup at Counter';
+                      }
+                      if (isCinema) {
+                        return '🎬 Deliver to Seat';
+                      }
+                      if (isHotel) {
+                        return '🏨 Deliver to Room';
+                      }
+                      return '✓ Mark Order as Ready / Served';
+                    })()}
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleRejectOrder(selectedOrder);
+                      setSelectedOrder(null);
+                    }}
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      background: '#FEE2E2',
+                      color: '#DC2626',
+                      border: '1px solid #FCA5A5',
+                      fontSize: '0.84rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                    title="Cancel order during kitchen preparation (items unavailable or guest cancelled)"
+                  >
+                    ✕ Cancel Order
+                  </button>
+                </div>
               )}
 
               {!isOrderCompleted(selectedOrder) && (selectedOrder.status === 'served' || selectedOrder.status === 'ready') && (
-                <button
-                  onClick={() => {
-                    if (typeof onOpenBillModal === 'function') {
+                isCinema ? (
+                  <button
+                    onClick={() => {
+                      if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'completed');
                       setSelectedOrder(null);
-                      handleTriggerBillAction(selectedOrder);
-                    } else {
-                      handleTriggerBillAction(selectedOrder);
-                    }
-                  }}
-                  disabled={!onOpenBillModal}
-                  title={!onOpenBillModal ? 'Billing modal unavailable' : 'Generate Bill & Complete Order'}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
-                    color: '#FFFFFF',
-                    fontSize: '0.84rem',
-                    fontWeight: 900,
-                    border: 'none',
-                    cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
-                    boxShadow: onOpenBillModal ? '0 2px 8px rgba(126, 34, 206, 0.3)' : 'none',
-                    opacity: onOpenBillModal ? 1 : 0.6
-                  }}
-                >
-                  Generate Bill & Complete Order
-                </button>
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: '#16A34A',
+                      color: '#FFFFFF',
+                      fontSize: '0.84rem',
+                      fontWeight: 900,
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
+                    }}
+                  >
+                    ✓ Complete Seat Delivery
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (typeof onOpenBillModal === 'function') {
+                        setSelectedOrder(null);
+                        handleTriggerBillAction(selectedOrder);
+                      } else {
+                        handleTriggerBillAction(selectedOrder);
+                      }
+                    }}
+                    disabled={!onOpenBillModal}
+                    title={!onOpenBillModal ? 'Billing modal unavailable' : 'Generate Bill & Complete Order'}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
+                      color: '#FFFFFF',
+                      fontSize: '0.84rem',
+                      fontWeight: 900,
+                      border: 'none',
+                      cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
+                      boxShadow: onOpenBillModal ? '0 2px 8px rgba(126, 34, 206, 0.3)' : 'none',
+                      opacity: onOpenBillModal ? 1 : 0.6
+                    }}
+                  >
+                    💳 Settle Bill & Complete Order
+                  </button>
+                )
               )}
             </div>
           </div>

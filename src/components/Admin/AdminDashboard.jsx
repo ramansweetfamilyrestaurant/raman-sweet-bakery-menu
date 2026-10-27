@@ -1221,8 +1221,8 @@ export default function AdminDashboard({
 
           <div class="meta">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-              <strong>INVOICE #${order.id}</strong>
-              <span class="badge">${paymentMode}</span>
+              <strong>${paymentMode === 'CHECK_SLIP' ? 'TABLE CHECK SLIP' : `INVOICE #${order.id}`}</strong>
+              <span class="badge" style="${paymentMode === 'CHECK_SLIP' ? 'background:#7E22CE;' : ''}">${paymentMode === 'CHECK_SLIP' ? 'UNSETTLED SLIP' : paymentMode}</span>
             </div>
             <div><strong>Location / Space:</strong> ${resolvedSpace}</div>
             <div><strong>Date:</strong> ${formatDateTimeString(order.created_at)}</div>
@@ -3273,7 +3273,7 @@ export default function AdminDashboard({
                     }
                   }}
                   onOpenBillModal={setBillOrderModal}
-                  onPrintBill={(order) => handlePrintCustomerBill(order, 'CASH')}
+                  onPrintBill={(order, mode) => handlePrintCustomerBill(order, mode || 'CASH')}
                   serviceRequests={serviceRequests}
                   onResolveServiceRequest={handleResolveServiceRequest}
                   onApprovePresenceRequest={handleApprovePresenceRequest}
