@@ -142,7 +142,9 @@ export default function OrdersView({
   const handleRejectOrder = (order) => {
     if (!order) return;
     const loc = formatCleanTableLabel(order.table_number, order.space_type) || `Order #${order.id}`;
-    const confirmed = window.confirm(`Are you sure you want to REJECT and cancel Order #${order.id} (${loc})?`);
+    const isKitchen = order.status === 'kitchen' || order.status === 'preparing' || order.status === 'accepted';
+    const actionWord = isKitchen ? 'CANCEL' : 'REJECT';
+    const confirmed = window.confirm(`Are you sure you want to ${actionWord} Order #${order.id} (${loc})?`);
     if (!confirmed) return;
     if (onUpdateStatus) {
       onUpdateStatus(order.id, 'rejected');
@@ -1186,12 +1188,12 @@ export default function OrdersView({
                               <button
                                 onClick={() => {
                                   const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
-                                  if (isCounter) {
-                                    if (onOpenAcceptRouting) {
-                                      onOpenAcceptRouting(order);
-                                    }
-                                    return;
+                                if (isCounter) {
+                                  if (onOpenAcceptRouting) {
+                                    onOpenAcceptRouting(order);
                                   }
+                                  return;
+                                }
                                   if (onUpdateStatus) {
                                     onUpdateStatus(order.id, 'kitchen');
                                   }
@@ -1229,22 +1231,40 @@ export default function OrdersView({
                           )}
 
                           {isKitchen && (
-                            <button
-                              onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
-                              style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                background: '#0284C7',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                fontSize: '0.74rem',
-                                fontWeight: 800,
-                                cursor: 'pointer'
-                              }}
-                              title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : 'Mark order ready / served to table'}
-                            >
-                              {isCinema ? '🎬 Deliver' : isHotel ? '🏨 Deliver' : '✓ Ready'}
-                            </button>
+                            <>
+                              <button
+                                onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
+                                  background: '#0284C7',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                                title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : 'Mark order ready / served to table'}
+                              >
+                                {isCinema ? '🎬 Deliver' : isHotel ? '🏨 Deliver' : '✓ Ready'}
+                              </button>
+                              <button
+                                onClick={() => handleRejectOrder(order)}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  background: '#FEE2E2',
+                                  color: '#DC2626',
+                                  border: '1px solid #FCA5A5',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                                title="Cancel order in kitchen (dish unavailable or guest cancelled)"
+                              >
+                                ✕ Cancel
+                              </button>
+                            </>
                           )}
 
                           {isReady && (
@@ -1523,12 +1543,12 @@ export default function OrdersView({
                           <button
                             onClick={() => {
                               const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
-                              if (isCounter) {
-                                if (onOpenAcceptRouting) {
-                                  onOpenAcceptRouting(order);
-                                }
-                                return;
+                            if (isCounter) {
+                              if (onOpenAcceptRouting) {
+                                onOpenAcceptRouting(order);
                               }
+                              return;
+                            }
                               if (onUpdateStatus) {
                                 onUpdateStatus(order.id, 'kitchen');
                               }
@@ -1566,22 +1586,40 @@ export default function OrdersView({
                       )}
 
                       {isKitchen && (
-                        <button
-                          onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
-                          style={{
-                            padding: '8px 14px',
-                            borderRadius: '10px',
-                            background: '#0284C7',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            fontSize: '0.78rem',
-                            fontWeight: 800,
-                            cursor: 'pointer'
-                          }}
-                          title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : 'Mark order ready / served to table'}
-                        >
-                          {isCinema ? '🎬 Deliver' : isHotel ? '🏨 Deliver' : '✓ Ready'}
-                        </button>
+                        <>
+                          <button
+                            onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
+                            style={{
+                              padding: '8px 14px',
+                              borderRadius: '10px',
+                              background: '#0284C7',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              fontSize: '0.78rem',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                            title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : 'Mark order ready / served to table'}
+                          >
+                            {isCinema ? '🎬 Deliver' : isHotel ? '🏨 Deliver' : '✓ Ready'}
+                          </button>
+                          <button
+                            onClick={() => handleRejectOrder(order)}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: '10px',
+                              background: '#FEE2E2',
+                              color: '#DC2626',
+                              border: '1px solid #FCA5A5',
+                              fontSize: '0.78rem',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                            title="Cancel order in kitchen (dish unavailable or guest cancelled)"
+                          >
+                            ✕ Cancel
+                          </button>
+                        </>
                       )}
 
                       {isReady && (
@@ -2765,13 +2803,13 @@ export default function OrdersView({
                   <button
                     onClick={() => {
                       const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
-                      if (isCounter) {
-                        if (onOpenAcceptRouting) {
-                          onOpenAcceptRouting(selectedOrder);
-                        }
-                        setSelectedOrder(null);
-                        return;
+                    if (isCounter) {
+                      if (onOpenAcceptRouting) {
+                        onOpenAcceptRouting(selectedOrder);
                       }
+                      setSelectedOrder(null);
+                      return;
+                    }
                       if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'kitchen');
                       setSelectedOrder(null);
                     }}
