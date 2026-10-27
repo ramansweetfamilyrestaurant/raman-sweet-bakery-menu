@@ -115,7 +115,14 @@ export default function OrdersView({
   const [spaceCategoryFilter, setSpaceCategoryFilter] = useState('all');
   const [processingReqState, setProcessingReqState] = useState({});
   const [rejectingModalReq, setRejectingModalReq] = useState(null);
-  const [selectedRejectReason, setSelectedRejectReason] = useState('Customer not visible at table');
+  const defaultRejectReason = isHotel 
+    ? 'Guest not reachable in room' 
+    : isCinema 
+      ? 'Customer not present at seat' 
+      : ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen'].includes(effectiveBiz) 
+        ? 'Customer not at pickup counter' 
+        : 'Customer not visible at table';
+  const [selectedRejectReason, setSelectedRejectReason] = useState(defaultRejectReason);
   const [customRejectReason, setCustomRejectReason] = useState('');
   const [currentTime, setCurrentTime] = useState(Date.now());
 
@@ -368,7 +375,7 @@ export default function OrdersView({
 
   const handleOpenRejectModal = (req) => {
     setRejectingModalReq(req);
-    setSelectedRejectReason('Customer not visible at table');
+    setSelectedRejectReason(defaultRejectReason);
     setCustomRejectReason('');
   };
 
@@ -622,7 +629,7 @@ export default function OrdersView({
             }}
           >
             <MapPin size={15} />
-            <span>{isCinema ? `Seats Map (${cinemaSeats.length})` : isHotel ? `Room Status (${spaceInventory.length})` : `Tables Map (${spaceInventory.length})`}</span>
+            <span>{isCinema ? `Seats Map (${cinemaSeats.length})` : isHotel ? `Room Status (${spaceInventory.length})` : ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen'].includes(effectiveBiz) ? `Space & Counters (${spaceInventory.length})` : `Tables Map (${spaceInventory.length})`}</span>
           </button>
 
           {/* Service Requests Subtab */}
@@ -675,7 +682,7 @@ export default function OrdersView({
             }}
           >
             <ChefHat size={15} color="#D97706" />
-            <span>Kitchen Display</span>
+            <span>{isCinema ? 'Concession Display' : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? 'Dispatch Display' : 'Kitchen Display'}</span>
             <ArrowUpRight size={13} color="#94A3B8" />
           </button>
         </div>
@@ -1388,17 +1395,18 @@ export default function OrdersView({
               <span style={{ fontSize: '1.2rem' }}>🍽️</span>
               <div>
                 <strong style={{ fontSize: '1.1rem', color: '#16A34A', display: 'block', lineHeight: 1 }}>{summaryCounters.served}</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Served / Dining</span>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>{isHotel ? 'Served / In-Room' : isCinema ? 'Delivered to Seat' : ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen'].includes(effectiveBiz) ? 'Served / Dispatched' : 'Served / Dining'}</span>
               </div>
             </div>
           </div>
 
-          {/* Category Filter Pills (Tables, Cabins, VIP, Rooms) */}
+          {/* Category Filter Pills (Tables, Cabins, VIP, Rooms, Counter) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
             {[
               { id: 'all', label: `All Spaces (${spaceGrid.length})` },
               { id: 'room', label: `🏨 Rooms (${spaceGrid.filter(s => s.category === 'room').length})` },
               { id: 'table', label: `🍽️ Tables (${spaceGrid.filter(s => s.category === 'table').length})` },
+              { id: 'counter', label: `🧾 Counter (${spaceGrid.filter(s => s.category === 'counter').length})` },
               { id: 'cabin', label: `🛋️ Cabins (${spaceGrid.filter(s => s.category === 'cabin').length})` },
               { id: 'vip', label: `👑 VIP (${spaceGrid.filter(s => s.category === 'vip').length})` }
             ].filter(f => f.id === 'all' || spaceGrid.filter(s => s.category === f.id).length > 0).map(tab => (
@@ -1677,10 +1685,14 @@ export default function OrdersView({
           <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                Live Service & Waiter Calls ({safeServiceRequests.length})
+                {isHotel ? `Live Room Service Calls (${safeServiceRequests.length})` : isCinema ? `Live Seat Assistance & Usher Calls (${safeServiceRequests.length})` : `Live Service & Staff Calls (${safeServiceRequests.length})`}
               </h3>
               <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                Real-time table calls, water requests, and assistance alerts from guests
+                {isHotel
+                  ? 'Real-time room service calls, water requests, and guest assistance alerts'
+                  : isCinema
+                    ? 'Real-time seat assistance, usher calls, and guest alerts'
+                    : 'Real-time space calls, water requests, and assistance alerts from guests'}
               </span>
             </div>
           </div>
@@ -1692,7 +1704,11 @@ export default function OrdersView({
                 No Pending Service Calls
               </h4>
               <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0 }}>
-                When customers at tables ring for assistance or request water, calls will appear here live.
+                {isHotel
+                  ? 'When guests in rooms ring for assistance or request room service, calls will appear here live.'
+                  : isCinema
+                    ? 'When guests at cinema seats ring for assistance, calls will appear here live.'
+                    : 'When customers at tables or counters ring for assistance or request water, calls will appear here live.'}
               </p>
             </div>
           ) : (
@@ -1774,8 +1790,8 @@ export default function OrdersView({
         <div style={{ padding: '24px 16px', maxWidth: '800px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <PlanLockedCard
             featureKey="kds_enabled"
-            featureName="Kitchen Display System (KDS)"
-            featureDescription="Dedicated chef terminal with real-time kitchen ticket management, ticking timers, PIN security, and loud audio chimes."
+            featureName={isCinema ? "Concession & Seat Dispatch Display (KDS)" : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? "Dispatch & Order Display (KDS)" : "Kitchen Display System (KDS)"}
+            featureDescription={isCinema ? "Dedicated concession terminal with real-time seat dispatch management, ticking timers, PIN security, and loud audio chimes." : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? "Dedicated packing terminal with real-time counter dispatch management, ticking timers, PIN security, and loud audio chimes." : "Dedicated chef terminal with real-time kitchen ticket management, ticking timers, PIN security, and loud audio chimes."}
             requiredPlanName="Pro Plan or Higher"
             onUpgradeClick={() => onNavigateToSetup && onNavigateToSetup('subscription')}
           />
@@ -1810,10 +1826,14 @@ export default function OrdersView({
             </div>
             <div>
               <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
-                Kitchen Display System (KDS) Active
+                {isCinema ? "Concession Display (KDS) Active" : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? "Dispatch Display (KDS) Active" : "Kitchen Display System (KDS) Active"}
               </h3>
               <p style={{ margin: 0, fontSize: '0.86rem', color: '#64748B', maxWidth: '520px', lineHeight: 1.5 }}>
-                Your dedicated chef terminal runs as a standalone, distraction-free screen designed for kitchen tablets with real-time ticket sync, ticking timers, and PIN protection.
+                {isCinema
+                  ? "Your dedicated concession terminal runs as a standalone, distraction-free screen designed for dispatch tablets with real-time ticket sync, ticking timers, and PIN protection."
+                  : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz)
+                    ? "Your dedicated packaging terminal runs as a standalone, distraction-free screen designed for dispatch tablets with real-time ticket sync, ticking timers, and PIN protection."
+                    : "Your dedicated chef terminal runs as a standalone, distraction-free screen designed for kitchen tablets with real-time ticket sync, ticking timers, and PIN protection."}
               </p>
             </div>
 
@@ -2095,7 +2115,7 @@ export default function OrdersView({
                     boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
                   }}
                 >
-                  Accept & Send to Kitchen
+                  {isCinema ? 'Accept & Send to Concession' : isHotel ? 'Accept & Send to Room Service Kitchen' : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? 'Accept & Send to Prep Counter' : 'Accept & Send to Kitchen'}
                 </button>
               )}
 
@@ -2118,7 +2138,19 @@ export default function OrdersView({
                     boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
                   }}
                 >
-                  Mark Order as Ready / Served
+                  {(() => {
+                    const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
+                    if (isCounter || ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen'].includes(effectiveBiz)) {
+                      return 'Mark Ready for Pickup at Counter';
+                    }
+                    if (isCinema) {
+                      return 'Mark Ready & Deliver to Seat';
+                    }
+                    if (isHotel) {
+                      return 'Mark Ready & Deliver to Room';
+                    }
+                    return 'Mark Order as Ready / Served';
+                  })()}
                 </button>
               )}
 
