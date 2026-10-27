@@ -3107,7 +3107,7 @@ export default function App() {
           restaurantInfo={info}
           tableNumber={effectiveTableNum || currentTableNum || '1'}
           spaceType={currentSpaceType || 'table'}
-          tableToken={currentTableToken || initialSpaceInfo.token || ''}
+          tableToken={currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim()}
           tableLabel={getDynamicSpaceLabel()}
           presencePolicy={presencePolicy}
           onVerified={handlePresenceVerified}

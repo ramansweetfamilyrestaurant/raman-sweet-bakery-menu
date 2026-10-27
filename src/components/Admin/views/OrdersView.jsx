@@ -1691,22 +1691,65 @@ export default function OrdersView({
                     )}
 
                     {isCall && space.serviceRequest && (
-                      <button
-                        onClick={() => onResolveServiceRequest && onResolveServiceRequest(space.serviceRequest.id)}
-                        style={{
-                          width: '100%',
-                          padding: '7px 10px',
-                          borderRadius: '8px',
-                          background: '#D97706',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          fontSize: '0.72rem',
-                          fontWeight: 800,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✓ Attend Call
-                      </button>
+                      space.serviceRequest.request_type === 'presence_verification' ? (
+                        <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleApprove(space.serviceRequest)}
+                            disabled={processingReqState[space.serviceRequest.id] === 'approving'}
+                            style={{
+                              flex: 1,
+                              padding: '7px 8px',
+                              borderRadius: '8px',
+                              background: '#10B981',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            ✓ Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRejectModal(space.serviceRequest)}
+                            style={{
+                              padding: '7px 8px',
+                              borderRadius: '8px',
+                              background: '#EF4444',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✕ Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => onResolveServiceRequest && onResolveServiceRequest(space.serviceRequest.id)}
+                          style={{
+                            width: '100%',
+                            padding: '7px 10px',
+                            borderRadius: '8px',
+                            background: '#D97706',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✓ Attend Call
+                        </button>
+                      )
                     )}
 
                     {isFree && onPrintQR && (
@@ -1820,25 +1863,90 @@ export default function OrdersView({
                       </span>
                     </div>
 
-                    <button
-                      onClick={() => onResolveServiceRequest && onResolveServiceRequest(req.id)}
-                      style={{
-                        padding: '9px 14px',
-                        borderRadius: '10px',
-                        background: '#D97706',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        fontSize: '0.78rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      ✓ Mark Attended & Clear
-                    </button>
+                    {req.request_type === 'presence_verification' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleApprove(req)}
+                            disabled={processingReqState[req.id] === 'approving'}
+                            style={{
+                              flex: 1,
+                              padding: '10px 14px',
+                              borderRadius: '10px',
+                              background: '#10B981',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              fontSize: '0.80rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            ✓ Approve Presence
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRejectModal(req)}
+                            style={{
+                              padding: '10px 14px',
+                              borderRadius: '10px',
+                              background: 'rgba(239, 68, 68, 0.12)',
+                              color: '#DC2626',
+                              border: '1.5px solid #EF4444',
+                              fontSize: '0.80rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            ✕ Reject
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onResolveServiceRequest && onResolveServiceRequest(req.id)}
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            background: '#F1F5F9',
+                            color: '#64748B',
+                            border: '1px solid #CBD5E1',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Dismiss Call
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => onResolveServiceRequest && onResolveServiceRequest(req.id)}
+                        style={{
+                          padding: '9px 14px',
+                          borderRadius: '10px',
+                          background: '#D97706',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        ✓ Mark Attended & Clear
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -2247,6 +2355,117 @@ export default function OrdersView({
                   Generate Bill & Complete Order
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 🛡️ Presence Verification Rejection Modal */}
+      {rejectingModalReq && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10050,
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '420px',
+            padding: '24px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            boxSizing: 'border-box'
+          }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', fontWeight: 800, color: '#DC2626' }}>
+              Reject Presence Verification
+            </h3>
+            <p style={{ margin: '0 0 16px', fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5 }}>
+              Rejecting verification for <strong>{formatCleanTableLabel(rejectingModalReq.table_number, rejectingModalReq.space_type)}</strong> will notify the customer.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+              {[defaultRejectReason, 'Customer not present at table', 'Wrong table QR scanned', 'Suspicious / Remote order attempt', 'Other'].filter((v, i, a) => a.indexOf(v) === i).map(reason => (
+                <label key={reason} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  border: selectedRejectReason === reason ? '2px solid #EF4444' : '1px solid #E2E8F0',
+                  background: selectedRejectReason === reason ? '#FEF2F2' : '#FFFFFF',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  color: '#1E293B'
+                }}>
+                  <input
+                    type="radio"
+                    name="reject_reason"
+                    checked={selectedRejectReason === reason}
+                    onChange={() => setSelectedRejectReason(reason)}
+                    style={{ accentColor: '#EF4444' }}
+                  />
+                  <span>{reason}</span>
+                </label>
+              ))}
+              {selectedRejectReason === 'Other' && (
+                <input
+                  type="text"
+                  placeholder="Enter rejection reason..."
+                  value={customRejectReason}
+                  onChange={(e) => setCustomRejectReason(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.82rem',
+                    marginTop: '4px',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setRejectingModalReq(null)}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  background: '#F1F5F9',
+                  border: 'none',
+                  color: '#475569',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReject}
+                disabled={processingReqState[rejectingModalReq.id] === 'rejecting'}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  background: '#DC2626',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                Confirm Reject
+              </button>
             </div>
           </div>
         </div>

@@ -93,8 +93,31 @@ export default function PresenceVerificationModal({
       if (initialAction === 'staff') {
         handleRequestStaff();
       } else {
-        // Auto-start GPS acquisition on first presentation for seamless UX
-        handleAcquireGps();
+        const hasConfiguredGps = Boolean(
+          restaurantInfo?.location_initialized &&
+          restaurantInfo?.latitude &&
+          restaurantInfo?.longitude
+        );
+
+        if (!hasConfiguredGps) {
+          // If restaurant has no GPS configured, verify immediately via authoritative QR token
+          handleAcquireGps();
+        } else if (typeof navigator !== 'undefined' && navigator.permissions && navigator.permissions.query) {
+          // If browser already granted permission, acquire smoothly without extra tap
+          navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+            if (!isMountedRef.current) return;
+            if (result.state === 'granted') {
+              handleAcquireGps();
+            } else {
+              setViewState('GPS_PROMPT');
+            }
+          }).catch(() => {
+            if (isMountedRef.current) setViewState('GPS_PROMPT');
+          });
+        } else {
+          // Require explicit user tap so modern mobile browsers reliably trigger the native permission prompt
+          setViewState('GPS_PROMPT');
+        }
       }
     }
 
@@ -192,20 +215,20 @@ export default function PresenceVerificationModal({
 
     let hasCompleted = false;
 
-    // Outer 10-second watchdog timer
+    // Outer 5-second watchdog timer (prevents long freezes on mobile)
     gpsWatchdogRef.current = setTimeout(() => {
       if (!hasCompleted && isMountedRef.current) {
         hasCompleted = true;
         isAcquiringGpsRef.current = false;
         setViewState('GPS_FAILED');
-        setErrorMessage('Getting your GPS signal timed out. Please ensure Location is enabled in browser settings.');
+        setErrorMessage('Getting your GPS signal timed out. Please ensure Location is enabled in browser settings or use Staff Verification.');
       }
-    }, 10000);
+    }, 5000);
 
     const geoOptions = {
       enableHighAccuracy: true,
-      timeout: 8000,
-      maximumAge: 30000
+      timeout: 4500,
+      maximumAge: 60000
     };
 
     navigator.geolocation.getCurrentPosition(
@@ -595,6 +618,32 @@ export default function PresenceVerificationModal({
               <Radio size={15} color="#2563EB" />
               <span>Verifying high-precision geofence...</span>
             </div>
+
+            {isStaffAllowed && (
+              <button
+                type="button"
+                onClick={handleRequestStaff}
+                style={{
+                  marginTop: '16px',
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  background: '#F8FAFC',
+                  border: '1.5px solid #E2E8F0',
+                  color: '#475569',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <UserCheck size={16} />
+                <span>{isHot ? 'Ask Front Desk to Verify Instead' : (isCin ? 'Ask Usher to Verify Instead' : (isCnt ? 'Ask Counter to Verify Instead' : 'Ask Staff to Verify Instead'))}</span>
+              </button>
+            )}
           </div>
         )}
 

@@ -3133,6 +3133,99 @@ export default function AdminDashboard({
 
           <main className="adm-main-canvas">
             <div className="adm-content-body">
+              {/* 🛡️ Real-Time Instant Presence Verification Action Banner */}
+              {Array.isArray(serviceRequests) && serviceRequests.some(r => r.request_type === 'presence_verification' && r.status === 'pending') && (
+                <div style={{
+                  margin: '0 0 16px 0',
+                  background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)',
+                  border: '2px solid #818CF8',
+                  borderRadius: '16px',
+                  padding: '14px 18px',
+                  boxShadow: '0 8px 24px rgba(79, 70, 229, 0.28)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '14px',
+                  flexWrap: 'wrap',
+                  position: 'relative',
+                  zIndex: 40
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '12px',
+                      background: '#4F46E5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.25rem',
+                      flexShrink: 0
+                    }}>
+                      🛡️
+                    </div>
+                    <div>
+                      <div style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '0.94rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>Customer Awaiting Table Presence Verification</span>
+                        <span style={{ background: '#EF4444', color: '#FFFFFF', padding: '2px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 900 }}>ACTION NEEDED</span>
+                      </div>
+                      <div style={{ color: '#C7D2FE', fontSize: '0.80rem', marginTop: '2px' }}>
+                        {serviceRequests.filter(r => r.request_type === 'presence_verification' && r.status === 'pending').map(r => {
+                          const raw = String(r.table_number || '1');
+                          return raw.toLowerCase().includes('table') || raw.toLowerCase().includes('room') || raw.toLowerCase().includes('cabin') || raw.toLowerCase().includes('counter') ? raw : `Table ${raw}`;
+                        }).join(', ')} • Customer waiting to place order. Approve to confirm physical presence.
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {serviceRequests.filter(r => r.request_type === 'presence_verification' && r.status === 'pending').map(req => {
+                      const raw = String(req.table_number || '1');
+                      const tblLabel = raw.toLowerCase().includes('table') || raw.toLowerCase().includes('room') || raw.toLowerCase().includes('cabin') || raw.toLowerCase().includes('counter') ? raw : `Table ${raw}`;
+                      return (
+                        <div key={req.id} style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleApprovePresenceRequest(req.id)}
+                            style={{
+                              padding: '9px 16px',
+                              borderRadius: '10px',
+                              background: '#10B981',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              fontWeight: 800,
+                              fontSize: '0.82rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)'
+                            }}
+                          >
+                            ✓ Approve {tblLabel}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRejectPresenceRequest(req.id, 'Customer not present at table')}
+                            style={{
+                              padding: '9px 12px',
+                              borderRadius: '10px',
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              color: '#FCA5A5',
+                              border: '1px solid rgba(239, 68, 68, 0.4)',
+                              fontWeight: 700,
+                              fontSize: '0.82rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✕ Reject
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* HOME VIEW (Business Command Center) */}
               {activeTab === 'home' && (
                 <HomeView

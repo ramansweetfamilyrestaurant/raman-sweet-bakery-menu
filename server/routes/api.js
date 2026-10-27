@@ -1108,15 +1108,15 @@ router.get('/orders/presence-status/:verificationToken', async (req, res) => {
 
     let presenceToken = null;
     if (currentStatus === 'verified') {
-      const spaceType = record.space_type || 'table';
-      const spaceNum = record.space_number || record.table_number;
+      const spaceType = normalizeSpaceType(record.space_type || 'table');
+      const spaceNum = normalizeSpaceNumber(record.space_number || record.table_number);
       presenceToken = generatePresenceToken({
         verificationToken: record.verification_token,
         restaurantId: record.restaurant_id,
         slug: record.slug,
         spaceType,
         spaceNumber: spaceNum,
-        verificationMethod: record.verification_method || 'GPS',
+        verificationMethod: record.verification_method || 'STAFF',
         qrContextHash: record.qr_context_hash || '',
         sessionId: record.session_id || null
       });
@@ -1125,7 +1125,7 @@ router.get('/orders/presence-status/:verificationToken', async (req, res) => {
     return res.json({
       success: true,
       status: currentStatus,
-      method: record.verification_method || 'GPS',
+      method: record.verification_method || 'STAFF',
       space_type: record.space_type || 'table',
       space_number: record.space_number || record.table_number,
       expires_at: record.expires_at,
@@ -1536,11 +1536,29 @@ router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (
     );
 
     if (existingPending && existingPending.length > 0) {
+      const pendingRec = existingPending[0];
+      // Ensure active service request exists in pending status for admin panel alerts
+      try {
+        const activeSr = await query(
+          "SELECT id FROM service_requests WHERE restaurant_id = $1 AND request_type = 'presence_verification' AND status = 'pending' AND (note LIKE $2 OR table_number = $3) LIMIT 1",
+          [resto.id, `%${pendingRec.verification_token}%`, String(cleanTable)]
+        );
+        if (!activeSr || activeSr.length === 0) {
+          await query(
+            `INSERT INTO service_requests (restaurant_id, table_number, request_type, status, note)
+             VALUES ($1, $2, 'presence_verification', 'pending', $3)`,
+            [resto.id, String(cleanTable), `Customer requesting table presence verification [${pendingRec.verification_token}]`]
+          );
+        }
+      } catch (srErr) {
+        console.warn('Notice re-linking service_request for pending verification:', srErr.message);
+      }
+
       return res.json({
         success: true,
-        verification_token: existingPending[0].verification_token,
+        verification_token: pendingRec.verification_token,
         status: 'pending',
-        expires_at: existingPending[0].expires_at,
+        expires_at: pendingRec.expires_at,
         message: 'A presence verification request is already pending approval from staff.'
       });
     }
@@ -1561,9 +1579,9 @@ router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (
     // 12. Create Service Request Record for Real-Time Staff Notification
     try {
       await query(
-        `INSERT INTO service_requests (restaurant_id, table_number, request_type, status)
-         VALUES ($1, $2, 'presence_verification', 'pending')`,
-        [resto.id, String(cleanTable)]
+        `INSERT INTO service_requests (restaurant_id, table_number, request_type, status, note)
+         VALUES ($1, $2, 'presence_verification', 'pending', $3)`,
+        [resto.id, String(cleanTable), `Customer requesting table presence verification [${verificationToken}]`]
       );
     } catch (srErr) {
       console.warn('Notice creating service_request for presence verification:', srErr.message);

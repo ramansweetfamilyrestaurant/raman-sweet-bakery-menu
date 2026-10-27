@@ -2999,7 +2999,7 @@ router.get('/service-requests', authenticateToken, requireActiveSubscription, as
     // Enrich presence verification requests with expiration, space type, and sanitized note
     const enriched = await Promise.all((requests || []).map(async (r) => {
       if (r.request_type === 'presence_verification') {
-        let tokenMatch = r.note ? r.note.match(/tq_staff_[a-z0-9_]+/i) : null;
+        let tokenMatch = r.note ? r.note.match(/(?:pv_staff_|tq_staff_)[a-z0-9_]+/i) : null;
         let vToken = tokenMatch ? tokenMatch[0] : null;
         let verifRows = [];
         try {
@@ -3010,7 +3010,7 @@ router.get('/service-requests', authenticateToken, requireActiveSubscription, as
             );
           } else {
             verifRows = await query(
-              "SELECT expires_at, space_type, space_number, status as verif_status FROM table_location_verifications WHERE restaurant_id = $1 AND table_number = $2 AND verification_method = 'STAFF' AND status = 'pending' ORDER BY id DESC LIMIT 1",
+              "SELECT expires_at, space_type, space_number, status as verif_status FROM table_location_verifications WHERE restaurant_id = $1 AND (table_number = $2 OR space_number = $2) AND verification_method = 'STAFF' AND status = 'pending' ORDER BY id DESC LIMIT 1",
               [targetId, r.table_number]
             );
           }
@@ -3021,7 +3021,8 @@ router.get('/service-requests', authenticateToken, requireActiveSubscription, as
 
         return {
           ...r,
-          note: 'Customer is requesting table presence verification to place order.',
+          verification_token: vToken,
+          note: r.note || 'Customer is requesting table presence verification to place order.',
           expires_at: vRecord ? vRecord.expires_at : null,
           space_type: vRecord ? (vRecord.space_type || 'table') : 'table',
           space_number: vRecord ? (vRecord.space_number || r.table_number) : r.table_number,
@@ -3077,12 +3078,12 @@ router.patch('/service-requests/:id/approve-presence', authenticateToken, requir
     const sr = srRows[0];
 
     // 2. Extract verification token from note (or fallback to space/table search)
-    let tokenMatch = sr.note ? sr.note.match(/tq_staff_[a-z0-9_]+/i) : null;
+    let tokenMatch = sr.note ? sr.note.match(/(?:pv_staff_|tq_staff_)[a-z0-9_]+/i) : null;
     let vToken = tokenMatch ? tokenMatch[0] : null;
 
     let verifQuery = vToken
       ? 'SELECT * FROM table_location_verifications WHERE verification_token = $1 AND restaurant_id = $2'
-      : 'SELECT * FROM table_location_verifications WHERE restaurant_id = $1 AND table_number = $2 AND verification_method = \'STAFF\' AND status = \'pending\' ORDER BY id DESC LIMIT 1';
+      : 'SELECT * FROM table_location_verifications WHERE restaurant_id = $1 AND (table_number = $2 OR space_number = $2) AND verification_method = \'STAFF\' AND status = \'pending\' ORDER BY id DESC LIMIT 1';
     let verifParams = vToken ? [vToken, targetId] : [targetId, sr.table_number];
 
     const verifRows = await query(verifQuery, verifParams);
@@ -3107,8 +3108,13 @@ router.patch('/service-requests/:id/approve-presence', authenticateToken, requir
       [req.user.id || null, nowIso, verifRecord.id, targetId]
     );
 
-    // 5. Resolve service request
-    await query("UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2", [id, targetId]);
+    // 5. Resolve service request(s) linked to this verification
+    if (vToken || verifRecord.verification_token) {
+      const activeTok = vToken || verifRecord.verification_token;
+      await query("UPDATE service_requests SET status = 'resolved' WHERE (id = $1 OR note LIKE $2) AND restaurant_id = $3", [id, `%${activeTok}%`, targetId]);
+    } else {
+      await query("UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2", [id, targetId]);
+    }
 
     return res.json({
       success: true,
@@ -3143,12 +3149,12 @@ router.patch('/service-requests/:id/reject-presence', authenticateToken, require
     }
     const sr = srRows[0];
 
-    let tokenMatch = sr.note ? sr.note.match(/tq_staff_[a-z0-9_]+/i) : null;
+    let tokenMatch = sr.note ? sr.note.match(/(?:pv_staff_|tq_staff_)[a-z0-9_]+/i) : null;
     let vToken = tokenMatch ? tokenMatch[0] : null;
 
     let verifQuery = vToken
       ? 'SELECT * FROM table_location_verifications WHERE verification_token = $1 AND restaurant_id = $2'
-      : 'SELECT * FROM table_location_verifications WHERE restaurant_id = $1 AND table_number = $2 AND verification_method = \'STAFF\' AND status = \'pending\' ORDER BY id DESC LIMIT 1';
+      : 'SELECT * FROM table_location_verifications WHERE restaurant_id = $1 AND (table_number = $2 OR space_number = $2) AND verification_method = \'STAFF\' AND status = \'pending\' ORDER BY id DESC LIMIT 1';
     let verifParams = vToken ? [vToken, targetId] : [targetId, sr.table_number];
 
     const verifRows = await query(verifQuery, verifParams);
@@ -3162,7 +3168,11 @@ router.patch('/service-requests/:id/reject-presence', authenticateToken, require
       );
     }
 
-    await query("UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2", [id, targetId]);
+    if (vToken) {
+      await query("UPDATE service_requests SET status = 'resolved' WHERE (id = $1 OR note LIKE $2) AND restaurant_id = $3", [id, `%${vToken}%`, targetId]);
+    } else {
+      await query("UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2", [id, targetId]);
+    }
 
     return res.json({
       success: true,
