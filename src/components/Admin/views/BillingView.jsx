@@ -40,6 +40,7 @@ import {
 } from '../../../api/client';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 import PlanLockedCard from '../components/PlanLockedCard';
 
 export default function BillingView({
@@ -59,6 +60,7 @@ export default function BillingView({
 }) {
   const sym = getCurrencySymbol(settingsForm?.currency_symbol !== undefined ? settingsForm.currency_symbol : (restaurantInfo?.currency_symbol || currencySymbol));
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
+  const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || settingsForm || {}), [restaurantInfo, settingsForm]);
 
   // Active Internal Tab: 'overview' | 'plans' | 'history' | 'invoices'
   const [activeTab, setActiveTab] = useState('overview');
@@ -287,20 +289,20 @@ export default function BillingView({
   // Feature capability items list for "Included in your plan"
   const planFeaturesList = useMemo(() => {
     return [
-      { name: 'Digital QR Code Menu', enabled: true, benefit: 'Browse dishes & photos on customer smartphones' },
-      { name: 'Direct Table QR Ordering', enabled: Boolean(resolvedCaps?.direct_ordering_enabled), benefit: 'Customers place live orders directly from tables' },
-      { name: 'WhatsApp Direct Ordering', enabled: Boolean(resolvedCaps?.whatsapp_ordering_enabled), benefit: 'Receive structured food orders directly on WhatsApp' },
-      { name: 'Kitchen Display System (KDS)', enabled: Boolean(resolvedCaps?.kds_enabled), benefit: 'Live chef prep screen with sound alerts' },
-      { name: 'Bluetooth Thermal KOT & Bill Printing', enabled: Boolean(resolvedCaps?.bluetooth_kot_enabled), benefit: 'Print 58mm/80mm kitchen tickets and final receipts' },
+      { name: 'Digital QR Code Menu', enabled: true, benefit: 'Browse items & photos on customer smartphones' },
+      { name: 'Direct Digital QR Ordering', enabled: Boolean(resolvedCaps?.direct_ordering_enabled), benefit: 'Customers place live orders directly from tables, rooms, or counters' },
+      { name: 'WhatsApp Direct Ordering', enabled: Boolean(resolvedCaps?.whatsapp_ordering_enabled), benefit: 'Receive structured orders directly on WhatsApp' },
+      { name: 'Kitchen / Dispatch Display (KDS)', enabled: Boolean(resolvedCaps?.kds_enabled), benefit: 'Live preparation & packing screen with sound alerts' },
+      { name: 'Bluetooth Thermal KOT & Receipt Printing', enabled: Boolean(resolvedCaps?.bluetooth_kot_enabled), benefit: 'Print 58mm/80mm tickets and final receipts' },
       { name: 'Dual Printer Routing', enabled: Boolean(resolvedCaps?.dual_printer_enabled), benefit: 'Route kitchen tickets to kitchen and bills to counter' },
       { name: 'Sales Analytics & Heatmaps', enabled: true, benefit: 'Daily trends, revenue summaries, and peak hour matrix' },
       { name: 'CSV & Excel Report Export', enabled: Boolean(resolvedCaps?.analytics_export_enabled), benefit: 'Download RFC 4180 CSV & XLSX spreadsheets' },
       { name: '5% GST Tax Invoicing', enabled: Boolean(resolvedCaps?.gst_invoice_enabled), benefit: 'Automatic CGST/SGST tax calculation on orders' },
       { name: 'Google Reviews Smart Redirect', enabled: Boolean(resolvedCaps?.google_reviews_enabled), benefit: 'Direct happy customers to your Google Maps review page' },
       { name: 'AI Smart Review Highlights', enabled: Boolean(resolvedCaps?.ai_review_enabled), benefit: 'AI-generated review sentiments and badges' },
-      { name: 'Dish Modifiers & Add-ons', enabled: Boolean(resolvedCaps?.modifiers_enabled), benefit: 'Customizable toppings, crusts, and portion sizes' },
+      { name: 'Item Modifiers & Add-ons', enabled: Boolean(resolvedCaps?.modifiers_enabled), benefit: 'Customizable toppings, crusts, and portion sizes' },
       { name: 'Watermark Removal (White-Label)', enabled: Boolean(resolvedCaps?.watermark_removal_enabled), benefit: 'Remove TouchQR branding from customer menu footer' },
-      { name: 'GPS Presence Verification', enabled: Boolean(resolvedCaps?.presence_verification_enabled), benefit: 'Verify diner is physically in hall before ordering' }
+      { name: 'GPS Presence Verification', enabled: Boolean(resolvedCaps?.presence_verification_enabled), benefit: 'Verify customer is physically at outlet before ordering' }
     ];
   }, [resolvedCaps]);
 
@@ -313,7 +315,7 @@ export default function BillingView({
         name: 'Basic Starter',
         price: 499,
         badge: '⚡ BASIC',
-        description: 'Essential digital QR menu for cafés & small dining outlets',
+        description: 'Essential digital QR menu for cafés, bakeries & small outlets',
         max_combos: 3,
         max_tables: 9999,
         direct_ordering_enabled: false,
@@ -338,7 +340,7 @@ export default function BillingView({
         name: 'Enterprise VIP',
         price: 1999,
         badge: '🚀 ENTERPRISE VIP',
-        description: 'Full-suite restaurant management, Direct Table Ordering & KOT',
+        description: 'Full-suite business management, Direct QR Ordering & Kitchen/Dispatch',
         max_combos: 9999,
         max_tables: 9999,
         direct_ordering_enabled: true,
@@ -868,7 +870,7 @@ export default function BillingView({
                 {/* Tables Usage */}
                 <div style={{ background: '#FAF8F5', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 700, color: '#0F172A' }}>Tables & Spaces</span>
+                    <span style={{ fontWeight: 700, color: '#0F172A' }}>{terminology.spacePlural || 'Spaces'} & Counters</span>
                     <strong style={{ color: '#064E3B' }}>
                       {tablesCount} / {maxTables === 9999 ? 'Unlimited' : maxTables}
                     </strong>
@@ -1192,11 +1194,11 @@ export default function BillingView({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                         <Check size={14} color="#059669" strokeWidth={2.5} />
-                        <span><strong>{plan.max_combos === 9999 ? 'Unlimited' : plan.max_combos}</strong> Combos & Thalis</span>
+                        <span><strong>{plan.max_combos === 9999 ? 'Unlimited' : plan.max_combos}</strong> Combos & Deals</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                         <Check size={14} color="#059669" strokeWidth={2.5} />
-                        <span><strong>{plan.max_tables === 9999 ? 'Unlimited' : plan.max_tables}</strong> Tables & Spaces</span>
+                        <span><strong>{plan.max_tables === 9999 ? 'Unlimited' : plan.max_tables}</strong> {terminology.spacePlural || 'Spaces'} & Counters</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                         {plan.whatsapp_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
@@ -1204,11 +1206,11 @@ export default function BillingView({
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                         {plan.direct_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
-                        <span style={{ color: plan.direct_ordering_enabled ? '#334155' : '#94A3B8' }}>Direct Table QR Ordering</span>
+                        <span style={{ color: plan.direct_ordering_enabled ? '#334155' : '#94A3B8' }}>Direct Digital QR Ordering</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                         {plan.kds_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
-                        <span style={{ color: plan.kds_enabled ? '#334155' : '#94A3B8' }}>Kitchen Display System (KDS)</span>
+                        <span style={{ color: plan.kds_enabled ? '#334155' : '#94A3B8' }}>Kitchen & Dispatch Display (KDS)</span>
                       </div>
                     </div>
                   </div>

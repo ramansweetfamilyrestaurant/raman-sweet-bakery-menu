@@ -1515,7 +1515,7 @@ export default function HomeView({
                     <span>QR Ordering</span>
                   </div>
                   <span 
-                    title={isAccountSuspended && isQrOrderingLive ? "Configured on plan, but currently unavailable because restaurant subscription is suspended" : undefined}
+                    title={isAccountSuspended && isQrOrderingLive ? "Configured on plan, but currently unavailable because business subscription is suspended" : undefined}
                     style={{ 
                       fontSize: '0.70rem', 
                       fontWeight: 700, 
@@ -1535,7 +1535,7 @@ export default function HomeView({
                     <span>WhatsApp Orders</span>
                   </div>
                   <span 
-                    title={isAccountSuspended && isWhatsappLive ? "Configured on plan, but currently unavailable because restaurant subscription is suspended" : undefined}
+                    title={isAccountSuspended && isWhatsappLive ? "Configured on plan, but currently unavailable because business subscription is suspended" : undefined}
                     style={{ 
                       fontSize: '0.70rem', 
                       fontWeight: 700, 
@@ -1555,7 +1555,7 @@ export default function HomeView({
                     <span>KDS</span>
                   </div>
                   <span 
-                    title={isAccountSuspended && isKdsLive ? "Configured on plan, but currently unavailable because restaurant subscription is suspended" : undefined}
+                    title={isAccountSuspended && isKdsLive ? "Configured on plan, but currently unavailable because business subscription is suspended" : undefined}
                     style={{ 
                       fontSize: '0.70rem', 
                       fontWeight: 700, 

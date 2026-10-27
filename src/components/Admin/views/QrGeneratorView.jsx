@@ -664,7 +664,7 @@ export default function QrGeneratorView({
             </span>
           </div>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748B' }}>
-            Manage physical dining standees with cryptographically signed QR codes. Changes in Setup reflect automatically.
+            Manage physical QR standees & stickers with cryptographically signed QR codes. Changes in Setup reflect automatically.
           </p>
         </div>
 
@@ -930,7 +930,7 @@ export default function QrGeneratorView({
                       cursor: 'pointer'
                     }}
                   >
-                    {isCinema ? 'Go to Cinema Settings' : isHotel ? 'Go to Hotel Settings' : 'Go to Restaurant Settings'}
+                    {isCinema ? 'Go to Cinema Settings' : isHotel ? 'Go to Hotel Settings' : 'Go to Business Settings'}
                   </button>
                 )}
               </div>
@@ -1197,16 +1197,26 @@ export default function QrGeneratorView({
               </div>
 
               {/* Tagline */}
-              <div style={{
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                color: theme.subtitleColor,
-                marginBottom: '10px'
-              }}>
-                {settingsForm?.tagline || (isCinema ? 'IN-SEAT FOOD ORDERING' : 'SCAN QR CODE FOR DIGITAL MENU')}
-              </div>
+              {(() => {
+                const isCounter = activeSpace?.spaceType === 'counter' || activeSpace?.paramName === 'counter';
+                return (
+                  <div style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    color: theme.subtitleColor,
+                    marginBottom: '10px'
+                  }}>
+                    {settingsForm?.tagline || (
+                      isCinema ? 'IN-SEAT FOOD ORDERING' :
+                      isHotel ? 'IN-ROOM GUEST DINING' :
+                      isCounter ? 'INSTANT COUNTER DIGITAL MENU' :
+                      'SCAN QR CODE FOR DIGITAL MENU'
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* QR Plaque Box */}
               <div style={{
@@ -1264,26 +1274,36 @@ export default function QrGeneratorView({
               </div>
 
               {/* Bilingual Instructions */}
-              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: theme.instructionEn, marginBottom: '2px' }}>
-                📱 POINT CAMERA AT QR TO ORDER
-              </div>
-              <div style={{ fontSize: '0.66rem', fontWeight: 600, color: theme.instructionHi, marginBottom: '6px' }}>
-                {isCinema ? 'स्कैन करें और सीट पर खाना मंगाएं' : 'कैमरे से स्कैन करें और खाना ऑर्डर करें'}
-              </div>
+              {(() => {
+                const isCounter = activeSpace?.spaceType === 'counter' || activeSpace?.paramName === 'counter';
+                return (
+                  <>
+                    <div style={{ fontSize: '0.74rem', fontWeight: 800, color: theme.instructionEn, marginBottom: '2px' }}>
+                      📱 POINT CAMERA AT QR TO ORDER
+                    </div>
+                    <div style={{ fontSize: '0.66rem', fontWeight: 600, color: theme.instructionHi, marginBottom: '6px' }}>
+                      {isCinema ? 'स्कैन करें और सीट पर मंगाएं' :
+                        isHotel ? 'स्कैन करें और कमरे में खाना मंगाएं' :
+                        isCounter ? 'स्कैन करें और काउंटर से तुरंत ऑर्डर करें' :
+                        'कैमरे से स्कैन करें और खाना ऑर्डर करें'}
+                    </div>
 
-              {/* 3-Step Bar */}
-              <div style={{
-                background: theme.stepBg,
-                border: `1px solid ${theme.stepBorder}`,
-                color: theme.stepText,
-                borderRadius: '6px',
-                padding: '3px 4px',
-                fontSize: '0.58rem',
-                fontWeight: 800,
-                marginBottom: '6px'
-              }}>
-                ① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food
-              </div>
+                    {/* 3-Step Bar */}
+                    <div style={{
+                      background: theme.stepBg,
+                      border: `1px solid ${theme.stepBorder}`,
+                      color: theme.stepText,
+                      borderRadius: '6px',
+                      padding: '3px 4px',
+                      fontSize: '0.58rem',
+                      fontWeight: 800,
+                      marginBottom: '6px'
+                    }}>
+                      ① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; {isCounter ? '③ Pickup at Counter' : '③ Order Food'}
+                    </div>
+                  </>
+                );
+              })()}
 
               {/* Reassurance */}
               {showReassurance && (

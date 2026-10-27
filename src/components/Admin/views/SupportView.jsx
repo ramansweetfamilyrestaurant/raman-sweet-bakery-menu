@@ -73,7 +73,7 @@ export default function SupportView({
   const supportWhatsapp = settingsForm?.support_whatsapp || restaurantInfo?.support_whatsapp || '919876543210';
   const cleanWhatsappNumber = supportWhatsapp.replace(/[^0-9]/g, '');
   const businessSlug = settingsForm?.slug || restaurantInfo?.slug || 'default';
-  const restoName = settingsForm?.name || restaurantInfo?.name || 'My Restaurant';
+  const restoName = settingsForm?.name || restaurantInfo?.name || 'My Business';
 
   // Real Backend Persistent Tickets State
   const [tickets, setTickets] = useState([]);
@@ -227,8 +227,8 @@ export default function SupportView({
       subtitle: 'Verify QR configuration, table pairing, and business slug',
       steps: [
         '1. Open the QR Standees manager from the Marketing / QR tab.',
-        '2. Ensure your restaurant slug matches your active storefront URL.',
-        '3. If you recently updated table numbers, download and print the latest SVG/PNG standees.',
+        '2. Ensure your business slug matches your active storefront URL.',
+        '3. If you recently updated spaces or tables, download and print the latest SVG/PNG standees.',
         '4. Test scanning with a phone camera to confirm it routes to the correct ordering space.'
       ],
       actionLabel: 'Go to QR Manager',
@@ -291,7 +291,7 @@ export default function SupportView({
       category: 'settings',
       icon: <BookOpen size={18} color="#064E3B" />,
       title: 'Getting Started with TouchQR',
-      desc: 'Complete walkthrough on setting up your restaurant profile, logo, address, and tables.',
+      desc: 'Complete walkthrough on setting up your business profile, logo, address, and spaces.',
       actionTab: 'settings',
       actionDrawer: 'profile'
     },
@@ -299,8 +299,8 @@ export default function SupportView({
       id: 'guide-menu',
       category: 'menu',
       icon: <Utensils size={18} color="#EA580C" />,
-      title: 'Managing Dishes, Categories & Combos',
-      desc: 'How to add high-resolution dish photos, mark items Sold Out, and configure value meal combos.',
+      title: 'Managing Items, Categories & Combos',
+      desc: 'How to add high-resolution photos, mark items Sold Out, and configure value meal combos.',
       actionTab: 'dishes'
     },
     {
@@ -362,7 +362,7 @@ export default function SupportView({
   }, [popularGuides, activeCategory, searchQuery]);
 
   const handleOpenWhatsApp = () => {
-    const restoName = restaurantInfo?.name || settingsForm?.name || 'My Restaurant';
+    const restoName = restaurantInfo?.name || settingsForm?.name || 'My Business';
     const msg = encodeURIComponent(`Hello TouchQR Support Team, I am an admin of "${restoName}". I need assistance with my TouchQR dashboard.`);
     window.open(`https://wa.me/${cleanWhatsappNumber}?text=${msg}`, '_blank');
   };
@@ -795,7 +795,7 @@ export default function SupportView({
                   Quick Troubleshooting
                 </strong>
                 <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                  Step-by-step resolution for common restaurant operational questions
+                  Step-by-step resolution for common business operational questions
                 </span>
               </div>
             </div>
