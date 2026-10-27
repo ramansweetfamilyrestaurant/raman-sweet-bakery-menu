@@ -1154,6 +1154,24 @@ export default function OrdersView({
                             <Printer size={14} />
                           </button>
 
+                          {/* Print Bill (for completed/settled orders) */}
+                          {(order.status === 'completed' || order.is_settled === 1) && (
+                            <button
+                              onClick={() => onPrintBill ? onPrintBill(order, order.payment_method || 'CASH') : null}
+                              style={{
+                                padding: '6px 8px',
+                                borderRadius: '8px',
+                                border: '1px solid #E2E8F0',
+                                background: '#FFFFFF',
+                                color: '#7E22CE',
+                                cursor: 'pointer'
+                              }}
+                              title="Print / Re-print Bill Receipt"
+                            >
+                              <Receipt size={14} />
+                            </button>
+                          )}
+
                           {/* Open Details */}
                           <button
                             onClick={() => setSelectedOrder(order)}
@@ -1327,6 +1345,28 @@ export default function OrdersView({
                           }}
                         >
                           💳 Bill
+                        </button>
+                      )}
+
+                      {(order.status === 'completed' || order.is_settled === 1) && (
+                        <button
+                          onClick={() => onPrintBill ? onPrintBill(order, order.payment_method || 'CASH') : null}
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            border: '1px solid #E2E8F0',
+                            background: '#FFFFFF',
+                            color: '#7E22CE',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          title="Print / Re-print Bill Receipt"
+                        >
+                          <Receipt size={14} /> Bill
                         </button>
                       )}
 
@@ -1605,23 +1645,28 @@ export default function OrdersView({
                           Details
                         </button>
                         <button
-                          onClick={() => handleTriggerBillAction(space.activeOrder)}
-                          disabled={!onOpenBillModal}
-                          title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
+                          onClick={() => {
+                            if (space.activeOrder?.is_settled === 1 || space.activeOrder?.status === 'completed') {
+                              if (onPrintBill) onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH');
+                            } else {
+                              handleTriggerBillAction(space.activeOrder);
+                            }
+                          }}
+                          disabled={!space.activeOrder?.is_settled && !onOpenBillModal}
+                          title={space.activeOrder?.is_settled ? 'Print Bill Receipt' : (!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment')}
                           style={{
                             flex: 1,
                             padding: '6px 8px',
                             borderRadius: '8px',
-                            background: onOpenBillModal ? '#261B14' : '#9CA3AF',
+                            background: space.activeOrder?.is_settled ? '#0F766E' : (onOpenBillModal ? '#261B14' : '#9CA3AF'),
                             color: '#FFFFFF',
                             border: 'none',
                             fontSize: '0.70rem',
                             fontWeight: 800,
-                            cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
-                            opacity: onOpenBillModal ? 1 : 0.6
+                            cursor: 'pointer'
                           }}
                         >
-                          Bill
+                          {space.activeOrder?.is_settled ? 'Print Bill' : 'Bill'}
                         </button>
                       </>
                     )}

@@ -780,7 +780,7 @@ export default function AdminDashboard({
         }
         const targetOrder = orders.find(o => String(o.id) === key);
         const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || `Order ${orderId}`;
-        const msg = newStatus === 'served' ? `📦 ${tblNum} Marked SERVED at Counter` : `💳 ${tblNum} Served & Bill Completed!`;
+        const msg = newStatus === 'served' ? `✓ ${tblNum} Marked Ready / Served!` : `💳 ${tblNum} Served & Bill Completed!`;
         setToastMessage(msg);
         setTimeout(() => setToastMessage(''), 4000);
       }
