@@ -1360,7 +1360,7 @@ export default function SetupView({
       content = (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.45 }}>
-            Help diners find directions to your restaurant easily by adding your exact Google Maps link or GPS coordinates.
+            Help customers find directions to your business easily by adding your exact Google Maps link or GPS coordinates.
           </div>
           <div>
             <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
@@ -1696,7 +1696,7 @@ export default function SetupView({
                   Business Profile
                 </h2>
                 <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
-                  Manage your restaurant identity, food details and business information
+                  Manage your business identity, catalog details and store information
                 </p>
               </div>
             </div>
@@ -5833,7 +5833,7 @@ export default function SetupView({
                 Location & GPS
               </h2>
               <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
-                Manage your restaurant location, customer presence verification and geofence settings.
+                Manage your store location, customer presence verification and geofence settings.
               </p>
             </div>
           </div>
@@ -5877,11 +5877,11 @@ export default function SetupView({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '1.1rem' }}>📍</span>
                   <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
-                    Restaurant Location
+                    Business Location
                   </h3>
                 </div>
                 <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
-                  Set the exact location of your restaurant for customer presence verification.
+                  Set the exact location of your premises for customer presence verification.
                 </p>
               </div>
 

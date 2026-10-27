@@ -168,7 +168,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
         }));
         setLocationStatus(`✅ GPS Fixed! Lat: ${lat}, Lng: ${lon} (Accuracy: ±${accuracy}m)`);
       } else {
-        setLocationStatus('⚠️ Could not get accurate GPS lock. You can search from your restaurant address below.');
+        setLocationStatus('⚠️ Could not get accurate GPS lock. You can search from your business address below.');
       }
     };
 
@@ -310,7 +310,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
 
       await completeOnboarding(token);
 
-      setSuccessMsg('✨ Setup Complete! Loading your restaurant dashboard...');
+      setSuccessMsg('✨ Setup Complete! Loading your business dashboard...');
       setTimeout(() => {
         if (onComplete) onComplete();
       }, 800);
