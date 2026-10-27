@@ -643,8 +643,10 @@ export async function fetchActiveTableOrder(slug, tableNumber, token = '', space
   if (token) url += `&tkn=${encodeURIComponent(token)}`;
   if (spaceType) url += `&space_type=${encodeURIComponent(spaceType)}`;
   const res = await fetch(url);
-  return handleResponse(res, 'Failed to fetch active table order');
+  return handleResponse(res, 'Failed to fetch active space order');
 }
+
+export const fetchActiveSpaceOrder = fetchActiveTableOrder;
 
 export async function createServiceRequest(data) {
   const res = await fetch(`${API_BASE}/service-requests`, {

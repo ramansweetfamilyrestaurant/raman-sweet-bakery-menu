@@ -5888,7 +5888,7 @@ export default function SetupView({
               {/* Address Input */}
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                  Restaurant Address
+                  Store / Premises Address
                 </label>
                 <input
                   type="text"
@@ -6083,7 +6083,7 @@ export default function SetupView({
             }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
-                  Restaurant Location Preview
+                  Premises Location Preview
                 </h3>
                 <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
                   Click anywhere on the map or drag the pin to fine-tune your entrance position.
@@ -6213,7 +6213,7 @@ export default function SetupView({
                   Customer Presence Verification
                 </h3>
                 <p style={{ margin: '3px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
-                  Verify that customers are physically near your restaurant before allowing location-based actions.
+                  Verify that customers are physically near your premises before allowing location-based actions.
                 </p>
               </div>
 
@@ -8518,7 +8518,7 @@ export default function SetupView({
               </div>
 
               <p style={{ margin: 0, fontSize: '0.74rem', color: '#475569', lineHeight: 1.45 }}>
-                Your restaurant data is protected by the platform's database infrastructure with automated snapshot protection, encrypted connections, and tenant isolation.
+                Your business data is protected by the platform's database infrastructure with automated snapshot protection, encrypted connections, and tenant isolation.
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.70rem', color: '#059669', fontWeight: 700, background: '#F0FDF4', padding: '8px 10px', borderRadius: '8px' }}>
@@ -9082,7 +9082,7 @@ export default function SetupView({
             </span>
           </div>
           <p style={{ fontSize: '0.74rem', color: '#64748B', margin: '3px 0 0 0', fontWeight: 500 }}>
-            Manage your restaurant, menu preferences, operations, security and account.
+            Manage your business settings, catalog preferences, operations, security and account.
           </p>
         </div>
 
@@ -10668,7 +10668,7 @@ export default function SetupView({
               <div style={{ position: 'relative' }}>
                 <input
                   type="url"
-                  placeholder="https://g.page/r/your-restaurant-review"
+                  placeholder="https://g.page/r/your-business-review"
                   value={settingsForm.google_review_url || ''}
                   onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
                   style={{
@@ -10776,7 +10776,7 @@ export default function SetupView({
               {/* Body Content Area */}
               <div style={{ padding: '0 16px 16px 16px', textAlign: 'center', background: '#FFFFFF' }}>
                 <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900, display: 'block', marginBottom: '2px' }}>
-                  {settingsForm.name || 'Restaurant Name'}
+                  {settingsForm.name || 'Business Name'}
                 </strong>
                 <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginBottom: '10px' }}>
                   {settingsForm.tagline || 'Pure Veg Family Restaurant & Bakery'}
@@ -12254,7 +12254,7 @@ export default function SetupView({
             </div>
 
             <p style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.5, margin: '0 0 18px' }}>
-              Your service will remain fully active until the current billing period ends. After that, your restaurant will switch to the free view-only plan without recurring charges.
+              Your service will remain fully active until the current billing period ends. After that, your account will switch to the free view-only plan without recurring charges.
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
