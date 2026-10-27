@@ -77,7 +77,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
     return typeof isNotificationSoundReady === 'function' ? isNotificationSoundReady() : false;
   });
   const [restaurantMeta, setRestaurantMeta] = useState(null);
-  const terminology = getBusinessTerminology(restaurantMeta);
+  const terminology = getBusinessTerminology(restaurantMeta || {});
   const [checkedItemsMap, setCheckedItemsMap] = useState({});
   const [showPrepSummary, setShowPrepSummary] = useState(true);
   const [recentlyCompleted, setRecentlyCompleted] = useState([]);

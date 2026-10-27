@@ -34,7 +34,7 @@ export default function KdsDisplayView({
   restaurantInfo = {},
   kdsEnabled = true
 }) {
-  const terminology = getBusinessTerminology(restaurantInfo);
+  const terminology = getBusinessTerminology(restaurantInfo || {});
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [soundEnabled, setSoundEnabled] = useState(true);

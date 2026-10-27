@@ -214,10 +214,11 @@ export function resolveServiceModelForBusinessType(businessType, currentServiceM
  * @returns {{ business_type: string, food_type: string|null, service_model: string, legacy_resto_type: string, is_pure_veg: boolean }}
  */
 export function resolveBusinessProfile(restaurant = {}) {
-  const rawBiz = restaurant.business_type ? String(restaurant.business_type).trim().toLowerCase() : '';
-  const rawFood = restaurant.food_type ? String(restaurant.food_type).trim().toLowerCase() : '';
-  const rawService = restaurant.service_model ? String(restaurant.service_model).trim().toLowerCase() : '';
-  const legacyResto = (restaurant.resto_type ? String(restaurant.resto_type) : '').trim().toLowerCase();
+  const safeResto = (restaurant && typeof restaurant === 'object') ? restaurant : {};
+  const rawBiz = safeResto.business_type ? String(safeResto.business_type).trim().toLowerCase() : '';
+  const rawFood = safeResto.food_type ? String(safeResto.food_type).trim().toLowerCase() : '';
+  const rawService = safeResto.service_model ? String(safeResto.service_model).trim().toLowerCase() : '';
+  const legacyResto = (safeResto.resto_type ? String(safeResto.resto_type) : '').trim().toLowerCase();
 
   let business_type = null;
   let food_type = null;
@@ -271,7 +272,7 @@ export function resolveBusinessProfile(restaurant = {}) {
     business_type,
     food_type,
     service_model,
-    legacy_resto_type: restaurant.resto_type || 'pure_veg',
+    legacy_resto_type: safeResto.resto_type || 'pure_veg',
     is_pure_veg
   };
 }
@@ -283,7 +284,8 @@ export function resolveBusinessProfile(restaurant = {}) {
  * @returns {string} Customer-facing banner badge text
  */
 export function resolveBannerBadge(restaurant = {}) {
-  const profile = resolveBusinessProfile(restaurant);
+  const safeResto = (restaurant && typeof restaurant === 'object') ? restaurant : {};
+  const profile = resolveBusinessProfile(safeResto);
   const { business_type, food_type, is_pure_veg } = profile;
 
   if (food_type === 'vegan') return '100% Vegan (Plant-Based)';
@@ -316,6 +318,7 @@ export function resolveBannerBadge(restaurant = {}) {
  * @returns {Array<{ id: string, label: string, singular: string, plural: string, badge: string, param: string }>}
  */
 export function getAvailableSpaceTypesForBusiness(businessType, serviceModel, options = {}) {
+  const safeOptions = (options && typeof options === 'object') ? options : {};
   const cleanBiz = businessType ? String(businessType).trim().toLowerCase() : 'restaurant';
   const canonicalBiz = BUSINESS_TYPE_ALIASES[cleanBiz] || (isValidBusinessType(cleanBiz) ? cleanBiz : 'restaurant');
   const cleanService = serviceModel ? String(serviceModel).trim().toLowerCase() : resolveServiceModelForBusinessType(canonicalBiz);
@@ -340,7 +343,7 @@ export function getAvailableSpaceTypesForBusiness(businessType, serviceModel, op
     { id: 'vip', label: '👑 VIP Lounge', singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' }
   ];
 
-  if (options.counter_ordering_enabled === 1 || options.counter_ordering_enabled === true || options.counter_ordering_enabled === '1') {
+  if (safeOptions.counter_ordering_enabled === 1 || safeOptions.counter_ordering_enabled === true || safeOptions.counter_ordering_enabled === '1') {
     spaces.push({ id: 'counter', label: '🧾 Billing Counter', singular: 'Counter', plural: 'Counters', badge: 'BILLING COUNTER', param: 'counter' });
   }
 

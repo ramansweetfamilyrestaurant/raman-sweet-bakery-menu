@@ -28,7 +28,7 @@ export default function CustomerLocationModal({
   onLocationVerified,
   allowDismiss = true
 }) {
-  const terminology = getBusinessTerminology(restaurantInfo);
+  const terminology = getBusinessTerminology(restaurantInfo || {});
   // State Machine:
   // 'idle' | 'requesting_location' | 'verifying_with_server' | 'verified' |
   // 'outside_boundary' | 'permission_denied' | 'permission_permanently_blocked' |

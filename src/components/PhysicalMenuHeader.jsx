@@ -4,7 +4,7 @@ import { getRestaurantLogoUrl } from '../utils/imageHelper';
 import { getBusinessTerminology } from '../utils/businessTaxonomy';
 
 export default function PhysicalMenuHeader({ info, categories, selectedCategory, onSelectCategory, onOpenInfoModal, onOpenAdmin }) {
-  const terminology = getBusinessTerminology(info);
+  const terminology = getBusinessTerminology(info || {});
   return (
     <header style={{
       background: 'var(--primary-emerald)',

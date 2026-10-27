@@ -27,7 +27,7 @@ export default function AdminHeader({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
-  const terms = getBusinessTerminology(restaurantInfo);
+  const terms = getBusinessTerminology(restaurantInfo || {});
 
   useEffect(() => {
     if (!showUserMenu) return;

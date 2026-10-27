@@ -14,7 +14,7 @@ const resolveImageUrl = (url) => {
 };
 
 export default function DishFormModal({ dish, categories, token, modifiersEnabled = true, currencySymbol = '₹', restaurantInfo = {}, onSave, onClose }) {
-  const terminology = getBusinessTerminology(restaurantInfo);
+  const terminology = getBusinessTerminology(restaurantInfo || {});
   const itemLabel = terminology.dishSingular || 'Item';
 
   const [activeTab, setActiveTab] = useState('basic'); // 'basic' | 'pricing' | 'details'

@@ -4,7 +4,7 @@ import { generateSmartReview, getCustomerReviewProfile } from '../utils/aiReview
 import { getBusinessTerminology } from '../utils/businessTaxonomy';
 
 export default function CustomerReviewModal({ info, onClose }) {
-  const terms = getBusinessTerminology(info);
+  const terms = getBusinessTerminology(info || {});
   const restoName = info?.name || terms.businessNoun || 'Business';
   const profile = getCustomerReviewProfile(info?.business_type, info?.resto_type);
   const availableChips = profile.highlights || [];

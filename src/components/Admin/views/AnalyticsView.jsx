@@ -111,7 +111,7 @@ export default function AnalyticsView({
   restaurantInfo = {},
   onViewOrders
 }) {
-  const terminology = getBusinessTerminology(restaurantInfo);
+  const terminology = getBusinessTerminology(restaurantInfo || {});
   const itemPlural = terminology.itemPlural || 'Items';
   const itemSingular = terminology.itemSingular || 'Item';
 

@@ -46,7 +46,7 @@ export default function NotificationView({
   onBackToDashboard
 }) {
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
-  const terminology = getBusinessTerminology(restaurantInfo);
+  const terminology = getBusinessTerminology(restaurantInfo || settingsForm || {});
 
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'orders' | 'payments' | 'system' | 'reviews' | 'security'
   const [unreadOnly, setUnreadOnly] = useState(false);
