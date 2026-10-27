@@ -33,7 +33,7 @@ import KdsDisplayView from './KdsDisplayView';
 import PlanLockedCard from '../components/PlanLockedCard';
 import { resolveBusinessProfile, getBusinessTerminology } from '../../../utils/businessTaxonomy';
 import { fetchCinemaScreens, fetchCinemaSeats } from '../../../api/client';
-import { triggerBillAction, safeParseModifiers, safeParseItems } from '../../../utils/billingHelper';
+import { triggerBillAction, safeParseModifiers, safeParseItems, calculateBillDetails } from '../../../utils/billingHelper';
 
 export default function OrdersView({
   orders = [],
@@ -119,6 +119,25 @@ export default function OrdersView({
       order.is_settled === true
     );
   };
+
+  // Authoritative Session Details mapping for all active orders (aggregates multi-round sessions)
+  const sessionDetailsMap = useMemo(() => {
+    const map = new Map();
+    validOrders.forEach(ord => {
+      try {
+        const details = calculateBillDetails(ord, validOrders, restaurantInfo, settingsForm);
+        map.set(ord.id, details);
+      } catch (_) {
+        map.set(ord.id, {
+          sessionOrders: [ord],
+          totalRoundsCount: 1,
+          isMultiRound: Boolean(Number(ord.round_number) > 1),
+          grandTotal: Number(ord.total_amount || 0)
+        });
+      }
+    });
+    return map;
+  }, [validOrders, restaurantInfo, settingsForm]);
 
   const handleRejectOrder = (order) => {
     if (!order) return;
@@ -326,11 +345,13 @@ export default function OrdersView({
   // Operational State mapping per physical space
   const spaceGrid = useMemo(() => {
     return spaceInventory.map(space => {
-      const activeOrder = validOrders.find(o => {
+      const spaceActiveOrders = validOrders.filter(o => {
         if (isOrderCompleted(o) || o.status === 'rejected' || o.status === 'cancelled') return false;
         const loc = parseOrderSpaceLocation(o);
         return loc.space_type === space.space_type && String(loc.space_number) === String(space.space_number);
       });
+
+      const activeOrder = spaceActiveOrders.length > 0 ? spaceActiveOrders[0] : null;
 
       const serviceReq = safeServiceRequests.find(s => {
         const loc = parseServiceReqSpaceLocation(s);
@@ -340,20 +361,26 @@ export default function OrdersView({
       let status = 'free';
       if (serviceReq) {
         status = 'call';
-      } else if (activeOrder) {
-        if (activeOrder.status === 'served') {
+      } else if (spaceActiveOrders.length > 0) {
+        const allServed = spaceActiveOrders.every(o => o.status === 'served');
+        const anyReady = spaceActiveOrders.some(o => o.status === 'served' || o.kitchen_prepared === 1 || o.kitchen_prepared === '1' || o.kitchen_prepared === true);
+        if (allServed) {
           status = 'served';
-        } else if (activeOrder.kitchen_prepared === 1 || activeOrder.kitchen_prepared === '1' || activeOrder.kitchen_prepared === true) {
+        } else if (anyReady) {
           status = 'ready';
         } else {
           status = 'order_active';
         }
       }
 
+      const spaceSessionTotal = spaceActiveOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+
       return {
         ...space,
         status,
         activeOrder,
+        activeOrders: spaceActiveOrders,
+        sessionTotal: spaceSessionTotal,
         serviceRequest: serviceReq
       };
     });
@@ -1034,6 +1061,15 @@ export default function OrdersView({
                   const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
                   const isKitchen = !isDone && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
                   const isReady = !isDone && (order.status === 'served' || order.status === 'ready');
+                  const sessionInfo = sessionDetailsMap.get(order.id) || {
+                    sessionOrders: [order],
+                    totalRoundsCount: 1,
+                    isMultiRound: Boolean(Number(order.round_number) > 1),
+                    grandTotal: Number(order.total_amount || 0)
+                  };
+                  const roundNum = Number(order.round_number) || (sessionInfo.isMultiRound ? 1 : 1);
+                  const isAddonRound = roundNum > 1;
+                  const isMultiRoundSession = sessionInfo.isMultiRound;
 
                   return (
                     <tr 
@@ -1047,7 +1083,36 @@ export default function OrdersView({
                     >
                       {/* Order # & Source */}
                       <td style={{ padding: '14px 18px', fontWeight: 800, color: '#0F172A' }}>
-                        <div>#{order.id}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span>#{order.id}</span>
+                          {isAddonRound ? (
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '6px',
+                              background: '#FEF3C7',
+                              color: '#B45309',
+                              border: '1px solid #FDE68A',
+                              fontSize: '0.64rem',
+                              fontWeight: 800,
+                              whiteSpace: 'nowrap'
+                            }}>
+                              🔄 Round {roundNum} (Add-on)
+                            </span>
+                          ) : isMultiRoundSession ? (
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '6px',
+                              background: '#E0F2FE',
+                              color: '#0369A1',
+                              border: '1px solid #BAE6FD',
+                              fontSize: '0.64rem',
+                              fontWeight: 800,
+                              whiteSpace: 'nowrap'
+                            }}>
+                              Round 1
+                            </span>
+                          ) : null}
+                        </div>
                         <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
                           {getOrderSourceDisplay(order)}
                         </span>
@@ -1055,7 +1120,25 @@ export default function OrdersView({
 
                       {/* Location */}
                       <td style={{ padding: '14px 18px', fontWeight: 700, color: '#0F172A' }}>
-                        {cleanLoc}
+                        <div>{cleanLoc}</div>
+                        {isMultiRoundSession && (
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            marginTop: '3px',
+                            fontSize: '0.66rem',
+                            color: '#0369A1',
+                            background: '#F0F9FF',
+                            border: '1px solid #BAE6FD',
+                            padding: '1px 6px',
+                            borderRadius: '5px',
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            <span>🔗 Session ({sessionInfo.totalRoundsCount} Rds • {currencySymbol}{Math.round(sessionInfo.grandTotal).toLocaleString('en-IN')})</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Time */}
@@ -1167,7 +1250,7 @@ export default function OrdersView({
                             <button
                               onClick={() => handleTriggerBillAction(order)}
                               disabled={!onOpenBillModal}
-                              title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
+                              title={!onOpenBillModal ? 'Billing modal unavailable' : isMultiRoundSession ? `Combined Bill for all ${sessionInfo.totalRoundsCount} rounds of this session (${currencySymbol}${Math.round(sessionInfo.grandTotal)})` : 'Open Bill & Settle Payment'}
                               style={{
                                 padding: '6px 12px',
                                 borderRadius: '8px',
@@ -1180,7 +1263,7 @@ export default function OrdersView({
                                 opacity: onOpenBillModal ? 1 : 0.6
                               }}
                             >
-                              💳 Bill
+                              {isMultiRoundSession ? `💳 Bill (${sessionInfo.totalRoundsCount} Rds)` : '💳 Bill'}
                             </button>
                           )}
 
@@ -1254,6 +1337,15 @@ export default function OrdersView({
               const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
               const isKitchen = !isDone && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
               const isReady = !isDone && (order.status === 'served' || order.status === 'ready');
+              const sessionInfo = sessionDetailsMap.get(order.id) || {
+                sessionOrders: [order],
+                totalRoundsCount: 1,
+                isMultiRound: Boolean(Number(order.round_number) > 1),
+                grandTotal: Number(order.total_amount || 0)
+              };
+              const roundNum = Number(order.round_number) || (sessionInfo.isMultiRound ? 1 : 1);
+              const isAddonRound = roundNum > 1;
+              const isMultiRoundSession = sessionInfo.isMultiRound;
 
               return (
                 <div
@@ -1269,11 +1361,36 @@ export default function OrdersView({
                     gap: '12px'
                   }}
                 >
-                  {/* Top Bar: Order ID + Status Badge */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
+                  {/* Top Bar: Order ID + Round Badge + Status Badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <strong style={{ fontSize: '0.92rem', color: '#0F172A' }}>#{order.id}</strong>
-                      <span style={{ fontSize: '0.70rem', color: '#64748B', marginLeft: '6px' }}>
+                      {isAddonRound ? (
+                        <span style={{
+                          padding: '2px 6px',
+                          borderRadius: '6px',
+                          background: '#FEF3C7',
+                          color: '#B45309',
+                          border: '1px solid #FDE68A',
+                          fontSize: '0.64rem',
+                          fontWeight: 800
+                        }}>
+                          🔄 Round {roundNum} (Add-on)
+                        </span>
+                      ) : isMultiRoundSession ? (
+                        <span style={{
+                          padding: '2px 6px',
+                          borderRadius: '6px',
+                          background: '#E0F2FE',
+                          color: '#0369A1',
+                          border: '1px solid #BAE6FD',
+                          fontSize: '0.64rem',
+                          fontWeight: 800
+                        }}>
+                          Round 1
+                        </span>
+                      ) : null}
+                      <span style={{ fontSize: '0.70rem', color: '#64748B', marginLeft: '4px' }}>
                         {getTimeAgo(order.created_at)}
                       </span>
                     </div>
@@ -1291,8 +1408,27 @@ export default function OrdersView({
                   </div>
 
                   {/* Location & Source */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                    <span style={{ fontWeight: 700, color: '#0F172A' }}>{cleanLoc}</span>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                    <div>
+                      <span style={{ fontWeight: 700, color: '#0F172A' }}>{cleanLoc}</span>
+                      {isMultiRoundSession && (
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          marginTop: '3px',
+                          fontSize: '0.66rem',
+                          color: '#0369A1',
+                          background: '#F0F9FF',
+                          border: '1px solid #BAE6FD',
+                          padding: '1px 6px',
+                          borderRadius: '5px',
+                          fontWeight: 700
+                        }}>
+                          <span>🔗 Session ({sessionInfo.totalRoundsCount} Rds • {currencySymbol}{Math.round(sessionInfo.grandTotal).toLocaleString('en-IN')})</span>
+                        </div>
+                      )}
+                    </div>
                     <span style={{ color: '#64748B', fontSize: '0.72rem' }}>
                       {getOrderSourceDisplay(order)}
                     </span>
@@ -1403,7 +1539,7 @@ export default function OrdersView({
                         <button
                           onClick={() => handleTriggerBillAction(order)}
                           disabled={!onOpenBillModal}
-                          title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
+                          title={!onOpenBillModal ? 'Billing modal unavailable' : isMultiRoundSession ? `Combined Bill for all ${sessionInfo.totalRoundsCount} rounds (${currencySymbol}${Math.round(sessionInfo.grandTotal)})` : 'Open Bill & Settle Payment'}
                           style={{
                             padding: '8px 14px',
                             borderRadius: '10px',
@@ -1416,7 +1552,7 @@ export default function OrdersView({
                             opacity: onOpenBillModal ? 1 : 0.6
                           }}
                         >
-                          💳 Bill
+                          {isMultiRoundSession ? `💳 Bill (${sessionInfo.totalRoundsCount} Rds)` : '💳 Bill'}
                         </button>
                       )}
 
@@ -1666,9 +1802,20 @@ export default function OrdersView({
                     {isOrder && space.activeOrder && (
                       <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #E2E8F0', marginTop: '6px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 800 }}>
-                          <span>Order #{space.activeOrder.id}</span>
-                          <span style={{ color: '#DC2626' }}>{currencySymbol}{Math.round(space.activeOrder.total_amount || 0)}</span>
+                          <span>
+                            {space.activeOrders && space.activeOrders.length > 1
+                              ? `Session (${space.activeOrders.length} Rounds)`
+                              : `Order #${space.activeOrder.id}`}
+                          </span>
+                          <span style={{ color: '#DC2626' }}>
+                            {currencySymbol}{Math.round(space.sessionTotal || space.activeOrder.total_amount || 0)}
+                          </span>
                         </div>
+                        {space.activeOrders && space.activeOrders.length > 1 && (
+                          <div style={{ fontSize: '0.64rem', color: '#0369A1', marginTop: '2px', fontWeight: 700 }}>
+                            {space.activeOrders.map((o, idx) => `R${o.round_number || (idx + 1)} (#${o.id})`).join(' + ')}
+                          </div>
+                        )}
                         <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
                           ⏱️ {getTimeAgo(space.activeOrder.created_at)} • {space.activeOrder.customer_name || 'Guest'}
                         </span>
@@ -1738,7 +1885,7 @@ export default function OrdersView({
                             cursor: 'pointer'
                           }}
                         >
-                          {space.activeOrder?.is_settled ? 'Print Bill' : 'Bill'}
+                          {space.activeOrder?.is_settled ? 'Print Bill' : (space.activeOrders && space.activeOrders.length > 1 ? `Bill (${space.activeOrders.length} Rds)` : 'Bill')}
                         </button>
                       </>
                     )}
@@ -2172,11 +2319,25 @@ export default function OrdersView({
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: '#334155', borderTop: '1px solid #E2E8F0', paddingTop: '8px' }}>
                   <span>Source: <strong>{getOrderSourceDisplay(selectedOrder)}</strong></span>
-                  {selectedOrder.round_number && selectedOrder.round_number > 1 && (
-                    <span style={{ background: '#E0F2FE', color: '#0284C7', padding: '2px 6px', borderRadius: '6px', fontWeight: 700, fontSize: '0.68rem' }}>
-                      Round #{selectedOrder.round_number}
-                    </span>
-                  )}
+                  {(() => {
+                    const selDetails = selectedOrder ? sessionDetailsMap.get(selectedOrder.id) : null;
+                    const rNum = Number(selectedOrder.round_number) || (selDetails?.isMultiRound ? 1 : null);
+                    if (rNum && rNum > 1) {
+                      return (
+                        <span style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', padding: '2px 8px', borderRadius: '6px', fontWeight: 800, fontSize: '0.68rem' }}>
+                          🔄 Round #{rNum} (Add-on)
+                        </span>
+                      );
+                    }
+                    if (selDetails?.isMultiRound) {
+                      return (
+                        <span style={{ background: '#E0F2FE', color: '#0369A1', border: '1px solid #BAE6FD', padding: '2px 8px', borderRadius: '6px', fontWeight: 800, fontSize: '0.68rem' }}>
+                          Round #1 (Initial Order)
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 {selectedOrder.customer_name && (
@@ -2185,6 +2346,98 @@ export default function OrdersView({
                     {selectedOrder.customer_phone ? ` (${selectedOrder.customer_phone})` : ''}
                   </div>
                 )}
+
+                {/* Multi-Round Session Breakdown Card if applicable */}
+                {(() => {
+                  const selDetails = selectedOrder ? sessionDetailsMap.get(selectedOrder.id) : null;
+                  if (!selDetails || !selDetails.isMultiRound) return null;
+
+                  return (
+                    <div style={{
+                      marginTop: '8px',
+                      background: '#F0F9FF',
+                      borderRadius: '12px',
+                      border: '1px solid #BAE6FD',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.9rem' }}>🔗</span>
+                          <strong style={{ fontSize: '0.78rem', color: '#0369A1' }}>
+                            Multi-Round Dining Session ({selDetails.totalRoundsCount} Rounds)
+                          </strong>
+                        </div>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0369A1' }}>
+                          Total: {currencySymbol}{Math.round(selDetails.grandTotal).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        {selDetails.sessionOrders.map((sOrd, sIdx) => {
+                          const sRound = Number(sOrd.round_number) || (sIdx + 1);
+                          const isCurrent = String(sOrd.id) === String(selectedOrder.id);
+                          const sStatus = getStatusBadge(sOrd);
+                          return (
+                            <div 
+                              key={sOrd.id} 
+                              onClick={() => setSelectedOrder(sOrd)}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '6px 10px',
+                                borderRadius: '8px',
+                                background: isCurrent ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
+                                border: isCurrent ? '1.5px solid #0284C7' : '1px solid #E0F2FE',
+                                cursor: 'pointer',
+                                fontSize: '0.72rem',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  background: sRound > 1 ? '#FEF3C7' : '#E0F2FE',
+                                  color: sRound > 1 ? '#B45309' : '#0369A1',
+                                  fontWeight: 800,
+                                  fontSize: '0.64rem'
+                                }}>
+                                  Round {sRound}
+                                </span>
+                                <span style={{ fontWeight: isCurrent ? 800 : 600, color: '#0F172A' }}>
+                                  Order #{sOrd.id}
+                                </span>
+                                {isCurrent && <span style={{ color: '#0284C7', fontSize: '0.64rem', fontWeight: 800 }}>(Viewing)</span>}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{
+                                  fontSize: '0.64rem',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  background: sStatus.bg,
+                                  color: sStatus.color,
+                                  fontWeight: 700
+                                }}>
+                                  {sStatus.label}
+                                </span>
+                                <strong style={{ color: '#0F172A' }}>{currencySymbol}{Math.round(sOrd.total_amount || 0)}</strong>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div style={{ fontSize: '0.67rem', color: '#0284C7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        <span>💡</span>
+                        <span>Single-Click Settlement: Billing any round automatically completes all {selDetails.totalRoundsCount} rounds for this table together.</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Itemized Dishes */}
