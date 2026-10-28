@@ -752,9 +752,10 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
     const sysRows = await query("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
     const canonicalTrialDays = sysRows.length > 0 && parseInt(sysRows[0].value, 10) ? parseInt(sysRows[0].value, 10) : 16;
     const isTrial = (req.body.onboarding_mode === 'trial');
-    const trialDays = isTrial ? canonicalTrialDays : 0;
+    const requestedTrialDays = parseInt(req.body.trial_days, 10);
+    const trialDays = isTrial ? (requestedTrialDays > 0 ? requestedTrialDays : canonicalTrialDays) : 0;
     const trialEndISO = isTrial 
-      ? new Date(Date.now() + canonicalTrialDays * 86400 * 1000).toISOString()
+      ? new Date(Date.now() + trialDays * 86400 * 1000).toISOString()
       : new Date(Date.now() + 30 * 86400 * 1000).toISOString();
 
     const regId = `reg_sa_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;

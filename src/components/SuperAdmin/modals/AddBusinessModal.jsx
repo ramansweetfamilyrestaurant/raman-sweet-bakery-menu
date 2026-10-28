@@ -35,7 +35,8 @@ export default function AddBusinessModal({
   onSuccess, 
   plansList = [], 
   token, 
-  createTenantRestaurant 
+  createTenantRestaurant,
+  defaultTrialDays = 16
 }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -811,7 +812,7 @@ export default function AddBusinessModal({
                       textAlign: 'center'
                     }}
                   >
-                    <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#1E40AF' }}>🎁 16-Day Free Trial</div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#1E40AF' }}>🎁 {formData.trial_days || defaultTrialDays || 16}-Day Free Trial</div>
                     <div style={{ fontSize: '0.66rem', color: '#2563EB', marginTop: '2px' }}>₹0 Due • Cashfree AutoPay Setup</div>
                   </div>
 
@@ -830,6 +831,27 @@ export default function AddBusinessModal({
                     <div style={{ fontSize: '0.66rem', color: '#A16207', marginTop: '2px' }}>₹0 Due • Lifetime SuperAdmin Grant</div>
                   </div>
                 </div>
+
+                {formData.onboarding_mode === 'trial' && (
+                  <div style={{ marginTop: '12px', background: '#EFF6FF', padding: '12px 14px', borderRadius: '10px', border: '1.5px solid #BFDBFE' }}>
+                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#1E40AF', marginBottom: '6px' }}>
+                      🎁 FREE TRIAL DURATION FOR THIS BUSINESS (DAYS):
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={formData.trial_days || defaultTrialDays || 16}
+                        onChange={(e) => setFormData({ ...formData, trial_days: e.target.value })}
+                        style={{ width: '90px', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #93C5FD', fontWeight: 900, fontSize: '0.9rem', color: '#1E3A8A' }}
+                      />
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#2563EB' }}>
+                        Days free trial before recurring billing starts
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1052,7 +1074,7 @@ export default function AddBusinessModal({
                   ) : formData.onboarding_mode === 'trial' ? (
                     <>
                       <Gift size={16} />
-                      <span>🎁 Setup 16-Day Trial Mandate (₹0 Today)</span>
+                      <span>🎁 Setup {formData.trial_days || defaultTrialDays || 16}-Day Trial Mandate (₹0 Today)</span>
                     </>
                   ) : formData.onboarding_mode === 'vip' ? (
                     <>

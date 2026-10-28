@@ -2301,6 +2301,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     {[
                       { id: 'security', label: 'Master Security', sub: 'Admin credentials & auth', icon: Lock },
                       { id: 'gateway', label: 'Cashfree Gateway', sub: 'API keys & environment', icon: Key },
+                      { id: 'trial', label: 'Subscription & Trial', sub: 'Free trial days & terms', icon: Clock },
                       { id: 'branding', label: 'Platform Branding', sub: 'Logo & visual assets', icon: Image },
                       { id: 'support', label: 'Support Channels', sub: 'WhatsApp & helpdesk', icon: Phone },
                     ].map(tab => {
@@ -2330,6 +2331,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     {[
                       { id: 'security', label: '🛡️ Security' },
                       { id: 'gateway', label: '💳 Gateway' },
+                      { id: 'trial', label: '⏳ Trial Terms' },
                       { id: 'branding', label: '🖼️ Branding' },
                       { id: 'support', label: '📞 Support' },
                     ].map(tab => {
@@ -2746,6 +2748,68 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       </button>
                     </div>
                   )}
+
+                  {/* ⏳ TAB 5: SUBSCRIPTION & FREE TRIAL TERMS */}
+                  {secTab === 'trial' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div className="sa-settings-form-header">
+                        <div>
+                          <h3 className="sa-settings-form-title">⏳ SaaS Subscription & Free Trial Terms</h3>
+                          <p className="sa-settings-form-desc">Configure default free trial days and grace period for new registrations.</p>
+                        </div>
+                      </div>
+
+                      <div className="sa-settings-field-group">
+                        <label className="sa-settings-label">🎁 DEFAULT FREE TRIAL DURATION (DAYS)</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <input
+                            type="number"
+                            min="1"
+                            max="365"
+                            placeholder="16"
+                            value={paymentKeys.default_trial_days || ''}
+                            onChange={(e) => setPaymentKeys({ ...paymentKeys, default_trial_days: e.target.value })}
+                            className="sa-settings-input"
+                            style={{ maxWidth: '140px', fontWeight: 900, fontSize: '1rem' }}
+                          />
+                          <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#B45309' }}>
+                            Days Free Trial for New Signups
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', marginTop: '4px', display: 'block', fontWeight: 600 }}>
+                          * Database-driven. New restaurant registrations automatically receive this free trial duration before subscription billing begins.
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={keysSaving}
+                        onClick={async () => {
+                          setKeysSaving(true);
+                          setKeysMsg('');
+                          try {
+                            const res = await fetch('/api/superadmin/settings', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify(paymentKeys)
+                            });
+                            const data = await res.json();
+                            if (res.ok) setKeysMsg(data.message || '✅ Free trial terms saved successfully!');
+                            else setKeysMsg(data.error || '⚠️ Failed to save free trial terms');
+                          } catch {
+                            setKeysMsg('⚠️ Failed to save free trial terms');
+                          } finally {
+                            setKeysSaving(false);
+                          }
+                        }}
+                        className="sa-btn sa-btn-accent"
+                        style={{ padding: '12px', fontWeight: 900, alignSelf: 'flex-start', minWidth: '220px' }}
+                      >
+                        {keysSaving ? 'Saving Trial Terms...' : '💾 Save Free Trial Terms'}
+                      </button>
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>
@@ -3248,6 +3312,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         onSuccess={loadData}
         plansList={plansList}
         token={token}
+        defaultTrialDays={paymentKeys.default_trial_days || 16}
         createTenantRestaurant={createTenantRestaurant}
       />
 
