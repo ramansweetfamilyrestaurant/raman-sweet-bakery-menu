@@ -6,7 +6,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
-import { DESKTOP_SIDEBAR_ITEMS, isNavItemActive } from '../adminNavigation';
+import { DESKTOP_SIDEBAR_ITEMS, isNavItemActive, getLocalizedNavLabel } from '../adminNavigation';
 
 export default function AdminSidebar({
   activeTab,
@@ -204,7 +204,7 @@ export default function AdminSidebar({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Icon size={17} color={iconColor} />
-                  <span>{item.label}</span>
+                  <span>{getLocalizedNavLabel(item, restaurantInfo, 'desktop')}</span>
                 </div>
                 {item.hasBadge && pendingOrdersCount > 0 && (
                   <span style={{

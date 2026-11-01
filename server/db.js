@@ -348,6 +348,7 @@ async function createTables(options = {}) {
         id SERIAL PRIMARY KEY,
         message TEXT NOT NULL,
         type VARCHAR(20) DEFAULT 'info',
+        audience VARCHAR(50) DEFAULT 'all',
         active INT DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
@@ -356,6 +357,7 @@ async function createTables(options = {}) {
         id SERIAL PRIMARY KEY,
         restaurant_id INT DEFAULT 1,
         table_number VARCHAR(50) DEFAULT '1',
+        space_type VARCHAR(50) DEFAULT 'table',
         request_type VARCHAR(50) NOT NULL,
         note TEXT,
         status VARCHAR(20) DEFAULT 'pending',
@@ -671,6 +673,7 @@ async function createTables(options = {}) {
     }
 
     const pgAlters = [
+      `ALTER TABLE announcements ADD COLUMN IF NOT EXISTS audience VARCHAR(50) DEFAULT 'all';`,
       `ALTER TABLE dishes ADD COLUMN IF NOT EXISTS modifiers TEXT DEFAULT '[]';`,
       `ALTER TABLE table_location_verifications ALTER COLUMN expires_at TYPE TIMESTAMP WITH TIME ZONE;`,
       `ALTER TABLE table_location_verifications ALTER COLUMN verified_at TYPE TIMESTAMP WITH TIME ZONE;`,
@@ -751,6 +754,8 @@ async function createTables(options = {}) {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_cabins INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_rooms INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_vip INT DEFAULT 0;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_seats INT DEFAULT 0;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_screens INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_prefix VARCHAR(50) DEFAULT 'table';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS qr_secret VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS order_retention_days INT DEFAULT 90;`,
@@ -826,6 +831,13 @@ async function createTables(options = {}) {
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS watermark_removal_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS custom_domain_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS dual_printer_enabled INT DEFAULT 0;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS industry VARCHAR(50) DEFAULT 'restaurant';`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_rooms INT DEFAULT 9999;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_screens INT DEFAULT 9999;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_seats INT DEFAULT 9999;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS amenities_booking_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS seat_runner_dispatch_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS interval_rush_mode_enabled INT DEFAULT 1;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(50);`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'cash';`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0;`,
@@ -882,6 +894,7 @@ async function createTables(options = {}) {
       `CREATE INDEX IF NOT EXISTS idx_presence_token ON table_location_verifications (verification_token);`,
       `CREATE INDEX IF NOT EXISTS idx_presence_session ON table_location_verifications (session_id);`,
       `CREATE INDEX IF NOT EXISTS idx_presence_expires ON table_location_verifications (expires_at);`,
+      `ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS space_type VARCHAR(50) DEFAULT 'table';`,
       // Step 3.21 Thermal Printer System Schema & Migration
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS printer_mode VARCHAR(20) DEFAULT 'single';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS auto_print_kot INT DEFAULT 0;`,
@@ -1117,6 +1130,7 @@ async function createTables(options = {}) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         message TEXT NOT NULL,
         type TEXT DEFAULT 'info',
+        audience TEXT DEFAULT 'all',
         active INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
@@ -1207,6 +1221,7 @@ async function createTables(options = {}) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         restaurant_id INTEGER DEFAULT 1,
         table_number TEXT DEFAULT '1',
+        space_type TEXT DEFAULT 'table',
         request_type TEXT NOT NULL,
         note TEXT,
         status TEXT DEFAULT 'pending',
@@ -1252,6 +1267,7 @@ async function createTables(options = {}) {
     try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_key TEXT"); } catch (e) {}
     try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_url TEXT"); } catch (e) {}
     try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN restaurant_id INTEGER DEFAULT 1"); } catch (e) {}
+    try { sqliteDb.exec("ALTER TABLE announcements ADD COLUMN audience TEXT DEFAULT 'all'"); } catch (e) {}
 
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS daily_sales_summaries (
@@ -1511,6 +1527,8 @@ async function createTables(options = {}) {
       if (!restoCols.some(c => c.name === 'total_cabins')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN total_cabins INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'total_rooms')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN total_rooms INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'total_vip')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN total_vip INTEGER DEFAULT 0");
+      if (!restoCols.some(c => c.name === 'total_seats')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN total_seats INTEGER DEFAULT 0");
+      if (!restoCols.some(c => c.name === 'total_screens')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN total_screens INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'table_prefix')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN table_prefix TEXT DEFAULT 'table'");
       if (!restoCols.some(c => c.name === 'qr_secret')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN qr_secret TEXT");
       if (!restoCols.some(c => c.name === 'order_retention_days')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN order_retention_days INTEGER DEFAULT 90");
@@ -1605,6 +1623,13 @@ async function createTables(options = {}) {
       if (!planCols.some(c => c.name === 'allowed_verification_modes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN allowed_verification_modes TEXT DEFAULT 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY'");
       if (!planCols.some(c => c.name === 'theme_color')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN theme_color TEXT DEFAULT 'gold'");
       if (!planCols.some(c => c.name === 'allowed_themes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN allowed_themes TEXT DEFAULT 'ALL'");
+      if (!planCols.some(c => c.name === 'industry')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN industry TEXT DEFAULT 'restaurant'");
+      if (!planCols.some(c => c.name === 'max_rooms')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_rooms INTEGER DEFAULT 9999");
+      if (!planCols.some(c => c.name === 'max_screens')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_screens INTEGER DEFAULT 9999");
+      if (!planCols.some(c => c.name === 'max_seats')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_seats INTEGER DEFAULT 9999");
+      if (!planCols.some(c => c.name === 'amenities_booking_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN amenities_booking_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'seat_runner_dispatch_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN seat_runner_dispatch_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'interval_rush_mode_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN interval_rush_mode_enabled INTEGER DEFAULT 1");
 
       const locCols = sqliteDb.pragma("table_info(table_location_verifications)");
       if (!locCols.some(c => c.name === 'space_type')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN space_type TEXT DEFAULT 'table'");
@@ -1618,6 +1643,11 @@ async function createTables(options = {}) {
 
       sqliteDb.exec("UPDATE table_location_verifications SET space_type = 'table' WHERE space_type IS NULL");
       sqliteDb.exec("UPDATE table_location_verifications SET space_number = table_number WHERE space_number IS NULL AND table_number IS NOT NULL");
+
+      const srvCols = sqliteDb.pragma("table_info(service_requests)");
+      if (!srvCols.some(c => c.name === 'space_type')) {
+        sqliteDb.exec("ALTER TABLE service_requests ADD COLUMN space_type TEXT DEFAULT 'table'");
+      }
 
       // Step 3.21 Thermal Printer System SQLite Fallback
       if (!restoCols.some(c => c.name === 'printer_mode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN printer_mode TEXT DEFAULT 'single'");
@@ -1901,10 +1931,24 @@ async function seedData(options = {}) {
     }
 
     try {
+      await query("UPDATE saas_plans SET max_tables = 20 WHERE key = 'basic' AND (max_tables IS NULL OR max_tables = 9999)");
+      await query("UPDATE saas_plans SET max_tables = 100 WHERE key = 'pro' AND (max_tables IS NULL OR max_tables = 9999)");
+      await query("UPDATE saas_plans SET max_tables = 9999 WHERE key = 'enterprise'");
+    } catch {}
+
+    try {
       await query('ALTER TABLE saas_plans ADD COLUMN original_price NUMERIC DEFAULT 999');
       await query("UPDATE saas_plans SET original_price = 999 WHERE key = 'basic'");
       await query("UPDATE saas_plans SET original_price = 1999 WHERE key = 'pro'");
       await query("UPDATE saas_plans SET original_price = 3999 WHERE key = 'enterprise'");
+    } catch {}
+
+    try {
+      await query("UPDATE saas_plans SET dual_printer_enabled = 1 WHERE key LIKE '%enterprise%' OR key LIKE '%vip%'");
+      await query("UPDATE saas_plans SET max_rooms = 20, max_dishes = 50, max_combos = 5 WHERE key = 'hotel_basic'");
+      await query("UPDATE saas_plans SET max_rooms = 60, max_dishes = 500, max_combos = 20, direct_ordering_enabled = 1, kds_enabled = 1, bluetooth_kot_enabled = 1 WHERE key = 'hotel_pro'");
+      await query("UPDATE saas_plans SET max_screens = 1, max_seats = 200, max_dishes = 50, max_combos = 5 WHERE key = 'cinema_basic'");
+      await query("UPDATE saas_plans SET max_screens = 3, max_seats = 800, max_dishes = 500, max_combos = 20, direct_ordering_enabled = 1, kds_enabled = 1, bluetooth_kot_enabled = 1 WHERE key = 'cinema_pro'");
     } catch {}
 
     try {
@@ -1943,13 +1987,64 @@ async function seedData(options = {}) {
     const pCount = parseInt(planCheck[0]?.count || 0, 10);
     if (pCount === 0) {
       await query(`
-        INSERT INTO saas_plans (key, name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, max_combos)
+        INSERT INTO saas_plans (key, name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, max_combos, max_tables)
         VALUES 
-        ('basic', 'Basic Starter Plan', 499, 999, '⚡ BASIC', 'Digital Menu Viewing & Custom Themes', 0, 0, 0, 3),
-        ('pro', 'Pro Luxury Plan', 999, 1999, '👑 PRO', 'Menu + WhatsApp Ordering + Google Reviews', 1, 0, 1, 10),
-        ('enterprise', 'Enterprise VIP Plan', 1999, 3999, '🚀 ENTERPRISE', 'All Features + Direct Table QR KOT Ordering & Kitchen System', 1, 1, 1, 9999)
+        ('basic', 'Basic Starter Plan', 499, 999, '⚡ BASIC', 'Digital Menu Viewing & Custom Themes', 0, 0, 0, 3, 20),
+        ('pro', 'Pro Luxury Plan', 999, 1999, '👑 PRO', 'Menu + WhatsApp Ordering + Google Reviews', 1, 0, 1, 10, 100),
+        ('enterprise', 'Enterprise VIP Plan', 1999, 3999, '🚀 ENTERPRISE', 'All Features + Direct Table QR KOT Ordering & Kitchen System', 1, 1, 1, 9999, 9999)
       `);
       console.log('💳 Seeded default SaaS Plans into saas_plans table');
+    }
+
+    // Auto-seed industry specific plans (Hotel & Cinema) if not present
+    try {
+      const existingPlanRows = await query('SELECT key FROM saas_plans');
+      const existingPlanKeys = (existingPlanRows || []).map(p => (p.key || '').toLowerCase());
+      
+      // Update legacy plans with industry = 'restaurant'
+      await query("UPDATE saas_plans SET industry = 'restaurant' WHERE industry IS NULL OR industry = '' OR key IN ('basic', 'pro', 'enterprise')").catch(() => {});
+
+      // Seed Hotel Plans
+      if (!existingPlanKeys.includes('hotel_basic')) {
+        await query(`
+          INSERT INTO saas_plans (key, name, price, original_price, badge, description, industry, max_rooms, max_dishes, max_categories, max_combos, direct_ordering_enabled, whatsapp_enabled, whatsapp_ordering_enabled, google_reviews_enabled, ai_review_enabled, kds_enabled, bluetooth_kot_enabled, dual_printer_enabled, custom_domain_enabled, amenities_booking_enabled)
+          VALUES ('hotel_basic', 'Hotel Basic (Room Directory)', 999, 1999, '🏨 BASIC', 'In-Room Digital Menu Viewing & Hotel Amenities', 'hotel', 20, 50, 10, 5, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1)
+        `);
+      }
+      if (!existingPlanKeys.includes('hotel_pro')) {
+        await query(`
+          INSERT INTO saas_plans (key, name, price, original_price, badge, description, industry, max_rooms, max_dishes, max_categories, max_combos, direct_ordering_enabled, whatsapp_enabled, whatsapp_ordering_enabled, google_reviews_enabled, ai_review_enabled, kds_enabled, bluetooth_kot_enabled, dual_printer_enabled, custom_domain_enabled, amenities_booking_enabled)
+          VALUES ('hotel_pro', 'Hotel Pro (In-Room QR Dining)', 1999, 3499, '👑 PRO', 'In-Room QR Ordering + Room Service Pantry Dispatch', 'hotel', 60, 500, 50, 20, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1)
+        `);
+      }
+      if (!existingPlanKeys.includes('hotel_enterprise')) {
+        await query(`
+          INSERT INTO saas_plans (key, name, price, original_price, badge, description, industry, max_rooms, max_dishes, max_categories, max_combos, direct_ordering_enabled, whatsapp_enabled, whatsapp_ordering_enabled, google_reviews_enabled, ai_review_enabled, kds_enabled, bluetooth_kot_enabled, dual_printer_enabled, custom_domain_enabled, amenities_booking_enabled)
+          VALUES ('hotel_enterprise', 'Hotel Enterprise (Resort & Dining)', 3499, 5999, '🚀 ENTERPRISE', 'Unlimited Rooms + In-House Restaurant Dining + Butler Service', 'hotel', 9999, 9999, 9999, 9999, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+        `);
+      }
+
+      // Seed Cinema Plans
+      if (!existingPlanKeys.includes('cinema_basic')) {
+        await query(`
+          INSERT INTO saas_plans (key, name, price, original_price, badge, description, industry, max_screens, max_seats, max_dishes, max_categories, max_combos, direct_ordering_enabled, whatsapp_enabled, whatsapp_ordering_enabled, google_reviews_enabled, ai_review_enabled, kds_enabled, bluetooth_kot_enabled, dual_printer_enabled, custom_domain_enabled, seat_runner_dispatch_enabled, interval_rush_mode_enabled)
+          VALUES ('cinema_basic', 'Cinema Basic (Digital Canteen)', 1499, 2499, '🎬 BASIC', 'Digital Concessions Menu Board & QR Viewing', 'cinema', 1, 200, 50, 10, 5, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1)
+        `);
+      }
+      if (!existingPlanKeys.includes('cinema_pro')) {
+        await query(`
+          INSERT INTO saas_plans (key, name, price, original_price, badge, description, industry, max_screens, max_seats, max_dishes, max_categories, max_combos, direct_ordering_enabled, whatsapp_enabled, whatsapp_ordering_enabled, google_reviews_enabled, ai_review_enabled, kds_enabled, bluetooth_kot_enabled, dual_printer_enabled, custom_domain_enabled, seat_runner_dispatch_enabled, interval_rush_mode_enabled)
+          VALUES ('cinema_pro', 'Cinema Pro (In-Seat Ordering)', 2999, 4999, '👑 PRO', 'In-Seat QR Ordering + Concessions Runner Dispatch', 'cinema', 3, 800, 500, 50, 20, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1)
+        `);
+      }
+      if (!existingPlanKeys.includes('cinema_enterprise')) {
+        await query(`
+          INSERT INTO saas_plans (key, name, price, original_price, badge, description, industry, max_screens, max_seats, direct_ordering_enabled, whatsapp_enabled, whatsapp_ordering_enabled, google_reviews_enabled, ai_review_enabled, kds_enabled, bluetooth_kot_enabled, dual_printer_enabled, custom_domain_enabled, seat_runner_dispatch_enabled, interval_rush_mode_enabled, max_dishes, max_categories, max_combos)
+          VALUES ('cinema_enterprise', 'Cinema Enterprise (Multiplex)', 4999, 7999, '🚀 ENTERPRISE', 'Unlimited Screens & Multiplex Scale Concessions Delivery', 'cinema', 9999, 9999, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 9999, 9999, 9999)
+        `);
+      }
+    } catch (seedPlanErr) {
+      console.warn('Auto-seed industry plans notice:', seedPlanErr.message);
     }
 
     // Auto-sync missing subscription records for existing restaurants.

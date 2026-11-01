@@ -114,6 +114,8 @@ export default function HomeView({
 }) {
   const [hoveredPointIdx, setHoveredPointIdx] = useState(null);
   const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || settingsForm || {}), [restaurantInfo, settingsForm]);
+  const isHotel = terminology.serviceModel === 'hotel' || restaurantInfo?.business_type === 'hotel_resort' || restaurantInfo?.service_model === 'hotel';
+  const isCinema = terminology.serviceModel === 'cinema' || restaurantInfo?.business_type === 'cinema_theatre' || restaurantInfo?.service_model === 'cinema';
 
   // 1. Sanitize Orders & Service Requests
   const safeOrders = useMemo(() => {
@@ -194,6 +196,10 @@ export default function HomeView({
   const dishQuota = formatQuota(safeDishes.length, capabilities?.max_dishes);
   const catQuota = formatQuota(safeCategories.length, capabilities?.max_categories);
   const comboQuota = formatQuota(safeCombos.length, capabilities?.max_combos);
+  const tableQuota = formatQuota(totalTablesCount || 0, capabilities?.max_tables);
+  const roomQuota = formatQuota(restaurantInfo?.total_rooms ?? restaurantInfo?.room_count ?? 0, capabilities?.max_rooms);
+  const screenQuota = formatQuota(restaurantInfo?.total_screens ?? restaurantInfo?.screen_count ?? (isCinema ? 1 : 0), capabilities?.max_screens);
+  const seatQuota = formatQuota(restaurantInfo?.total_seats ?? 0, capabilities?.max_seats);
 
   // 8. Canonical Plan & VIP / Lifetime Details
   const isComplimentary = Boolean(
@@ -221,7 +227,7 @@ export default function HomeView({
   };
 
   const planName = isComplimentary
-    ? (capabilities?.plan_name ? `${capabilities.plan_name.toUpperCase()}` : (restaurantInfo?.plan_name ? `${restaurantInfo.plan_name.toUpperCase()}` : 'ENTERPRISE VIP ACCESS'))
+    ? (capabilities?.plan_name ? `${capabilities.plan_name.toUpperCase()}` : (restaurantInfo?.plan_name ? `${restaurantInfo.plan_name.toUpperCase()}` : (subscriptionStatus?.plan_name ? `${subscriptionStatus.plan_name.toUpperCase()}` : 'VIP ACCESS')))
     : (capabilities?.plan_name 
         ? `${capabilities.plan_name.toUpperCase()}` 
         : (restaurantInfo?.plan_name 
@@ -604,7 +610,7 @@ export default function HomeView({
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
-              Orders Today
+              {isHotel ? 'Room Orders Today' : isCinema ? 'Seat Orders Today' : "Today's Orders"}
             </div>
             <div style={{ fontSize: '1.42rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', marginTop: '1px' }}>
               {todayOrdersCount}
@@ -657,7 +663,7 @@ export default function HomeView({
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
-              Pending Orders
+              {isHotel ? 'Pending Room Orders' : isCinema ? 'Pending Seat Orders' : 'Pending Orders'}
             </div>
             <div style={{ fontSize: '1.42rem', fontWeight: 900, color: pendingOrdersCount > 0 ? '#D97706' : '#0F172A', letterSpacing: '-0.02em', marginTop: '1px' }}>
               {pendingOrdersCount}
@@ -1175,7 +1181,7 @@ export default function HomeView({
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Receipt size={16} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>View Orders</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>{isHotel ? 'Room Orders' : isCinema ? 'Seat Orders' : 'View Orders'}</span>
                 </button>
 
                 <button
@@ -1202,7 +1208,7 @@ export default function HomeView({
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FFE4E6', color: '#E11D48', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <ChefHat size={16} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Open KDS</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>{isHotel ? 'Room KDS' : isCinema ? 'Concession KDS' : 'Open KDS'}</span>
                 </button>
 
                 <button
@@ -1222,7 +1228,7 @@ export default function HomeView({
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <QrCode size={16} />
                   </div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>QR Standees</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>{terminology.standeeLabel || 'QR Standees'}</span>
                 </button>
 
                 <button
@@ -1382,7 +1388,7 @@ export default function HomeView({
                   borderRadius: '8px',
                   textTransform: isComplimentary ? 'none' : 'capitalize'
                 }}>
-                  {isComplimentary ? 'VIP Lifetime' : (subStatus === 'trialing' ? 'Trial' : (subStatus === 'active' ? 'Active' : subStatus))}
+                  {isComplimentary ? (nextBillingDate.includes('Lifetime') ? 'VIP Lifetime' : 'VIP Complimentary') : (subStatus === 'trialing' ? 'Trial' : (subStatus === 'active' ? 'Active' : subStatus))}
                 </span>
 
                 <button
@@ -1424,6 +1430,26 @@ export default function HomeView({
               gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
               gap: '16px'
             }}>
+              {/* Capacity Quota */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>
+                  <span style={{ color: '#0F172A', fontWeight: 600 }}>
+                    {isHotel ? 'Rooms Quota' : isCinema ? 'Seats Quota' : 'Tables Quota'}
+                  </span>
+                  <strong style={{ color: (isHotel ? roomQuota.isAtLimit : isCinema ? seatQuota.isAtLimit : tableQuota.isAtLimit) ? '#DC2626' : '#0F172A' }}>
+                    {isHotel ? roomQuota.display : isCinema ? seatQuota.display : tableQuota.display}
+                  </strong>
+                </div>
+                <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ 
+                    width: `${isHotel ? (roomQuota.isUnlimited ? 100 : Math.min(100, Math.round((roomQuota.count / (roomQuota.limit || 1)) * 100))) : isCinema ? (seatQuota.isUnlimited ? 100 : Math.min(100, Math.round((seatQuota.count / (seatQuota.limit || 1)) * 100))) : (tableQuota.isUnlimited ? 100 : Math.min(100, Math.round((tableQuota.count / (tableQuota.limit || 1)) * 100))) }%`, 
+                    height: '100%', 
+                    background: (isHotel ? roomQuota.isAtLimit : isCinema ? seatQuota.isAtLimit : tableQuota.isAtLimit) ? '#DC2626' : '#0D3823', 
+                    borderRadius: '4px' 
+                  }} />
+                </div>
+              </div>
+
               {/* Dishes */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>

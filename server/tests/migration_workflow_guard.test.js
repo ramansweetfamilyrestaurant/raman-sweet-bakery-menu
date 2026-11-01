@@ -20,6 +20,7 @@ import {
   PRODUCTION_MIGRATION_DDL
 } from '../scripts/migrate_production_postgres.js';
 import { validateMigrationTargetUrl } from '../scripts/migrate_orders_notes.js';
+import { isCiTestMode } from './testDbGuard.js';
 
 console.log('======================================================================');
 console.log('🛡️  POSTGRESQL MIGRATION WORKFLOW & GUARD TEST SUITE');
@@ -45,6 +46,16 @@ async function test(name, fn) {
 async function runSuite() {
   // Validate local test URL before connecting
   validateMigrationTargetUrl(LOCAL_TEST_URL);
+
+  let isPostgresAvailable = false;
+  try {
+    const probePool = new pg.Pool({ connectionString: LOCAL_TEST_URL, connectionTimeoutMillis: 1500 });
+    await probePool.query('SELECT 1;');
+    await probePool.end();
+    isPostgresAvailable = true;
+  } catch (e) {
+    isPostgresAvailable = false;
+  }
 
   // -------------------------------------------------------------------
   // 1. Missing MIGRATION_DATABASE_URL is rejected
@@ -299,6 +310,12 @@ async function runSuite() {
   // 12. Existing orders.notes reported as already present, with no DDL during dry-run
   // -------------------------------------------------------------------
   await test('12. Existing orders.notes is reported as already present, with no DDL during dry-run', async () => {
+    if (!isPostgresAvailable) {
+      if (!isCiTestMode()) {
+        console.log('     ⚠️  [NOT RUN] Skipped (PostgreSQL not running locally)');
+        return;
+      }
+    }
     const dryRunReal = await runPostgresMigration({
       migrationUrl: LOCAL_TEST_URL,
       dryRun: true,
@@ -319,6 +336,12 @@ async function runSuite() {
   // 13. Selected execution applies only the notes migration
   // -------------------------------------------------------------------
   await test('13. Selected execution applies ONLY the notes migration', async () => {
+    if (!isPostgresAvailable) {
+      if (!isCiTestMode()) {
+        console.log('     ⚠️  [NOT RUN] Skipped (PostgreSQL not running locally)');
+        return;
+      }
+    }
     const applyResult = await runPostgresMigration({
       migrationUrl: LOCAL_TEST_URL,
       dryRun: false,
@@ -336,6 +359,12 @@ async function runSuite() {
   // 14. Repeated selected execution is idempotent
   // -------------------------------------------------------------------
   await test('14. Repeated selected execution is idempotent', async () => {
+    if (!isPostgresAvailable) {
+      if (!isCiTestMode()) {
+        console.log('     ⚠️  [NOT RUN] Skipped (PostgreSQL not running locally)');
+        return;
+      }
+    }
     const rerunResult = await runPostgresMigration({
       migrationUrl: LOCAL_TEST_URL,
       dryRun: false,
@@ -373,6 +402,12 @@ async function runSuite() {
   // 15. Omitting --migration preserves existing default registry behavior
   // -------------------------------------------------------------------
   await test('15. Omitting --migration preserves existing default registry behavior (all 10 migrations)', async () => {
+    if (!isPostgresAvailable) {
+      if (!isCiTestMode()) {
+        console.log('     ⚠️  [NOT RUN] Skipped (PostgreSQL not running locally)');
+        return;
+      }
+    }
     const defaultDryRun = await runPostgresMigration({
       migrationUrl: LOCAL_TEST_URL,
       dryRun: true
@@ -465,6 +500,12 @@ async function runSuite() {
   // 18. CLI End-to-End: --migration flag parsing via child_process
   // -------------------------------------------------------------------
   await test('18. CLI invocations handle --migration flag and errors end-to-end', async () => {
+    if (!isPostgresAvailable) {
+      if (!isCiTestMode()) {
+        console.log('     ⚠️  [NOT RUN] Skipped (PostgreSQL not running locally)');
+        return;
+      }
+    }
     const { spawnSync } = await import('child_process');
 
     // Valid selected dry run

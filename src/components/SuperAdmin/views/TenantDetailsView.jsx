@@ -46,7 +46,7 @@ export default function TenantDetailsView({
     if (isOpen && resto?.id) {
       setLoading(true);
       setFetchErr('');
-      const authToken = token || localStorage.getItem('saas_super_token') || localStorage.getItem('touchqr_superadmin_token') || sessionStorage.getItem('saas_super_token');
+      const authToken = token || localStorage.getItem('touchqr_superadmin_token') || localStorage.getItem('token') || localStorage.getItem('saas_super_token') || sessionStorage.getItem('touchqr_superadmin_token') || sessionStorage.getItem('saas_super_token');
       fetch(`/api/superadmin/restaurants/${resto.id}/360`, {
         cache: 'no-store',
         headers: {
@@ -84,7 +84,9 @@ export default function TenantDetailsView({
 
   const copyToClipboard = (text, key) => {
     if (!text) return;
-    navigator.clipboard.writeText(text);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };
@@ -141,8 +143,10 @@ export default function TenantDetailsView({
     dishes: { current: resto.dish_count || 0, limit: 500, percentage: Math.min(100, Math.round(((resto.dish_count || 0) / 500) * 100)) },
     categories: { current: resto.category_count || 0, limit: 50, percentage: Math.min(100, Math.round(((resto.category_count || 0) / 50) * 100)) },
     tables: { current: Number(resto.total_tables || 0), limit: 100, percentage: Math.min(100, Math.round((Number(resto.total_tables || 0) / 100) * 100)) },
+    rooms: { current: Number(resto.total_rooms || 0), limit: 1000, percentage: 0 },
+    seats: { current: Number(resto.total_seats || 0), limit: 10000, percentage: 0 },
+    screens: { current: Number(resto.total_screens || 0), limit: 100, percentage: 0 },
     cabins: Number(resto.total_cabins || 0),
-    rooms: Number(resto.total_rooms || 0),
     vip_tables: Number(resto.total_vip || 0),
     orders: resto.order_count || 0,
     scan_count: resto.scan_count || 0,
@@ -534,7 +538,7 @@ export default function TenantDetailsView({
                 {tenant.service_model === 'hotel'
                   ? `🏨 ${usage.rooms?.current ?? (typeof usage.rooms === 'number' ? usage.rooms : Number(tenant.total_rooms || 0))} Rooms • 🪑 ${usage.tables?.current ?? (typeof usage.tables === 'number' ? usage.tables : Number(tenant.total_tables || 0))} Dining Tables`
                   : tenant.service_model === 'cinema'
-                  ? `🎬 ${usage.seats?.current ?? (typeof usage.seats === 'number' ? usage.seats : Number(tenant.total_tables || 0))} Auditorium Seats`
+                  ? `🎬 ${usage.screens?.current ?? (typeof usage.screens === 'number' ? usage.screens : Number(tenant.total_screens || 1))} Screens • 🎟️ ${usage.seats?.current ?? (typeof usage.seats === 'number' ? usage.seats : Number(tenant.total_seats || 150))} Seats`
                   : `🪑 ${usage.tables?.current ?? (typeof usage.tables === 'number' ? usage.tables : Number(tenant.total_tables || 0))} Tables • 🚪 ${usage.cabins?.current ?? (typeof usage.cabins === 'number' ? usage.cabins : Number(tenant.total_cabins || 0))} Cabins`}
               </strong>
             </div>
@@ -554,7 +558,7 @@ export default function TenantDetailsView({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <MessageSquare size={13} color="var(--sa-primary)" />
-                <span>Support Inquiries ({support.total_tickets ?? 0} total · {support.open_tickets ?? 0} open)</span>
+                <span>Support Inquiries ({support.total_tickets ?? 0} total · {support.active_tickets ?? support.open_tickets ?? 0} active)</span>
               </span>
             </div>
 
@@ -1058,18 +1062,28 @@ export default function TenantDetailsView({
             </button>
 
             {sub.is_complimentary ? (
-              <button
-                type="button"
-                onClick={() => { onClose(); onRevokeFree(tenant); }}
-                className="sa-btn sa-btn-danger"
-                style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', borderRadius: '12px' }}
-              >
-                <ShieldAlert size={18} /> Revoke Complimentary Free Access (Revert to Paid)
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => { onClose(); onGrantFree({ ...tenant, ...sub, subscription: sub }); }}
+                  className="sa-btn sa-btn-accent"
+                  style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', borderRadius: '12px', background: '#F3E8FF', border: '1px solid #E9D5FF', color: '#6B21A8' }}
+                >
+                  <Sparkles size={18} /> 👑 Extend or Update VIP Access Duration / Plan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { onClose(); onRevokeFree({ ...tenant, ...sub, subscription: sub }); }}
+                  className="sa-btn sa-btn-danger"
+                  style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', borderRadius: '12px' }}
+                >
+                  <ShieldAlert size={18} /> Revoke Complimentary Free Access (Revert to Paid)
+                </button>
+              </>
             ) : (
               <button
                 type="button"
-                onClick={() => { onClose(); onGrantFree(tenant); }}
+                onClick={() => { onClose(); onGrantFree({ ...tenant, ...sub, subscription: sub }); }}
                 className="sa-btn sa-btn-primary"
                 style={{ width: '100%', justifyContent: 'flex-start', padding: '12px 16px', borderRadius: '12px' }}
               >

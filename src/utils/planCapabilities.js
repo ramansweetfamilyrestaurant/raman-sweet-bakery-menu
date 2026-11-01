@@ -157,17 +157,23 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
     return `${tier.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} Plan`;
   };
 
+  const isUnlimitedPlan = planTier.includes('enterprise') || planTier.includes('vip') || planTier === 'vip_ultra' || planTier === 'vip_ultra_plan';
+  const isBasic = planTier === 'basic' || planTier.endsWith('_basic') || planTier.endsWith('basic');
+
   const defaultPlanName = isComplimentary
-    ? 'Enterprise VIP Access'
+    ? (isUnlimitedPlan ? 'Enterprise VIP Access' : (rawTier ? `${formatTierLabel(rawTier)} (VIP Access)` : 'VIP Access'))
     : (rawTier ? formatTierLabel(rawTier) : 'Pro Plan');
 
   const planPrice = isComplimentary ? 0 : (rawPrice !== null ? getNum(rawPrice, 999) : 999);
   const rawSubStatus = actualSub?.status || actualResto?.subscription_status || 'active';
   const subStatus = isComplimentary ? 'active' : rawSubStatus;
 
+  const isHotel = actualResto?.service_model === 'hotel' || actualResto?.business_type === 'hotel_resort' || planTier.startsWith('hotel_');
+  const isCinema = actualResto?.service_model === 'cinema' || actualResto?.business_type === 'cinema_theatre' || planTier.startsWith('cinema_');
+
   return {
     plan_tier: planTier,
-    plan_name: isComplimentary ? 'Enterprise VIP Access' : (actualResto?.plan_name || actualSub?.plan_name || defaultPlanName),
+    plan_name: actualResto?.plan_name || actualSub?.plan_name || defaultPlanName,
     plan_price: planPrice,
     subscription_status: subStatus,
     is_complimentary: isComplimentary,
@@ -175,27 +181,33 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
     business_type: actualResto?.business_type || 'restaurant',
     service_model: actualResto?.service_model || 'dine_in',
 
-    // Features
-    direct_ordering_enabled: isBoolTrue(actualResto?.direct_ordering_enabled ?? perms?.direct_ordering_enabled, true),
-    whatsapp_ordering_enabled: isBoolTrue(actualResto?.whatsapp_ordering_enabled ?? perms?.whatsapp_ordering_enabled, true),
-    kds_enabled: isBoolTrue(actualResto?.kds_enabled ?? perms?.kds_enabled, true),
-    bluetooth_kot_enabled: isBoolTrue(actualResto?.bluetooth_kot_enabled ?? perms?.bluetooth_kot_enabled, false),
-    dual_printer_enabled: isBoolTrue(actualResto?.dual_printer_enabled ?? perms?.dual_printer_enabled, isComplimentary || planTier === 'vip' || planTier === 'vip_ultra' || planTier === 'vip_ultra_plan'),
+    // Features (Option B: constrained to the granted plan tier)
+    direct_ordering_enabled: isBasic ? false : isBoolTrue(perms?.direct_ordering_enabled ?? actualResto?.direct_ordering_enabled, isUnlimitedPlan),
+    whatsapp_ordering_enabled: isBoolTrue(actualResto?.whatsapp_ordering_enabled ?? perms?.whatsapp_ordering_enabled, !isBasic),
+    kds_enabled: isBasic ? false : isBoolTrue(actualResto?.kds_enabled ?? perms?.kds_enabled, isUnlimitedPlan),
+    bluetooth_kot_enabled: isBasic ? false : isBoolTrue(actualResto?.bluetooth_kot_enabled ?? perms?.bluetooth_kot_enabled, isUnlimitedPlan),
+    dual_printer_enabled: isBasic ? false : isBoolTrue(actualResto?.dual_printer_enabled ?? perms?.dual_printer_enabled, isUnlimitedPlan),
+    cinema_ordering_enabled: isCinema && !isBasic ? isBoolTrue(perms?.cinema_ordering_enabled ?? actualResto?.cinema_ordering_enabled, isUnlimitedPlan) : false,
+    room_ordering_enabled: isHotel && !isBasic ? isBoolTrue(perms?.room_ordering_enabled ?? actualResto?.room_ordering_enabled, isUnlimitedPlan) : false,
     gst_invoice_enabled: isBoolTrue(actualResto?.gst_invoice_enabled ?? perms?.gst_invoice_enabled, true),
     analytics_export_enabled: isBoolTrue(actualResto?.analytics_export_enabled ?? perms?.analytics_export_enabled, true),
     modifiers_enabled: isBoolTrue(actualResto?.modifiers_enabled ?? perms?.modifiers_enabled, true),
-    google_reviews_enabled: isBoolTrue(actualResto?.google_reviews_enabled ?? perms?.google_reviews_enabled, true),
+    google_reviews_enabled: isBoolTrue(actualResto?.google_reviews_enabled ?? perms?.google_reviews_enabled, !isBasic),
     ai_review_enabled: isBoolTrue(actualResto?.ai_review_enabled ?? perms?.ai_review_enabled, true),
     watermark_removal_enabled: isBoolTrue(actualResto?.watermark_removal_enabled ?? perms?.watermark_removal_enabled, true),
     presence_verification_enabled: isBoolTrue(actualResto?.presence_verification_enabled ?? perms?.presence_verification_enabled, true),
-    allowed_themes: isComplimentary ? 'ALL' : (actualResto?.allowed_themes || perms?.allowed_themes || 'ALL'),
+    allowed_themes: actualResto?.allowed_themes || perms?.allowed_themes || (isBasic ? 'gold' : !isUnlimitedPlan ? 'gold,emerald,crimson,navy' : 'ALL'),
 
-    // Quotas
-    max_dishes: isComplimentary ? 9999 : getNum(actualResto?.max_dishes ?? perms?.max_dishes, 9999),
-    max_categories: isComplimentary ? 9999 : getNum(actualResto?.max_categories ?? perms?.max_categories, 9999),
-    max_combos: isComplimentary ? 9999 : getNum(actualResto?.max_combos ?? perms?.max_combos, 9999),
-    max_tables: isComplimentary ? 9999 : getNum(actualResto?.max_tables ?? perms?.max_tables, 9999),
-    order_retention_days: getNum(actualResto?.order_retention_days ?? perms?.order_retention_days, 365)
+    // Quotas (Option B: aligned with server entitlements)
+    max_dishes: isUnlimitedPlan ? 9999 : getNum(actualResto?.max_dishes ?? perms?.max_dishes ?? actualSub?.max_dishes, isBasic ? 50 : 500),
+    max_categories: isUnlimitedPlan ? 9999 : getNum(actualResto?.max_categories ?? perms?.max_categories ?? actualSub?.max_categories, isBasic ? 10 : 50),
+    max_combos: isUnlimitedPlan ? 9999 : getNum(actualResto?.max_combos ?? perms?.max_combos ?? actualSub?.max_combos, isBasic ? (isHotel || isCinema ? 5 : 3) : (isHotel || isCinema ? 20 : 10)),
+    max_tables: isUnlimitedPlan ? 9999 : getNum(actualResto?.max_tables ?? perms?.max_tables ?? actualSub?.max_tables, isBasic ? 20 : 100),
+    max_rooms: isHotel ? (isUnlimitedPlan ? 9999 : getNum(actualResto?.max_rooms ?? perms?.max_rooms ?? actualSub?.max_rooms, isBasic ? 20 : 60)) : null,
+    max_screens: isCinema ? (isUnlimitedPlan ? 9999 : getNum(actualResto?.max_screens ?? perms?.max_screens ?? actualSub?.max_screens, isBasic ? 1 : 3)) : null,
+    max_seats: isCinema ? (isUnlimitedPlan ? 9999 : getNum(actualResto?.max_seats ?? perms?.max_seats ?? actualSub?.max_seats, isBasic ? 200 : 800)) : null,
+    max_staff_accounts: isUnlimitedPlan ? 9999 : getNum(actualResto?.max_staff_accounts ?? perms?.max_staff_accounts, isBasic ? 2 : 5),
+    order_retention_days: isUnlimitedPlan ? 365 : getNum(actualResto?.order_retention_days ?? perms?.order_retention_days, isBasic ? 30 : 90)
   };
 }
 

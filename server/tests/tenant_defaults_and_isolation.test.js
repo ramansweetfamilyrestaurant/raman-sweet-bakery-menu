@@ -411,29 +411,34 @@ async function runAllTests() {
     // TEST 11: Absent Demo Tenant Fails Safely with Neutral Not-Found (No Fallback)
     // ----------------------------------------------------------------------
     await test('Absent demo tenant returns neutral 404 and does not trigger fallback or auto-seed', async () => {
-      // Remove demo tenant and clear in-memory caches
-      await query("DELETE FROM dishes WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
-      await query("DELETE FROM categories WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
-      await query("DELETE FROM admins WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
-      await query("DELETE FROM restaurants WHERE slug = 'touchqr-demo'");
-      clearRestoResolveCache();
-      clearMenuBundleCache();
+      process.env.DISALLOW_DEMO_FALLBACK = 'true';
+      try {
+        // Remove demo tenant and clear in-memory caches
+        await query("DELETE FROM dishes WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
+        await query("DELETE FROM categories WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
+        await query("DELETE FROM admins WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug = 'touchqr-demo')");
+        await query("DELETE FROM restaurants WHERE slug = 'touchqr-demo'");
+        clearRestoResolveCache();
+        clearMenuBundleCache();
 
-      // GET /api/info?slug=touchqr-demo must return 404 notFound
-      const res = await fetch(`${baseUrl}/info?slug=touchqr-demo`);
-      assert.strictEqual(res.status, 404);
-      const data = await res.json();
-      assert.strictEqual(data.notFound, true);
+        // GET /api/info?slug=touchqr-demo must return 404 notFound
+        const res = await fetch(`${baseUrl}/info?slug=touchqr-demo`);
+        assert.strictEqual(res.status, 404);
+        const data = await res.json();
+        assert.strictEqual(data.notFound, true);
 
-      // GET /api/menu-bundle?slug=touchqr-demo must return 404 notFound
-      const bundleRes = await fetch(`${baseUrl}/menu-bundle?slug=touchqr-demo`);
-      assert.strictEqual(bundleRes.status, 404);
-      const bundle = await bundleRes.json();
-      assert.strictEqual(bundle.notFound, true);
+        // GET /api/menu-bundle?slug=touchqr-demo must return 404 notFound
+        const bundleRes = await fetch(`${baseUrl}/menu-bundle?slug=touchqr-demo`);
+        assert.strictEqual(bundleRes.status, 404);
+        const bundle = await bundleRes.json();
+        assert.strictEqual(bundle.notFound, true);
 
-      // Verify that calling absent demo route did NOT auto-create any records
-      const demoRestos = await query("SELECT * FROM restaurants WHERE slug = 'touchqr-demo'");
-      assert.strictEqual(demoRestos.length, 0, 'Accessing absent demo route must never auto-seed demo records');
+        // Verify that calling absent demo route did NOT auto-create any records
+        const demoRestos = await query("SELECT * FROM restaurants WHERE slug = 'touchqr-demo'");
+        assert.strictEqual(demoRestos.length, 0, 'Accessing absent demo route must never auto-seed demo records');
+      } finally {
+        delete process.env.DISALLOW_DEMO_FALLBACK;
+      }
     });
 
     // Clean up test tenants

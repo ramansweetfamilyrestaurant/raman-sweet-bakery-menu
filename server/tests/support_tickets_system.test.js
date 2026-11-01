@@ -134,7 +134,9 @@ async function run() {
   app.use('/api/admin', adminRoutes);
   app.use('/api/superadmin', superadminRoutes);
 
-  const server = app.listen(0);
+  const server = await new Promise(resolve => {
+    const s = app.listen(0, '127.0.0.1', () => resolve(s));
+  });
   const port = server.address().port;
   const baseUrl = `http://127.0.0.1:${port}/api`;
 

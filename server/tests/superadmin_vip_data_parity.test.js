@@ -109,6 +109,9 @@ async function runSuite() {
              ('pro', 'Pro Plan', 999, 500, 50, 100, 0, 0, 0),
              ('enterprise', 'Enterprise Plan', 1999, 9999, 9999, 9999, 1, 1, 1)
     `).catch(() => {}); // ignore duplicate key if already seeded
+    await query("UPDATE saas_plans SET max_dishes = 50, max_categories = 10, max_tables = 20, direct_ordering_enabled = 0, kds_enabled = 0, dual_printer_enabled = 0, bluetooth_kot_enabled = 0, whatsapp_ordering_enabled = 0, whatsapp_enabled = 0 WHERE LOWER(key) = 'basic'");
+    await query("UPDATE saas_plans SET max_dishes = 500, max_categories = 50, max_tables = 100, direct_ordering_enabled = 0, kds_enabled = 0, dual_printer_enabled = 0 WHERE LOWER(key) = 'pro'");
+    await query("UPDATE saas_plans SET max_dishes = 9999, max_categories = 9999, max_tables = 9999, direct_ordering_enabled = 1, kds_enabled = 1, dual_printer_enabled = 1 WHERE LOWER(key) = 'enterprise'");
 
     // -----------------------------------------------------------------------------------------------------
     // Seed fixtures:
@@ -196,7 +199,7 @@ async function runSuite() {
     // Tenant G (Hotel Resort VIP: room service model, total_rooms 45, total_tables 10)
     await query(`
       INSERT INTO restaurants (name, slug, business_type, service_model, business_category, plan_tier, plan_price, subscription_type, mandate_status, active, plan_expires_at, total_rooms, total_tables)
-      VALUES ('Grand Royal Resort', 'test-parity-hotel-resort', 'hotel_resort', 'hotel', 'hotel', 'pro', 0, 'ADMIN_GRANTED', 'admin_granted', true, $1, 45, 10)
+      VALUES ('Grand Royal Resort', 'test-parity-hotel-resort', 'hotel_resort', 'hotel', 'hotel', 'enterprise', 0, 'ADMIN_GRANTED', 'admin_granted', true, $1, 45, 10)
     `, [futureDate]);
     const [restoG] = await query("SELECT * FROM restaurants WHERE slug = 'test-parity-hotel-resort'");
     await query(`
@@ -207,7 +210,7 @@ async function runSuite() {
     // Tenant H (Cinema & Theatre VIP: cinema service model, total_tables 350 representing seats)
     await query(`
       INSERT INTO restaurants (name, slug, business_type, service_model, business_category, plan_tier, plan_price, subscription_type, mandate_status, active, plan_expires_at, total_tables)
-      VALUES ('Star Cineplex', 'test-parity-cinema-multiplex', 'cinema_theatre', 'cinema', 'cinema', 'basic', 0, 'ADMIN_GRANTED', 'admin_granted', true, $1, 350)
+      VALUES ('Star Cineplex', 'test-parity-cinema-multiplex', 'cinema_theatre', 'cinema', 'cinema', 'enterprise', 0, 'ADMIN_GRANTED', 'admin_granted', true, $1, 350)
     `, [futureDate]);
     const [restoH] = await query("SELECT * FROM restaurants WHERE slug = 'test-parity-cinema-multiplex'");
     await query(`
@@ -274,19 +277,19 @@ async function runSuite() {
       const tenant = list.find(r => r.slug === 'test-parity-vip-bistro');
 
       assert(tenant, 'VIP tenant must be returned in list API');
-      assert.strictEqual(tenant.plan_name, 'Enterprise VIP Access', 'Must display "Enterprise VIP Access"');
+      assert.strictEqual(tenant.plan_name, 'Basic Starter Plan (VIP Access)', 'Must display "Basic Starter Plan (VIP Access)"');
       assert.strictEqual(tenant.effective_plan_price, 0, 'Effective plan price must be 0');
       assert.strictEqual(tenant.is_vip, true, 'is_vip must be true');
       assert.strictEqual(tenant.is_complimentary, true, 'is_complimentary must be true');
-      assert.strictEqual(tenant.effective_plan_tier, 'enterprise', 'effective_plan_tier must project enterprise');
+      assert.strictEqual(tenant.effective_plan_tier, 'basic', 'effective_plan_tier must project basic');
       assert.strictEqual(tenant.subscription_status, 'active', 'subscription_status must be active');
 
       // Assert presentation mapping for list rows and cards
       const planDisplay = formatTenantPlanDisplay(tenant);
-      assert.strictEqual(planDisplay.primaryLabel, 'Enterprise VIP Access', 'Primary effective label must be "Enterprise VIP Access"');
+      assert.strictEqual(planDisplay.primaryLabel, 'Basic Starter Plan (VIP Access)', 'Primary effective label must be "Basic Starter Plan (VIP Access)"');
       assert.strictEqual(planDisplay.secondaryLabel, '₹0/mo (Base: BASIC)', 'Secondary label must show ₹0/mo and base tier');
       assert.strictEqual(planDisplay.badgeText, '★ VIP', 'Badge text must be VIP');
-      assert.strictEqual(planDisplay.fullDisplay, 'Enterprise VIP Access (₹0/mo • Base: BASIC)');
+      assert.strictEqual(planDisplay.fullDisplay, 'Basic Starter Plan (VIP Access) (₹0/mo • Base: BASIC)');
       assert(planDisplay.primaryLabel !== 'BASIC', 'Must not display BASIC as primary plan label');
       assert(planDisplay.primaryLabel !== 'Basic Plan', 'Must not display Basic Plan as primary plan label');
     });
@@ -301,21 +304,21 @@ async function runSuite() {
       assert.strictEqual(res.status, 200, 'GET /restaurants/:id/360 must return 200');
       const data = await res.json();
 
-      assert.strictEqual(data.subscription.plan_name, 'Enterprise VIP Access');
+      assert.strictEqual(data.subscription.plan_name, 'Basic Starter Plan (VIP Access)');
       assert.strictEqual(data.subscription.effective_plan_price, 0);
       assert.strictEqual(data.subscription.is_vip, true);
-      assert.strictEqual(data.subscription.effective_plan_tier, 'enterprise');
+      assert.strictEqual(data.subscription.effective_plan_tier, 'basic');
 
-      // Check quotas
-      assert.strictEqual(data.usage.dishes.limit, 9999, 'Dishes limit must be 9999 for VIP');
-      assert.strictEqual(data.usage.categories.limit, 9999, 'Categories limit must be 9999 for VIP');
-      assert.strictEqual(data.usage.tables.limit, 9999, 'Tables limit must be 9999 for VIP');
+      // Check quotas (Option B: Basic limits)
+      assert.strictEqual(data.usage.dishes.limit, 50, 'Dishes limit must be 50 for Basic VIP');
+      assert.strictEqual(data.usage.categories.limit, 10, 'Categories limit must be 10 for Basic VIP');
+      assert.strictEqual(data.usage.tables.limit, 20, 'Tables limit must be 20 for Basic VIP');
 
-      // Check capabilities
-      assert.strictEqual(data.usage.entitlements.direct_ordering_enabled, true, 'Direct ordering must be enabled for VIP');
-      assert.strictEqual(data.usage.entitlements.kds_enabled, true, 'KDS must be enabled for VIP');
-      assert.strictEqual(data.usage.entitlements.dual_printer_enabled, true, 'Dual printer must be enabled for VIP');
-      assert.strictEqual(data.usage.entitlements.whatsapp_ordering_enabled, true, 'WhatsApp ordering must be enabled for VIP');
+      // Check capabilities (Option B: Basic features)
+      assert.strictEqual(data.usage.entitlements.direct_ordering_enabled, false, 'Direct ordering must be disabled for Basic VIP');
+      assert.strictEqual(data.usage.entitlements.kds_enabled, false, 'KDS must be disabled for Basic VIP');
+      assert.strictEqual(data.usage.entitlements.dual_printer_enabled, false, 'Dual printer must be disabled for Basic VIP');
+      assert.strictEqual(data.usage.entitlements.whatsapp_ordering_enabled, false, 'WhatsApp ordering must be disabled for Basic VIP');
     });
 
     // =====================================================================================================
@@ -686,9 +689,9 @@ async function runSuite() {
       const dataResto = await resResto.json();
       const restoMatrix = dataResto.usage.feature_matrix;
 
-      assert.strictEqual(restoMatrix.kds_enabled.status, 'AVAILABLE', 'KDS must be AVAILABLE for restaurant VIP');
-      assert.strictEqual(restoMatrix.kds_enabled.applicable, true);
-      assert.strictEqual(restoMatrix.bluetooth_kot_enabled.status, 'AVAILABLE', 'Bluetooth KOT must be AVAILABLE for restaurant VIP');
+      assert.strictEqual(restoMatrix.kds_enabled.status, 'LOCKED', 'KDS must be LOCKED for basic restaurant VIP');
+      assert.strictEqual(restoMatrix.kds_enabled.applicable, true, 'KDS is applicable to restaurants');
+      assert.strictEqual(restoMatrix.bluetooth_kot_enabled.status, 'LOCKED', 'Bluetooth KOT must be LOCKED for basic restaurant VIP');
     });
 
     // =====================================================================================================
@@ -737,27 +740,24 @@ async function runSuite() {
 
       // 1. Bistro VIP (Base: basic)
       const bistroDisplay = formatTenantPlanDisplay(vipBistro);
-      assert.strictEqual(bistroDisplay.primaryLabel, 'Enterprise VIP Access', 'Bistro primary plan must be Enterprise VIP Access');
+      assert.strictEqual(bistroDisplay.primaryLabel, 'Basic Starter Plan (VIP Access)', 'Bistro primary plan must be Basic Starter Plan (VIP Access)');
       assert.strictEqual(bistroDisplay.secondaryLabel, '₹0/mo (Base: BASIC)', 'Bistro secondary label must show base tier BASIC');
       assert.strictEqual(bistroDisplay.badgeText, '★ VIP');
-      assert.strictEqual(bistroDisplay.fullDisplay, 'Enterprise VIP Access (₹0/mo • Base: BASIC)');
-      assert(!bistroDisplay.primaryLabel.includes('BASIC'), 'Must not display BASIC as primary label');
+      assert.strictEqual(bistroDisplay.fullDisplay, 'Basic Starter Plan (VIP Access) (₹0/mo • Base: BASIC)');
 
-      // 2. Hotel VIP (Base: pro)
+      // 2. Hotel VIP (Base: enterprise)
       const hotelDisplay = formatTenantPlanDisplay(vipHotel);
       assert.strictEqual(hotelDisplay.primaryLabel, 'Enterprise VIP Access', 'Hotel primary plan must be Enterprise VIP Access');
-      assert.strictEqual(hotelDisplay.secondaryLabel, '₹0/mo (Base: PRO)', 'Hotel secondary label must show base tier PRO');
+      assert.strictEqual(hotelDisplay.secondaryLabel, '₹0/mo', 'Hotel secondary label must show ₹0/mo');
       assert.strictEqual(hotelDisplay.badgeText, '★ VIP');
-      assert.strictEqual(hotelDisplay.fullDisplay, 'Enterprise VIP Access (₹0/mo • Base: PRO)');
-      assert(!hotelDisplay.primaryLabel.includes('PRO'), 'Must not display PRO as primary label');
+      assert.strictEqual(hotelDisplay.fullDisplay, 'Enterprise VIP Access (₹0/mo)');
 
-      // 3. Cinema VIP (Base: basic)
+      // 3. Cinema VIP (Base: enterprise)
       const cinemaDisplay = formatTenantPlanDisplay(vipCinema);
       assert.strictEqual(cinemaDisplay.primaryLabel, 'Enterprise VIP Access', 'Cinema primary plan must be Enterprise VIP Access');
-      assert.strictEqual(cinemaDisplay.secondaryLabel, '₹0/mo (Base: BASIC)', 'Cinema secondary label must show base tier BASIC');
+      assert.strictEqual(cinemaDisplay.secondaryLabel, '₹0/mo', 'Cinema secondary label must show ₹0/mo');
       assert.strictEqual(cinemaDisplay.badgeText, '★ VIP');
-      assert.strictEqual(cinemaDisplay.fullDisplay, 'Enterprise VIP Access (₹0/mo • Base: BASIC)');
-      assert(!cinemaDisplay.primaryLabel.includes('BASIC'), 'Must not display BASIC as primary label');
+      assert.strictEqual(cinemaDisplay.fullDisplay, 'Enterprise VIP Access (₹0/mo)');
 
       // 4. Bakery VIP (Base: enterprise)
       const bakeryDisplay = formatTenantPlanDisplay(vipBakery);
@@ -846,7 +846,7 @@ async function runSuite() {
 
       // Presentation formatting check
       const display = formatTenantPlanDisplay({ ...t360.tenant, ...t360.subscription });
-      assert.strictEqual(display.primaryLabel, 'Enterprise VIP Access');
+      assert.strictEqual(display.primaryLabel, 'Pro Luxury Plan (VIP Access)');
       assert.strictEqual(display.secondaryLabel, '₹0/mo (Base: PRO)');
       assert.strictEqual(display.badgeText, '★ VIP');
     });
@@ -891,7 +891,7 @@ async function runSuite() {
         { id: 51, gateway: 'admin_granted', subscription_type: 'ADMIN_GRANTED', status: 'active', amount: 0, current_period_end: '2036-10-06 13:53:16.01' },
         { id: 29, gateway: 'admin_granted', subscription_type: 'ADMIN_GRANTED', status: 'cancelled', current_period_end: '2024-01-01 00:00:00' }
       ];
-      const resto = { id: 1, name: 'Tenant 1', subscription_type: 'ADMIN_GRANTED', mandate_status: 'pending', is_vip: true, plan_expires_at: '2036-10-06T13:53:16.010Z' };
+      const resto = { id: 1, name: 'Tenant 1', plan_tier: 'enterprise', subscription_type: 'ADMIN_GRANTED', mandate_status: 'pending', is_vip: true, plan_expires_at: '2036-10-06T13:53:16.010Z' };
       const { effectiveSub, paidSub, vipSub } = resolveTenantSubscriptions(subs, resto);
 
       assert.strictEqual(effectiveSub.id, 51, 'Effective sub must be active VIP #51');

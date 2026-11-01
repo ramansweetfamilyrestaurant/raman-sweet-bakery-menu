@@ -1,7 +1,7 @@
 import React from 'react';
-import { BOTTOM_NAV_ITEMS, isNavItemActive } from '../adminNavigation';
+import { BOTTOM_NAV_ITEMS, isNavItemActive, getLocalizedNavLabel } from '../adminNavigation';
 
-export default function AdminBottomNavigation({ activeTab, setActiveTab, pendingOrdersCount = 0 }) {
+export default function AdminBottomNavigation({ activeTab, setActiveTab, pendingOrdersCount = 0, restaurantInfo = {} }) {
   return (
     <>
       <style>{`
@@ -38,7 +38,7 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
           const isActive = isNavItemActive(item, activeTab, 'bottomNav');
           const activeColor = ['dishes', 'settings'].includes(item.id) ? '#D97706' : '#16A34A';
           const color = isActive ? activeColor : '#64748B';
-          const label = item.bottomNavLabel || item.label;
+          const label = getLocalizedNavLabel(item, restaurantInfo, 'bottomNav');
           const showBadge = item.hasBadge && pendingOrdersCount > 0;
 
           return (

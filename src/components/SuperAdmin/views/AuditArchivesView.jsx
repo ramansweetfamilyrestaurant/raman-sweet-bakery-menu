@@ -22,11 +22,20 @@ export default function AuditArchivesView({
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState(null);
 
+  const getAuthToken = () => {
+    return localStorage.getItem('touchqr_superadmin_token') || 
+           localStorage.getItem('token') || 
+           localStorage.getItem('sa_token') || 
+           localStorage.getItem('saas_super_token') || 
+           sessionStorage.getItem('touchqr_superadmin_token') || 
+           sessionStorage.getItem('token') || '';
+  };
+
   const fetchArchives = async (targetPage = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('sa_token') || sessionStorage.getItem('token');
+      const token = getAuthToken();
       const res = await fetch(`${apiBaseUrl}?page=${targetPage}&limit=15`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -68,7 +77,7 @@ export default function AuditArchivesView({
     if (!selectedArchive) return;
     setSearchLoading(true);
     try {
-      const token = localStorage.getItem('sa_token') || sessionStorage.getItem('token');
+      const token = getAuthToken();
       const res = await fetch(`${apiBaseUrl}/${selectedArchive.id}/search`, {
         method: 'POST',
         headers: {
@@ -100,7 +109,7 @@ export default function AuditArchivesView({
     setRestoreLoading(true);
     setRestoreMessage(null);
     try {
-      const token = localStorage.getItem('sa_token') || sessionStorage.getItem('token');
+      const token = getAuthToken();
       const res = await fetch(`${apiBaseUrl}/${selectedArchive.id}/restore`, {
         method: 'POST',
         headers: {

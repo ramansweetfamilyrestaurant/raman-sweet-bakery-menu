@@ -574,7 +574,7 @@ async function runAllTests() {
       for (const t of types) {
         const [bizResto] = await query(`
           INSERT INTO restaurants (name, slug, business_type, service_model, plan_tier, plan_price, subscription_type, mandate_status, active)
-          VALUES ($1, $2, $3, $4, 'pro', 0, 'ADMIN_GRANTED', 'admin_granted', true)
+          VALUES ($1, $2, $3, $4, 'enterprise', 0, 'ADMIN_GRANTED', 'admin_granted', true)
           RETURNING id
         `, [`VIP ${t.type}`, `vip-${t.type}-${ts}`, t.type, t.service]);
         const bId = bizResto.id;

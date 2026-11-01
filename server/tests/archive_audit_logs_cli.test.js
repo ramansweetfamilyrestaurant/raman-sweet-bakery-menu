@@ -17,6 +17,7 @@ import {
   runArchiveAuditLogsCli
 } from '../scripts/archive_audit_logs.js';
 import { initializeArchivalSchema } from '../services/auditLogArchivalService.js';
+import { isCiTestMode } from './testDbGuard.js';
 
 const { Pool } = pg;
 const LOCAL_TEST_URL = 'postgres://postgres:postgres@127.0.0.1:5432/touchqr_disposable_test';
@@ -41,7 +42,19 @@ async function test(name, fn) {
 }
 
 async function run() {
-  const pool = new Pool({ connectionString: LOCAL_TEST_URL });
+  const pool = new Pool({ connectionString: LOCAL_TEST_URL, connectionTimeoutMillis: 1500 });
+
+  try {
+    await pool.query('SELECT 1;');
+  } catch (probeErr) {
+    if (probeErr.code === 'ECONNREFUSED' || probeErr.code === 'EACCES' || (probeErr.message && (probeErr.message.includes('ECONNREFUSED') || probeErr.message.includes('EACCES')))) {
+      if (!isCiTestMode()) {
+        console.log('⚠️  [NOT RUN] Local PostgreSQL (127.0.0.1:5432) is not reachable. Skipping archival operator CLI test suite.');
+        process.exit(0);
+      }
+    }
+    throw probeErr;
+  }
 
   try {
     // Setup clean tables on disposable DB

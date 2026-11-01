@@ -41,6 +41,7 @@ import {
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
 import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
+import { SAAS_PLANS, getPlanDetails } from '../../../config/plans';
 import PlanLockedCard from '../components/PlanLockedCard';
 
 export default function BillingView({
@@ -61,6 +62,12 @@ export default function BillingView({
   const sym = getCurrencySymbol(settingsForm?.currency_symbol !== undefined ? settingsForm.currency_symbol : (restaurantInfo?.currency_symbol || currencySymbol));
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
   const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || settingsForm || {}), [restaurantInfo, settingsForm]);
+
+  const targetBiz = (settingsForm?.business_type || restaurantInfo?.business_type || 'restaurant').toLowerCase();
+  const targetService = (settingsForm?.service_model || restaurantInfo?.service_model || 'dine_in').toLowerCase();
+  const isHotel = targetService === 'hotel' || targetBiz === 'hotel_resort';
+  const isCinema = targetService === 'cinema' || targetService === 'seat_service' || targetBiz === 'cinema_theatre';
+  const targetIndustry = isHotel ? 'hotel' : (isCinema ? 'cinema' : 'restaurant');
 
   // Active Internal Tab: 'overview' | 'plans' | 'history' | 'invoices'
   const [activeTab, setActiveTab] = useState('overview');
@@ -83,6 +90,7 @@ export default function BillingView({
 
   // Plan Change In-Progress State
   const [changingPlanKey, setChangingPlanKey] = useState(null);
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
 
   // Load live subscription status, payment history, and public plans catalog
   const loadBillingData = useCallback(async (isManual = false) => {
@@ -179,9 +187,25 @@ export default function BillingView({
   const isMandateActive = subData?.mandate_status === 'active' || Boolean(restaurantInfo?.mandate_id);
   const autoRenewEnabled = subData?.auto_renew !== 0 && !subData?.cancel_requested_at;
 
+  const isExplicitLifetime = Boolean(
+    subData?.is_lifetime || 
+    restaurantInfo?.is_lifetime || 
+    String(subData?.access_until).toLowerCase() === 'lifetime'
+  );
+  const isLifetimeVip = isComplimentary && (isExplicitLifetime || (nextBillingDateObj && !isNaN(nextBillingDateObj.getTime()) && nextBillingDateObj.getFullYear() > 2030));
+
   const statusConfig = useMemo(() => {
     if (isComplimentary) {
-      return { label: 'VIP (Complimentary)', bg: '#FAF5FF', color: '#7E22CE', border: '#E9D5FF', icon: Crown, desc: 'Lifetime complimentary SaaS access granted by platform.' };
+      return { 
+        label: isLifetimeVip ? 'VIP (Lifetime Complimentary)' : 'VIP (Complimentary)', 
+        bg: '#FAF5FF', 
+        color: '#7E22CE', 
+        border: '#E9D5FF', 
+        icon: Crown, 
+        desc: isLifetimeVip 
+          ? 'Lifetime complimentary SaaS access granted by platform.' 
+          : `Complimentary VIP access granted until ${formattedRenewalDate}.` 
+      };
     }
     if (rawStatus === 'trialing') {
       return { label: 'Free Trial', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A', icon: Sparkles, desc: `Trial period active until ${formattedRenewalDate}.` };
@@ -199,10 +223,17 @@ export default function BillingView({
   }, [rawStatus, isComplimentary, subData, formattedRenewalDate]);
 
   // Quota usage computations
-  const maxDishes = resolvedCaps?.max_dishes ?? (subData?.permissions?.max_dishes || 9999);
-  const maxCategories = resolvedCaps?.max_categories ?? (subData?.permissions?.max_categories || 9999);
-  const maxCombos = resolvedCaps?.max_combos ?? (subData?.permissions?.max_combos || 10);
-  const maxTables = resolvedCaps?.max_tables ?? (subData?.permissions?.max_tables || 9999);
+  const isUnlimitedPlan = Boolean(
+    currentPlanTier?.includes('enterprise') || 
+    currentPlanTier?.includes('vip') || 
+    currentPlanTier === 'vip_ultra' ||
+    resolvedCaps?.is_vip ||
+    isComplimentary
+  );
+  const maxDishes = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_dishes ?? (subData?.permissions?.max_dishes || 9999));
+  const maxCategories = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_categories ?? (subData?.permissions?.max_categories || 9999));
+  const maxCombos = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_combos ?? (subData?.permissions?.max_combos || 10));
+  const maxTables = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_tables ?? (subData?.permissions?.max_tables || 9999));
 
   const dishesCount = Array.isArray(dishes) ? dishes.length : 0;
   const categoriesCount = Array.isArray(categories) ? categories.length : 0;
@@ -294,7 +325,16 @@ export default function BillingView({
       { name: 'WhatsApp Direct Ordering', enabled: Boolean(resolvedCaps?.whatsapp_ordering_enabled), benefit: 'Receive structured orders directly on WhatsApp' },
       { name: 'Kitchen / Dispatch Display (KDS)', enabled: Boolean(resolvedCaps?.kds_enabled), benefit: 'Live preparation & packing screen with sound alerts' },
       { name: 'Bluetooth Thermal KOT & Receipt Printing', enabled: Boolean(resolvedCaps?.bluetooth_kot_enabled), benefit: 'Print 58mm/80mm tickets and final receipts' },
-      { name: 'Dual Printer Routing', enabled: Boolean(resolvedCaps?.dual_printer_enabled), benefit: 'Route kitchen tickets to kitchen and bills to counter' },
+      ...(isHotel ? [{ name: 'Hotel Amenities & Toiletries Booking', enabled: Boolean(resolvedCaps?.amenities_booking_enabled), benefit: 'Guests can request room amenities, toiletries, and housekeeping' }] : []),
+      ...(isCinema ? [
+        { name: 'In-Seat Direct Delivery Ordering', enabled: Boolean(resolvedCaps?.cinema_ordering_enabled || resolvedCaps?.seat_runner_dispatch_enabled), benefit: 'Audi, row & seat QR codes for in-seat delivery' },
+        { name: 'Interval Rush Mode & Runner Dispatch', enabled: Boolean(resolvedCaps?.interval_rush_mode_enabled), benefit: 'Fast interval ordering and runner delivery queue' }
+      ] : []),
+      ...(isCinema ? [
+        { name: 'Movie Interval Express Rush Mode', enabled: Boolean(resolvedCaps?.interval_rush_mode_enabled), benefit: 'Prioritize fast-prep snacks and drinks during 10-minute intervals' },
+        { name: 'In-Seat Runner Dispatch Terminal', enabled: Boolean(resolvedCaps?.seat_runner_dispatch_enabled), benefit: 'Dispatch usher and runner staff directly to auditorium seat rows' }
+      ] : []),
+      ...(!isHotel && !isCinema ? [{ name: 'Dual Printer Routing', enabled: Boolean(resolvedCaps?.dual_printer_enabled), benefit: 'Route kitchen tickets to kitchen and bills to counter' }] : []),
       { name: 'Sales Analytics & Heatmaps', enabled: true, benefit: 'Daily trends, revenue summaries, and peak hour matrix' },
       { name: 'CSV & Excel Report Export', enabled: Boolean(resolvedCaps?.analytics_export_enabled), benefit: 'Download RFC 4180 CSV & XLSX spreadsheets' },
       { name: '5% GST Tax Invoicing', enabled: Boolean(resolvedCaps?.gst_invoice_enabled), benefit: 'Automatic CGST/SGST tax calculation on orders' },
@@ -304,51 +344,14 @@ export default function BillingView({
       { name: 'Watermark Removal (White-Label)', enabled: Boolean(resolvedCaps?.watermark_removal_enabled), benefit: 'Remove TouchQR branding from customer menu footer' },
       { name: 'GPS Presence Verification', enabled: Boolean(resolvedCaps?.presence_verification_enabled), benefit: 'Verify customer is physically at outlet before ordering' }
     ];
-  }, [resolvedCaps]);
+  }, [resolvedCaps, isHotel, isCinema]);
 
-  // Master Plans Catalog Fallback if backend plans list is loading
+  // Master Plans Catalog dynamically filtered to current tenant's industry
   const masterPlans = useMemo(() => {
-    if (plansCatalog.length > 0) return plansCatalog;
-    return [
-      {
-        key: 'basic',
-        name: 'Basic Starter',
-        price: 499,
-        badge: '⚡ BASIC',
-        description: 'Essential digital QR menu for cafés, bakeries & small outlets',
-        max_combos: 3,
-        max_tables: 9999,
-        direct_ordering_enabled: false,
-        whatsapp_ordering_enabled: false,
-        kds_enabled: false
-      },
-      {
-        key: 'pro',
-        name: 'Pro Luxury',
-        price: 999,
-        badge: '👑 PRO (MOST POPULAR)',
-        popular: true,
-        description: 'Complete digital menu, WhatsApp ordering & sales growth suite',
-        max_combos: 10,
-        max_tables: 9999,
-        direct_ordering_enabled: false,
-        whatsapp_ordering_enabled: true,
-        kds_enabled: false
-      },
-      {
-        key: 'enterprise',
-        name: 'Enterprise VIP',
-        price: 1999,
-        badge: '🚀 ENTERPRISE VIP',
-        description: 'Full-suite business management, Direct QR Ordering & Kitchen/Dispatch',
-        max_combos: 9999,
-        max_tables: 9999,
-        direct_ordering_enabled: true,
-        whatsapp_ordering_enabled: true,
-        kds_enabled: true
-      }
-    ];
-  }, [plansCatalog]);
+    const raw = plansCatalog.length > 0 ? plansCatalog : Object.values(SAAS_PLANS);
+    const filtered = raw.filter(p => (p.industry || 'restaurant').toLowerCase() === targetIndustry || p.key.startsWith(targetIndustry));
+    return filtered.length > 0 ? filtered : raw.filter(p => ['basic', 'pro', 'enterprise'].includes(p.key));
+  }, [plansCatalog, targetIndustry]);
 
   return (
     <div style={{
@@ -586,10 +589,9 @@ export default function BillingView({
         scrollbarWidth: 'none'
       }}>
         {[
-          { id: 'overview', label: 'Overview & Current Plan' },
+          { id: 'overview', label: 'Subscription Overview' },
           { id: 'plans', label: 'All Plans & Upgrade' },
-          { id: 'history', label: `Payment History (${paymentsList.length})` },
-          { id: 'invoices', label: 'Invoices' }
+          { id: 'invoices', label: paymentsList.length > 0 ? `Invoices & Receipts (${paymentsList.length})` : 'Invoices & Receipts' }
         ].map(tab => {
           const active = activeTab === tab.id;
           return (
@@ -620,155 +622,164 @@ export default function BillingView({
           3. TAB CONTENT: OVERVIEW
          ========================================================================= */}
       {activeTab === 'overview' && (
-        <div className="billing-main-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 360px',
-          gap: '16px',
-          alignItems: 'start'
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '18px',
+          width: '100%',
+          boxSizing: 'border-box'
         }}>
-          {/* LEFT MAIN AREA: CURRENT PLAN + USAGE + FEATURES */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-            {/* Current Plan Primary Card */}
+          {/* 1. HERO ACTIVE SUBSCRIPTION CARD */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            border: '1.5px solid #EAE5DF',
+            padding: '24px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Top Accent Gradient Bar */}
             <div style={{
-              background: '#FFFFFF',
-              borderRadius: '16px',
-              border: '1.5px solid #EAE5DF',
-              padding: '20px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-              position: 'relative',
-              overflow: 'hidden'
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: isComplimentary
+                ? 'linear-gradient(90deg, #7E22CE 0%, #D4AF37 100%)'
+                : 'linear-gradient(90deg, #064E3B 0%, #10B981 100%)'
+            }} />
+
+            {/* Top Row: Plan Name, Badge, Price */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              flexWrap: 'wrap',
+              gap: '16px',
+              marginBottom: '20px'
             }}>
-              {/* Subtle top accent bar */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '4px',
-                background: 'linear-gradient(90deg, #064E3B 0%, #10B981 100%)'
-              }} />
-
-              {/* Plan Header Row */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-                <div>
-                  <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    CURRENT ACTIVE PLAN
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 900,
+                    color: isComplimentary ? '#7E22CE' : (currentPlanTier === 'enterprise' ? '#7E22CE' : (currentPlanTier === 'basic' ? '#0284C7' : '#B45309')),
+                    background: isComplimentary ? '#FAF5FF' : (currentPlanTier === 'enterprise' ? '#FAF5FF' : (currentPlanTier === 'basic' ? '#F0F9FF' : '#FEF3C7')),
+                    border: `1px solid ${isComplimentary ? '#E9D5FF' : (currentPlanTier === 'enterprise' ? '#E9D5FF' : (currentPlanTier === 'basic' ? '#BAE6FD' : '#FDE68A'))}`,
+                    padding: '3px 10px',
+                    borderRadius: '20px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em'
+                  }}>
+                    {isComplimentary ? '👑 VIP COMPLIMENTARY ACCESS' : (currentPlanTier === 'enterprise' ? '🚀 ENTERPRISE' : currentPlanTier === 'basic' ? '⚡ BASIC STARTER' : '👑 PRO LUXURY')}
                   </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
-                    <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-                      {isComplimentary ? 'Enterprise VIP Access' : (subData?.plan_name || (currentPlanTier === 'enterprise' ? 'Enterprise VIP Plan' : currentPlanTier === 'basic' ? 'Basic Starter Plan' : 'Pro Luxury Plan'))}
-                    </h2>
-                    <span style={{
-                      fontSize: '0.68rem',
-                      fontWeight: 900,
-                      color: isComplimentary ? '#7E22CE' : (currentPlanTier === 'enterprise' ? '#7E22CE' : (currentPlanTier === 'basic' ? '#0284C7' : '#B45309')),
-                      background: isComplimentary ? '#FAF5FF' : (currentPlanTier === 'enterprise' ? '#FAF5FF' : (currentPlanTier === 'basic' ? '#F0F9FF' : '#FEF3C7')),
-                      border: `1px solid ${isComplimentary ? '#E9D5FF' : (currentPlanTier === 'enterprise' ? '#E9D5FF' : (currentPlanTier === 'basic' ? '#BAE6FD' : '#FDE68A'))}`,
-                      padding: '2px 8px',
-                      borderRadius: '6px'
-                    }}>
-                      {isComplimentary ? '🎁 VIP ACCESS' : (currentPlanTier === 'enterprise' ? '🚀 ENTERPRISE' : currentPlanTier === 'basic' ? '⚡ BASIC' : '👑 PRO')}
-                    </span>
+                  <div style={{
+                    background: statusConfig.bg,
+                    color: statusConfig.color,
+                    border: `1px solid ${statusConfig.border}`,
+                    borderRadius: '20px',
+                    padding: '3px 10px',
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}>
+                    <statusConfig.icon size={13} />
+                    <span>● {statusConfig.label}</span>
                   </div>
                 </div>
 
-                {/* Price Display */}
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#064E3B', lineHeight: 1 }}>
-                    {isComplimentary ? '₹0 (Complimentary)' : `₹${formatPriceNumber(currentPlanPrice)}`}
-                    {!isComplimentary && <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748B' }}> / month</span>}
-                  </div>
-                  <span style={{ fontSize: '0.68rem', color: isComplimentary ? '#7E22CE' : '#64748B', display: 'block', marginTop: '3px', fontWeight: isComplimentary ? 700 : 400 }}>
-                    {isComplimentary ? '🛡️ Super Admin Granted Access' : '+ 18% GST (Tax Invoice Included)'}
-                  </span>
+                <h2 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+                  {subData?.plan_name || (currentPlanTier === 'enterprise' ? 'Enterprise VIP Plan' : currentPlanTier === 'basic' ? (isComplimentary ? 'Basic Starter Plan (VIP)' : 'Basic Starter Plan') : (isComplimentary ? 'Pro Luxury Plan (VIP)' : 'Pro Luxury Plan'))}
+                </h2>
+                <p style={{ fontSize: '0.80rem', color: '#64748B', margin: 0 }}>
+                  {isComplimentary
+                    ? (isLifetimeVip ? 'Permanent complimentary SaaS access sponsored by TouchQR platform.' : `Complimentary platform access granted until ${formattedRenewalDate}.`)
+                    : `${statusConfig.desc}`}
+                </p>
+              </div>
+
+              {/* Price Display */}
+              <div style={{ textAlign: 'right', background: '#F8FAFC', padding: '12px 18px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#064E3B', lineHeight: 1 }}>
+                  {isComplimentary ? '₹0' : `₹${formatPriceNumber(currentPlanPrice)}`}
+                  {!isComplimentary && <span style={{ fontSize: '0.80rem', fontWeight: 600, color: '#64748B' }}> / month</span>}
+                </div>
+                <span style={{ fontSize: '0.70rem', color: isComplimentary ? '#7E22CE' : '#64748B', display: 'block', marginTop: '4px', fontWeight: isComplimentary ? 800 : 600 }}>
+                  {isComplimentary ? '🛡️ Super Admin Sponsored' : '+ 18% GST (Tax Invoice Included)'}
+                </span>
+              </div>
+            </div>
+
+            {/* Middle Strip: Metadata Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '12px',
+              background: '#FAF8F5',
+              borderRadius: '12px',
+              padding: '14px 16px',
+              border: '1px solid #EAE5DF',
+              marginBottom: '20px'
+            }}>
+              <div>
+                <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {isComplimentary ? 'Access Valid Until' : 'Next Renewal / Period'}
+                </span>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Calendar size={14} color="#064E3B" />
+                  <span>{isComplimentary ? (isLifetimeVip ? '👑 Lifetime Access' : formattedRenewalDate) : formattedRenewalDate}</span>
                 </div>
               </div>
 
-              {/* Status & Billing Cycle Info Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                gap: '10px',
-                background: '#FAF8F5',
-                borderRadius: '12px',
-                padding: '14px',
-                border: '1px solid #EAE5DF',
-                marginBottom: '16px'
-              }}>
-                <div>
-                  <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Status</span>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 800, color: statusConfig.color, marginTop: '2px' }}>
-                    ● {statusConfig.label}
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Billing Cycle</span>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
-                    Monthly Recurring
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Next Renewal / Period</span>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
-                    {formattedRenewalDate}
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Auto-Renew</span>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 800, color: autoRenewEnabled ? '#059669' : '#DC2626', marginTop: '2px' }}>
-                    {autoRenewEnabled ? 'ON (Active)' : 'OFF (Paused)'}
-                  </div>
+              <div>
+                <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Billing Frequency
+                </span>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Clock size={14} color="#064E3B" />
+                  <span>{isComplimentary ? 'Complimentary Access' : 'Monthly Recurring'}</span>
                 </div>
               </div>
 
-              {/* Status Explanation Banner */}
-              <div style={{
-                fontSize: '0.74rem',
-                color: '#475569',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                lineHeight: 1.4
-              }}>
-                <Info size={16} color="#064E3B" style={{ flexShrink: 0 }} />
-                <span>{statusConfig.desc}</span>
+              <div>
+                <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Auto-Renewal Mandate
+                </span>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: autoRenewEnabled ? '#059669' : '#DC2626', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <RefreshCw size={14} />
+                  <span>{isComplimentary ? 'N/A (Sponsored)' : (autoRenewEnabled ? 'Active (AutoPay)' : 'Paused (Manual)')}</span>
+                </div>
               </div>
+            </div>
 
-              {/* Quick Actions Footer */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '10px',
-                marginTop: '16px',
-                paddingTop: '14px',
-                borderTop: '1px solid #EAE5DF'
-              }}>
+            {/* Actions Bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => setActiveTab('plans')}
                   style={{
-                    padding: '8px 16px',
+                    padding: '10px 20px',
                     borderRadius: '10px',
                     border: 'none',
                     background: '#064E3B',
                     color: '#FFFFFF',
-                    fontSize: '0.76rem',
+                    fontSize: '0.80rem',
                     fontWeight: 800,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
+                    gap: '8px',
+                    boxShadow: '0 2px 8px rgba(6, 78, 59, 0.25)',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  <Sparkles size={14} />
-                  <span>Change or Upgrade Plan</span>
+                  <Sparkles size={15} />
+                  <span>Upgrade / Change Plan</span>
                 </button>
 
                 {autoRenewEnabled && !isComplimentary && (
@@ -776,137 +787,217 @@ export default function BillingView({
                     type="button"
                     onClick={() => setShowAutoRenewModal(true)}
                     style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E8F0',
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
                       background: '#FFFFFF',
-                      color: '#64748B',
-                      fontSize: '0.72rem',
+                      color: '#475569',
+                      fontSize: '0.78rem',
                       fontWeight: 700,
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     Manage Auto-Renew
                   </button>
                 )}
               </div>
+
+              <button
+                type="button"
+                onClick={() => onNavigate ? onNavigate('support') : window.open('https://wa.me/919876543210', '_blank')}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  color: '#64748B',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <HelpCircle size={14} color="#064E3B" />
+                <span>Billing Help & FAQs</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 2. PLAN CAPACITY & USAGE (CLEAN 4-METRIC STRIP) */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            border: '1px solid #EAE5DF',
+            padding: '20px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Layers size={18} color="#064E3B" />
+                <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                  Plan Capacity & Usage
+                </h3>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                Active Limits for {currentPlanTier.toUpperCase()}
+              </span>
             </div>
 
-            {/* Plan Usage Section (Live Factual Quotas) */}
-            <div style={{
-              background: '#FFFFFF',
-              borderRadius: '16px',
-              border: '1px solid #EAE5DF',
-              padding: '18px 20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Layers size={18} color="#064E3B" />
-                  <h3 style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                    Plan Usage & Limits
-                  </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+              {/* Dishes */}
+              <div style={{ background: '#FAF8F5', borderRadius: '12px', padding: '14px 16px', border: '1px solid #EAE5DF' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 700, color: '#0F172A' }}>🍽️ Menu Dishes</span>
+                  <strong style={{ color: '#064E3B' }}>{dishesCount} / {maxDishes >= 9999 ? 'Unlimited' : maxDishes}</strong>
                 </div>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
-                  Based on {currentPlanTier.toUpperCase()} Plan Entitlements
+                <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    width: maxDishes >= 9999
+                      ? (dishesCount > 0 ? `${Math.min(30, Math.max(8, Math.round(dishesCount * 0.5)))}%` : '0%')
+                      : `${Math.min(100, Math.round((dishesCount / maxDishes) * 100))}%`,
+                    height: '100%',
+                    background: maxDishes >= 9999 ? 'linear-gradient(90deg, #10B981, #059669)' : '#064E3B',
+                    borderRadius: '3px'
+                  }} />
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div style={{ background: '#FAF8F5', borderRadius: '12px', padding: '14px 16px', border: '1px solid #EAE5DF' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 700, color: '#0F172A' }}>📂 Categories</span>
+                  <strong style={{ color: '#064E3B' }}>{categoriesCount} / {maxCategories >= 9999 ? 'Unlimited' : maxCategories}</strong>
+                </div>
+                <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    width: maxCategories >= 9999
+                      ? (categoriesCount > 0 ? `${Math.min(30, Math.max(8, Math.round(categoriesCount * 0.8)))}%` : '0%')
+                      : `${Math.min(100, Math.round((categoriesCount / maxCategories) * 100))}%`,
+                    height: '100%',
+                    background: maxCategories >= 9999 ? 'linear-gradient(90deg, #10B981, #059669)' : '#064E3B',
+                    borderRadius: '3px'
+                  }} />
+                </div>
+              </div>
+
+              {/* Combos */}
+              <div style={{ background: '#FAF8F5', borderRadius: '12px', padding: '14px 16px', border: '1px solid #EAE5DF' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 700, color: '#0F172A' }}>🍱 Combos & Deals</span>
+                  <strong style={{ color: combosCount >= maxCombos && maxCombos < 9999 ? '#DC2626' : '#064E3B' }}>
+                    {combosCount} / {maxCombos >= 9999 ? 'Unlimited' : maxCombos}
+                  </strong>
+                </div>
+                <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    width: maxCombos >= 9999
+                      ? (combosCount > 0 ? `${Math.min(30, Math.max(8, Math.round(combosCount * 4)))}%` : '0%')
+                      : `${Math.min(100, Math.round((combosCount / maxCombos) * 100))}%`,
+                    height: '100%',
+                    background: combosCount >= maxCombos && maxCombos < 9999 ? '#DC2626' : (maxCombos >= 9999 ? 'linear-gradient(90deg, #10B981, #059669)' : '#064E3B'),
+                    borderRadius: '3px'
+                  }} />
+                </div>
+              </div>
+
+              {/* Spaces / Tables */}
+              <div style={{ background: '#FAF8F5', borderRadius: '12px', padding: '14px 16px', border: '1px solid #EAE5DF' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 700, color: '#0F172A' }}>🪑 {terminology.spacePlural || 'Tables & Counters'}</span>
+                  <strong style={{ color: '#064E3B' }}>{tablesCount} / {maxTables >= 9999 ? 'Unlimited' : maxTables}</strong>
+                </div>
+                <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    width: maxTables >= 9999
+                      ? (tablesCount > 0 ? `${Math.min(30, Math.max(8, Math.round(tablesCount * 1.5)))}%` : '0%')
+                      : `${Math.min(100, Math.round((tablesCount / maxTables) * 100))}%`,
+                    height: '100%',
+                    background: maxTables >= 9999 ? 'linear-gradient(90deg, #10B981, #059669)' : '#064E3B',
+                    borderRadius: '3px'
+                  }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. WHAT'S INCLUDED (COMPACT COLLAPSIBLE ACCORDION) */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            border: '1px solid #EAE5DF',
+            padding: '20px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px',
+              marginBottom: showAllFeatures ? '16px' : 0
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck size={18} color="#064E3B" />
+                <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                  Included in Your Plan
+                </h3>
+                <span style={{ fontSize: '0.70rem', color: '#064E3B', background: '#ECFDF5', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>
+                  {planFeaturesList.filter(f => f.enabled).length} Features Active
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                {/* Dishes Usage */}
-                <div style={{ background: '#FAF8F5', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 700, color: '#0F172A' }}>Menu Dishes</span>
-                    <strong style={{ color: '#064E3B' }}>
-                      {dishesCount} / {maxDishes === 9999 ? 'Unlimited' : maxDishes}
-                    </strong>
-                  </div>
-                  <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: maxDishes === 9999 ? '100%' : `${Math.min(100, Math.round((dishesCount / maxDishes) * 100))}%`,
-                      height: '100%',
-                      background: '#064E3B',
-                      borderRadius: '3px'
-                    }} />
-                  </div>
-                </div>
-
-                {/* Categories Usage */}
-                <div style={{ background: '#FAF8F5', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 700, color: '#0F172A' }}>Categories</span>
-                    <strong style={{ color: '#064E3B' }}>
-                      {categoriesCount} / {maxCategories === 9999 ? 'Unlimited' : maxCategories}
-                    </strong>
-                  </div>
-                  <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: maxCategories === 9999 ? '100%' : `${Math.min(100, Math.round((categoriesCount / maxCategories) * 100))}%`,
-                      height: '100%',
-                      background: '#064E3B',
-                      borderRadius: '3px'
-                    }} />
-                  </div>
-                </div>
-
-                {/* Combos Usage */}
-                <div style={{ background: '#FAF8F5', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 700, color: '#0F172A' }}>Combos & Thalis</span>
-                    <strong style={{ color: combosCount >= maxCombos && maxCombos !== 9999 ? '#DC2626' : '#064E3B' }}>
-                      {combosCount} / {maxCombos === 9999 ? 'Unlimited' : maxCombos}
-                    </strong>
-                  </div>
-                  <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: maxCombos === 9999 ? '100%' : `${Math.min(100, Math.round((combosCount / maxCombos) * 100))}%`,
-                      height: '100%',
-                      background: combosCount >= maxCombos && maxCombos !== 9999 ? '#DC2626' : '#064E3B',
-                      borderRadius: '3px'
-                    }} />
-                  </div>
-                </div>
-
-                {/* Tables Usage */}
-                <div style={{ background: '#FAF8F5', borderRadius: '12px', padding: '12px 14px', border: '1px solid #EAE5DF' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 700, color: '#0F172A' }}>{terminology.spacePlural || 'Spaces'} & Counters</span>
-                    <strong style={{ color: '#064E3B' }}>
-                      {tablesCount} / {maxTables === 9999 ? 'Unlimited' : maxTables}
-                    </strong>
-                  </div>
-                  <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: maxTables === 9999 ? '100%' : `${Math.min(100, Math.round((tablesCount / maxTables) * 100))}%`,
-                      height: '100%',
-                      background: '#064E3B',
-                      borderRadius: '3px'
-                    }} />
-                  </div>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowAllFeatures(!showAllFeatures)}
+                style={{
+                  background: '#FAF8F5',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '8px',
+                  padding: '5px 12px',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  color: '#0F172A',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span>{showAllFeatures ? 'Hide Feature Details ▲' : 'View All Features ▼'}</span>
+              </button>
             </div>
 
-            {/* Plan Features Included Section (Canonical Capability Resolver) */}
-            <div style={{
-              background: '#FFFFFF',
-              borderRadius: '16px',
-              border: '1px solid #EAE5DF',
-              padding: '18px 20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShieldCheck size={18} color="#064E3B" />
-                  <h3 style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                    Included in your plan
-                  </h3>
-                </div>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
-                  Live Plan Matrix
+            {/* When Collapsed: Quick Highlights Chips */}
+            {!showAllFeatures && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
+                {planFeaturesList.filter(f => f.enabled).slice(0, 5).map((f, i) => (
+                  <span key={i} style={{
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    color: '#064E3B',
+                    background: '#ECFDF5',
+                    border: '1px solid #A7F3D0',
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}>
+                    <Check size={12} strokeWidth={2.5} />
+                    <span>{f.name}</span>
+                  </span>
+                ))}
+                <span style={{ fontSize: '0.72rem', color: '#64748B', alignSelf: 'center', paddingLeft: '4px' }}>
+                  +{planFeaturesList.filter(f => f.enabled).length - 5} more features enabled
                 </span>
               </div>
+            )}
 
+            {/* When Expanded: Full Grid */}
+            {showAllFeatures && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
                 {planFeaturesList.map((f, i) => (
                   <div
@@ -919,7 +1010,7 @@ export default function BillingView({
                       display: 'flex',
                       alignItems: 'flex-start',
                       gap: '10px',
-                      opacity: f.enabled ? 1 : 0.65
+                      opacity: f.enabled ? 1 : 0.6
                     }}
                   >
                     <div style={{
@@ -934,169 +1025,127 @@ export default function BillingView({
                       flexShrink: 0,
                       marginTop: '1px'
                     }}>
-                      {f.enabled ? <Check size={13} strokeWidth={2.5} /> : <Lock size={12} />}
+                      {f.enabled ? <Check size={12} strokeWidth={2.5} /> : <Lock size={11} />}
                     </div>
-                    <div style={{ minWidth: 0 }}>
+                    <div>
                       <div style={{ fontSize: '0.78rem', fontWeight: 800, color: f.enabled ? '#0F172A' : '#64748B' }}>
                         {f.name}
                       </div>
-                      <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginTop: '1px' }}>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '2px', lineHeight: 1.3 }}>
                         {f.benefit}
                       </span>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-
+            )}
           </div>
 
-          {/* RIGHT SIDE PANEL: BILLING SUMMARY + AUTO RENEW + SUPPORT */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-
-            {/* Card 1: Billing Summary */}
-            <div style={{
-              background: '#FFFFFF',
-              borderRadius: '16px',
-              border: '1px solid #EAE5DF',
-              padding: '18px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-            }}>
-              <h3 style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0F172A', margin: '0 0 12px 0' }}>
-                Billing Summary
-              </h3>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem' }}>
-                  <span style={{ color: '#64748B' }}>Current Plan:</span>
-                  <strong style={{ color: '#0F172A' }}>₹{formatPriceNumber(currentPlanPrice)} / mo</strong>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem' }}>
-                  <span style={{ color: '#64748B' }}>Next Payment Due:</span>
-                  <strong style={{ color: '#064E3B' }}>{formattedRenewalDate}</strong>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem' }}>
-                  <span style={{ color: '#64748B' }}>Payment Gateway:</span>
-                  <strong style={{ color: '#0F172A' }}>Cashfree AutoPay</strong>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem' }}>
-                  <span style={{ color: '#64748B' }}>Invoices Recorded:</span>
-                  <strong style={{ color: '#0F172A' }}>{paymentsList.length}</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: Auto-Renew Settings Control */}
-            <div style={{
-              background: '#FFFFFF',
-              borderRadius: '16px',
-              border: '1px solid #EAE5DF',
-              padding: '18px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <RefreshCw size={16} color="#064E3B" />
-                <h3 style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                  Subscription Auto-Renew
+          {/* 4. RECENT INVOICES & RECEIPTS EMBEDDED DIRECTLY */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            border: '1px solid #EAE5DF',
+            padding: '20px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={18} color="#064E3B" />
+                <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                  Recent Invoices & Receipts
                 </h3>
               </div>
-              <p style={{ fontSize: '0.74rem', color: '#475569', margin: '0 0 12px 0', lineHeight: 1.45 }}>
-                {autoRenewEnabled
-                  ? 'Your subscription will renew automatically at the end of each billing cycle.'
-                  : 'Your subscription will not renew after the current billing period.'}
-              </p>
-
-              {autoRenewEnabled && !isComplimentary ? (
+              {paymentsList.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setShowAutoRenewModal(true)}
+                  onClick={() => setActiveTab('invoices')}
                   style={{
-                    width: '100%',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    background: '#FAF8F5',
-                    color: '#475569',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Turn Off Auto-Renew
-                </button>
-              ) : !isComplimentary ? (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('plans')}
-                  style={{
-                    width: '100%',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
+                    background: 'none',
                     border: 'none',
-                    background: '#064E3B',
-                    color: '#FFFFFF',
-                    fontSize: '0.74rem',
+                    color: '#064E3B',
+                    fontSize: '0.76rem',
                     fontWeight: 800,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}
                 >
-                  Re-Enable Auto-Renew
+                  <span>View all ({paymentsList.length})</span>
+                  <ArrowRight size={13} />
                 </button>
-              ) : null}
+              )}
             </div>
 
-            {/* Card 3: Billing & Payment Support */}
-            <div style={{
-              background: 'linear-gradient(135deg, #FAF8F5 0%, #F4EFE6 100%)',
-              borderRadius: '16px',
-              border: '1px solid #EAE5DF',
-              padding: '18px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <HelpCircle size={18} color="#064E3B" />
-                <h3 style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                  Need help with billing?
-                </h3>
+            {paymentsList.length === 0 ? (
+              <div style={{ padding: '24px 16px', textAlign: 'center', background: '#FAF8F5', borderRadius: '12px', border: '1px solid #EAE5DF' }}>
+                <p style={{ fontSize: '0.78rem', color: '#64748B', margin: 0 }}>
+                  {isComplimentary
+                    ? '🛡️ This account currently has Complimentary VIP access granted by the platform. No invoices or charges are pending.'
+                    : 'No payment invoices generated yet. Your receipt will appear here upon completion of your billing cycle.'}
+                </p>
               </div>
-              <p style={{ fontSize: '0.74rem', color: '#475569', margin: '0 0 12px 0', lineHeight: 1.45 }}>
-                Contact TouchQR support for subscription or payment assistance.
-              </p>
-              <button
-                type="button"
-                onClick={() => onNavigate ? onNavigate('support') : window.open('https://wa.me/919876543210', '_blank')}
-                style={{
-                  width: '100%',
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: '#064E3B',
-                  color: '#FFFFFF',
-                  fontSize: '0.74rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(6, 78, 59, 0.2)'
-                }}
-              >
-                <span>Contact Billing Support</span>
-                <ArrowRight size={14} />
-              </button>
-            </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {paymentsList.slice(0, 3).map(pay => {
+                  const payDate = parseSafeDate(pay.paid_at || pay.created_at);
+                  return (
+                    <div
+                      key={pay.id}
+                      style={{
+                        background: '#FAF8F5',
+                        borderRadius: '12px',
+                        border: '1px solid #EAE5DF',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '10px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ECFDF5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <FileText size={16} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>Tax Invoice #INV-{pay.id}</strong>
+                          <div style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                            {payDate ? payDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent'} • ₹{formatPriceNumber(pay.amount)}
+                          </div>
+                        </div>
+                      </div>
 
+                      <button
+                        type="button"
+                        onClick={() => setSelectedInvoice(pay)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          background: '#FFFFFF',
+                          color: '#064E3B',
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Printer size={13} />
+                        <span>Print / View</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* =========================================================================
-          4. TAB CONTENT: ALL PLANS & UPGRADE
-         ========================================================================= */}
       {activeTab === 'plans' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Header Note */}
@@ -1132,10 +1181,8 @@ export default function BillingView({
           }}>
             {masterPlans.map(plan => {
               const isCurrent = plan.key === currentPlanTier;
-              const isUpgrade = (
-                (currentPlanTier === 'basic' && (plan.key === 'pro' || plan.key === 'enterprise')) ||
-                (currentPlanTier === 'pro' && plan.key === 'enterprise')
-              );
+              const currentTierPrice = masterPlans.find(p => p.key === currentPlanTier)?.price || Number(restaurantInfo?.plan_price) || Number(subData?.amount) || getPlanDetails(currentPlanTier)?.price || 0;
+              const isUpgrade = !isCurrent && Number(plan.price) > Number(currentTierPrice);
 
               return (
                 <div
@@ -1190,28 +1237,78 @@ export default function BillingView({
                       <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}> / month</span>
                     </div>
 
-                    {/* Features checklist */}
+                    {/* Features checklist (Vertical-Tailored) */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
-                        <Check size={14} color="#059669" strokeWidth={2.5} />
-                        <span><strong>{plan.max_combos === 9999 ? 'Unlimited' : plan.max_combos}</strong> Combos & Deals</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
-                        <Check size={14} color="#059669" strokeWidth={2.5} />
-                        <span><strong>{plan.max_tables === 9999 ? 'Unlimited' : plan.max_tables}</strong> {terminology.spacePlural || 'Spaces'} & Counters</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
-                        {plan.whatsapp_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
-                        <span style={{ color: plan.whatsapp_ordering_enabled ? '#334155' : '#94A3B8' }}>WhatsApp Direct Ordering</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
-                        {plan.direct_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
-                        <span style={{ color: plan.direct_ordering_enabled ? '#334155' : '#94A3B8' }}>Direct Digital QR Ordering</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
-                        {plan.kds_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
-                        <span style={{ color: plan.kds_enabled ? '#334155' : '#94A3B8' }}>Kitchen & Dispatch Display (KDS)</span>
-                      </div>
+                      {isHotel ? (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            <Check size={14} color="#059669" strokeWidth={2.5} />
+                            <span><strong>{plan.max_rooms === 9999 ? 'Unlimited' : plan.max_rooms}</strong> Guest Rooms & Suites</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            <Check size={14} color="#059669" strokeWidth={2.5} />
+                            <span>In-Room QR Directory & Amenities</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.direct_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.direct_ordering_enabled ? '#334155' : '#94A3B8' }}>In-Room Guest Food Ordering</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.direct_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.direct_ordering_enabled ? '#334155' : '#94A3B8' }}>Room Service & Butler Calls</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.kds_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.kds_enabled ? '#334155' : '#94A3B8' }}>Kitchen & Pantry KDS Display</span>
+                          </div>
+                        </>
+                      ) : isCinema ? (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            <Check size={14} color="#059669" strokeWidth={2.5} />
+                            <span><strong>{plan.max_screens === 9999 ? 'Unlimited' : plan.max_screens}</strong> Audi Screen{plan.max_screens > 1 ? 's' : ''} · <strong>{plan.max_seats === 9999 ? 'Unlimited' : plan.max_seats}</strong> Seats</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            <Check size={14} color="#059669" strokeWidth={2.5} />
+                            <span>Concessions & Canteen QR Menu</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.direct_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.direct_ordering_enabled ? '#334155' : '#94A3B8' }}>In-Seat Direct Delivery (Row + Seat QR)</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.direct_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.direct_ordering_enabled ? '#334155' : '#94A3B8' }}>Interval Rush Fast Checkout</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.kds_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.kds_enabled ? '#334155' : '#94A3B8' }}>Concessions Live KDS Display</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            <Check size={14} color="#059669" strokeWidth={2.5} />
+                            <span><strong>{plan.max_tables === 9999 ? 'Unlimited' : plan.max_tables}</strong> Dining Tables</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            <Check size={14} color="#059669" strokeWidth={2.5} />
+                            <span><strong>{plan.max_combos === 9999 ? 'Unlimited' : plan.max_combos}</strong> Combos & Thali Deals</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.whatsapp_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.whatsapp_ordering_enabled ? '#334155' : '#94A3B8' }}>WhatsApp Direct Ordering</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.direct_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.direct_ordering_enabled ? '#334155' : '#94A3B8' }}>Direct Table QR Ordering</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.kds_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.kds_enabled ? '#334155' : '#94A3B8' }}>Kitchen Display Screen (KDS)</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -1276,163 +1373,6 @@ export default function BillingView({
 
       {/* =========================================================================
           5. TAB CONTENT: PAYMENT HISTORY
-         ========================================================================= */}
-      {activeTab === 'history' && (
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #EAE5DF',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          {/* Header */}
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #EAE5DF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h2 style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                Payment History
-              </h2>
-              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                All recorded SaaS subscription payments and charges
-              </span>
-            </div>
-            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#064E3B', background: '#ECFDF5', padding: '3px 8px', borderRadius: '6px' }}>
-              {paymentsList.length} Records Found
-            </span>
-          </div>
-
-          {/* Desktop Table View */}
-          <div className="billing-desktop-table">
-            {paymentsList.length === 0 ? (
-              <div style={{ padding: '48px 20px', textAlign: 'center' }}>
-                <CreditCard size={28} color="#94A3B8" style={{ margin: '0 auto 8px auto' }} />
-                <h3 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
-                  No payments yet
-                </h3>
-                <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>
-                  Your payment receipts will appear here after your first subscription billing cycle.
-                </p>
-              </div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ background: '#FAF8F5', borderBottom: '1px solid #EAE5DF' }}>
-                    <th style={{ padding: '10px 18px', fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>Date</th>
-                    <th style={{ padding: '10px 14px', fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>Invoice #</th>
-                    <th style={{ padding: '10px 14px', fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>Plan</th>
-                    <th style={{ padding: '10px 14px', fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>Amount</th>
-                    <th style={{ padding: '10px 14px', fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>Payment Method</th>
-                    <th style={{ padding: '10px 14px', fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>Status</th>
-                    <th style={{ padding: '10px 18px', fontSize: '0.70rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', textAlign: 'right' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paymentsList.map(pay => {
-                    const payDate = parseSafeDate(pay.paid_at || pay.created_at);
-                    const isSuccess = pay.status === 'SUCCESS' || pay.status === 'success' || pay.status === 'paid';
-                    return (
-                      <tr key={pay.id} style={{ borderBottom: '1px solid #F1F5F9', background: '#FFFFFF' }}>
-                        <td style={{ padding: '12px 18px', fontSize: '0.76rem', color: '#0F172A', fontWeight: 700 }}>
-                          {payDate ? payDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent'}
-                        </td>
-                        <td style={{ padding: '12px 14px', fontSize: '0.74rem', color: '#475569', fontWeight: 800 }}>
-                          INV-{pay.id}
-                        </td>
-                        <td style={{ padding: '12px 14px', fontSize: '0.74rem', color: '#0F172A', fontWeight: 800 }}>
-                          {currentPlanTier.toUpperCase()} Plan
-                        </td>
-                        <td style={{ padding: '12px 14px', fontSize: '0.82rem', color: '#064E3B', fontWeight: 900 }}>
-                          ₹{formatPriceNumber(pay.amount)}
-                        </td>
-                        <td style={{ padding: '12px 14px', fontSize: '0.72rem', color: '#64748B' }}>
-                          {pay.gateway ? `Cashfree (${pay.gateway.toUpperCase()})` : 'AutoPay Mandate'}
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <span style={{
-                            fontSize: '0.68rem',
-                            fontWeight: 800,
-                            color: isSuccess ? '#064E3B' : '#DC2626',
-                            background: isSuccess ? '#ECFDF5' : '#FEE2E2',
-                            padding: '2px 6px',
-                            borderRadius: '4px'
-                          }}>
-                            {isSuccess ? 'Paid' : (pay.status || 'Pending')}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 18px', textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedInvoice(pay)}
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              border: '1px solid #E2E8F0',
-                              background: '#FAF8F5',
-                              color: '#064E3B',
-                              fontSize: '0.72rem',
-                              fontWeight: 800,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            View Invoice
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-
-          {/* Mobile Cards View */}
-          <div className="billing-mobile-cards" style={{ flexDirection: 'column', gap: '10px', padding: '12px' }}>
-            {paymentsList.length === 0 ? (
-              <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.74rem', color: '#64748B', margin: 0 }}>No payments recorded yet.</p>
-              </div>
-            ) : (
-              paymentsList.map(pay => {
-                const payDate = parseSafeDate(pay.paid_at || pay.created_at);
-                const isSuccess = pay.status === 'SUCCESS' || pay.status === 'success' || pay.status === 'paid';
-                return (
-                  <div key={pay.id} style={{ background: '#FAF8F5', borderRadius: '12px', border: '1px solid #EAE5DF', padding: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <strong style={{ fontSize: '0.80rem', color: '#0F172A' }}>INV-{pay.id}</strong>
-                      <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#064E3B' }}>₹{formatPriceNumber(pay.amount)}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.70rem', color: '#64748B', marginBottom: '8px' }}>
-                      <span>{payDate ? payDate.toLocaleDateString('en-IN') : 'Recent'}</span>
-                      <span style={{ color: isSuccess ? '#059669' : '#DC2626', fontWeight: 800 }}>{isSuccess ? 'Paid' : 'Pending'}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedInvoice(pay)}
-                      style={{
-                        width: '100%',
-                        minHeight: '44px',
-                        borderRadius: '8px',
-                        border: '1px solid #E2E8F0',
-                        background: '#FFFFFF',
-                        color: '#064E3B',
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      View Invoice Details
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          6. TAB CONTENT: INVOICES
          ========================================================================= */}
       {activeTab === 'invoices' && (
         <div style={{

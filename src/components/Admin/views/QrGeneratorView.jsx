@@ -51,7 +51,7 @@ export default function QrGeneratorView({
   const rawService = String(settingsForm?.service_model || restaurantInfo?.service_model || '').trim().toLowerCase();
   const effectiveBiz = String(profile?.business_type || rawBiz || 'restaurant').trim().toLowerCase();
   const effectiveService = String(profile?.service_model || rawService || 'dine_in').trim().toLowerCase();
-  const isCinema = effectiveBiz === 'cinema_theatre' || effectiveBiz === 'cinema' || rawBiz === 'cinema_theatre' || rawBiz === 'cinema' || effectiveService === 'cinema' || effectiveService === 'seat_service' || rawService === 'cinema' || rawService === 'seat_service' || Boolean(capabilities?.cinema_ordering_enabled);
+  const isCinema = effectiveBiz === 'cinema_theatre' || effectiveBiz === 'cinema' || rawBiz === 'cinema_theatre' || rawBiz === 'cinema' || effectiveService === 'cinema' || effectiveService === 'seat_service' || rawService === 'cinema' || rawService === 'seat_service';
   const isHotel = effectiveBiz === 'hotel_resort' || effectiveBiz === 'hotel' || rawBiz === 'hotel_resort' || rawBiz === 'hotel' || effectiveService === 'hotel' || effectiveService === 'in_room_dining' || rawService === 'hotel' || rawService === 'in_room_dining';
 
   // Appearance & Customization State
@@ -164,7 +164,7 @@ export default function QrGeneratorView({
       }
     } else {
       // Dining Tables: 1 .. total_tables
-      const tablesCount = Math.max(0, Number(settingsForm?.total_tables ?? restaurantInfo?.total_tables ?? 0));
+      const tablesCount = Math.max(0, Number(settingsForm?.total_tables ?? restaurantInfo?.total_tables ?? totalTablesCount ?? 0));
       for (let i = 1; i <= tablesCount; i++) {
         const numStr = String(i);
         spaces.push({
@@ -243,6 +243,8 @@ export default function QrGeneratorView({
   }, [
     isCinema, 
     isHotel,
+    totalTablesCount,
+    effectiveBiz,
     cinemaSeats, 
     settingsForm?.total_tables, 
     settingsForm?.total_cabins, 

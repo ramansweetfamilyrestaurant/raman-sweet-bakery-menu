@@ -40,6 +40,8 @@ import {
   initializeArchivalSchema,
   serializeCanonicalJsonl
 } from '../services/auditLogArchivalService.js';
+import { isCiTestMode } from './testDbGuard.js';
+import pg from 'pg';
 
 console.log('======================================================================');
 console.log('🌐 TOUCHQR AUDIT ARCHIVES HTTP INTEGRATION TEST SUITE');
@@ -61,6 +63,21 @@ async function test(name, fn) {
 }
 
 async function run() {
+  const probePool = new pg.Pool({ connectionString: LOCAL_TEST_URL, connectionTimeoutMillis: 1500 });
+  try {
+    await probePool.query('SELECT 1;');
+    await probePool.end();
+  } catch (probeErr) {
+    await probePool.end().catch(() => {});
+    if (probeErr.code === 'ECONNREFUSED' || probeErr.code === 'EACCES' || (probeErr.message && (probeErr.message.includes('ECONNREFUSED') || probeErr.message.includes('EACCES')))) {
+      if (!isCiTestMode()) {
+        console.log('⚠️  [NOT RUN] Local PostgreSQL (127.0.0.1:5432) is not reachable. Skipping superadmin audit archives HTTP test suite.');
+        process.exit(0);
+      }
+    }
+    throw probeErr;
+  }
+
   await initDb();
   await initializeArchivalSchema(query);
 

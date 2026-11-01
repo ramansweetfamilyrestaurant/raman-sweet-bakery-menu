@@ -190,6 +190,36 @@ const suites = [
     name: 'Audit Log Archival Migration Infrastructure & Invariants',
     file: 'server/tests/audit_log_archival_migration.test.js',
     requiresDb: true
+  },
+  {
+    name: 'Vertical Quotas & Hard Limits Controls',
+    file: 'server/tests/vertical_limits_and_controls.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'Landing Page & Live Demo Resilience',
+    file: 'server/tests/landing_page_audit.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'A-to-Z Deep Multi-Vertical Lifecycle Audit',
+    file: 'server/tests/atoz_deep_vertical_audit.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'Multi-Industry SaaS Plans & Feature Matrix',
+    file: 'server/tests/multi_industry_vertical_and_plans.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'Thermal Printer, Analytics & AI Review System',
+    file: 'server/tests/printer_and_analytics_audit.test.js',
+    requiresDb: true
+  },
+  {
+    name: 'Admin Dashboard Comprehensive Multi-Tenant Integration',
+    file: 'server/tests/admin_dashboard_comprehensive.test.js',
+    requiresDb: true
   }
 ];
 

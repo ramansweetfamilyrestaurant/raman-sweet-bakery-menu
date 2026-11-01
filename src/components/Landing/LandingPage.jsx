@@ -40,6 +40,7 @@ export default function LandingPage({
   onSubmitLogin = () => {},
   onSubmitResetPassword = () => {}
 }) {
+  const [selectedIndustry, setSelectedIndustry] = React.useState('restaurant'); // 'restaurant' | 'hotel' | 'cinema'
   const [platformLogoUrl, setPlatformLogoUrl] = React.useState(() => {
     let cached = '';
     try { cached = localStorage.getItem('touchqr_platform_logo_url') || ''; } catch {}
@@ -117,11 +118,16 @@ export default function LandingPage({
       <Pricing 
         publicPlans={publicPlans} 
         trialDays={trialDays} 
+        selectedIndustry={selectedIndustry}
+        setSelectedIndustry={setSelectedIndustry}
         onSelectPlan={(key) => handleStartTrial(key)} 
       />
 
       {/* Plan Feature Comparison Table */}
-      <Comparison />
+      <Comparison 
+        selectedIndustry={selectedIndustry}
+        onSelectIndustry={setSelectedIndustry}
+      />
 
       {/* Accordion FAQ */}
       <FAQ trialDays={trialDays} />

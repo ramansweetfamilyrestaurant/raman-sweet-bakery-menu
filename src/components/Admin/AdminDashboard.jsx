@@ -77,8 +77,9 @@ export default function AdminDashboard({
   const [initialSetupDrawer, setInitialSetupDrawer] = useState(null);
   const [categories, setCategories] = useState(() => getInitialAdminState('categories', []));
   const [dishes, setDishes] = useState(() => getInitialAdminState('dishes', []));
-  const [announcements, setAnnouncements] = useState([]);
-  const [dismissedNotice, setDismissedNotice] = useState(false);
+  const [announcements, setAnnouncements] = useState(() => { try { const cached = localStorage.getItem('touchqr_cached_announcements'); return cached ? JSON.parse(cached) : []; } catch { return []; } });
+  const [dismissedNoticeIds, setDismissedNoticeIds] = useState(() => { try { const raw = localStorage.getItem('touchqr_dismissed_notice_ids'); if (raw) return JSON.parse(raw); const legacy = localStorage.getItem('touchqr_dismissed_notice_id'); return legacy ? [String(legacy)] : []; } catch { return []; } });
+  const [dismissingNoticeId, setDismissingNoticeId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCatFilter, setSelectedCatFilter] = useState('all');
@@ -92,7 +93,7 @@ export default function AdminDashboard({
   // Live Orders (KOT) & Analytics State
   const [orders, setOrders] = useState(() => getInitialAdminState('orders', []));
   const [serviceRequests, setServiceRequests] = useState([]);
-  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState(() => getInitialAdminState('analytics', null));
   const [billOrderModal, setBillOrderModal] = useState(null);
   const [acceptRoutingModal, setAcceptRoutingModal] = useState(null); // { order, show: true }
   const [isRoutingSubmitting, setIsRoutingSubmitting] = useState(false);
@@ -110,7 +111,7 @@ export default function AdminDashboard({
   const [toastMessage, setToastMessage] = useState('');
 
   const [billingModal, setBillingModal] = useState(null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(() => getInitialAdminState('subscription_status', null));
 
   // Settings Accordion Folders State
   const [openSettingsSections, setOpenSettingsSections] = useState({
@@ -495,6 +496,10 @@ export default function AdminDashboard({
         return mergedOrders;
       });
       try {
+        const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+        if (currentSlug) {
+          localStorage.setItem(`admin_cache_${currentSlug}_orders`, JSON.stringify(mergedOrders));
+        }
         localStorage.setItem('admin_cache_orders', JSON.stringify(mergedOrders));
       } catch (e) { }
       setServiceRequests(safeReqs);
@@ -1801,6 +1806,8 @@ export default function AdminDashboard({
         if (safeDishes.length > 0) localStorage.setItem(`admin_cache_${currentSlug}_dishes`, JSON.stringify(safeDishes));
         if (infoData) localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(infoData));
         if (safeCombos.length > 0) localStorage.setItem(`admin_cache_${currentSlug}_combos`, JSON.stringify(safeCombos));
+        if (analyticsResp) localStorage.setItem(`admin_cache_${currentSlug}_analytics`, JSON.stringify(analyticsResp));
+        if (subStatusData) localStorage.setItem(`admin_cache_${currentSlug}_subscription_status`, JSON.stringify(subStatusData));
       }
 
       setSubscriptionStatus(subStatusData || null);
@@ -1888,17 +1895,52 @@ export default function AdminDashboard({
       setCategories(currentSlug ? getInitialAdminState('categories', []) : []);
       setDishes(currentSlug ? getInitialAdminState('dishes', []) : []);
       setCombos(currentSlug ? getInitialAdminState('combos', []) : []);
-      setOrders([]);
-      setAnalyticsData(null);
-      setSubscriptionStatus(null);
+      setOrders(currentSlug ? getInitialAdminState('orders', []) : []);
+      setAnalyticsData(currentSlug ? getInitialAdminState('analytics', null) : null);
+      setSubscriptionStatus(currentSlug ? getInitialAdminState('subscription_status', null) : null);
       setSettingsForm({});
     }
 
     loadData();
     fetchAnnouncements().then(data => {
-      if (Array.isArray(data)) setAnnouncements(data);
+      if (Array.isArray(data)) { setAnnouncements(data); try { localStorage.setItem('touchqr_cached_announcements', JSON.stringify(data)); } catch {} }
     }).catch(() => { });
   }, [token, propSlug]);
+
+  // 📢 Real-Time Platform Broadcast Sync (Cross-Tab BroadcastChannel + Tab Focus + 45s Polling)
+  useEffect(() => {
+    const refreshAnnouncements = () => {
+      fetchAnnouncements().then(data => {
+        if (Array.isArray(data)) {
+          setAnnouncements(data);
+          try { localStorage.setItem('touchqr_cached_announcements', JSON.stringify(data)); } catch {}
+        }
+      }).catch(() => { });
+    };
+
+    const pollTimer = setInterval(refreshAnnouncements, 45000);
+    window.addEventListener('focus', refreshAnnouncements);
+
+    let bc = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bc = new BroadcastChannel('touchqr_broadcast_channel');
+        bc.onmessage = (event) => {
+          if (event.data?.type === 'ANNOUNCEMENTS_UPDATED') {
+            refreshAnnouncements();
+          }
+        };
+      }
+    } catch {}
+
+    return () => {
+      clearInterval(pollTimer);
+      window.removeEventListener('focus', refreshAnnouncements);
+      if (bc) {
+        try { bc.close(); } catch {}
+      }
+    };
+  }, []);
 
   const handleToggleDish = async (id, nextAvailable) => {
     try {
@@ -2809,152 +2851,6 @@ export default function AdminDashboard({
       `}</style>
 
 
-      {/* 📢 Global System Announcement Banner */}
-      {announcements.length > 0 && !dismissedNotice && (
-        <div style={{
-          background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)',
-          color: '#E0E7FF',
-          padding: '10px 16px',
-          fontSize: '0.82rem',
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
-          borderBottom: '1px solid #6366F1'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Megaphone size={16} color="#FBBF24" />
-            <span><strong>Platform Notice:</strong> {announcements[0].message}</span>
-          </div>
-          <button
-            onClick={() => setDismissedNotice(true)}
-            style={{
-              background: 'rgba(255, 255, 255, 0.15)',
-              border: 'none',
-              color: '#FFFFFF',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '4px',
-              borderRadius: '50%',
-              transition: 'all 0.2s ease'
-            }}
-            title="Dismiss Notice"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
-      {/* 🔔 1. First-Time Full Width Sound Onboarding Banner */}
-      {!isAudioReady && !hasSoundSetupCompleted && !audioBannerDismissed && (
-        <div style={{
-          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-          color: '#FFFFFF',
-          padding: '10px 16px',
-          borderBottom: '2px solid #F59E0B',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '10px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '240px' }}>
-            <span style={{ fontSize: '1.4rem' }}>🔔</span>
-            <div>
-              <strong style={{ fontSize: '0.88rem', color: '#FBBF24', display: 'block' }}>
-                Enable Alert Sounds
-              </strong>
-              <span style={{ fontSize: '0.76rem', color: '#94A3B8', fontWeight: 600 }}>
-                Enable sound alerts for orders, kitchen, and staff service notifications.
-              </span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              onClick={handleEnableSound}
-              style={{
-                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                color: '#FFFFFF',
-                border: 'none',
-                padding: '7px 16px',
-                borderRadius: '9999px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(245,158,11,0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              🔔 Enable
-            </button>
-            <button
-              onClick={handleDismissAudioBanner}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#64748B',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                padding: '4px 8px'
-              }}
-              title="Dismiss"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ⏳ Trial Expiry Warning Banner (3 Days Remaining) */}
-      {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
-        <div style={{
-          background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-          borderBottom: '2px solid #F59E0B',
-          padding: '10px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '10px',
-          color: '#78350F'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '20px' }}>⏳</span>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
-              Your Free Pro Trial expires in <strong style={{ color: '#B45309', fontSize: '0.88rem' }}>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>! Renew now to prevent menu interruption.
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              style={{
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
-                border: 'none', fontWeight: 900, fontSize: '0.78rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16,185,129,0.4)', whiteSpace: 'nowrap'
-              }}
-            >
-              💳 Pay & Renew Instant
-            </button>
-            <a
-              href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, I want to renew/upgrade my business subscription plan for '${restaurantInfo?.name || 'my business'}'.`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                background: '#B45309', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
-                textDecoration: 'none', fontWeight: 900, fontSize: '0.78rem', boxShadow: '0 2px 8px rgba(180,83,9,0.3)', whiteSpace: 'nowrap'
-              }}
-            >
-              💬 WhatsApp Support
-            </a>
-          </div>
-        </div>
-      )}
-
       {/* 🔒 SUBSCRIPTION EXPIRED / TRIAL LOCKED OVERLAY */}
       {isExpired && (
         <div style={{
@@ -3118,6 +3014,336 @@ export default function AdminDashboard({
 
         {/* Right Main Dashboard Area */}
         <div className="adm-dashboard-container" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          {/* 📢 Global System Announcement Banner (Theme-Aware & Persistent Dismissal) */}
+          {(() => {
+            const currentNotice = announcements.find(a => {
+              const idKey = String(a.id || a.message);
+              if (dismissedNoticeIds.includes(idKey)) return false;
+              if (a.audience === 'trial' && !isTrial) return false;
+              if (a.audience === 'active' && isTrial) return false;
+              return true;
+            });
+            if (!currentNotice) return null;
+
+            const getAnnouncementTheme = (type) => {
+              switch (type) {
+                case 'warning':
+                  return {
+                    bg: 'linear-gradient(135deg, rgba(120, 53, 15, 0.96) 0%, rgba(146, 64, 14, 0.96) 100%)',
+                    border: 'rgba(245, 158, 11, 0.45)',
+                    textColor: '#FEF3C7',
+                    iconColor: '#FDE68A',
+                    badgeBg: 'rgba(245, 158, 11, 0.22)',
+                    badgeText: '#FDE68A',
+                    badgeBorder: 'rgba(245, 158, 11, 0.45)',
+                    badgeLabel: 'Maintenance Alert',
+                    dotColor: '#F59E0B'
+                  };
+                case 'success':
+                  return {
+                    bg: 'linear-gradient(135deg, rgba(6, 78, 59, 0.96) 0%, rgba(6, 95, 70, 0.96) 100%)',
+                    border: 'rgba(16, 185, 129, 0.45)',
+                    textColor: '#ECFDF5',
+                    iconColor: '#6EE7B7',
+                    badgeBg: 'rgba(16, 185, 129, 0.22)',
+                    badgeText: '#A7F3D0',
+                    badgeBorder: 'rgba(16, 185, 129, 0.45)',
+                    badgeLabel: 'New Feature Release',
+                    dotColor: '#10B981'
+                  };
+                case 'error':
+                  return {
+                    bg: 'linear-gradient(135deg, rgba(127, 29, 29, 0.96) 0%, rgba(153, 27, 27, 0.96) 100%)',
+                    border: 'rgba(239, 68, 68, 0.45)',
+                    textColor: '#FEF2F2',
+                    iconColor: '#FCA5A5',
+                    badgeBg: 'rgba(239, 68, 68, 0.22)',
+                    badgeText: '#FECACA',
+                    badgeBorder: 'rgba(239, 68, 68, 0.45)',
+                    badgeLabel: 'Critical System Alert',
+                    dotColor: '#EF4444'
+                  };
+                case 'info':
+                default:
+                  return {
+                    bg: 'linear-gradient(135deg, rgba(30, 27, 75, 0.96) 0%, rgba(49, 46, 129, 0.96) 100%)',
+                    border: 'rgba(99, 102, 241, 0.45)',
+                    textColor: '#EEF2FF',
+                    iconColor: '#FBBF24',
+                    badgeBg: 'rgba(99, 102, 241, 0.22)',
+                    badgeText: '#C7D2FE',
+                    badgeBorder: 'rgba(99, 102, 241, 0.45)',
+                    badgeLabel: 'Platform Announcement',
+                    dotColor: '#6366F1'
+                  };
+              }
+            };
+
+            const theme = getAnnouncementTheme(currentNotice.type);
+            const idToDismiss = String(currentNotice.id || currentNotice.message);
+            const isBeingDismissed = dismissingNoticeId === idToDismiss;
+
+            // Helper to render message with clickable links if URL present
+            const renderMessageContent = (text) => {
+              if (!text) return null;
+              const urlRegex = /(https?:\/\/[^\s]+)/g;
+              const parts = text.split(urlRegex);
+              return parts.map((part, index) => {
+                if (part.match(urlRegex)) {
+                  return (
+                    <a
+                      key={index}
+                      href={part}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: '#FFFFFF',
+                        fontWeight: 800,
+                        textDecoration: 'underline',
+                        textUnderlineOffset: '3px',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        marginLeft: '4px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      {part} ↗
+                    </a>
+                  );
+                }
+                return part;
+              });
+            };
+
+            return (
+              <div
+                style={{
+                  background: theme.bg,
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  color: theme.textColor,
+                  padding: '11px 20px',
+                  fontSize: '0.83rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '14px',
+                  borderBottom: `1px solid ${theme.border}`,
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.16)',
+                  position: 'relative',
+                  zIndex: 50,
+                  opacity: isBeingDismissed ? 0 : 1,
+                  transform: isBeingDismissed ? 'translateY(-12px)' : 'translateY(0)',
+                  maxHeight: isBeingDismissed ? '0px' : '100px',
+                  overflow: 'hidden',
+                  transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1, flexWrap: 'wrap' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Megaphone size={15} color={theme.iconColor} />
+                  </div>
+
+                  {/* Status Badge with Glowing Dot */}
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    background: theme.badgeBg,
+                    color: theme.badgeText,
+                    border: `1px solid ${theme.badgeBorder}`,
+                    padding: '3px 9px',
+                    borderRadius: '9999px',
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    flexShrink: 0
+                  }}>
+                    <span
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: theme.dotColor,
+                        boxShadow: `0 0 8px ${theme.dotColor}`,
+                        display: 'inline-block'
+                      }}
+                    />
+                    {theme.badgeLabel}
+                  </div>
+
+                  {/* Message Content */}
+                  <div style={{
+                    color: theme.textColor,
+                    wordBreak: 'break-word',
+                    lineHeight: 1.45,
+                    fontWeight: 600,
+                    flex: 1,
+                    minWidth: '220px'
+                  }}>
+                    {renderMessageContent(currentNotice.message)}
+                  </div>
+                </div>
+
+                {/* Dismiss Button with Smooth Micro-Interaction */}
+                <button
+                  onClick={() => {
+                    setDismissingNoticeId(idToDismiss);
+                    setTimeout(() => {
+                      const nextDismissed = [...dismissedNoticeIds, idToDismiss];
+                      setDismissedNoticeIds(nextDismissed);
+                      setDismissingNoticeId(null);
+                      try {
+                        localStorage.setItem('touchqr_dismissed_notice_ids', JSON.stringify(nextDismissed));
+                      } catch (e) {
+                        console.warn('Failed to save dismissed notice id:', e);
+                      }
+                    }, 280);
+                  }}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    transition: 'all 0.18s ease'
+                  }}
+                  title="Dismiss announcement"
+                  aria-label="Dismiss announcement"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* 🔔 1. First-Time Full Width Sound Onboarding Banner */}
+      {!isAudioReady && !hasSoundSetupCompleted && !audioBannerDismissed && (
+        <div style={{
+          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+          color: '#FFFFFF',
+          padding: '10px 16px',
+          borderBottom: '2px solid #F59E0B',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '240px' }}>
+            <span style={{ fontSize: '1.4rem' }}>🔔</span>
+            <div>
+              <strong style={{ fontSize: '0.88rem', color: '#FBBF24', display: 'block' }}>
+                Enable Alert Sounds
+              </strong>
+              <span style={{ fontSize: '0.76rem', color: '#94A3B8', fontWeight: 600 }}>
+                Enable sound alerts for orders, kitchen, and staff service notifications.
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={handleEnableSound}
+              style={{
+                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '7px 16px',
+                borderRadius: '9999px',
+                fontWeight: 800,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(245,158,11,0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              🔔 Enable
+            </button>
+            <button
+              onClick={handleDismissAudioBanner}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#64748B',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                padding: '4px 8px'
+              }}
+              title="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ⏳ Trial Expiry Warning Banner (3 Days Remaining) */}
+      {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+          borderBottom: '2px solid #F59E0B',
+          padding: '10px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          color: '#78350F'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '20px' }}>⏳</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
+              Your Free Pro Trial expires in <strong style={{ color: '#B45309', fontSize: '0.88rem' }}>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>! Renew now to prevent menu interruption.
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              style={{
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
+                border: 'none', fontWeight: 900, fontSize: '0.78rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16,185,129,0.4)', whiteSpace: 'nowrap'
+              }}
+            >
+              💳 Pay & Renew Instant
+            </button>
+            <a
+              href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, I want to renew/upgrade my business subscription plan for '${restaurantInfo?.name || 'my business'}'.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: '#B45309', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
+                textDecoration: 'none', fontWeight: 900, fontSize: '0.78rem', boxShadow: '0 2px 8px rgba(180,83,9,0.3)', whiteSpace: 'nowrap'
+              }}
+            >
+              💬 WhatsApp Support
+            </a>
+          </div>
+        </div>
+      )}
+
           <AdminHeader
             restaurantInfo={restaurantInfo}
             username={username}
@@ -3568,6 +3794,7 @@ export default function AdminDashboard({
             pendingOrdersCount={orders.filter(o => o.status === 'pending').length}
             analyticsEnabled={isAnalyticsEnabled}
             ordersEnabled={isDirectOrderingEnabled}
+            restaurantInfo={restaurantInfo}
           />
         </div>
       </div>

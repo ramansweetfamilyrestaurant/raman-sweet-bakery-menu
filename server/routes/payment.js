@@ -60,7 +60,7 @@ router.get('/config-status', async (req, res) => {
 // Validates registration form inputs and initiates Cashfree Subscription Checkout BEFORE creating any database record!
 router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) => {
   try {
-    const { name, phone, owner_username, owner_password, plan_tier, owner_name, owner_email } = req.body;
+    const { name, phone, owner_username, owner_password, plan_tier, owner_name, owner_email, business_type, total_rooms, total_screens, total_seats, total_tables } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Restaurant Name is required!' });
@@ -113,8 +113,66 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
       id: 2,
       key: 'pro',
       name: 'Pro Luxury Plan',
-      price: 999
+      price: 999,
+      industry: 'restaurant',
+      max_tables: 100
     };
+
+    // 🛡️ Validate Plan Industry against Business Vertical
+    const cleanBizType = (business_type || '').trim().toLowerCase() || 'restaurant';
+    const planIndustry = (dbPlan.industry || 'restaurant').toLowerCase();
+    const bizCategory = resolveBusinessCategoryFromType ? resolveBusinessCategoryFromType(cleanBizType) : 'restaurant';
+    const expectedIndustry = (bizCategory === 'hotel' || cleanBizType === 'hotel_resort') 
+      ? 'hotel' 
+      : (bizCategory === 'cinema' || cleanBizType === 'cinema_theatre') 
+        ? 'cinema' 
+        : 'restaurant';
+
+    if (planIndustry !== expectedIndustry) {
+      return res.status(400).json({
+        error: 'plan_industry_mismatch',
+        message: `Plan '${dbPlan.name}' (${planIndustry}) does not match your business vertical '${cleanBizType}' (${expectedIndustry}). Please choose an appropriate plan.`
+      });
+    }
+
+    // 🛡️ Validate Venue Capacities Against Plan Quotas
+    const reqTables = Number(total_tables) || 0;
+    const reqRooms = Number(total_rooms) || 0;
+    const reqScreens = Number(total_screens) || 0;
+    const reqSeats = Number(total_seats) || 0;
+
+    if (expectedIndustry === 'hotel') {
+      const maxRooms = dbPlan.max_rooms !== undefined && dbPlan.max_rooms !== null ? Number(dbPlan.max_rooms) : 9999;
+      if (reqRooms > maxRooms) {
+        return res.status(400).json({
+          error: 'capacity_exceeds_plan',
+          message: `Selected plan '${dbPlan.name}' supports up to ${maxRooms} rooms. Requested: ${reqRooms} rooms.`
+        });
+      }
+    } else if (expectedIndustry === 'cinema') {
+      const maxScreens = dbPlan.max_screens !== undefined && dbPlan.max_screens !== null ? Number(dbPlan.max_screens) : 9999;
+      const maxSeats = dbPlan.max_seats !== undefined && dbPlan.max_seats !== null ? Number(dbPlan.max_seats) : 9999;
+      if (reqScreens > maxScreens) {
+        return res.status(400).json({
+          error: 'capacity_exceeds_plan',
+          message: `Selected plan '${dbPlan.name}' supports up to ${maxScreens} screen(s). Requested: ${reqScreens} screens.`
+        });
+      }
+      if (reqSeats > maxSeats) {
+        return res.status(400).json({
+          error: 'capacity_exceeds_plan',
+          message: `Selected plan '${dbPlan.name}' supports up to ${maxSeats} seats. Requested: ${reqSeats} seats.`
+        });
+      }
+    } else {
+      const maxTables = dbPlan.max_tables !== undefined && dbPlan.max_tables !== null ? Number(dbPlan.max_tables) : 9999;
+      if (reqTables > maxTables) {
+        return res.status(400).json({
+          error: 'capacity_exceeds_plan',
+          message: `Selected plan '${dbPlan.name}' supports up to ${maxTables} dining tables. Requested: ${reqTables} tables.`
+        });
+      }
+    }
 
     const sysRows = await query("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
     const trialDays = Math.max(1, parseInt(sysRows[0]?.value || '16', 10));
@@ -156,7 +214,13 @@ router.post('/checkout-pre-register', registrationRateLimiter, async (req, res) 
       plan_tier: dbPlan.key,
       plan_price: dbPlan.price,
       trial_days: trialDays,
-      subscription_id: cfResult.subscription_id
+      subscription_id: cfResult.subscription_id,
+      business_type: cleanBizType,
+      service_model: resolveBusinessCategoryFromType(cleanBizType),
+      total_tables: total_tables !== undefined ? Number(total_tables) || 0 : 0,
+      total_rooms: total_rooms !== undefined ? Number(total_rooms) || 0 : 0,
+      total_screens: total_screens !== undefined ? Number(total_screens) || 0 : 0,
+      total_seats: total_seats !== undefined ? Number(total_seats) || 0 : 0
     };
 
     // Store registration payload in pending_registrations table with explicit columns & secure hash
@@ -329,8 +393,8 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
 
     const restoRes = await txQuery(`
       INSERT INTO restaurants (
-        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, total_tables, mandate_status, mandate_id, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email, subscription_type
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27) RETURNING id
+        name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, trial_started_at, trial_ends_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, total_tables, total_rooms, total_screens, total_seats, mandate_status, mandate_id, auto_debit_enabled, onboarding_completed, location_initialized, owner_name, owner_email, subscription_type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30) RETURNING id
     `, [
       regData.name, cleanSlug, regData.tagline || '100% Fresh & Authentic Food',
       '/images/default-logo.webp',
@@ -339,7 +403,12 @@ export async function finalizePendingRegistration(reg_id, inputSubId = null) {
       effectiveBiz,
       regCategory,
       regCategory,
-      1, 0, mandateStatus, targetSubId || null, autoDebitEnabled, false, false, regData.owner_name || '',
+      1,
+      Number(regData.total_tables) || 0,
+      Number(regData.total_rooms) || 0,
+      Number(regData.total_screens) || 0,
+      Number(regData.total_seats) || 0,
+      mandateStatus, targetSubId || null, autoDebitEnabled, false, false, regData.owner_name || '',
       regData.owner_email || null,
       subType
     ]);
@@ -1307,8 +1376,8 @@ router.post('/change-plan', authenticateToken, async (req, res) => {
     }
 
     // Only accept plan key - NEVER accept price/amount from frontend
-    const { plan } = req.body;
-    const targetPlanKey = (plan || '').toLowerCase().trim();
+    const planKeyInput = req.body.plan || req.body.plan_key || req.body.plan_tier;
+    const targetPlanKey = (planKeyInput || '').toLowerCase().trim();
 
     if (!targetPlanKey) {
       return res.status(400).json({ error: 'Plan key is required', message: 'Please specify a valid plan (basic, pro, enterprise).' });
@@ -1320,6 +1389,23 @@ router.post('/change-plan', authenticateToken, async (req, res) => {
 
     if (!targetPlan) {
       return res.status(400).json({ error: 'Invalid plan', message: `Plan '${targetPlanKey}' does not exist.` });
+    }
+
+    // 🛡️ Industry Vertical Plan Hopping Protection
+    const restoIndustryRows = await query('SELECT business_type, service_model FROM restaurants WHERE id = $1', [targetRestoId]);
+    const currentRestoForPlan = restoIndustryRows[0] || {};
+    const restoService = (currentRestoForPlan.service_model || '').toLowerCase();
+    const restoBiz = (currentRestoForPlan.business_type || '').toLowerCase();
+    const isHotel = restoService === 'hotel' || restoBiz === 'hotel_resort';
+    const isCinema = restoService === 'cinema' || restoService === 'seat_service' || restoBiz === 'cinema_theatre';
+    const tenantIndustry = isHotel ? 'hotel' : (isCinema ? 'cinema' : 'restaurant');
+
+    const planIndustry = (targetPlan.industry || 'restaurant').toLowerCase();
+    if (planIndustry !== tenantIndustry) {
+      return res.status(403).json({
+        error: 'industry_mismatch',
+        message: `Plan '${targetPlan.name}' belongs to the ${planIndustry} industry. Your venue is registered under ${tenantIndustry}. Please select a plan matching your industry.`
+      });
     }
 
     // Get current subscription

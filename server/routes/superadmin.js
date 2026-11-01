@@ -1,7 +1,9 @@
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb, purgeLocalR2DiskCache, withTransaction } from '../db.js';
+import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb, purgeLocalR2DiskCache, withTransaction, getDbType } from '../db.js';
 import { authenticateToken, clearSubStatusCache } from '../middleware/auth.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
 import { createCashfreeSubscriptionSession, getCashfreeConfigAsync } from '../services/cashfree.js';
@@ -11,6 +13,7 @@ import { resolveCanonicalSubscriptionState, isAuthoritativeComplimentaryTenant, 
 import { resolveBusinessCategoryFromType, resolveBusinessProfile } from '../config/businessTaxonomy.js';
 import { validateReplyInput, validateStatusTransition, VALID_STATUSES, VALID_PRIORITIES, VALID_CATEGORIES, normalizeCategory } from '../services/supportTicketService.js';
 import { fetchPlatformAuditLogs } from '../services/auditLogService.js';
+import { generateRestaurantQrSecret } from '../utils/qrSecurity.js';
 import auditArchivesRouter from './auditArchives.js';
 
 function getAppBaseUrl(req) {
@@ -38,9 +41,10 @@ function projectTenantSummary(r, sub, countMap, adminMap, planMap, paidSub = nul
   const matchedPlan = planMap ? planMap[tierKey] : null;
   const profile = resolveBusinessProfile(r || {});
 
+  const basePlanName = matchedPlan?.name || (r.plan_name || `${tierKey.toUpperCase()} Plan`);
   const effectivePlanName = isVip
-    ? 'Enterprise VIP Access'
-    : (matchedPlan?.name || (r.plan_name || `${(r.plan_tier || 'pro').toUpperCase()} Plan`));
+    ? (tierKey === "enterprise" ? "Enterprise VIP Access" : (basePlanName.includes("VIP") ? basePlanName : `${basePlanName} (VIP Access)`))
+    : basePlanName;
 
   const rawPrice = (r.plan_price !== undefined && r.plan_price !== null && r.plan_price !== '')
     ? Number(r.plan_price)
@@ -49,7 +53,7 @@ function projectTenantSummary(r, sub, countMap, adminMap, planMap, paidSub = nul
         : (matchedPlan ? Number(matchedPlan.price) : 999));
 
   const effectivePlanPrice = isVip ? 0 : (isNaN(rawPrice) ? 999 : rawPrice);
-  const effectivePlanTier = isVip ? 'enterprise' : tierKey;
+  const effectivePlanTier = tierKey;
   const effectiveStatus = isSuspended ? 'suspended' : canonicalState.status;
 
   const isVipSub = effectiveSub && (effectiveSub.subscription_type === 'ADMIN_GRANTED' || effectiveSub.gateway === 'admin_granted');
@@ -495,9 +499,14 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
           percentage: (entitlements.quotas.rooms && entitlements.quotas.rooms < 9999) ? Math.min(100, Math.round((Number(resto.total_rooms || 0) / entitlements.quotas.rooms) * 100)) : 0
         },
         seats: {
-          current: Number(resto.total_tables || 0),
+          current: Number(resto.total_seats || resto.total_tables || 0),
           limit: entitlements.quotas.seats,
-          percentage: (entitlements.quotas.seats && entitlements.quotas.seats < 9999) ? Math.min(100, Math.round((Number(resto.total_tables || 0) / entitlements.quotas.seats) * 100)) : 0
+          percentage: (entitlements.quotas.seats && entitlements.quotas.seats < 9999) ? Math.min(100, Math.round((Number(resto.total_seats || resto.total_tables || 0) / entitlements.quotas.seats) * 100)) : 0
+        },
+        screens: {
+          current: Number(resto.total_screens || 0),
+          limit: 9999,
+          percentage: 0
         },
         primarySpace: profile.service_model === 'hotel' ? 'rooms' : profile.service_model === 'cinema' ? 'seats' : 'tables',
         space_type: profile.service_model === 'hotel' ? 'rooms' : profile.service_model === 'cinema' ? 'seats' : 'tables',
@@ -544,6 +553,7 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
           return {
             total_tickets: parseInt(stats.total_tickets || 0, 10),
             active_tickets: parseInt(stats.active_tickets || 0, 10),
+            open_tickets: parseInt(stats.active_tickets || 0, 10),
             resolved_tickets: parseInt(stats.resolved_tickets || 0, 10),
             last_ticket_at: stats.last_ticket_at || null,
             recent_tickets: recentTickets || []
@@ -552,6 +562,7 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
           return {
             total_tickets: 0,
             active_tickets: 0,
+            open_tickets: 0,
             resolved_tickets: 0,
             last_ticket_at: null,
             recent_tickets: []
@@ -573,7 +584,8 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       name, slug, owner_username, owner_password, phone, address, tagline, 
       plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, 
       business_type, service_model, business_category, owner_email, gstin_number,
-      onboarding_mode
+      onboarding_mode, trial_days, total_tables, total_rooms, total_seats, total_screens,
+      owner_name, city, state, pincode, trade_license_number, fssai_lic_no
     } = req.body;
 
     if (!name || !slug || !owner_username || !owner_password) {
@@ -606,7 +618,8 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
     let expiryDate = plan_expires_at;
     if (!expiryDate) {
       if (isTrial) {
-        expiryDate = new Date(Date.now() + 16 * 24 * 60 * 60 * 1000).toISOString();
+        const tDays = parseInt(trial_days, 10);
+        expiryDate = new Date(Date.now() + (tDays > 0 ? tDays : 16) * 24 * 60 * 60 * 1000).toISOString();
       } else if (isVip) {
         expiryDate = null;
       } else {
@@ -631,10 +644,17 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
     // Atomic Transaction: restaurant + subscription + admin + audit log
     const createdTenant = await withTransaction(async (txQuery) => {
       // 1. Create Restaurant Entry
+      const effectiveMandateStatus = isVip ? 'admin_granted' : (isTrial ? 'pending' : 'active');
+      const trialStartedAt = isTrial ? new Date().toISOString() : null;
+      const trialEndsAt = isTrial ? expiryDate : null;
+      const generatedQrSecret = generateRestaurantQrSecret();
+
       const restoRes = await txQuery(`
         INSERT INTO restaurants (
-          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, owner_email, gstin_number, subscription_type, mandate_status, auto_debit_enabled
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id
+          name, slug, tagline, logo, phone, address, opening_hours, plan_tier, plan_price, plan_expires_at, whatsapp_number, theme_color, business_type, service_model, business_category, active, owner_email, gstin_number, subscription_type, mandate_status, auto_debit_enabled,
+          total_tables, total_rooms, total_seats, total_screens, trial_started_at, trial_ends_at, qr_secret,
+          owner_name, city, state, pincode, fssai_lic_no
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33) RETURNING id
       `, [
         name,
         cleanSlug,
@@ -655,8 +675,20 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
         owner_email || null,
         gstin_number || null,
         isVip ? 'ADMIN_GRANTED' : (isTrial ? 'TRIAL' : 'PAID'),
-        isVip ? 'admin_granted' : 'pending',
-        isVip ? 0 : 1
+        effectiveMandateStatus,
+        isVip ? 0 : 1,
+        total_tables !== undefined ? Number(total_tables) : 0,
+        total_rooms !== undefined ? Number(total_rooms) : 0,
+        total_seats !== undefined ? Number(total_seats) : 0,
+        total_screens !== undefined ? Number(total_screens) : 0,
+        trialStartedAt,
+        trialEndsAt,
+        generatedQrSecret,
+        owner_name || null,
+        city || null,
+        state || null,
+        pincode || null,
+        fssai_lic_no || trade_license_number || ''
       ]);
 
       const newRestoId = restoRes[0]?.id || restoRes.lastInsertRowid;
@@ -700,6 +732,10 @@ router.post('/restaurants', authenticateToken, requireSuperAdmin, async (req, re
       success: true,
       id: createdTenant.id,
       slug: createdTenant.slug,
+      name: name,
+      plan_tier: effectivePlanTier,
+      owner_username: owner_username,
+      subscription_type: isVip ? 'ADMIN_GRANTED' : (isTrial ? 'TRIAL' : 'PAID'),
       message: `Business '${name}' created and provisioned successfully with slug '/r/${createdTenant.slug}'!`
     });
   } catch (err) {
@@ -714,7 +750,8 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
     const { 
       name, slug, owner_username, owner_password, phone, address, tagline, 
       plan_tier, whatsapp_number, theme_color, business_type, service_model, 
-      owner_email, gstin_number, owner_name 
+      owner_email, gstin_number, owner_name,
+      total_tables, total_rooms, total_seats, total_screens
     } = req.body;
 
     if (!name || !name.trim()) {
@@ -751,7 +788,7 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
 
     const sysRows = await query("SELECT value FROM system_settings WHERE key = 'default_trial_days'");
     const canonicalTrialDays = sysRows.length > 0 && parseInt(sysRows[0].value, 10) ? parseInt(sysRows[0].value, 10) : 16;
-    const isTrial = (req.body.onboarding_mode === 'trial');
+    const isTrial = (req.body.onboarding_mode === 'trial' || req.body.onboarding_mode === 'cashfree_trial');
     const requestedTrialDays = parseInt(req.body.trial_days, 10);
     const trialDays = isTrial ? (requestedTrialDays > 0 ? requestedTrialDays : canonicalTrialDays) : 0;
     const trialEndISO = isTrial 
@@ -802,7 +839,11 @@ router.post('/checkout-business', authenticateToken, requireSuperAdmin, async (r
       subscription_id: cfResult.subscription_id,
       onboarding_mode: isTrial ? 'trial' : 'active',
       subscription_type: isTrial ? 'TRIAL' : 'PAID',
-      trial_days: trialDays
+      trial_days: trialDays,
+      total_tables: Number(total_tables || req.body.total_tables) || 0,
+      total_rooms: Number(total_rooms || req.body.total_rooms) || 0,
+      total_seats: Number(total_seats || req.body.total_seats) || 0,
+      total_screens: Number(total_screens || req.body.total_screens) || 0
     };
 
     const expiresAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
@@ -930,7 +971,20 @@ router.post('/restaurants/:id/exit-impersonation', authenticateToken, requireSup
 router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, custom_domain, owner_name, owner_email, business_type, service_model, business_category } = req.body;
+    const { 
+      name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, 
+      plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, 
+      direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, 
+      custom_domain, owner_name, owner_email, business_type, service_model, business_category,
+      total_tables, total_rooms, total_seats, total_screens
+    } = req.body;
+
+    // Fetch existing restaurant FIRST for audit comparison & avoid TDZ ReferenceError
+    const existingRestoRows = await query('SELECT * FROM restaurants WHERE id = $1', [id]);
+    if (!existingRestoRows || existingRestoRows.length === 0) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+    const currentResto = existingRestoRows[0];
 
     let cleanDomain = null;
     if (custom_domain !== undefined) {
@@ -967,11 +1021,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       }
     }
 
-    // Fetch existing restaurant for audit comparison
-    const existingRestoRows = await query('SELECT * FROM restaurants WHERE id = $1', [id]);
-    const currentResto = existingRestoRows[0] || {};
-
-    // Update restaurant info & Feature Control Matrix & Logo
+    // Update restaurant info & Feature Control Matrix & Capacities
     await query(`
       UPDATE restaurants
       SET name = $1, tagline = $2, logo = $3, phone = $4, address = $5, fssai_lic_no = $6,
@@ -982,8 +1032,12 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
           owner_email = CASE WHEN $18::boolean THEN $19 ELSE owner_email END,
           service_model = COALESCE($20, service_model),
           business_category = COALESCE($20, business_category),
-          business_type = COALESCE($21, business_type)
-      WHERE id = $22
+          business_type = COALESCE($21, business_type),
+          total_tables = COALESCE($22, total_tables),
+          total_rooms = COALESCE($23, total_rooms),
+          total_seats = COALESCE($24, total_seats),
+          total_screens = COALESCE($25, total_screens)
+      WHERE id = $26
     `, [
       name || currentResto.name,
       tagline !== undefined ? tagline : (currentResto.tagline || ''),
@@ -1006,8 +1060,29 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
       cleanCategory !== undefined ? cleanCategory : null,
       cleanBusinessType !== undefined ? cleanBusinessType : null,
+      total_tables !== undefined ? Number(total_tables) : null,
+      total_rooms !== undefined ? Number(total_rooms) : null,
+      total_seats !== undefined ? Number(total_seats) : null,
+      total_screens !== undefined ? Number(total_screens) : null,
       id
     ]);
+
+    // Keep active subscriptions table record in sync with edited plan / price, but do not overwrite
+    // preserved paid subscription if tenant has an active admin-granted VIP pass or if updating to VIP
+    const effectiveTier = (plan_tier !== undefined ? plan_tier : currentResto.plan_tier || 'pro').toLowerCase();
+    const isVipTier = effectiveTier.includes('vip') || currentResto.subscription_type === 'ADMIN_GRANTED';
+    if (!isVipTier && (plan_tier !== undefined || plan_price !== undefined)) {
+      const effectivePrice = plan_price !== undefined ? parseFloat(plan_price) : parseFloat(currentResto.plan_price || 0);
+      const targetPlanRows = await query('SELECT id FROM saas_plans WHERE LOWER(key) = $1 LIMIT 1', [effectiveTier]);
+      const targetPlanId = targetPlanRows.length > 0 ? targetPlanRows[0].id : null;
+      await query(`
+        UPDATE subscriptions 
+        SET amount = $1, 
+            plan_id = COALESCE($2, plan_id),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE restaurant_id = $3 AND status IN ('active', 'trialing')
+      `, [effectivePrice, targetPlanId, id]).catch(() => {});
+    }
 
     // Invalidate subscription status cache for immediate consistency
     clearSubStatusCache(id);
@@ -1049,8 +1124,17 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
 router.post('/restaurants/:id/grant-free-access', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { plan_key, plan_id, duration_days, valid_until, is_lifetime, notes, admin_notes } = req.body;
+    const { plan_key, plan_id, duration_days, valid_until, is_lifetime, notes, admin_notes, extend_mode } = req.body;
     const noteText = notes || admin_notes || 'Super Admin granted free sponsored access';
+
+    const restoRows = await query('SELECT * FROM restaurants WHERE id = $1', [id]);
+    if (!restoRows || restoRows.length === 0) {
+      return res.status(404).json({ error: 'Restaurant tenant not found' });
+    }
+    const currentResto = restoRows[0];
+    const currentSubRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC', [id]);
+    const { effectiveSub, vipSub } = resolveTenantSubscriptions(currentSubRows || [], currentResto);
+    const currentSub = vipSub || effectiveSub;
 
     let targetPlan = null;
     if (plan_id) {
@@ -1080,21 +1164,18 @@ router.post('/restaurants/:id/grant-free-access', authenticateToken, requireSupe
       expiryDate = new Date(valid_until).toISOString();
     } else if (duration_days) {
       const dDays = Math.max(1, parseInt(duration_days, 10) || 30);
-      expiryDate = new Date(Date.now() + dDays * 86400 * 1000).toISOString();
+      const currentExpTime = (currentResto?.plan_expires_at && !isNaN(new Date(currentResto.plan_expires_at).getTime()))
+        ? new Date(currentResto.plan_expires_at).getTime()
+        : null;
+      const baseTime = (extend_mode === 'extend' && currentExpTime && currentExpTime > Date.now())
+        ? currentExpTime
+        : Date.now();
+      expiryDate = new Date(baseTime + dDays * 86400 * 1000).toISOString();
     } else {
       expiryDate = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
     }
 
     const nowISO = new Date().toISOString();
-
-    const restoRows = await query('SELECT * FROM restaurants WHERE id = $1', [id]);
-    if (!restoRows || restoRows.length === 0) {
-      return res.status(404).json({ error: 'Restaurant tenant not found' });
-    }
-    const currentResto = restoRows[0];
-    const currentSubRows = await query('SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC', [id]);
-    const { effectiveSub, vipSub } = resolveTenantSubscriptions(currentSubRows || [], currentResto);
-    const currentSub = vipSub || effectiveSub;
 
     const previousSnapshot = {
       previous_plan_tier: currentResto?.plan_tier || 'pro',
@@ -1286,15 +1367,26 @@ router.delete('/restaurants/:id', authenticateToken, requireSuperAdmin, async (r
     const deletedSlug = targetResto[0]?.slug || '';
     const deletedName = targetResto[0]?.name || '';
 
-    // Cascade delete all restaurant child data
-    await query('DELETE FROM dishes WHERE restaurant_id = $1', [id]);
-    await query('DELETE FROM categories WHERE restaurant_id = $1', [id]);
-    await query('DELETE FROM combos WHERE restaurant_id = $1', [id]);
-    await query('DELETE FROM orders WHERE restaurant_id = $1', [id]);
-    await query('DELETE FROM service_requests WHERE restaurant_id = $1', [id]);
+    // Cascade delete all restaurant child data completely
+    await query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE restaurant_id = $1)', [id]).catch(() => {});
+    await query('DELETE FROM orders WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM service_requests WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM dishes WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM categories WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM combos WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM offer_items WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM offers WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM daily_sales_summaries WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM table_location_verifications WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM support_ticket_messages WHERE ticket_id IN (SELECT id FROM support_tickets WHERE restaurant_id = $1)', [id]).catch(() => {});
+    await query('DELETE FROM support_tickets WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM payments WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM subscriptions WHERE restaurant_id = $1', [id]).catch(() => {});
+    await query('DELETE FROM admins WHERE restaurant_id = $1', [id]).catch(() => {});
 
     // Permanently delete restaurant tenant & purge its URL slug
     await query('DELETE FROM restaurants WHERE id = $1', [id]);
+    clearSubStatusCache(id);
 
     await logAudit(id, 'superadmin', 'Delete Tenant', `Deleted tenant "${deletedName}" (slug: ${deletedSlug})`);
     res.json({ success: true, message: `Tenant "${deletedName}" (${deletedSlug}) deleted completely.` });
@@ -1318,13 +1410,17 @@ router.get('/announcements', authenticateToken, requireSuperAdmin, async (req, r
 // POST Create Global System Announcement
 router.post('/announcements', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { message, type } = req.body;
+    const { message, type, audience } = req.body;
     if (!message || !message.trim()) {
       return res.status(400).json({ error: 'Announcement message is required' });
     }
 
     // Optional: deactivate old active announcements if wanted or keep all
-    await query('INSERT INTO announcements (message, type, active) VALUES ($1, $2, 1)', [message.trim(), type || 'info']);
+    try {
+      await query('INSERT INTO announcements (message, type, audience, active) VALUES ($1, $2, $3, 1)', [message.trim(), type || 'info', audience || 'all']);
+    } catch {
+      await query('INSERT INTO announcements (message, type, active) VALUES ($1, $2, 1)', [message.trim(), type || 'info']);
+    }
     await logAudit(null, 'superadmin', 'Post Announcement', `Posted announcement: "${message.substring(0, 50)}..."`);
     res.json({ success: true, message: 'System announcement broadcasted successfully!' });
   } catch (err) {
@@ -1408,25 +1504,43 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
   try {
     const { 
       key, name, price, original_price, badge, description, 
-      whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, 
+      whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, google_reviews_enabled, 
       presence_verification_enabled, allowed_verification_modes,
-      theme_color, allowed_themes
+      theme_color, allowed_themes, industry, max_tables, max_rooms, max_screens, max_seats,
+      max_dishes, max_categories, max_combos, max_staff_accounts, order_retention_days,
+      modifiers_enabled, staff_roles_enabled, audio_alarm_enabled, order_status_whatsapp_enabled,
+      kds_enabled, bluetooth_kot_enabled, dual_printer_enabled, ai_review_enabled, stories_enabled,
+      gst_invoice_enabled, analytics_export_enabled, multi_language_enabled, watermark_removal_enabled,
+      custom_domain_enabled, amenities_booking_enabled, seat_runner_dispatch_enabled, interval_rush_mode_enabled
     } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: 'Plan name is required' });
 
     const cleanKey = (key || name.toLowerCase().replace(/[^a-z0-9]/g, '_')).trim();
 
-    const toBoolInt = (val) => (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
-    const wVal = toBoolInt(whatsapp_enabled);
+    const toBoolInt = (val, def = 1) => {
+      if (val === undefined || val === null) return def;
+      return (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
+    };
+    const wVal = toBoolInt(whatsapp_ordering_enabled !== undefined ? whatsapp_ordering_enabled : whatsapp_enabled, 1);
 
     await query(`
       INSERT INTO saas_plans (
         key, name, price, original_price, badge, description, 
         whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, 
         google_reviews_enabled, presence_verification_enabled, allowed_verification_modes,
-        theme_color, allowed_themes
+        theme_color, allowed_themes, industry, max_tables, max_rooms, max_screens, max_seats,
+        max_dishes, max_categories, max_combos, max_staff_accounts, order_retention_days,
+        modifiers_enabled, staff_roles_enabled, audio_alarm_enabled, order_status_whatsapp_enabled,
+        kds_enabled, bluetooth_kot_enabled, dual_printer_enabled, ai_review_enabled, stories_enabled,
+        gst_invoice_enabled, analytics_export_enabled, multi_language_enabled, watermark_removal_enabled,
+        custom_domain_enabled, amenities_booking_enabled, seat_runner_dispatch_enabled, interval_rush_mode_enabled
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10, $11, $12, $13)
+      VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+        $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41
+      )
     `, [
       cleanKey,
       name.trim(),
@@ -1435,12 +1549,40 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
       badge || '👑 CUSTOM',
       description || '',
       wVal,
-      toBoolInt(direct_ordering_enabled),
-      toBoolInt(google_reviews_enabled),
-      presence_verification_enabled !== undefined ? toBoolInt(presence_verification_enabled) : 1,
+      wVal,
+      toBoolInt(direct_ordering_enabled, 0),
+      toBoolInt(google_reviews_enabled, 1),
+      toBoolInt(presence_verification_enabled, 1),
       allowed_verification_modes || 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY',
       theme_color || 'gold',
-      allowed_themes || 'ALL'
+      allowed_themes || 'ALL',
+      industry || 'restaurant',
+      max_tables !== undefined ? parseInt(max_tables, 10) : 9999,
+      max_rooms !== undefined ? parseInt(max_rooms, 10) : 9999,
+      max_screens !== undefined ? parseInt(max_screens, 10) : 9999,
+      max_seats !== undefined ? parseInt(max_seats, 10) : 9999,
+      max_dishes !== undefined ? parseInt(max_dishes, 10) : 9999,
+      max_categories !== undefined ? parseInt(max_categories, 10) : 9999,
+      max_combos !== undefined ? parseInt(max_combos, 10) : 10,
+      max_staff_accounts !== undefined ? parseInt(max_staff_accounts, 10) : 9999,
+      order_retention_days !== undefined ? parseInt(order_retention_days, 10) : 365,
+      toBoolInt(modifiers_enabled, 1),
+      toBoolInt(staff_roles_enabled, 1),
+      toBoolInt(audio_alarm_enabled, 1),
+      toBoolInt(order_status_whatsapp_enabled, 1),
+      toBoolInt(kds_enabled, 1),
+      toBoolInt(bluetooth_kot_enabled, 1),
+      toBoolInt(dual_printer_enabled, 0),
+      toBoolInt(ai_review_enabled, 1),
+      toBoolInt(stories_enabled, 1),
+      toBoolInt(gst_invoice_enabled, 1),
+      toBoolInt(analytics_export_enabled, 1),
+      toBoolInt(multi_language_enabled, 1),
+      toBoolInt(watermark_removal_enabled, 1),
+      toBoolInt(custom_domain_enabled, 1),
+      toBoolInt(amenities_booking_enabled, 1),
+      toBoolInt(seat_runner_dispatch_enabled, 1),
+      toBoolInt(interval_rush_mode_enabled, 1)
     ]);
 
     await logAudit(null, 'superadmin', 'Create SaaS Plan', `Created plan '${name}' (${cleanKey}) with theme '${theme_color || 'gold'}'`);
@@ -1455,6 +1597,12 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
 router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { key } = req.params;
+    const existingPlanRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = LOWER($1)', [key]);
+    if (!existingPlanRows || existingPlanRows.length === 0) {
+      return res.status(404).json({ error: `SaaS Plan '${key}' not found` });
+    }
+    const existingPlan = existingPlanRows[0];
+
     const {
       name, price, badge, description,
       max_dishes, max_categories, max_combos, max_tables, max_staff_accounts, order_retention_days,
@@ -1462,43 +1610,55 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       audio_alarm_enabled, order_status_whatsapp_enabled, kds_enabled, bluetooth_kot_enabled,
       google_reviews_enabled, ai_review_enabled, stories_enabled, gst_invoice_enabled,
       analytics_export_enabled, multi_language_enabled, watermark_removal_enabled, custom_domain_enabled, dual_printer_enabled,
-      presence_verification_enabled, allowed_verification_modes, theme_color, allowed_themes
+      presence_verification_enabled, allowed_verification_modes, theme_color, allowed_themes,
+      industry, max_rooms, max_screens, max_seats,
+      amenities_booking_enabled, seat_runner_dispatch_enabled, interval_rush_mode_enabled
     } = req.body;
 
-    const toBoolInt = (val) => (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
+    const toBoolInt = (val, fallback = 0) => {
+      if (val === undefined || val === null) return (fallback === 1 || fallback === true || fallback === '1' || fallback === 'true') ? 1 : 0;
+      return (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
+    };
 
     const queryParams = [
-      name || key,
-      price !== undefined ? parseFloat(price) : 999,
-      badge || '👑 PRO',
-      description || '',
-      max_dishes !== undefined ? parseInt(max_dishes, 10) : 9999,
-      max_categories !== undefined ? parseInt(max_categories, 10) : 9999,
-      max_combos !== undefined ? parseInt(max_combos, 10) : 9999,
-      max_tables !== undefined ? parseInt(max_tables, 10) : 9999,
-      max_staff_accounts !== undefined ? parseInt(max_staff_accounts, 10) : 9999,
-      order_retention_days !== undefined ? parseInt(order_retention_days, 10) : 365,
-      toBoolInt(modifiers_enabled),
-      toBoolInt(staff_roles_enabled),
-      toBoolInt(whatsapp_ordering_enabled !== undefined ? whatsapp_ordering_enabled : req.body.whatsapp_enabled),
-      toBoolInt(direct_ordering_enabled),
-      toBoolInt(audio_alarm_enabled),
-      toBoolInt(order_status_whatsapp_enabled),
-      toBoolInt(kds_enabled),
-      toBoolInt(bluetooth_kot_enabled),
-      toBoolInt(google_reviews_enabled),
-      toBoolInt(ai_review_enabled),
-      toBoolInt(stories_enabled),
-      toBoolInt(gst_invoice_enabled),
-      toBoolInt(analytics_export_enabled),
-      toBoolInt(multi_language_enabled),
-      toBoolInt(watermark_removal_enabled),
-      toBoolInt(custom_domain_enabled),
-      toBoolInt(dual_printer_enabled),
-      presence_verification_enabled !== undefined ? toBoolInt(presence_verification_enabled) : 1,
-      allowed_verification_modes !== undefined ? String(allowed_verification_modes) : 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY',
-      theme_color || 'gold',
-      allowed_themes || 'ALL',
+      name || existingPlan.name || key,
+      price !== undefined ? parseFloat(price) : (existingPlan.price ?? 999),
+      badge || existingPlan.badge || '👑 PRO',
+      description !== undefined ? description : (existingPlan.description || ''),
+      max_dishes !== undefined ? parseInt(max_dishes, 10) : (existingPlan.max_dishes ?? 9999),
+      max_categories !== undefined ? parseInt(max_categories, 10) : (existingPlan.max_categories ?? 9999),
+      max_combos !== undefined ? parseInt(max_combos, 10) : (existingPlan.max_combos ?? 9999),
+      max_tables !== undefined ? parseInt(max_tables, 10) : (existingPlan.max_tables ?? 9999),
+      max_staff_accounts !== undefined ? parseInt(max_staff_accounts, 10) : (existingPlan.max_staff_accounts ?? 9999),
+      order_retention_days !== undefined ? parseInt(order_retention_days, 10) : (existingPlan.order_retention_days ?? 365),
+      toBoolInt(modifiers_enabled, existingPlan.modifiers_enabled),
+      toBoolInt(staff_roles_enabled, existingPlan.staff_roles_enabled),
+      toBoolInt(whatsapp_ordering_enabled !== undefined ? whatsapp_ordering_enabled : req.body.whatsapp_enabled, existingPlan.whatsapp_ordering_enabled ?? existingPlan.whatsapp_enabled),
+      toBoolInt(direct_ordering_enabled, existingPlan.direct_ordering_enabled),
+      toBoolInt(audio_alarm_enabled, existingPlan.audio_alarm_enabled),
+      toBoolInt(order_status_whatsapp_enabled, existingPlan.order_status_whatsapp_enabled),
+      toBoolInt(kds_enabled, existingPlan.kds_enabled),
+      toBoolInt(bluetooth_kot_enabled, existingPlan.bluetooth_kot_enabled),
+      toBoolInt(google_reviews_enabled, existingPlan.google_reviews_enabled),
+      toBoolInt(ai_review_enabled, existingPlan.ai_review_enabled),
+      toBoolInt(stories_enabled, existingPlan.stories_enabled),
+      toBoolInt(gst_invoice_enabled, existingPlan.gst_invoice_enabled),
+      toBoolInt(analytics_export_enabled, existingPlan.analytics_export_enabled),
+      toBoolInt(multi_language_enabled, existingPlan.multi_language_enabled),
+      toBoolInt(watermark_removal_enabled, existingPlan.watermark_removal_enabled),
+      toBoolInt(custom_domain_enabled, existingPlan.custom_domain_enabled),
+      toBoolInt(dual_printer_enabled, existingPlan.dual_printer_enabled),
+      presence_verification_enabled !== undefined ? toBoolInt(presence_verification_enabled, 1) : (existingPlan.presence_verification_enabled ?? 1),
+      allowed_verification_modes !== undefined ? String(allowed_verification_modes) : (existingPlan.allowed_verification_modes || 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY'),
+      theme_color || existingPlan.theme_color || 'gold',
+      allowed_themes || existingPlan.allowed_themes || 'ALL',
+      industry !== undefined ? industry : (existingPlan.industry || 'restaurant'),
+      max_rooms !== undefined ? parseInt(max_rooms, 10) : (existingPlan.max_rooms ?? 9999),
+      max_screens !== undefined ? parseInt(max_screens, 10) : (existingPlan.max_screens ?? 9999),
+      max_seats !== undefined ? parseInt(max_seats, 10) : (existingPlan.max_seats ?? 9999),
+      toBoolInt(amenities_booking_enabled, existingPlan.amenities_booking_enabled ?? 1),
+      toBoolInt(seat_runner_dispatch_enabled, existingPlan.seat_runner_dispatch_enabled ?? 1),
+      toBoolInt(interval_rush_mode_enabled, existingPlan.interval_rush_mode_enabled ?? 1),
       key
     ];
 
@@ -1512,8 +1672,8 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
             google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
             analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
             dual_printer_enabled = $27, presence_verification_enabled = $28, allowed_verification_modes = $29,
-            theme_color = $30, allowed_themes = $31
-        WHERE key = $32
+            theme_color = $30, allowed_themes = $31, industry = $32, max_rooms = $33, max_screens = $34, max_seats = $35, amenities_booking_enabled = $36, seat_runner_dispatch_enabled = $37, interval_rush_mode_enabled = $38
+        WHERE key = $39
       `, queryParams);
     } catch (dbErr) {
       console.warn('[SAAS PLAN MATRIX] Auto-healing table schema for missing columns...', dbErr.message);
@@ -1526,6 +1686,10 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS allowed_verification_modes VARCHAR(255) DEFAULT 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY';").catch(() => {});
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS theme_color VARCHAR(50) DEFAULT 'gold';").catch(() => {});
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS allowed_themes VARCHAR(255) DEFAULT 'ALL';").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS industry VARCHAR(50) DEFAULT 'restaurant';").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_rooms INT DEFAULT 9999;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_screens INT DEFAULT 9999;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_seats INT DEFAULT 9999;").catch(() => {});
       
       await query(`
         UPDATE saas_plans
@@ -1536,8 +1700,8 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
             google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
             analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
             dual_printer_enabled = $27, presence_verification_enabled = $28, allowed_verification_modes = $29,
-            theme_color = $30, allowed_themes = $31
-        WHERE key = $32
+            theme_color = $30, allowed_themes = $31, industry = $32, max_rooms = $33, max_screens = $34, max_seats = $35, amenities_booking_enabled = $36, seat_runner_dispatch_enabled = $37, interval_rush_mode_enabled = $38
+        WHERE key = $39
       `, queryParams);
     }
 
@@ -1553,15 +1717,20 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
 router.delete('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { key } = req.params;
-    if (['basic', 'pro', 'enterprise'].includes(key.toLowerCase())) {
-      return res.status(400).json({ error: 'Standard system plans (Basic, Pro, Enterprise) cannot be deleted.' });
+    const protectedPlans = ['basic', 'pro', 'enterprise', 'hotel_basic', 'hotel_pro', 'hotel_enterprise', 'cinema_basic', 'cinema_pro', 'cinema_enterprise'];
+    if (protectedPlans.includes(key.toLowerCase())) {
+      return res.status(400).json({ error: 'Standard system plans cannot be deleted.' });
     }
 
-    // Safely migrate any restaurant on this custom plan back to 'pro'
-    await query("UPDATE restaurants SET plan_tier = 'pro' WHERE LOWER(plan_tier) = LOWER($1)", [key]);
+    const targetPlanRows = await query('SELECT industry, name FROM saas_plans WHERE LOWER(key) = LOWER($1)', [key]);
+    const planIndustry = (targetPlanRows[0]?.industry || 'restaurant').toLowerCase();
+    const fallbackTier = planIndustry === 'hotel' ? 'hotel_pro' : (planIndustry === 'cinema' ? 'cinema_pro' : 'pro');
+
+    // Safely migrate any business on this custom plan back to the industry-appropriate Pro plan
+    await query("UPDATE restaurants SET plan_tier = $1 WHERE LOWER(plan_tier) = LOWER($2)", [fallbackTier, key]);
     await query('DELETE FROM saas_plans WHERE LOWER(key) = LOWER($1)', [key]);
-    await logAudit(null, 'superadmin', 'Delete SaaS Plan', `Deleted SaaS Plan '${key}' (restaurants migrated to 'pro')`);
-    res.json({ success: true, message: `Plan '${key}' deleted successfully. Assigned restaurants safely migrated to Pro plan.` });
+    await logAudit(null, 'superadmin', 'Delete SaaS Plan', `Deleted SaaS Plan '${key}' (businesses migrated to '${fallbackTier}')`);
+    res.json({ success: true, message: `Plan '${key}' deleted successfully. Assigned businesses safely migrated to ${fallbackTier} plan.` });
   } catch (err) {
     console.error('Delete SaaS plan error:', err);
     res.status(500).json({ error: 'Failed to delete SaaS plan' });
@@ -1591,21 +1760,48 @@ router.use('/audit-logs/archives', auditArchivesRouter);
 router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req, res) => {
   const startPing = Date.now();
   try {
-    // 1. Live Postgres Ping & Version
-    const pingRes = await query('SELECT 1 AS ping, version()');
-    const pingMs = Date.now() - startPing;
-    const pgVersion = pingRes && pingRes[0] ? pingRes[0].version.split(' on ')[0] : 'PostgreSQL Serverless';
+    const isPg = getDbType() === 'postgres';
+
+    // 1. Live Postgres/SQLite Ping & Version
+    let pgVersion = isPg ? 'PostgreSQL Serverless' : 'SQLite Local';
+    let pingMs = 0;
+    try {
+      const pingSql = isPg ? 'SELECT 1 AS ping, version()' : 'SELECT 1 AS ping, sqlite_version() AS version';
+      const pingRes = await query(pingSql);
+      pingMs = Date.now() - startPing;
+      if (pingRes && pingRes[0]) {
+        if (isPg) {
+          pgVersion = pingRes[0].version ? pingRes[0].version.split(' on ')[0] : 'PostgreSQL Serverless';
+        } else {
+          pgVersion = 'SQLite ' + (pingRes[0].version || '3.x');
+        }
+      }
+    } catch (e) {
+      pingMs = Date.now() - startPing;
+    }
 
     // 2. Database Total Size
     let dbSizePretty = 'Serverless Pool';
     let dbSizeBytes = 0;
     let dbSizeMB = 0;
     try {
-      const sizeRes = await query('SELECT pg_size_pretty(pg_database_size(current_database())) AS size, pg_database_size(current_database()) AS bytes');
-      if (sizeRes && sizeRes[0]) {
-        dbSizePretty = sizeRes[0].size;
-        dbSizeBytes = parseInt(sizeRes[0].bytes, 10) || 0;
-        dbSizeMB = parseFloat((dbSizeBytes / (1024 * 1024)).toFixed(2));
+      if (isPg) {
+        const sizeRes = await query('SELECT pg_size_pretty(pg_database_size(current_database())) AS size, pg_database_size(current_database()) AS bytes');
+        if (sizeRes && sizeRes[0]) {
+          dbSizePretty = sizeRes[0].size;
+          dbSizeBytes = parseInt(sizeRes[0].bytes, 10) || 0;
+          dbSizeMB = parseFloat((dbSizeBytes / (1024 * 1024)).toFixed(2));
+        }
+      } else {
+        const dbPath = path.resolve('menu.db');
+        if (fs.existsSync(dbPath)) {
+          const stats = fs.statSync(dbPath);
+          dbSizeBytes = stats.size;
+          dbSizeMB = parseFloat((dbSizeBytes / (1024 * 1024)).toFixed(2));
+          dbSizePretty = `${dbSizeMB} MB`;
+        } else {
+          dbSizePretty = '< 1 MB';
+        }
       }
     } catch (e) {
       console.warn('DB size query warning:', e.message);
@@ -1616,17 +1812,31 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
     let storedImagesBinaryBytes = 0;
     let storedImagesBinaryPretty = '0 B';
     try {
-      const imgRes = await query(`
-        SELECT 
-          COUNT(*)::int AS total_count,
-          COALESCE(SUM(octet_length(data)), 0)::bigint AS binary_bytes,
-          pg_size_pretty(COALESCE(SUM(octet_length(data)), 0)::bigint) AS binary_pretty
-        FROM stored_images
-      `);
-      if (imgRes && imgRes[0]) {
-        storedImagesCount = imgRes[0].total_count || 0;
-        storedImagesBinaryBytes = parseInt(imgRes[0].binary_bytes, 10) || 0;
-        storedImagesBinaryPretty = imgRes[0].binary_pretty || '0 B';
+      if (isPg) {
+        const imgRes = await query(`
+          SELECT 
+            COUNT(*)::int AS total_count,
+            COALESCE(SUM(octet_length(data)), 0)::bigint AS binary_bytes,
+            pg_size_pretty(COALESCE(SUM(octet_length(data)), 0)::bigint) AS binary_pretty
+          FROM stored_images
+        `);
+        if (imgRes && imgRes[0]) {
+          storedImagesCount = imgRes[0].total_count || 0;
+          storedImagesBinaryBytes = parseInt(imgRes[0].binary_bytes, 10) || 0;
+          storedImagesBinaryPretty = imgRes[0].binary_pretty || '0 B';
+        }
+      } else {
+        const imgRes = await query(`
+          SELECT 
+            COUNT(*) AS total_count,
+            COALESCE(SUM(LENGTH(data)), 0) AS binary_bytes
+          FROM stored_images
+        `);
+        if (imgRes && imgRes[0]) {
+          storedImagesCount = imgRes[0].total_count || 0;
+          storedImagesBinaryBytes = parseInt(imgRes[0].binary_bytes, 10) || 0;
+          storedImagesBinaryPretty = (storedImagesBinaryBytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
       }
     } catch (e) {
       console.warn('Stored images telemetry notice:', e.message);
@@ -1636,14 +1846,20 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
     let activeSessionsCount = 0;
     let activeOrdersCount = 0;
     try {
-      const sessRes = await query(`
-        SELECT 
-          COUNT(DISTINCT COALESCE(session_id, restaurant_id::text || '_' || table_number::text))::int AS active_sessions,
-          COUNT(*)::int AS active_orders
-        FROM orders
-        WHERE LOWER(status) NOT IN ('completed', 'cancelled', 'rejected') 
-          AND (is_settled = 0 OR is_settled IS NULL)
-      `);
+      const sessSql = isPg
+        ? `SELECT 
+             COUNT(DISTINCT COALESCE(session_id, restaurant_id::text || '_' || table_number::text))::int AS active_sessions,
+             COUNT(*)::int AS active_orders
+           FROM orders
+           WHERE LOWER(status) NOT IN ('completed', 'cancelled', 'rejected') 
+             AND (is_settled = 0 OR is_settled IS NULL)`
+        : `SELECT 
+             COUNT(DISTINCT COALESCE(session_id, CAST(restaurant_id AS TEXT) || '_' || CAST(table_number AS TEXT))) AS active_sessions,
+             COUNT(*) AS active_orders
+           FROM orders
+           WHERE LOWER(status) NOT IN ('completed', 'cancelled', 'rejected') 
+             AND (is_settled = 0 OR is_settled IS NULL)`;
+      const sessRes = await query(sessSql);
       if (sessRes && sessRes[0]) {
         activeSessionsCount = sessRes[0].active_sessions || 0;
         activeOrdersCount = sessRes[0].active_orders || 0;
@@ -1656,12 +1872,16 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
     let totalDishesHosted = 0;
     let availableDishesHosted = 0;
     try {
-      const dishRes = await query(`
-        SELECT 
-          COUNT(*)::int AS total_dishes,
-          COUNT(CASE WHEN available IS NOT FALSE THEN 1 END)::int AS available_dishes
-        FROM dishes
-      `);
+      const dishSql = isPg
+        ? `SELECT 
+             COUNT(*)::int AS total_dishes,
+             COUNT(CASE WHEN available IS NOT FALSE THEN 1 END)::int AS available_dishes
+           FROM dishes`
+        : `SELECT 
+             COUNT(*) AS total_dishes,
+             COUNT(CASE WHEN available = 1 OR available IS NULL THEN 1 END) AS available_dishes
+           FROM dishes`;
+      const dishRes = await query(dishSql);
       if (dishRes && dishRes[0]) {
         totalDishesHosted = dishRes[0].total_dishes || 0;
         availableDishesHosted = dishRes[0].available_dishes || 0;
@@ -1673,10 +1893,10 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
     // 2e. QR Scans Telemetry (Platform all-time scans vs daily tracking status)
     let totalLifetimeScans = 0;
     try {
-      const scanRes = await query(`
-        SELECT COALESCE(SUM(scan_count), 0)::bigint AS total_scans
-        FROM restaurants
-      `);
+      const scanSql = isPg
+        ? `SELECT COALESCE(SUM(scan_count), 0)::bigint AS total_scans FROM restaurants`
+        : `SELECT COALESCE(SUM(scan_count), 0) AS total_scans FROM restaurants`;
+      const scanRes = await query(scanSql);
       if (scanRes && scanRes[0]) {
         totalLifetimeScans = parseInt(scanRes[0].total_scans, 10) || 0;
       }
@@ -1686,28 +1906,37 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
 
     // 3. Active Connections Count
     let activeConnections = 1;
-    try {
-      const connRes = await query('SELECT count(*)::int AS total FROM pg_stat_activity WHERE datname = current_database()');
-      if (connRes && connRes[0]) {
-        activeConnections = connRes[0].total;
+    if (isPg) {
+      try {
+        const connRes = await query('SELECT count(*)::int AS total FROM pg_stat_activity WHERE datname = current_database()');
+        if (connRes && connRes[0]) {
+          activeConnections = connRes[0].total;
+        }
+      } catch (e) {
+        activeConnections = 1;
       }
-    } catch (e) {
-      activeConnections = 1;
     }
 
     // 4. Detailed Table Breakdown
-    const targetTables = ['restaurants', 'dishes', 'categories', 'orders', 'order_items', 'payments', 'audit_logs', 'admins', 'saas_plans'];
+    const targetTables = [
+      'restaurants', 'dishes', 'categories', 'orders', 'order_items', 
+      'payments', 'audit_logs', 'admins', 'saas_plans', 'support_tickets', 
+      'ticket_messages', 'stored_images', 'system_settings'
+    ];
     const tableStats = [];
 
     for (const t of targetTables) {
       try {
-        const countRes = await query(`SELECT count(*)::int AS total FROM ${t}`);
+        const countSql = isPg ? `SELECT count(*)::int AS total FROM ${t}` : `SELECT count(*) AS total FROM ${t}`;
+        const countRes = await query(countSql);
         const totalRows = countRes && countRes[0] ? countRes[0].total : 0;
         let sizePretty = '< 1 MB';
-        try {
-          const tSizeRes = await query(`SELECT pg_size_pretty(pg_total_relation_size('${t}')) AS size`);
-          if (tSizeRes && tSizeRes[0]) sizePretty = tSizeRes[0].size;
-        } catch {}
+        if (isPg) {
+          try {
+            const tSizeRes = await query(`SELECT pg_size_pretty(pg_total_relation_size('${t}')) AS size`);
+            if (tSizeRes && tSizeRes[0]) sizePretty = tSizeRes[0].size;
+          } catch {}
+        }
 
         tableStats.push({
           table_name: t,
@@ -1747,7 +1976,7 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
       timestamp: new Date().toISOString(),
       database: {
         status: 'CONNECTED',
-        provider: 'Neon PostgreSQL (Serverless)',
+        provider: isPg ? 'Neon PostgreSQL (Serverless)' : 'SQLite Local (Embedded)',
         version: pgVersion,
         ping_ms: pingMs,
         total_size: dbSizePretty,
@@ -1858,6 +2087,12 @@ router.put('/change-credentials', authenticateToken, requireSuperAdmin, async (r
     let updatedUsername = admin.username;
     if (newUsername && newUsername.trim()) {
       updatedUsername = newUsername.trim();
+      if (updatedUsername !== admin.username) {
+        const existingUser = await query('SELECT id FROM admins WHERE LOWER(username) = LOWER($1) AND id != $2', [updatedUsername, admin.id]);
+        if (existingUser && existingUser.length > 0) {
+          return res.status(400).json({ error: `Username '${updatedUsername}' is already taken!` });
+        }
+      }
     }
 
     let updatedHash = admin.password_hash;
@@ -2135,7 +2370,7 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
           }
 
           try {
-            await query("DELETE FROM stored_images WHERE restaurant_id IS NULL OR image_key LIKE 'superadmin/%' OR filename LIKE 'logo-external-%'");
+            await query("DELETE FROM stored_images WHERE image_key LIKE 'superadmin/%' OR filename LIKE 'logo-external-%'");
           } catch (dbDelErr) {
             console.warn('Notice purging superadmin logo from stored_images DB:', dbDelErr.message);
           }
@@ -2230,13 +2465,17 @@ router.get('/support/tickets', authenticateToken, requireSuperAdmin, async (req,
     }
 
     if (search) {
-      params.push(`%${search}%`);
+      const cleanSearch = search.startsWith('#') ? search.slice(1).trim() : search;
+      params.push(`%${cleanSearch}%`);
       const pIdx = params.length;
       whereConditions.push(`(
         LOWER(st.ticket_ref) LIKE $${pIdx} OR 
         LOWER(st.subject) LIKE $${pIdx} OR 
+        CAST(st.id AS TEXT) LIKE $${pIdx} OR
         LOWER(r.name) LIKE $${pIdx} OR 
-        LOWER(r.slug) LIKE $${pIdx}
+        LOWER(r.slug) LIKE $${pIdx} OR
+        LOWER(COALESCE(r.owner_email, '')) LIKE $${pIdx} OR
+        LOWER(COALESCE(r.phone, '')) LIKE $${pIdx}
       )`);
     }
 
@@ -2265,7 +2504,9 @@ router.get('/support/tickets', authenticateToken, requireSuperAdmin, async (req,
         st.status,
         st.priority,
         st.assigned_to_admin_id,
+        st.assigned_to_admin_id as assigned_to,
         st.assigned_to_name,
+        st.assigned_to_name as assigned_operator_username,
         st.created_at,
         st.updated_at,
         st.resolved_at,
@@ -2345,6 +2586,8 @@ router.get('/support/tickets/:id', authenticateToken, requireSuperAdmin, async (
     const ticketRes = await query(`
       SELECT 
         st.*,
+        st.assigned_to_admin_id as assigned_to,
+        st.assigned_to_name as assigned_operator_username,
         r.name as restaurant_name,
         r.slug as restaurant_slug,
         r.business_type,

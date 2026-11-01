@@ -1,25 +1,84 @@
-import React, { useState } from 'react';
-import { CreditCard, ArrowDown } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { CreditCard, ArrowDown, Search, X, Download, MessageSquare, ExternalLink } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
 import { BUSINESS_TYPE_METADATA, BUSINESS_TYPE_ALIASES } from '../../../utils/businessTaxonomy';
 import { matchesTenantStatusFilter, formatTenantPlanDisplay, isLifetimeVipTenant, isVipTenant } from '../../../utils/subscriptionState';
 
-export default function SubscriptionsView({ restaurants, onSelectTenant }) {
+export default function SubscriptionsView({ restaurants = [], onSelectTenant, onMoreActions }) {
   const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const matchesSubFilter = (r, f) => matchesTenantStatusFilter(r, f);
 
-  const filteredSubs = restaurants.filter(r => matchesSubFilter(r, filter));
+  // Search filtering
+  const filteredSubs = useMemo(() => {
+    return restaurants.filter(r => {
+      const matchesFilter = matchesSubFilter(r, filter);
+      if (!matchesFilter) return false;
+
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.trim().toLowerCase();
+      const name = (r.name || '').toLowerCase();
+      const slug = (r.slug || '').toLowerCase();
+      const phone = (r.phone || r.whatsapp_number || '').toLowerCase();
+      const user = (r.owner_username || '').toLowerCase();
+      return name.includes(q) || slug.includes(q) || phone.includes(q) || user.includes(q);
+    });
+  }, [restaurants, filter, searchQuery]);
 
   const filterTabs = [
-    { id: 'all', label: `All Subscriptions (${restaurants.length})` },
+    { id: 'all', label: `All (${restaurants.length})` },
     { id: 'active', label: `🟢 Active Paid (${restaurants.filter(r => matchesSubFilter(r, 'active')).length})` },
     { id: 'trial', label: `⏳ Free Trial (${restaurants.filter(r => matchesSubFilter(r, 'trial')).length})` },
     { id: 'failed', label: `⚠️ Payment Failed (${restaurants.filter(r => matchesSubFilter(r, 'failed')).length})` },
     { id: 'cancelled', label: `⏸️ Cancellations (${restaurants.filter(r => matchesSubFilter(r, 'cancelled')).length})` },
     { id: 'scheduled', label: `📋 Plan Changes (${restaurants.filter(r => matchesSubFilter(r, 'scheduled')).length})` },
-    { id: 'complimentary', label: `🎁 Complimentary (${restaurants.filter(r => matchesSubFilter(r, 'complimentary')).length})` },
+    { id: 'complimentary', label: `👑 VIP / Complimentary (${restaurants.filter(r => matchesSubFilter(r, 'complimentary')).length})` },
   ];
+
+  // Export CSV
+  const handleExportCsv = () => {
+    if (!filteredSubs.length) return;
+    const headers = ['ID', 'Business Name', 'Slug', 'Plan', 'Price (INR)', 'Status', 'Auto Renew', 'Access Until', 'Scheduled Switch'];
+    const rows = filteredSubs.map(r => {
+      const planInfo = formatTenantPlanDisplay(r);
+      const isLifetime = isLifetimeVipTenant(r);
+      const isVip = isVipTenant(r);
+      const accessStr = isLifetime ? 'Lifetime' : (r.access_until || r.plan_expires_at || 'Active');
+      return [
+        r.id,
+        `"${(r.name || '').replace(/"/g, '""')}"`,
+        r.slug || '',
+        `"${planInfo.primaryLabel}"`,
+        r.effective_plan_price !== undefined ? r.effective_plan_price : (r.plan_price || 999),
+        r.subscription_status || (r.active !== false ? 'active' : 'suspended'),
+        isVip ? 'OFF (VIP)' : (r.auto_renew === 0 || r.auto_renew === false ? 'OFF' : 'ON'),
+        `"${accessStr}"`,
+        r.scheduled_plan_key || 'None'
+      ];
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `touchqr_subscriptions_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // WhatsApp Outreach
+  const handleWhatsAppOutreach = (resto) => {
+    const rawPhone = (resto.phone || resto.whatsapp_number || '').replace(/[^0-9]/g, '');
+    const cleanPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://touchqr.com';
+    const adminUrl = `${origin}/admin/login?slug=${resto.slug}`;
+
+    const msg = `Hello ${resto.owner_username || resto.name},\nThis is TouchQR Billing Support regarding your account for *${resto.name}*.\nPlease check your subscription status or update your payment details at: ${adminUrl}`;
+    const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -32,6 +91,51 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
             Audit shop Cashfree AutoPay mandates, renewals, and complimentary access.
           </span>
         </div>
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          className="sa-btn sa-btn-secondary sa-btn-sm"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}
+        >
+          <Download size={14} /> Export CSV
+        </button>
+      </div>
+
+      {/* Search & Filter Controls */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ position: 'relative', width: '100%', maxWidth: '320px', height: '38px' }}>
+          <Search size={14} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--sa-text-muted)', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Search subscriptions by name, slug..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="sa-input sa-search-input-field"
+            style={{
+              paddingLeft: '34px',
+              paddingRight: searchQuery ? '32px' : '12px',
+              height: '38px',
+              fontSize: '0.80rem',
+              borderRadius: 'var(--sa-radius-full)',
+              background: 'var(--sa-surface-subtle)',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', padding: '2px' }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 700 }}>
+          Showing <strong>{filteredSubs.length}</strong> of {restaurants.length} subscriptions
+        </span>
       </div>
 
       {/* Horizontally Scrollable Filter Strip */}
@@ -58,7 +162,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
               <th>STATUS</th>
               <th>AUTO-RENEW</th>
               <th>ACCESS UNTIL / EXPIRY</th>
-              <th style={{ textAlign: 'right' }}>MANAGE</th>
+              <th style={{ textAlign: 'right' }}>ACTION</th>
             </tr>
           </thead>
           <tbody>
@@ -132,9 +236,39 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
                             : 'N/A'}
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button onClick={() => onSelectTenant(r)} className="sa-btn sa-btn-secondary sa-btn-sm">
-                        Details ➔
-                      </button>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', alignItems: 'center' }}>
+                        {(r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due') && (
+                          <button
+                            type="button"
+                            onClick={() => handleWhatsAppOutreach(r)}
+                            className="sa-btn sa-btn-sm"
+                            style={{ padding: '4px 8px', fontSize: '0.70rem', background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontWeight: 800 }}
+                            title="Send WhatsApp Billing Reminder"
+                          >
+                            <MessageSquare size={13} />
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => onSelectTenant && onSelectTenant(r)} 
+                          className="sa-btn sa-btn-secondary sa-btn-sm"
+                          style={{ padding: '4px 9px', fontSize: '0.72rem', fontWeight: 800 }}
+                        >
+                          🔍 360°
+                        </button>
+                        {onMoreActions && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onMoreActions(r);
+                            }}
+                            className="sa-btn sa-btn-secondary sa-btn-sm"
+                            style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 900 }}
+                          >
+                            •••
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -151,7 +285,7 @@ export default function SubscriptionsView({ restaurants, onSelectTenant }) {
           const planInfo = formatTenantPlanDisplay(r);
 
           return (
-            <div key={r.id} className="sa-mobile-card" onClick={() => onSelectTenant(r)} style={{ cursor: 'pointer', padding: '14px' }}>
+            <div key={r.id} className="sa-mobile-card" onClick={() => onSelectTenant && onSelectTenant(r)} style={{ cursor: 'pointer', padding: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <strong style={{ fontSize: '0.95rem' }}>{r.name}</strong>
                 <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'suspended')} type={r.subscription_type} active={r.active} />

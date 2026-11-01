@@ -1271,7 +1271,7 @@ export default function OrdersView({
                             <>
                               {isCinema ? (
                                 <button
-                                  onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'completed') : null}
+                                  onClick={() => handleTriggerBillAction(order)} disabled={!onOpenBillModal}
                                   style={{
                                     padding: '6px 12px',
                                     borderRadius: '8px',
@@ -1626,7 +1626,7 @@ export default function OrdersView({
                         <>
                           {isCinema ? (
                             <button
-                              onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'completed') : null}
+                              onClick={() => handleTriggerBillAction(order)} disabled={!onOpenBillModal}
                               style={{
                                 padding: '8px 14px',
                                 borderRadius: '10px',
@@ -2910,7 +2910,7 @@ export default function OrdersView({
                 isCinema ? (
                   <button
                     onClick={() => {
-                      if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'completed');
+                      handleTriggerBillAction(selectedOrder);
                       setSelectedOrder(null);
                     }}
                     style={{

@@ -8,7 +8,7 @@ import {
   X
 } from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
-import { MOBILE_DRAWER_ITEMS, isNavItemActive } from '../adminNavigation';
+import { MOBILE_DRAWER_ITEMS, isNavItemActive, getLocalizedNavLabel } from '../adminNavigation';
 import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 
 export default function AdminHeader({
@@ -480,7 +480,7 @@ export default function AdminHeader({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <Icon size={17} color={isActive ? '#F59E0B' : (item.highlight ? '#34D399' : '#94A3B8')} />
                           <span style={{ color: isActive ? '#FFFFFF' : (item.highlight ? '#F1F5F9' : '#94A3B8') }}>
-                            {item.label}
+                            {getLocalizedNavLabel(item, restaurantInfo, 'mobileDrawer')}
                           </span>
                         </div>
 

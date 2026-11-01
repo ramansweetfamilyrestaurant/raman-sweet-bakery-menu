@@ -258,15 +258,24 @@ export function formatTenantPlanDisplay(tenant) {
       );
 
   if (isVip) {
-    const rawBase = (tenant.plan_tier || '').trim();
-    const hasBaseTier = rawBase && rawBase.toLowerCase() !== 'enterprise';
-    const baseTier = hasBaseTier ? rawBase.toUpperCase() : null;
+    const rawBase = (tenant.effective_plan_tier || tenant.plan_tier || 'pro').trim().toLowerCase();
+    if (rawBase === 'enterprise') {
+      return {
+        primaryLabel: 'Enterprise VIP Access',
+        secondaryLabel: '₹0/mo',
+        badgeText: '★ VIP',
+        fullDisplay: 'Enterprise VIP Access (₹0/mo)'
+      };
+    }
+    const baseName = tenant.plan_name || (rawBase === 'basic' ? 'Basic Plan' : rawBase === 'pro' ? 'Pro Plan' : `${rawBase.toUpperCase()} Plan`);
+    const primaryLabel = baseName.includes('VIP') ? baseName : `${baseName} (VIP Access)`;
+    const baseTier = rawBase.toUpperCase();
 
     return {
-      primaryLabel: 'Enterprise VIP Access',
-      secondaryLabel: baseTier ? `₹0/mo (Base: ${baseTier})` : '₹0/mo',
+      primaryLabel,
+      secondaryLabel: `₹0/mo (Base: ${baseTier})`,
       badgeText: '★ VIP',
-      fullDisplay: `Enterprise VIP Access (₹0/mo${baseTier ? ` • Base: ${baseTier}` : ''})`
+      fullDisplay: `${primaryLabel} (₹0/mo • Base: ${baseTier})`
     };
   }
 

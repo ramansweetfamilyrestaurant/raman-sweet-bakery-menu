@@ -147,6 +147,7 @@ async function runAllTests() {
           phone: `99${String(Date.now()).slice(-8)}`,
           address: '77 VIP Boulevard',
           onboarding_mode: 'vip',
+          plan_tier: 'enterprise',
           isVip: true
         })
       });
@@ -263,7 +264,7 @@ async function runAllTests() {
       // 1. Create VIP tenant on basic plan
       const r1 = await query(`
         INSERT INTO restaurants (name, slug, plan_tier, plan_price, subscription_type, mandate_status, auto_debit_enabled, active, qr_secret, direct_ordering_enabled, location_initialized, total_tables)
-        VALUES ('Basic VIP Cafe', $1, 'basic', 0, 'ADMIN_GRANTED', 'admin_granted', 0, true, $2, 1, false, 10)
+        VALUES ('Enterprise VIP Cafe', $1, 'enterprise', 0, 'ADMIN_GRANTED', 'admin_granted', 0, true, $2, 1, false, 10)
         RETURNING id
       `, [basicVipSlug, qrSecret]);
       basicVipRestoId = r1[0]?.id || r1.lastInsertRowid;
@@ -496,6 +497,7 @@ async function runAllTests() {
           'Authorization': `Bearer ${superAdminToken}`
         },
         body: JSON.stringify({
+          plan_key: 'enterprise',
           duration_days: 30,
           admin_notes: 'E2E Grant Test'
         })

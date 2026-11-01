@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image, LayoutGrid, List, MoreHorizontal, ArrowUpDown, Clock, Radio, HardDrive, Settings, Users, UserCheck, Activity } from 'lucide-react';
+import { ChevronRight, Crown, Plus, LogOut, ExternalLink, Trash2, CheckCircle, Store, Utensils, DollarSign, Phone, MapPin, Copy, Check, Search, Edit3, Shield, ShieldCheck, RefreshCw, QrCode, Megaphone, FileText, Calendar, Palette, MessageSquare, Upload, X, XCircle, CreditCard, Lock, Sparkles, Eye, EyeOff, Key, Database, Sliders, Image, LayoutGrid, List, MoreHorizontal, ArrowUpDown, Clock, Radio, HardDrive, Settings, Users, UserCheck, Activity, Download } from 'lucide-react';
 import { fetchSuperAdminRestaurants, createTenantRestaurant, toggleTenantRestaurantActive, deleteTenantRestaurant, impersonateTenantRestaurant, updateTenantRestaurant, createAnnouncement, fetchSuperAnnouncements, deleteAnnouncement, clearAllAnnouncements, fetchAuditLogs, uploadImage, fetchSaaSPlans, createSaaSPlan, updateSaaSPlan, deleteSaaSPlan, superAdminOptimizeDatabase, updateSuperAdminCredentials, grantFreeAccess, revokeFreeAccess } from '../../api/client';
 import { SAAS_PLANS, getPlanDetails } from '../../config/plans';
 import { resolveImageUrl, getRestaurantLogoUrl } from '../../utils/imageHelper';
@@ -282,10 +282,30 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     }
   };
 
+  const [openTicketsCount, setOpenTicketsCount] = useState(0);
+
+  const loadTicketCount = async () => {
+    try {
+      const effectiveToken = token || localStorage.getItem('touchqr_superadmin_token') || localStorage.getItem('token') || localStorage.getItem('saas_super_token');
+      const res = await fetch('/api/superadmin/support/tickets', {
+        headers: { Authorization: `Bearer ${effectiveToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : (data.tickets || []);
+        const count = list.filter(t => t.status === 'open' || t.status === 'in_progress' || t.status === 'pending').length;
+        setOpenTicketsCount(count);
+      }
+    } catch (e) {
+      // silent fallback
+    }
+  };
+
   const loadOperationsTelemetry = async () => {
     try {
+      const effectiveToken = token || localStorage.getItem('touchqr_superadmin_token') || localStorage.getItem('token') || localStorage.getItem('saas_super_token');
       const res = await fetch('/api/superadmin/operations/stats', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${effectiveToken}` }
       });
       if (res.ok) {
         const data = await res.json();
@@ -302,11 +322,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     loadSystemSettings();
     loadAuditData();
     loadOperationsTelemetry();
+    loadSuperAnnouncements();
+    loadTicketCount();
   }, [token]);
 
   useEffect(() => {
     if (activeView === 'activity') {
       loadAuditData();
+    }
+    if (activeView === 'communication') {
+      loadSuperAnnouncements();
     }
   }, [activeView]);
 
@@ -426,6 +451,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     try {
       await deleteAnnouncement(id, token);
       loadSuperAnnouncements();
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const bc = new BroadcastChannel('touchqr_broadcast_channel');
+          bc.postMessage({ type: 'ANNOUNCEMENTS_UPDATED' });
+          bc.close();
+        }
+      } catch (e) {}
       alert('📢 Announcement deleted successfully!');
     } catch (err) {
       alert(err.message || 'Failed to delete announcement');
@@ -437,6 +469,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     try {
       await clearAllAnnouncements(token);
       loadSuperAnnouncements();
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const bc = new BroadcastChannel('touchqr_broadcast_channel');
+          bc.postMessage({ type: 'ANNOUNCEMENTS_UPDATED' });
+          bc.close();
+        }
+      } catch (e) {}
       alert('✨ All active broadcast notices cleared successfully!');
     } catch (err) {
       alert(err.message || 'Failed to clear announcements');
@@ -449,6 +488,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     setAnnounceSubmitting(true);
     try {
       await createAnnouncement(announceMsg.trim(), announceType, token);
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const bc = new BroadcastChannel('touchqr_broadcast_channel');
+          bc.postMessage({ type: 'ANNOUNCEMENTS_UPDATED' });
+          bc.close();
+        }
+      } catch (e) {}
       alert('📢 Announcement broadcasted successfully to all business dashboards!');
       setAnnounceMsg('');
       loadSuperAnnouncements();
@@ -557,8 +603,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   };
 
   const getDaysRemaining = (expiryStr) => {
-    if (!expiryStr) return null;
+    if (!expiryStr || expiryStr === 'Lifetime' || String(expiryStr).toLowerCase() === 'lifetime') return null;
     const expiry = new Date(expiryStr);
+    if (isNaN(expiry.getTime())) return null;
     const now = new Date();
     const diffTime = expiry - now;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -566,6 +613,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   };
 
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'trial', 'failed', 'autorenew_off', 'expired', 'vip', 'suspended'
+  const [industryFilter, setIndustryFilter] = useState('all'); // 'all', 'restaurants', 'hotels', 'cinemas', 'bakeries', 'qsr'
   const [sortBy, setSortBy] = useState('recent'); // 'recent', 'name_asc', 'plan', 'expiry', 'scans'
   const [viewMode, setViewMode] = useState('grid'); // 'grid', 'table'
   const [openMoreId, setOpenMoreId] = useState(null);
@@ -588,7 +636,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     if (isVip) return 'vip';
     const isAutoRenewOff = (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null || r.subscription_status === 'auto_renew_off');
     if (isAutoRenewOff) return 'autorenew_off';
-    const daysLeft = getDaysRemaining(r.plan_expires_at || r.access_until);
+    const daysLeft = getDaysRemaining(r.access_until || r.plan_expires_at);
     const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
     if (isExpired) return 'expired';
     const isFailed = (r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due' || r.subscription_status === 'failed');
@@ -609,8 +657,38 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
   const matchesStatusFilter = (r, filter) => {
     if (!filter || filter === 'all') return true;
+    if (filter === 'expiring') {
+      const d = getDaysRemaining(r.plan_expires_at);
+      return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
+    }
     return getTenantStatus(r) === filter;
   };
+
+  // Industry Taxonomy Filter Helper
+  const matchesIndustryFilter = (r, filter) => {
+    if (!filter || filter === 'all') return true;
+    const bType = (r.business_type || '').toLowerCase();
+    const sModel = (r.service_model || '').toLowerCase();
+    const isBakery = bType === 'bakery_confectionery' || bType === 'sweet_shop' || bType === 'ice_cream_dessert';
+    const isQsr = bType === 'fast_food_qsr' || bType === 'fast_food' || bType === 'food_truck' || bType === 'cloud_kitchen';
+    const isHotel = sModel === 'hotel' || bType === 'hotel_resort';
+    const isCinema = sModel === 'cinema' || bType === 'cinema_theatre';
+    if (filter === 'hotels') return isHotel;
+    if (filter === 'cinemas') return isCinema;
+    if (filter === 'bakeries') return isBakery;
+    if (filter === 'qsr') return isQsr;
+    if (filter === 'restaurants') return !(isHotel || isCinema || isBakery || isQsr);
+    return true;
+  };
+
+  const getIndustryFilterPills = () => [
+    { id: 'all', label: 'All Industries', count: restaurants.length },
+    { id: 'restaurants', label: '🍽️ Dine-In & Cafes', count: restaurants.filter(r => matchesIndustryFilter(r, 'restaurants')).length },
+    { id: 'hotels', label: '🏨 Hotels & Resorts', count: restaurants.filter(r => matchesIndustryFilter(r, 'hotels')).length },
+    { id: 'cinemas', label: '🎬 Cinemas & Theatres', count: restaurants.filter(r => matchesIndustryFilter(r, 'cinemas')).length },
+    { id: 'bakeries', label: '🍰 Bakeries & Sweets', count: restaurants.filter(r => matchesIndustryFilter(r, 'bakeries')).length },
+    { id: 'qsr', label: '🍔 QSR & Fast Food', count: restaurants.filter(r => matchesIndustryFilter(r, 'qsr')).length },
+  ];
 
   // Synchronized Filter Pills Configuration
   const getDirectoryFilterPills = () => [
@@ -620,6 +698,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     { id: 'trial', label: '🎁 Trial', count: restaurants.filter(r => matchesStatusFilter(r, 'trial')).length },
     { id: 'failed', label: '🟡 Past Due', count: restaurants.filter(r => matchesStatusFilter(r, 'failed')).length },
     { id: 'autorenew_off', label: '🟠 Renew Off', count: restaurants.filter(r => matchesStatusFilter(r, 'autorenew_off')).length },
+    { id: 'expiring', label: '⏳ Expiring Soon', count: restaurants.filter(r => matchesStatusFilter(r, 'expiring')).length },
     { id: 'expired', label: '🔴 Expired', count: restaurants.filter(r => matchesStatusFilter(r, 'expired')).length },
     { id: 'vip', label: '👑 VIP', count: restaurants.filter(r => matchesStatusFilter(r, 'vip')).length },
     { id: 'suspended', label: '⚫ Suspended', count: restaurants.filter(r => matchesStatusFilter(r, 'suspended')).length },
@@ -691,6 +770,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       if (!matchesStatusFilter(r, statusFilter)) {
         return false;
       }
+      if (!matchesIndustryFilter(r, industryFilter)) {
+        return false;
+      }
 
       // Extended Search (name, slug, owner_name, owner_username, phone, owner_email, id, business_type)
       if (!searchQuery.trim()) return true;
@@ -729,6 +811,115 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     .reduce((acc, r) => acc + (Number(r.recurring_amount) || Number(r.effective_plan_price) || Number(r.plan_price) || 0), 0);
 
   // Render Directory Controls & Clean Tenant Cards Grid / Table
+  const handleExportTenantsCsv = () => {
+    if (!restaurants.length) return;
+    const headers = ['ID', 'Name', 'Slug', 'Business Type', 'Service Model', 'Plan Tier', 'Price', 'Status', 'Expiry', 'Tables', 'Rooms', 'Screens', 'Seats', 'Phone', 'Owner Username', 'Owner Email', 'Scans'];
+    const rows = filteredAndSortedRestaurants.map(r => [
+      r.id,
+      `"${(r.name || '').replace(/"/g, '""')}"`,
+      r.slug,
+      r.business_type || 'restaurant',
+      r.service_model || 'dine_in',
+      r.plan_tier || 'pro',
+      r.plan_price || 0,
+      getTenantStatus(r),
+      r.access_until || r.plan_expires_at || 'Lifetime',
+      r.total_tables || 0,
+      r.total_rooms || 0,
+      r.total_screens || 0,
+      r.total_seats || 0,
+      `"${r.phone || r.whatsapp_number || ''}"`,
+      r.owner_username || 'admin',
+      r.owner_email || '',
+      r.scan_count || 0
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `touchqr_tenants_directory_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportBillingCsv = () => {
+    if (!restaurants.length) return;
+    const headers = [
+      'ID',
+      'Business Name',
+      'Slug',
+      'Industry',
+      'Owner Username',
+      'Phone',
+      'Email',
+      'Plan Tier',
+      'Plan Price (INR)',
+      'Status',
+      'Auto Renew',
+      'Access Until / Expiry',
+      'Scheduled Plan Switch',
+      'Cancellation Requested'
+    ];
+
+    const rows = filteredAndSortedRestaurants.map(r => {
+      const isVip = isVipTenant(r);
+      const isLifetime = isLifetimeVipTenant(r);
+      const daysLeft = getDaysRemaining(r.access_until || r.plan_expires_at);
+      const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
+      const planInfo = formatTenantPlanDisplay(r);
+      const accessStr = isLifetime ? 'Lifetime' : (r.access_until || r.plan_expires_at || (daysLeft !== null ? `${daysLeft} days` : 'Active'));
+      const autoRenewStr = isVip ? 'OFF (VIP)' : (r.auto_renew === 0 || r.auto_renew === false ? 'OFF' : 'ON');
+
+      return [
+        r.id,
+        `"${(r.name || '').replace(/"/g, '""')}"`,
+        r.slug || '',
+        r.service_model || r.business_type || 'restaurant',
+        r.owner_username || '',
+        r.phone || '',
+        r.owner_email || '',
+        `"${planInfo.primaryLabel}"`,
+        r.effective_plan_price !== undefined ? r.effective_plan_price : (r.plan_price || 999),
+        r.subscription_status || (r.active !== false ? 'active' : 'suspended'),
+        autoRenewStr,
+        `"${accessStr}"`,
+        r.scheduled_plan_key || 'None',
+        r.cancel_requested_at ? `"${r.cancel_requested_at}"` : 'No'
+      ];
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `touchqr_billing_ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleBillingWhatsAppOutreach = (resto) => {
+    const rawPhone = (resto.phone || resto.whatsapp_number || '').replace(/[^0-9]/g, '');
+    const cleanPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://touchqr.com';
+    const adminUrl = `${origin}/admin/login?slug=${resto.slug}`;
+    const status = getTenantStatus(resto);
+
+    let msg = '';
+    if (status === 'failed') {
+      msg = `Hello ${resto.owner_username || resto.name},\nThis is TouchQR Billing Support regarding your account for *${resto.name}*.\n\nYour latest subscription renewal payment could not be processed. To keep your digital menu live and avoid order disruption, please update your payment method here: ${adminUrl}\n\nLet us know if you need any assistance!`;
+    } else if (status === 'trial') {
+      const daysLeft = getDaysRemaining(resto.trial_ends_at || resto.plan_expires_at);
+      msg = `Hello ${resto.owner_username || resto.name},\nYour 16-day free trial on TouchQR for *${resto.name}* has ${daysLeft !== null ? `${daysLeft} days remaining` : 'ended'}.\n\nTo continue accepting seamless QR orders and access all Pro features, activate your subscription here: ${adminUrl}\n\nThank you for choosing TouchQR!`;
+    } else {
+      msg = `Hello ${resto.owner_username || resto.name},\nGreetings from TouchQR Support regarding your business *${resto.name}*.\nPlease feel free to contact us if you need help with your subscription or menu setup.\nAdmin Portal: ${adminUrl}`;
+    }
+
+    const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const renderDirectorySection = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} onClick={() => setOpenMoreId(null)}>
       {/* 👑 1. DIRECTORY SECTION HEADER */}
@@ -744,6 +935,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               style={{ fontWeight: 900 }}
             >
               <Plus size={15} /> Add Business
+            </button>
+            <button
+              type="button"
+              onClick={handleExportTenantsCsv}
+              title="Export Directory to CSV"
+              className="sa-btn sa-btn-secondary sa-btn-sm"
+              style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <Download size={14} /> Export CSV
             </button>
             <button
               type="button"
@@ -873,7 +1073,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         </div>
       </div>
 
-      {/* 🏷️ FILTER PILLS STRIP */}
+      {/* 🏢 INDUSTRY CATEGORY FILTER STRIP */}
+      <FilterPills
+        pills={getIndustryFilterPills()}
+        activeId={industryFilter}
+        onChange={setIndustryFilter}
+      />
+
+      {/* 🏷️ STATUS FILTER PILLS STRIP */}
       <FilterPills
         pills={getDirectoryFilterPills()}
         activeId={statusFilter}
@@ -893,7 +1100,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           action={
             <button
               type="button"
-              onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+              onClick={() => { setSearchQuery(''); setStatusFilter('all'); setIndustryFilter('all'); }}
               className="sa-btn sa-btn-secondary sa-btn-sm"
             >
               Clear Search & Filters
@@ -918,9 +1125,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </thead>
             <tbody>
               {filteredAndSortedRestaurants.map(r => {
-                const daysLeft = getDaysRemaining(r.plan_expires_at);
-                const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
-                const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
+                const daysLeft = getDaysRemaining(r.access_until || r.plan_expires_at);
+                const isVip = isVipTenant(r);
+                const isLifetime = isLifetimeVipTenant(r);
+                const isExpired = (!isLifetime && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
                 const bizMeta = BUSINESS_TYPE_METADATA[r.business_type] || { icon: '🏢', label: r.business_type || 'Restaurant' };
 
                 return (
@@ -990,8 +1198,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <td>
                       <StatusBadge status={r.subscription_status} type={r.subscription_type} />
                     </td>
-                    <td style={{ fontSize: '0.76rem', fontWeight: 700 }}>
-                      {isVip ? '♾️ Lifetime' : daysLeft !== null ? (isExpired ? 'Expired' : `${daysLeft}d left`) : 'Active'}
+                    <td style={{ fontSize: '0.76rem', fontWeight: 700 }} title={r.access_until || r.plan_expires_at ? `Access until: ${new Date(r.access_until || r.plan_expires_at).toLocaleDateString('en-IN')}` : undefined}>
+                      {isLifetime
+                        ? '♾️ Lifetime'
+                        : daysLeft !== null
+                          ? (isExpired ? 'Expired' : `${daysLeft}d left`)
+                          : (r.access_until || r.plan_expires_at)
+                            ? new Date(r.access_until || r.plan_expires_at).toLocaleDateString('en-IN')
+                            : 'Active'}
                     </td>
                     <td style={{ fontSize: '0.78rem', fontWeight: 800, color: '#7E22CE' }}>
                       📲 {r.scan_count || 0}
@@ -1016,6 +1230,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         >
                           👑 Manage
                         </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedMoreResto(r);
+                          }}
+                          className="sa-btn sa-btn-secondary sa-btn-sm"
+                          style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 900 }}
+                          title="More Shop Actions"
+                        >
+                          •••
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1032,9 +1258,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           gap: '16px'
         }}>
           {filteredAndSortedRestaurants.map(r => {
-            const daysLeft = getDaysRemaining(r.plan_expires_at);
-            const isVip = (r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted');
-            const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
+            const daysLeft = getDaysRemaining(r.access_until || r.plan_expires_at);
+            const isVip = isVipTenant(r);
+            const isLifetime = isLifetimeVipTenant(r);
+            const isExpired = (!isLifetime && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
             const bizMeta = BUSINESS_TYPE_METADATA[r.business_type] || { icon: '🏢', label: r.business_type || 'Restaurant' };
 
             return (
@@ -1096,12 +1323,36 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       <span>{bizMeta.icon}</span> {(bizMeta.label || 'Restaurant').replace(/\s*\(.*\)/, '')}
                     </span>
 
-                    <span style={{ background: '#F1F5F9', color: '#475569', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
-                      {isVip ? '♾️ Lifetime' : daysLeft !== null ? (isExpired ? 'Expired' : `${daysLeft}d left`) : 'Active'}
+                    <span 
+                      style={{ 
+                        background: isExpired ? '#FEE2E2' : '#F1F5F9', 
+                        color: isExpired ? '#DC2626' : '#475569', 
+                        padding: '2px 7px', 
+                        borderRadius: '6px', 
+                        fontSize: '0.66rem', 
+                        fontWeight: 800 
+                      }}
+                      title={r.access_until || r.plan_expires_at ? `Access until: ${new Date(r.access_until || r.plan_expires_at).toLocaleDateString('en-IN')}` : undefined}
+                    >
+                      {isLifetime 
+                        ? '♾️ Lifetime' 
+                        : daysLeft !== null 
+                          ? (isExpired ? 'Expired' : `${daysLeft}d left`) 
+                          : (r.access_until || r.plan_expires_at) 
+                            ? new Date(r.access_until || r.plan_expires_at).toLocaleDateString('en-IN') 
+                            : 'Active'}
                     </span>
 
                     <span style={{ background: '#F3E8FF', color: '#7E22CE', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
                       📲 {r.scan_count || 0} scans
+                    </span>
+
+                    <span style={{ background: '#F1F5F9', color: '#334155', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
+                      {r.service_model === 'cinema' || r.business_type === 'cinema_theatre'
+                        ? `🎬 ${r.total_screens || 1} screens · ${r.total_seats || 100} seats`
+                        : r.service_model === 'hotel' || r.business_type === 'hotel_resort'
+                          ? `🏨 ${r.total_rooms || 20} rooms`
+                          : `🍽️ ${r.total_tables || 20} tables`}
                     </span>
                   </div>
 
@@ -1182,7 +1433,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     style={{ background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)', color: '#FFD700', border: '1px solid #D4AF37', fontWeight: 900, fontSize: '0.75rem', padding: '7px 12px', flex: '1.2 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                     title="1-Click Log In as Business Owner"
                   >
-                    <Crown size={13} color="#FFD700" /> Manage Menu
+                    <Crown size={13} color="#FFD700" /> {
+                      (r.service_model === 'cinema' || r.business_type === 'cinema_theatre')
+                        ? 'Manage Concessions'
+                        : (r.service_model === 'hotel' || r.business_type === 'hotel_resort')
+                          ? 'In-Room Dining'
+                          : 'Manage Menu'
+                    }
                   </button>
 
                   {/* ••• More Button */}
@@ -1223,6 +1480,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         logoUrl={paymentKeys.platform_logo_url}
         onOpenSupport={() => setShowWhatsappModal(true)}
         onOpenBroadcast={() => handleOpenBroadcastModal()}
+        badgeCounts={{ tickets: openTicketsCount }}
       />
 
       {/* 🖥️ MAIN CANVAS AREA */}
@@ -1231,12 +1489,34 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         <Header
           username={username}
           activeView={activeView}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
           onToggleMobileMenu={() => setShowMobileMoreDrawer(true)}
           onOpenBroadcast={() => handleOpenBroadcastModal()}
           onLogout={onLogout}
           logoUrl={paymentKeys.platform_logo_url}
+          alerts={{
+            tickets: openTicketsCount,
+            failed: restaurants.filter(r => matchesStatusFilter(r, 'failed')).length,
+            expiring: restaurants.filter(r => {
+              const d = getDaysRemaining(r.plan_expires_at);
+              return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
+            }).length,
+            pending: restaurants.filter(r => matchesStatusFilter(r, 'suspended')).length,
+            total: (openTicketsCount || 0) +
+              restaurants.filter(r => matchesStatusFilter(r, 'failed')).length +
+              restaurants.filter(r => {
+                const d = getDaysRemaining(r.plan_expires_at);
+                return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
+              }).length +
+              restaurants.filter(r => matchesStatusFilter(r, 'suspended')).length
+          }}
+          onNavigate={(view, statusFilterVal) => {
+            setActiveView(view);
+            if (statusFilterVal) {
+              setStatusFilter(statusFilterVal);
+              setIndustryFilter('all');
+              setSearchQuery('');
+            }
+          }}
         />
 
         {/* 📄 MAIN CONTENT BODY */}
@@ -1268,10 +1548,19 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <Plus size={15} /> Add Business
                   </button>
                   <button
-                    onClick={loadData}
+                    onClick={async () => {
+                      setLoading(true);
+                      await Promise.all([
+                        loadData(),
+                        loadOperationsTelemetry(),
+                        loadTicketCount(),
+                        loadAuditData()
+                      ]);
+                      setLoading(false);
+                    }}
                     className="sa-btn sa-btn-secondary sa-btn-sm"
                     style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                    title="Refresh live metrics"
+                    title="Refresh live metrics, telemetry & ticket counts"
                   >
                     <RefreshCw size={13} className={loading ? 'spin' : ''} /> Refresh
                   </button>
@@ -1301,29 +1590,29 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   color="#15803D"
                   iconBg="#DCFCE7"
                   subtitle="Tenants"
-                  onClick={() => { setActiveView('tenants'); setStatusFilter('active'); }}
+                  onClick={() => { setActiveView('tenants'); setStatusFilter('active'); setIndustryFilter('all'); setSearchQuery(''); }}
                 />
 
                 {/* KPI 3: Free Trial */}
                 <KpiCard
                   label="Free Trial"
-                  value={restaurants.filter(r => getTenantStatus(r) === 'trial').length}
+                  value={restaurants.filter(r => matchesStatusFilter(r, 'trial')).length}
                   icon={Calendar}
                   color="#2563EB"
                   iconBg="#EFF6FF"
                   subtitle="Tenants"
-                  onClick={() => { setActiveView('tenants'); setStatusFilter('trial'); }}
+                  onClick={() => { setActiveView('tenants'); setStatusFilter('trial'); setIndustryFilter('all'); setSearchQuery(''); }}
                 />
 
                 {/* KPI 4: Past Due */}
                 <KpiCard
                   label="Past Due"
-                  value={restaurants.filter(r => getTenantStatus(r) === 'failed').length}
+                  value={restaurants.filter(r => matchesStatusFilter(r, 'failed')).length}
                   icon={CreditCard}
                   color="#EA580C"
                   iconBg="#FFF7ED"
                   subtitle="Tenants"
-                  onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); }}
+                  onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); setIndustryFilter('all'); setSearchQuery(''); }}
                 />
 
                 {/* KPI 5: Total Tenants */}
@@ -1334,7 +1623,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   color="#0D9488"
                   iconBg="#F0FDFA"
                   subtitle="All Accounts"
-                  onClick={() => { setActiveView('tenants'); setStatusFilter('all'); }}
+                  onClick={() => { setActiveView('tenants'); setStatusFilter('all'); setIndustryFilter('all'); setSearchQuery(''); }}
                 />
               </div>
 
@@ -1378,9 +1667,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       {categories.map(cat => (
                         <div
                           key={cat.id}
-                          onClick={() => setActiveView('tenants')}
+                          onClick={() => {
+                            setActiveView('tenants');
+                            if (cat.id === 'hotel') setIndustryFilter('hotels');
+                            else if (cat.id === 'cinema') setIndustryFilter('cinemas');
+                            else setIndustryFilter('restaurants');
+                          }}
                           className="sa-category-mix-card"
-                          title={`View ${cat.label}s`}
+                          title={`View ${cat.label}s in directory`}
                         >
                           <div className="sa-category-mix-card-left">
                             <span className="sa-category-mix-emoji">{cat.emoji}</span>
@@ -1410,16 +1704,39 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     </div>
 
                     {(() => {
-                      const failedCount = restaurants.filter(r => getTenantStatus(r) === 'failed').length;
-                      const autoRenewOffCount = restaurants.filter(r => getTenantStatus(r) === 'autorenew_off').length;
+                      const failedCount = restaurants.filter(r => matchesStatusFilter(r, 'failed')).length;
+                      const autoRenewOffCount = restaurants.filter(r => matchesStatusFilter(r, 'autorenew_off')).length;
                       const expiringCount = restaurants.filter(r => {
                         const d = getDaysRemaining(r.plan_expires_at);
                         return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
                       }).length;
-                      const pendingApprovalCount = restaurants.filter(r => getTenantStatus(r) === 'suspended').length;
+                      const pendingApprovalCount = restaurants.filter(r => matchesStatusFilter(r, 'suspended')).length;
 
                       return (
                         <div className="sa-attention-list">
+                          {/* Row 0: Open Support Tickets */}
+                          <div className="sa-attention-row" style={{ opacity: openTicketsCount === 0 ? 0.75 : 1 }}>
+                            <div className="sa-attention-left">
+                              <div className="sa-attention-icon-box" style={{ background: openTicketsCount > 0 ? '#FEE2E2' : '#F1F5F9', color: openTicketsCount > 0 ? '#DC2626' : '#64748B' }}>
+                                <MessageSquare size={14} />
+                              </div>
+                              <div className="sa-attention-info">
+                                <span className="sa-attention-name" style={{ color: openTicketsCount > 0 ? 'var(--sa-text-main)' : '#64748B' }}>Open Support Tickets</span>
+                                <span className="sa-attention-count" style={{ color: openTicketsCount > 0 ? '#DC2626' : '#94A3B8', fontWeight: openTicketsCount > 0 ? 800 : 600 }}>
+                                  {openTicketsCount} tickets
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setActiveView('tickets')}
+                              className="sa-attention-action-btn"
+                              style={{ opacity: openTicketsCount === 0 ? 0.6 : 1 }}
+                            >
+                              Respond
+                            </button>
+                          </div>
+
                           {/* Row 1: Payment Failed */}
                           <div className="sa-attention-row" style={{ opacity: failedCount === 0 ? 0.75 : 1 }}>
                             <div className="sa-attention-left">
@@ -1435,7 +1752,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             </div>
                             <button
                               type="button"
-                              onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); }}
+                              onClick={() => { setActiveView('tenants'); setStatusFilter('failed'); setIndustryFilter('all'); setSearchQuery(''); }}
                               className="sa-attention-action-btn"
                               style={{ opacity: failedCount === 0 ? 0.6 : 1 }}
                             >
@@ -1481,7 +1798,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             </div>
                             <button
                               type="button"
-                              onClick={() => { setActiveView('tenants'); setStatusFilter('expired'); }}
+                              onClick={() => { setActiveView('tenants'); setStatusFilter('expiring'); setIndustryFilter('all'); setSearchQuery(''); }}
                               className="sa-attention-action-btn"
                               style={{ opacity: expiringCount === 0 ? 0.6 : 1 }}
                             >
@@ -1504,7 +1821,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             </div>
                             <button
                               type="button"
-                              onClick={() => { setActiveView('tenants'); setStatusFilter('suspended'); }}
+                              onClick={() => { setActiveView('tenants'); setStatusFilter('suspended'); setIndustryFilter('all'); setSearchQuery(''); }}
                               className="sa-attention-action-btn"
                               style={{ opacity: pendingApprovalCount === 0 ? 0.6 : 1 }}
                             >
@@ -1542,15 +1859,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         title={`Lifetime Cumulative Scans: ${(dbStats?.telemetry?.qr_scans_today?.total_all_time ?? totalScans).toLocaleString()} (Daily scan timestamps not metered)`}
                       >
                         <div className="sa-telemetry-top">
-                          <span className="sa-telemetry-label">QR Scans (Today)</span>
+                          <span className="sa-telemetry-label">Lifetime QR Scans</span>
                           <QrCode size={13} color="#7E22CE" />
                         </div>
                         <div className="sa-telemetry-val-box">
-                          <span className="sa-telemetry-val" style={{ fontSize: '0.90rem', color: 'var(--sa-text-muted)' }}>
-                            Not tracked
+                          <span className="sa-telemetry-val" style={{ fontSize: '1.05rem', color: '#7E22CE' }}>
+                            {(dbStats?.telemetry?.qr_scans_today?.total_all_time ?? totalScans).toLocaleString('en-IN')}
                           </span>
                           <span className="sa-telemetry-sub">
-                            {(dbStats?.telemetry?.qr_scans_today?.total_all_time ?? totalScans).toLocaleString()} total
+                            Platform all-time scans
                           </span>
                         </div>
                       </div>
@@ -1601,7 +1918,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         </div>
                         <div className="sa-telemetry-val-box">
                           <span className="sa-telemetry-val" style={{ fontSize: '1.05rem' }}>
-                            {dbStats?.storage?.database_size_pretty || dbStats?.database?.total_size || '12.92 MB'}
+                            {dbStats?.storage?.database_size_pretty || dbStats?.database?.total_size || (dbStats ? 'Serverless Pool' : 'Measuring...')}
                           </span>
                           <span className="sa-telemetry-sub" style={{ fontSize: '0.64rem' }}>
                             DB • R2 unmetered
@@ -1867,68 +2184,103 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 title="💳 Billing & Subscription Center"
                 subtitle="Monitor subscriptions, renewals, failed payments and cancellations."
                 actions={
-                  <button
-                    type="button"
-                    onClick={loadData}
-                    className="sa-btn sa-btn-secondary sa-btn-sm"
-                    title="Refresh live metrics"
-                  >
-                    <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '4px 10px', borderRadius: 'var(--sa-radius-full)',
+                      background: (paymentKeys?.cashfree_app_id || dbStats?.services?.cashfree?.configured) ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                      border: `1px solid ${(paymentKeys?.cashfree_app_id || dbStats?.services?.cashfree?.configured) ? '#10B981' : '#EF4444'}`,
+                      fontSize: '0.72rem', fontWeight: 800,
+                      color: (paymentKeys?.cashfree_app_id || dbStats?.services?.cashfree?.configured) ? '#065F46' : '#991B1B'
+                    }}>
+                      <span className={`sa-live-dot ${(paymentKeys?.cashfree_app_id || dbStats?.services?.cashfree?.configured) ? 'active' : 'muted'}`} />
+                      <span>Cashfree: {((paymentKeys?._runtime_cashfree_env || paymentKeys?.cashfree_env || 'sandbox')).toUpperCase()}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleExportBillingCsv}
+                      className="sa-btn sa-btn-secondary sa-btn-sm"
+                      title="Export Billing Ledger as CSV"
+                      style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      <Download size={14} /> Export CSV
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={loadData}
+                      className="sa-btn sa-btn-secondary sa-btn-sm"
+                      title="Refresh live metrics"
+                    >
+                      <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
+                    </button>
+                  </div>
                 }
               />
 
               {/* 📊 2. FINANCIAL KPI HERO ROW (USING SHARED KpiCard) */}
               <div className="sa-stats-grid">
                 {/* KPI 1: Paid MRR */}
-                <KpiCard
-                  label="Paid MRR"
-                  value={`₹${paidMrr.toLocaleString()}`}
-                  icon={DollarSign}
-                  color="var(--sa-accent)"
-                  badge="ACTIVE PAID"
-                  subtitle={`${paidTenants.length} Paid Subscribers`}
-                />
+                <div style={{ outline: statusFilter === 'active' ? '2.5px solid var(--sa-primary)' : 'none', borderRadius: 'var(--sa-radius-lg)', cursor: 'pointer', transition: 'outline 0.15s ease' }}>
+                  <KpiCard
+                    label="Paid MRR"
+                    value={`₹${paidMrr.toLocaleString()}`}
+                    icon={DollarSign}
+                    color="var(--sa-accent)"
+                    badge="ACTIVE PAID"
+                    subtitle={`${paidTenants.length} Paid Subscribers`}
+                    onClick={() => setStatusFilter(prev => prev === 'active' ? 'all' : 'active')}
+                  />
+                </div>
 
                 {/* KPI 2: Active Paid */}
-                <KpiCard
-                  label="Active Paid"
-                  value={paidTenants.length}
-                  icon={CheckCircle}
-                  color="#15803D"
-                  onClick={() => setStatusFilter('active')}
-                  subtitle="Paid Accounts"
-                />
+                <div style={{ outline: statusFilter === 'active' ? '2.5px solid var(--sa-primary)' : 'none', borderRadius: 'var(--sa-radius-lg)', cursor: 'pointer', transition: 'outline 0.15s ease' }}>
+                  <KpiCard
+                    label="Active Paid"
+                    value={paidTenants.length}
+                    icon={CheckCircle}
+                    color="#15803D"
+                    onClick={() => setStatusFilter(prev => prev === 'active' ? 'all' : 'active')}
+                    subtitle="Paid Accounts"
+                  />
+                </div>
 
                 {/* KPI 3: Past Due / Failed */}
-                <KpiCard
-                  label="Past Due / Failed"
-                  value={restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length}
-                  icon={CreditCard}
-                  color="#B45309"
-                  onClick={() => setStatusFilter('failed')}
-                  subtitle="Needs Attention"
-                />
+                <div style={{ outline: statusFilter === 'failed' ? '2.5px solid #B45309' : 'none', borderRadius: 'var(--sa-radius-lg)', cursor: 'pointer', transition: 'outline 0.15s ease' }}>
+                  <KpiCard
+                    label="Past Due / Failed"
+                    value={restaurants.filter(r => r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due').length}
+                    icon={CreditCard}
+                    color="#B45309"
+                    onClick={() => setStatusFilter(prev => prev === 'failed' ? 'all' : 'failed')}
+                    subtitle="Needs Attention"
+                  />
+                </div>
 
                 {/* KPI 4: Auto-Renew Off */}
-                <KpiCard
-                  label="Auto-Renew Off"
-                  value={restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false && !r.is_vip && !r.is_complimentary).length}
-                  icon={Clock}
-                  color="#C2410C"
-                  onClick={() => setStatusFilter('autorenew_off')}
-                  subtitle="Churn Risk"
-                />
+                <div style={{ outline: statusFilter === 'autorenew_off' ? '2.5px solid #C2410C' : 'none', borderRadius: 'var(--sa-radius-lg)', cursor: 'pointer', transition: 'outline 0.15s ease' }}>
+                  <KpiCard
+                    label="Auto-Renew Off"
+                    value={restaurants.filter(r => (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null) && r.active !== false && !r.is_vip && !r.is_complimentary).length}
+                    icon={Clock}
+                    color="#C2410C"
+                    onClick={() => setStatusFilter(prev => prev === 'autorenew_off' ? 'all' : 'autorenew_off')}
+                    subtitle="Churn Risk"
+                  />
+                </div>
 
                 {/* KPI 5: Complimentary / VIP */}
-                <KpiCard
-                  label="Complimentary VIP"
-                  value={restaurants.filter(r => r.is_vip || r.is_complimentary || ((r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') && r.subscription_status !== 'expired')).length}
-                  icon={Sparkles}
-                  color="#7E22CE"
-                  onClick={() => setStatusFilter('vip')}
-                  subtitle="Active Grants"
-                />
+                <div style={{ outline: statusFilter === 'vip' ? '2.5px solid #7E22CE' : 'none', borderRadius: 'var(--sa-radius-lg)', cursor: 'pointer', transition: 'outline 0.15s ease' }}>
+                  <KpiCard
+                    label="Complimentary VIP"
+                    value={restaurants.filter(r => r.is_vip || r.is_complimentary || ((r.subscription_type === 'ADMIN_GRANTED' || r.mandate_status === 'admin_granted') && r.subscription_status !== 'expired')).length}
+                    icon={Sparkles}
+                    color="#7E22CE"
+                    onClick={() => setStatusFilter(prev => prev === 'vip' ? 'all' : 'vip')}
+                    subtitle="Active Grants"
+                  />
+                </div>
               </div>
 
               {/* ⚠️ 3. BILLING ATTENTION HUB */}
@@ -1990,7 +2342,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                   {/* Row 3: Expiring Within 7 Days */}
                   {restaurants.filter(r => {
-                    const d = getDaysRemaining(r.plan_expires_at || r.access_until);
+                    const d = getDaysRemaining(r.access_until || r.plan_expires_at);
                     return d !== null && d > 0 && d <= 7 && !isVipTenant(r) && !isLifetimeVipTenant(r);
                   }).length > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '10px 14px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
@@ -1998,7 +2350,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         <span style={{ background: '#64748B', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 900, flexShrink: 0 }}>EXPIRING</span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
                           {restaurants.filter(r => {
-                            const d = getDaysRemaining(r.plan_expires_at || r.access_until);
+                            const d = getDaysRemaining(r.access_until || r.plan_expires_at);
                             return d !== null && d > 0 && d <= 7 && !isVipTenant(r) && !isLifetimeVipTenant(r);
                           }).length} Subscriptions Expiring in &le; 7 Days
                         </span>
@@ -2088,6 +2440,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               </div>
 
+              {/* 🏢 INDUSTRY CATEGORY FILTER STRIP */}
+              <FilterPills
+                pills={getIndustryFilterPills()}
+                activeId={industryFilter}
+                onChange={setIndustryFilter}
+              />
+
               {/* 🏷️ 5. FILTER PILLS STRIP */}
               <FilterPills
                 pills={getDirectoryFilterPills()}
@@ -2104,7 +2463,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   action={
                     <button
                       type="button"
-                      onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+                      onClick={() => { setSearchQuery(''); setStatusFilter('all'); setIndustryFilter('all'); }}
                       className="sa-btn sa-btn-secondary sa-btn-sm"
                     >
                       Clear Search & Filters
@@ -2137,7 +2496,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             );
 
                         const isLifetime = isLifetimeVipTenant(r);
-                        const daysLeft = getDaysRemaining(r.plan_expires_at || r.access_until);
+                        const daysLeft = getDaysRemaining(r.access_until || r.plan_expires_at);
                         const isExpired = (!isVip && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
                         const isAutoRenewOff = isVip ? true : (r.auto_renew === 0 || r.auto_renew === false || r.cancel_requested_at !== null);
 
@@ -2225,15 +2584,45 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                                       : 'Active'}
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedTenant360(r)}
-                                className="sa-btn sa-btn-secondary sa-btn-sm"
-                                style={{ padding: '4px 9px', fontSize: '0.72rem', fontWeight: 800 }}
-                                title="Open complete 360-degree Shop Profile"
-                              >
-                                🔍 360°
-                              </button>
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', alignItems: 'center' }}>
+                                {(r.subscription_status === 'payment_failed' || r.subscription_status === 'past_due' || (daysLeft !== null && daysLeft <= 7 && !isVip)) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleBillingWhatsAppOutreach(r)}
+                                    className="sa-btn sa-btn-sm"
+                                    style={{
+                                      padding: '4px 8px', fontSize: '0.70rem', fontWeight: 800,
+                                      background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0',
+                                      display: 'flex', alignItems: 'center', gap: '4px'
+                                    }}
+                                    title="Send WhatsApp Billing / Renewal Reminder"
+                                  >
+                                    <MessageSquare size={13} />
+                                    <span>Remind</span>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedTenant360(r)}
+                                  className="sa-btn sa-btn-secondary sa-btn-sm"
+                                  style={{ padding: '4px 9px', fontSize: '0.72rem', fontWeight: 800 }}
+                                  title="Open complete 360-degree Shop Profile"
+                                >
+                                  🔍 360°
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedMoreResto(r);
+                                  }}
+                                  className="sa-btn sa-btn-secondary sa-btn-sm"
+                                  style={{ padding: '4px 8px', fontSize: '0.72rem', fontWeight: 900 }}
+                                  title="More Shop Actions"
+                                >
+                                  •••
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -2822,10 +3211,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             <div style={{ maxWidth: '840px', margin: '0 auto', width: '100%' }}>
               <CommunicationView
                 announcementsList={announcementsList}
-                onSendAnnouncement={async ({ message, type }) => {
-                  await createAnnouncement(message.trim(), type, token);
-                  alert('📢 Announcement broadcasted successfully to all shop dashboards!');
-                  loadSuperAnnouncements();
+                onSendAnnouncement={async ({ message, type, audience }) => {
+                  try {
+                    await createAnnouncement(message.trim(), type, token, audience || 'all');
+                    try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const bc = new BroadcastChannel('touchqr_broadcast_channel');
+          bc.postMessage({ type: 'ANNOUNCEMENTS_UPDATED' });
+          bc.close();
+        }
+      } catch (e) {}
+      alert('📢 Announcement broadcasted successfully to all shop dashboards!');
+                    loadSuperAnnouncements();
+                  } catch (err) {
+                    alert(err.message || 'Failed to broadcast announcement');
+                  }
                 }}
                 onDeleteAnnouncement={handleDeleteAnnouncement}
                 onClearAll={handleClearAllAnnouncements}
@@ -2838,7 +3238,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* ========================================================================= */}
           {activeView === 'tickets' && (
             <div style={{ maxWidth: '1240px', margin: '0 auto', width: '100%' }}>
-              <SupportTicketsView token={token} />
+              <SupportTicketsView 
+                token={token} 
+                setSelectedTenant360={setSelectedTenant360} 
+                onImpersonate={handleImpersonate}
+                restaurants={restaurants}
+              />
             </div>
           )}
         </main>
@@ -2851,6 +3256,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             setShowMobileMoreDrawer(false);
           }}
           onOpenMoreDrawer={() => setShowMobileMoreDrawer(true)}
+          openTicketsCount={openTicketsCount}
         />
       </div>
 
@@ -2899,7 +3305,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               {[
                 { id: 'overview', label: 'Overview & KPIs', desc: 'Real-time telemetry & stats', icon: LayoutGrid, count: null, color: '#2563EB', bg: '#EFF6FF' },
                 { id: 'tenants', label: 'Shops Directory', desc: 'Manage client accounts & access', icon: Store, count: restaurants.length, color: '#059669', bg: '#ECFDF5' },
-                { id: 'tickets', label: 'Support Tickets Desk', desc: 'Manage tenant tickets & replies', icon: MessageSquare, count: null, color: '#059669', bg: '#ECFDF5' },
+                { id: 'tickets', label: 'Support Tickets Desk', desc: 'Manage tenant tickets & replies', icon: MessageSquare, count: openTicketsCount > 0 ? openTicketsCount : null, color: '#059669', bg: '#ECFDF5' },
                 { id: 'billing', label: 'Billing & Subscriptions', desc: 'Cashfree mandates & renewals', icon: CreditCard, count: restaurants.filter(r => getTenantStatus(r) === 'active').length, color: '#7C3AED', bg: '#F5F3FF' },
               ].map((item, idx, arr) => {
                 const isActive = activeView === item.id;
@@ -3186,22 +3592,39 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
             {/* Action Items */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {/* 1. VIP Grant / Revoke */}
-              {((selectedMoreResto.subscription_type === 'ADMIN_GRANTED' || selectedMoreResto.mandate_status === 'admin_granted')) ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRevokeModalResto(selectedMoreResto);
-                    setSelectedMoreResto(null);
-                  }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
-                >
-                  <Shield size={18} color="#DC2626" />
-                  <div>
-                    <strong style={{ display: 'block' }}>Revoke VIP Access</strong>
-                    <span style={{ fontSize: '0.70rem', color: '#B91C1C', fontWeight: 600 }}>Revert account back to normal billing</span>
-                  </div>
-                </button>
+              {/* 1. VIP Grant / Extend / Revoke */}
+              {isVipTenant(selectedMoreResto) ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGrantModalResto(selectedMoreResto);
+                      setSelectedMoreResto(null);
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#F3E8FF', border: '1px solid #E9D5FF', color: '#6B21A8', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <Crown size={18} color="#7E22CE" />
+                    <div>
+                      <strong style={{ display: 'block' }}>Extend / Update VIP Access</strong>
+                      <span style={{ fontSize: '0.70rem', color: '#7E22CE', fontWeight: 600 }}>Extend duration, change plan tier, or grant lifetime</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRevokeModalResto(selectedMoreResto);
+                      setSelectedMoreResto(null);
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <Shield size={18} color="#DC2626" />
+                    <div>
+                      <strong style={{ display: 'block' }}>Revoke VIP Access</strong>
+                      <span style={{ fontSize: '0.70rem', color: '#B91C1C', fontWeight: 600 }}>Revert account back to normal billing</span>
+                    </div>
+                  </button>
+                </>
               ) : (
                 <button
                   type="button"
@@ -3214,7 +3637,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   <Crown size={18} color="#7E22CE" />
                   <div>
                     <strong style={{ display: 'block' }}>Grant VIP Access</strong>
-                    <span style={{ fontSize: '0.70rem', color: '#7E22CE', fontWeight: 600 }}>Give complimentary 100% free lifetime access</span>
+                    <span style={{ fontSize: '0.70rem', color: '#7E22CE', fontWeight: 600 }}>Give complimentary 100% free VIP access</span>
                   </div>
                 </button>
               )}
@@ -3432,6 +3855,81 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Dynamic Capacity Inputs for Hotels, Cinemas, Restaurants */}
+              {(editModalData.service_model === 'cinema' || editModalData.business_type === 'cinema_theatre') ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>AUDITORIUM SCREENS</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={editModalData.total_screens !== undefined ? editModalData.total_screens : 3}
+                      onChange={(e) => setEditModalData({ ...editModalData, total_screens: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>TOTAL SEATS</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10000"
+                      value={editModalData.total_seats !== undefined ? editModalData.total_seats : 150}
+                      onChange={(e) => setEditModalData({ ...editModalData, total_seats: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                </div>
+              ) : (editModalData.service_model === 'hotel' || editModalData.business_type === 'hotel_resort') ? (
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>TOTAL GUEST ROOMS / SUITES</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={editModalData.total_rooms !== undefined ? editModalData.total_rooms : 20}
+                    onChange={(e) => setEditModalData({ ...editModalData, total_rooms: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>TOTAL DINING TABLES</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={editModalData.total_tables !== undefined ? editModalData.total_tables : 20}
+                    onChange={(e) => setEditModalData({ ...editModalData, total_tables: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>PHONE / WHATSAPP</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9876543210"
+                    value={editModalData.phone || editModalData.whatsapp_number || ''}
+                    onChange={(e) => setEditModalData({ ...editModalData, phone: e.target.value, whatsapp_number: e.target.value })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>STORE ADDRESS</label>
+                  <input
+                    type="text"
+                    placeholder="City, locality, street"
+                    value={editModalData.address || ''}
+                    onChange={(e) => setEditModalData({ ...editModalData, address: e.target.value })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                  />
+                </div>
               </div>
 
               <div>
@@ -3739,14 +4237,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 {/* Template Chips */}
                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
                   {[
-                    { label: '⚡ New Feature', text: '🎉 New Feature Released: WhatsApp Direct Ordering is now live for all businesses!' },
-                    { label: '🛠️ Maintenance', text: '⚠️ Scheduled maintenance tonight from 2:00 AM - 3:00 AM IST. QR menus remain online.' },
-                    { label: '📢 System Update', text: 'ℹ️ Platform speed optimization complete. Dashboard loading 40% faster!' },
+                    { label: '⚡ New Feature', type: 'success', text: '🎉 New Feature Released: WhatsApp Direct Ordering is now live for all businesses!' },
+                    { label: '🛠️ Maintenance', type: 'warning', text: '⚠️ Scheduled maintenance tonight from 2:00 AM - 3:00 AM IST. QR menus remain online.' },
+                    { label: '📢 System Update', type: 'info', text: 'ℹ️ Platform speed optimization complete. Dashboard loading 40% faster!' },
                   ].map((tpl, i) => (
                     <button
                       key={i}
                       type="button"
-                      onClick={() => setAnnounceMsg(tpl.text)}
+                      onClick={() => { setAnnounceMsg(tpl.text); if (tpl.type) setAnnounceType(tpl.type); }}
                       style={{
                         padding: '4px 8px', fontSize: '0.68rem', fontWeight: 700, borderRadius: '6px',
                         background: '#F1F5F9', border: '1px solid #E2E8F0', color: '#334155', cursor: 'pointer',
@@ -3773,11 +4271,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               </div>
 
               {/* Type Selector with luxury styled pills */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
                 {[
-                  { id: 'info', label: 'ℹ️ Information', color: '#1D4ED8', bg: '#EFF6FF', border: '#93C5FD' },
-                  { id: 'success', label: '🎉 Feature Release', color: '#15803D', bg: '#DCFCE7', border: '#86EFAC' },
-                  { id: 'warning', label: '⚠️ Maintenance', color: '#B45309', bg: '#FEF3C7', border: '#FCD34D' },
+                  { id: 'info', label: 'ℹ️ Information', color: '#6366F1', bg: 'rgba(99, 102, 241, 0.08)', border: '#6366F1' },
+                  { id: 'success', label: '🎉 Feature Release', color: '#10B981', bg: 'rgba(16, 185, 129, 0.08)', border: '#10B981' },
+                  { id: 'warning', label: '⚠️ Maintenance', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.08)', border: '#F59E0B' },
+                  { id: 'error', label: '🚨 Critical Alert', color: '#EF4444', bg: 'rgba(239, 68, 68, 0.08)', border: '#EF4444' }
                 ].map(type => {
                   const isSelected = announceType === type.id;
                   return (
@@ -3800,25 +4299,43 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 })}
               </div>
 
-              {/* Live Preview Box */}
-              {announceMsg.trim() && (
-                <div style={{
-                  padding: '12px 14px', borderRadius: '10px',
-                  background: announceType === 'warning' ? '#FEF3C7' : announceType === 'success' ? '#DCFCE7' : '#EFF6FF',
-                  border: `1px solid ${announceType === 'warning' ? '#FCD34D' : announceType === 'success' ? '#86EFAC' : '#BFDBFE'}`,
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}>
-                  <Megaphone size={16} color={announceType === 'warning' ? '#B45309' : announceType === 'success' ? '#15803D' : '#1D4ED8'} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.66rem', fontWeight: 900, textTransform: 'uppercase', color: announceType === 'warning' ? '#B45309' : announceType === 'success' ? '#15803D' : '#1D4ED8' }}>
-                      Shop Dashboard Banner Live Preview
+              {/* 1:1 Live Replica Preview */}
+              {announceMsg.trim() && (() => {
+                const previewThemes = {
+                  warning: { bg: 'linear-gradient(135deg, #78350F 0%, #92400E 100%)', border: '#F59E0B', text: '#FEF3C7', icon: '#FDE68A', badge: 'MAINTENANCE ALERT', badgeBg: 'rgba(245,158,11,0.25)', badgeBorder: 'rgba(245,158,11,0.45)', badgeText: '#FDE68A' },
+                  success: { bg: 'linear-gradient(135deg, #064E3B 0%, #065F46 100%)', border: '#10B981', text: '#ECFDF5', icon: '#6EE7B7', badge: 'NEW FEATURE RELEASE', badgeBg: 'rgba(16,185,129,0.25)', badgeBorder: 'rgba(16,185,129,0.45)', badgeText: '#A7F3D0' },
+                  error: { bg: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)', border: '#EF4444', text: '#FEF2F2', icon: '#FCA5A5', badge: 'CRITICAL SYSTEM ALERT', badgeBg: 'rgba(239,68,68,0.25)', badgeBorder: 'rgba(239,68,68,0.45)', badgeText: '#FECACA' },
+                  info: { bg: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)', border: '#6366F1', text: '#EEF2FF', icon: '#FBBF24', badge: 'PLATFORM ANNOUNCEMENT', badgeBg: 'rgba(99,102,241,0.25)', badgeBorder: 'rgba(99,102,241,0.45)', badgeText: '#C7D2FE' }
+                };
+                const pt = previewThemes[announceType] || previewThemes.info;
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--sa-text-muted)', letterSpacing: '0.04em' }}>
+                        👁️ Live Business Dashboard Preview:
+                      </span>
+                      <span style={{ fontSize: '0.66rem', color: '#10B981', fontWeight: 700 }}>● Exact Shop Replica</span>
                     </div>
-                    <div style={{ fontSize: '0.80rem', fontWeight: 700, color: '#1E293B', wordBreak: 'break-word' }}>
-                      {announceMsg}
+                    <div style={{
+                      background: pt.bg, borderRadius: '12px', padding: '11px 16px', color: pt.text, fontSize: '0.80rem',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', boxShadow: '0 6px 18px rgba(0,0,0,0.18)', border: `1px solid ${pt.border}`
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+                        <Megaphone size={15} color={pt.icon} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.64rem', fontWeight: 800, padding: '2px 7px', borderRadius: '9999px', background: pt.badgeBg, border: `1px solid ${pt.badgeBorder}`, color: pt.badgeText, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
+                          {pt.badge}
+                        </span>
+                        <span style={{ wordBreak: 'break-word', fontWeight: 600, flex: 1, minWidth: '160px' }}>
+                          {announceMsg}
+                        </span>
+                      </div>
+                      <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontSize: '0.70rem', flexShrink: 0 }}>
+                        ✕
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Submit Button */}
               <button

@@ -12,6 +12,7 @@ import {
   Settings,
   MoreHorizontal
 } from 'lucide-react';
+import { getBusinessTerminology } from '../../utils/businessTaxonomy';
 
 /**
  * TouchQR Centralized Admin Navigation Configuration
@@ -154,4 +155,37 @@ export function isNavItemActive(item, activeTab, surface = 'desktop') {
     return item.matchTabs.includes(activeTab);
   }
   return activeTab === item.id;
+}
+
+/**
+ * Returns dynamic, vertical-tailored navigation labels based on tenant industry.
+ * - Hotel & Resort: Room Service Orders, In-Room Menu, Room QR Codes
+ * - Cinema & Multiplex: In-Seat Orders, Concessions Menu, Seat QR Standees
+ * - Restaurant & Dining: Orders, Menu, QR Standees
+ */
+export function getLocalizedNavLabel(item, restaurantInfo = {}, surface = 'desktop') {
+  if (!item) return '';
+  const terms = getBusinessTerminology(restaurantInfo);
+  const isHotel = terms.serviceModel === 'hotel' || restaurantInfo?.business_type === 'hotel_resort' || restaurantInfo?.service_model === 'hotel';
+  const isCinema = terms.serviceModel === 'cinema' || restaurantInfo?.business_type === 'cinema_theatre' || restaurantInfo?.service_model === 'cinema';
+
+  if (item.id === 'orders') {
+    if (surface === 'bottomNav') {
+      return isHotel ? 'Room Orders' : isCinema ? 'Seat Orders' : (item.bottomNavLabel || 'Orders');
+    }
+    return isHotel ? 'Room Service Orders' : isCinema ? 'In-Seat Orders' : 'Orders';
+  }
+
+  if (item.id === 'dishes') {
+    if (surface === 'bottomNav') {
+      return isHotel ? 'In-Room Menu' : isCinema ? 'Concessions' : (item.bottomNavLabel || 'Menu');
+    }
+    return isHotel ? 'In-Room Menu' : isCinema ? 'Concessions & Snacks' : 'Menu';
+  }
+
+  if (item.id === 'qr-generator') {
+    return isHotel ? 'Room QR Codes' : isCinema ? 'Seat QR Standees' : 'QR Standees';
+  }
+
+  return surface === 'bottomNav' ? (item.bottomNavLabel || item.label) : item.label;
 }

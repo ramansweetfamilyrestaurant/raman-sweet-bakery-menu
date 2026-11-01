@@ -415,31 +415,39 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     const mandateStatus = (r.mandate_status || (r.mandate_id ? 'active' : 'pending')).toLowerCase();
     const isComplimentary = Boolean(subInfo.isComplimentary || isAuthoritativeComplimentaryTenant(r, sub));
 
+    const isUnlimitedPlan = tierKey === 'enterprise' || tierKey === 'vip_ultra' || tierKey === 'vip_ultra_plan' || tierKey === 'vip';
     const matrixPermissions = {
-      max_dishes: isComplimentary ? 9999 : (saasPlan.max_dishes !== undefined && saasPlan.max_dishes !== null ? Number(saasPlan.max_dishes) : 9999),
-      max_categories: isComplimentary ? 9999 : (saasPlan.max_categories !== undefined && saasPlan.max_categories !== null ? Number(saasPlan.max_categories) : 9999),
-      max_combos: isComplimentary ? 9999 : (saasPlan.max_combos !== undefined && saasPlan.max_combos !== null ? Number(saasPlan.max_combos) : (tierKey === 'basic' ? 3 : tierKey === 'pro' ? 10 : 9999)),
-      max_tables: isComplimentary ? 9999 : (saasPlan.max_tables !== undefined && saasPlan.max_tables !== null ? Number(saasPlan.max_tables) : 9999),
-      max_staff_accounts: isComplimentary ? 9999 : (saasPlan.max_staff_accounts !== undefined && saasPlan.max_staff_accounts !== null ? Number(saasPlan.max_staff_accounts) : 9999),
-      order_retention_days: isComplimentary ? 365 : (saasPlan.order_retention_days !== undefined && saasPlan.order_retention_days !== null ? Number(saasPlan.order_retention_days) : 365),
+      max_dishes: isUnlimitedPlan ? 9999 : ((r.max_dishes !== undefined && r.max_dishes !== null) ? Number(r.max_dishes) : ((saasPlan.max_dishes !== undefined && saasPlan.max_dishes !== null) ? Number(saasPlan.max_dishes) : ((saasPlan.dish_limit !== undefined && saasPlan.dish_limit !== null) ? Number(saasPlan.dish_limit) : (tierKey === 'basic' ? 50 : 500)))),
+      max_categories: isUnlimitedPlan ? 9999 : ((r.max_categories !== undefined && r.max_categories !== null) ? Number(r.max_categories) : ((saasPlan.max_categories !== undefined && saasPlan.max_categories !== null) ? Number(saasPlan.max_categories) : ((saasPlan.category_limit !== undefined && saasPlan.category_limit !== null) ? Number(saasPlan.category_limit) : (tierKey === 'basic' ? 10 : 50)))),
+      max_combos: isUnlimitedPlan ? 9999 : ((r.max_combos !== undefined && r.max_combos !== null) ? Number(r.max_combos) : ((saasPlan.max_combos !== undefined && saasPlan.max_combos !== null) ? Number(saasPlan.max_combos) : (tierKey === 'basic' ? 3 : 10))),
+      max_tables: isUnlimitedPlan ? 9999 : ((r.max_tables !== undefined && r.max_tables !== null) ? Number(r.max_tables) : ((saasPlan.max_tables !== undefined && saasPlan.max_tables !== null) ? Number(saasPlan.max_tables) : ((saasPlan.table_limit !== undefined && saasPlan.table_limit !== null) ? Number(saasPlan.table_limit) : (tierKey === 'basic' ? 20 : 100)))),
+      max_staff_accounts: isUnlimitedPlan ? 9999 : ((r.max_staff_accounts !== undefined && r.max_staff_accounts !== null) ? Number(r.max_staff_accounts) : ((saasPlan.max_staff_accounts !== undefined && saasPlan.max_staff_accounts !== null) ? Number(saasPlan.max_staff_accounts) : (tierKey === 'basic' ? 2 : 5))),
+      order_retention_days: isUnlimitedPlan ? 365 : ((r.order_retention_days !== undefined && r.order_retention_days !== null) ? Number(r.order_retention_days) : ((saasPlan.order_retention_days !== undefined && saasPlan.order_retention_days !== null) ? Number(saasPlan.order_retention_days) : (tierKey === 'basic' ? 30 : 90))),
       modifiers_enabled: isValTrue(saasPlan.modifiers_enabled, true),
       staff_roles_enabled: isValTrue(saasPlan.staff_roles_enabled, true),
-      whatsapp_enabled: isComplimentary ? true : isValTrue(saasPlan.whatsapp_ordering_enabled ?? saasPlan.whatsapp_enabled, tierKey !== 'basic'),
-      direct_ordering_enabled: isComplimentary ? true : isValTrue(saasPlan.direct_ordering_enabled, tierKey === 'enterprise'),
+      whatsapp_enabled: isValTrue(saasPlan.whatsapp_ordering_enabled ?? saasPlan.whatsapp_enabled, tierKey !== 'basic'),
+      direct_ordering_enabled: isValTrue(saasPlan.direct_ordering_enabled, isUnlimitedPlan),
       audio_alarm_enabled: isValTrue(saasPlan.audio_alarm_enabled, true),
       order_status_whatsapp_enabled: isValTrue(saasPlan.order_status_whatsapp_enabled, true),
-      kds_enabled: isComplimentary ? true : isValTrue(saasPlan.kds_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan'),
-      bluetooth_kot_enabled: isValTrue(saasPlan.bluetooth_kot_enabled, true),
-      google_reviews_enabled: isComplimentary ? true : isValTrue(saasPlan.google_reviews_enabled, tierKey !== 'basic'),
+      kds_enabled: isValTrue(saasPlan.kds_enabled, isUnlimitedPlan),
+      bluetooth_kot_enabled: isValTrue(saasPlan.bluetooth_kot_enabled, isUnlimitedPlan),
+      google_reviews_enabled: isValTrue(saasPlan.google_reviews_enabled, tierKey !== 'basic'),
       ai_review_enabled: isValTrue(saasPlan.ai_review_enabled, true),
       stories_enabled: isValTrue(saasPlan.stories_enabled, true),
       gst_invoice_enabled: isValTrue(saasPlan.gst_invoice_enabled, true),
       analytics_export_enabled: isValTrue(saasPlan.analytics_export_enabled, true),
       multi_language_enabled: isValTrue(saasPlan.multi_language_enabled, true),
       watermark_removal_enabled: isValTrue(saasPlan.watermark_removal_enabled, true),
-      custom_domain_enabled: isValTrue(saasPlan.custom_domain_enabled, true),
-      dual_printer_enabled: isComplimentary ? true : isValTrue(saasPlan.dual_printer_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan'),
-      allowed_themes: isComplimentary ? 'ALL' : (saasPlan.allowed_themes || (tierKey === 'basic' ? 'gold' : tierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL'))
+      custom_domain_enabled: isValTrue(saasPlan.custom_domain_enabled, isUnlimitedPlan),
+      dual_printer_enabled: isValTrue(saasPlan.dual_printer_enabled, isUnlimitedPlan),
+      max_rooms: (r.max_rooms !== undefined && r.max_rooms !== null) ? Number(r.max_rooms) : ((saasPlan.max_rooms !== undefined && saasPlan.max_rooms !== null) ? Number(saasPlan.max_rooms) : 9999),
+      max_screens: (r.max_screens !== undefined && r.max_screens !== null) ? Number(r.max_screens) : ((saasPlan.max_screens !== undefined && saasPlan.max_screens !== null) ? Number(saasPlan.max_screens) : 9999),
+      max_seats: (r.max_seats !== undefined && r.max_seats !== null) ? Number(r.max_seats) : ((saasPlan.max_seats !== undefined && saasPlan.max_seats !== null) ? Number(saasPlan.max_seats) : 9999),
+      amenities_booking_enabled: isValTrue(saasPlan.amenities_booking_enabled, true),
+      seat_runner_dispatch_enabled: isValTrue(saasPlan.seat_runner_dispatch_enabled, true),
+      interval_rush_mode_enabled: isValTrue(saasPlan.interval_rush_mode_enabled, true),
+      industry: saasPlan.industry || (tierKey.startsWith('hotel_') ? 'hotel' : tierKey.startsWith('cinema_') ? 'cinema' : 'restaurant'),
+      allowed_themes: (saasPlan.allowed_themes || (tierKey === 'basic' ? 'gold' : tierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL'))
     };
 
     const parseDate = (val) => {
@@ -502,7 +510,8 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       billing_setup: isComplimentary || mandateStatus === 'active' ? 'complete' : 'incomplete',
       grace_period_active: isGracePeriodActive,
       plan_tier: r.plan_tier || 'pro',
-      plan_name: isComplimentary ? 'Enterprise VIP Access' : (saasPlan.name || (tierKey === 'enterprise' ? 'Enterprise Plan' : tierKey === 'basic' ? 'Basic Plan' : 'Pro Plan')),
+      industry: saasPlan.industry || (tierKey.startsWith('hotel_') ? 'hotel' : tierKey.startsWith('cinema_') ? 'cinema' : 'restaurant'),
+      plan_name: isComplimentary ? (tierKey === 'enterprise' ? 'Enterprise VIP Access' : (saasPlan.name ? (saasPlan.name.includes('VIP') ? saasPlan.name : `${saasPlan.name} (VIP Access)`) : (tierKey === 'basic' ? 'Basic Plan (VIP Access)' : 'Pro Plan (VIP Access)'))) : (saasPlan.name || (tierKey === 'enterprise' ? 'Enterprise Plan' : tierKey === 'basic' ? 'Basic Plan' : 'Pro Plan')),
       plan_price: isComplimentary ? 0 : planPrice,
       subscription_type: r.subscription_type || (isComplimentary ? 'ADMIN_GRANTED' : 'PAID'),
       mandate_status: isComplimentary ? 'admin_granted' : mandateStatus,
@@ -1522,7 +1531,7 @@ const handleUpdateSettings = async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, business_category, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds, counter_ordering_enabled } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, business_category, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, total_screens, total_seats, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds, counter_ordering_enabled } = req.body;
 
     let cleanOwnerEmail = undefined;
     if (owner_email !== undefined) {
@@ -1635,31 +1644,46 @@ const handleUpdateSettings = async (req, res) => {
       }
     }
 
-    // 🛡️ AUTHORITATIVE BUSINESS TYPE -> SERVICE MODEL (CATEGORY) DERIVATION
-    let effectiveBizType = cleanBusinessType;
-    if (!effectiveBizType) {
-      const currentRestoForBiz = await query('SELECT business_type FROM restaurants WHERE id = $1', [targetId]);
-      effectiveBizType = currentRestoForBiz && currentRestoForBiz.length > 0 ? (currentRestoForBiz[0].business_type || 'restaurant') : 'restaurant';
+    // 🛡️ AUTHORITATIVE BUSINESS TYPE & SERVICE MODEL ENFORCEMENT
+    const currentRestoForBiz = await query('SELECT business_type, service_model FROM restaurants WHERE id = $1', [targetId]);
+    const rawExistingBizType = currentRestoForBiz && currentRestoForBiz.length > 0 ? (currentRestoForBiz[0].business_type || 'restaurant') : 'restaurant';
+    const normExisting = String(rawExistingBizType).trim().toLowerCase();
+    const normalizedExistingBizType = BUSINESS_TYPE_ALIASES[normExisting] || (isValidBusinessType(normExisting) ? normExisting : 'restaurant');
+    const existingServiceModel = currentRestoForBiz && currentRestoForBiz.length > 0 ? (currentRestoForBiz[0].service_model || 'dine_in') : 'dine_in';
+
+    // Business type / category can ONLY be modified centrally by SuperAdmin
+    if (req.user?.role !== 'superadmin') {
+      if (cleanBusinessType && cleanBusinessType !== normalizedExistingBizType) {
+        return res.status(403).json({
+          error: 'business_type_locked',
+          message: 'Business industry type is locked and managed centrally by SuperAdmin. Please contact SuperAdmin to change your business category.'
+        });
+      }
+      cleanBusinessType = normalizedExistingBizType;
     }
 
-    // service_model is now the authoritative category field ('dine_in', 'hotel', 'cinema')
-    const cleanServiceModel = resolveBusinessCategoryFromType(effectiveBizType);
+    let effectiveBizType = cleanBusinessType || normalizedExistingBizType;
+    let cleanServiceModel = resolveBusinessCategoryFromType(effectiveBizType);
+    if (req.user?.role !== 'superadmin') {
+      cleanServiceModel = existingServiceModel;
+    }
     const cleanBusinessCategory = cleanServiceModel;
 
-    // 🛡️ AUTHORITATIVE SAAS PLAN MAX_TABLES / SPACES ENFORCEMENT
-    const isSpaceUpdate = total_tables !== undefined || total_cabins !== undefined || total_rooms !== undefined || total_vip !== undefined;
+    // 🛡️ AUTHORITATIVE SAAS PLAN MAX_TABLES / ROOMS / SPACES ENFORCEMENT
+    const isSpaceUpdate = total_tables !== undefined || total_cabins !== undefined || total_rooms !== undefined || total_vip !== undefined || total_screens !== undefined || total_seats !== undefined;
     if (isSpaceUpdate) {
-      const restoRows = await query('SELECT plan_tier, subscription_type, mandate_status, total_tables, total_cabins, total_rooms, total_vip FROM restaurants WHERE id = $1', [targetId]);
+      const restoRows = await query('SELECT plan_tier, subscription_type, mandate_status, business_type, total_tables, total_cabins, total_rooms, total_vip, total_screens, total_seats FROM restaurants WHERE id = $1', [targetId]);
       if (!restoRows || restoRows.length === 0) {
         return res.status(404).json({ error: 'Restaurant not found' });
       }
       const currentResto = restoRows[0];
       const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
       const planTier = (currentResto.plan_tier || 'basic').toLowerCase();
+      const isHotelTenant = (effectiveBizType === 'hotel_resort' || currentResto.business_type === 'hotel_resort' || planTier.startsWith('hotel_'));
+      const isCinemaTenant = (effectiveBizType === 'cinema_theatre' || currentResto.business_type === 'cinema_theatre' || planTier.startsWith('cinema_'));
 
-      const planRows = await query('SELECT max_tables FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
-      const rawMaxTables = planRows && planRows.length > 0 ? planRows[0].max_tables : 9999;
-      const maxTablesAllowed = isComplimentary ? 9999 : (rawMaxTables !== null && rawMaxTables !== undefined ? Number(rawMaxTables) : 9999);
+      const planRows = await query('SELECT max_tables, max_rooms, max_screens, max_seats, industry FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
+      const planRow = planRows && planRows.length > 0 ? planRows[0] : {};
 
       const parseSpaceInput = (val, existingVal, fieldName) => {
         if (val === undefined || val === null) return Number(existingVal) || 0;
@@ -1670,29 +1694,79 @@ const handleUpdateSettings = async (req, res) => {
         return num;
       };
 
-      let reqTables, reqCabins, reqRooms, reqVip;
+      let reqTables, reqCabins, reqRooms, reqVip, reqScreens, reqSeats;
       try {
         reqTables = parseSpaceInput(total_tables, currentResto.total_tables, 'total_tables');
         reqCabins = parseSpaceInput(total_cabins, currentResto.total_cabins, 'total_cabins');
         reqRooms = parseSpaceInput(total_rooms, currentResto.total_rooms, 'total_rooms');
         reqVip = parseSpaceInput(total_vip, currentResto.total_vip, 'total_vip');
+        reqScreens = parseSpaceInput(total_screens, currentResto.total_screens, 'total_screens');
+        reqSeats = parseSpaceInput(total_seats, currentResto.total_seats, 'total_seats');
       } catch (valErr) {
         return res.status(400).json({ error: 'invalid_space_count', message: valErr.message });
       }
 
-      const existingTotalSpaces = (Number(currentResto.total_tables) || 0) + (Number(currentResto.total_cabins) || 0) + (Number(currentResto.total_rooms) || 0) + (Number(currentResto.total_vip) || 0);
-      const requestedTotalSpaces = reqTables + reqCabins + reqRooms + reqVip;
+      if (isHotelTenant) {
+        const rawMaxRooms = planRow.max_rooms;
+        const maxRoomsAllowed = isComplimentary ? 9999 : (rawMaxRooms !== null && rawMaxRooms !== undefined ? Number(rawMaxRooms) : 9999);
+        const existingRooms = Number(currentResto.total_rooms) || 0;
 
-      // Block if requested total exceeds quota AND is an increase beyond existing grandfathered count
-      if (requestedTotalSpaces > maxTablesAllowed && requestedTotalSpaces > existingTotalSpaces) {
-        return res.status(403).json({
-          success: false,
-          error: 'plan_limit_reached',
-          resource: 'tables',
-          limit: maxTablesAllowed,
-          current_count: requestedTotalSpaces,
-          message: `Your current SaaS plan allows a maximum of ${maxTablesAllowed} total customer-orderable spaces (tables, cabins, rooms, VIP lounges). Requested total: ${requestedTotalSpaces}. Please upgrade your plan to configure more spaces.`
-        });
+        if (reqRooms > maxRoomsAllowed && reqRooms > existingRooms) {
+          return res.status(403).json({
+            success: false,
+            error: 'plan_limit_reached',
+            resource: 'rooms',
+            limit: maxRoomsAllowed,
+            current_count: reqRooms,
+            message: `Your current SaaS plan allows a maximum of ${maxRoomsAllowed} guest rooms. Requested: ${reqRooms}. Please upgrade your plan to configure more rooms.`
+          });
+        }
+      } else if (isCinemaTenant) {
+        const rawMaxScreens = planRow.max_screens;
+        const maxScreensAllowed = isComplimentary ? 9999 : (rawMaxScreens !== null && rawMaxScreens !== undefined ? Number(rawMaxScreens) : 9999);
+        const existingScreens = Number(currentResto.total_screens) || 0;
+
+        if (reqScreens > maxScreensAllowed && reqScreens > existingScreens) {
+          return res.status(403).json({
+            success: false,
+            error: 'plan_limit_reached',
+            resource: 'screens',
+            limit: maxScreensAllowed,
+            current_count: reqScreens,
+            message: `Your current SaaS plan allows a maximum of ${maxScreensAllowed} auditorium screens. Requested: ${reqScreens}. Please upgrade your plan to configure more screens.`
+          });
+        }
+
+        const rawMaxSeats = planRow.max_seats;
+        const maxSeatsAllowed = isComplimentary ? 9999 : (rawMaxSeats !== null && rawMaxSeats !== undefined ? Number(rawMaxSeats) : 9999);
+        const existingSeats = Number(currentResto.total_seats) || 0;
+
+        if (reqSeats > maxSeatsAllowed && reqSeats > existingSeats) {
+          return res.status(403).json({
+            success: false,
+            error: 'plan_limit_reached',
+            resource: 'seats',
+            limit: maxSeatsAllowed,
+            current_count: reqSeats,
+            message: `Your current SaaS plan allows a maximum of ${maxSeatsAllowed} auditorium seats. Requested: ${reqSeats}. Please upgrade your plan to configure more seats.`
+          });
+        }
+      } else {
+        const rawMaxTables = planRow.max_tables;
+        const maxTablesAllowed = isComplimentary ? 9999 : (rawMaxTables !== null && rawMaxTables !== undefined ? Number(rawMaxTables) : 9999);
+        const existingDiningSpaces = (Number(currentResto.total_tables) || 0) + (Number(currentResto.total_cabins) || 0) + (Number(currentResto.total_vip) || 0);
+        const requestedDiningSpaces = reqTables + reqCabins + reqVip;
+
+        if (requestedDiningSpaces > maxTablesAllowed && requestedDiningSpaces > existingDiningSpaces) {
+          return res.status(403).json({
+            success: false,
+            error: 'plan_limit_reached',
+            resource: 'tables',
+            limit: maxTablesAllowed,
+            current_count: requestedDiningSpaces,
+            message: `Your current SaaS plan allows a maximum of ${maxTablesAllowed} dining spaces (tables, cabins, VIP lounges). Requested: ${requestedDiningSpaces}. Please upgrade your plan to configure more spaces.`
+          });
+        }
       }
     }
 
@@ -1703,7 +1777,7 @@ const handleUpdateSettings = async (req, res) => {
       const currentResto = restoRows[0] || {};
       const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
       const currentPlanTier = (currentResto.plan_tier || 'basic').toLowerCase();
-      let isDualAllowed = isComplimentary;
+      let isDualAllowed = isComplimentary || currentPlanTier.includes('enterprise') || currentPlanTier.includes('vip');
       if (!isDualAllowed) {
         const planRows = await query('SELECT dual_printer_enabled FROM saas_plans WHERE LOWER(key) = $1', [currentPlanTier]);
         isDualAllowed = planRows && planRows.length > 0
@@ -1778,8 +1852,10 @@ const handleUpdateSettings = async (req, res) => {
             business_type = COALESCE($39, business_type), food_type = COALESCE($40, food_type), service_model = COALESCE($41, service_model),
             owner_email = CASE WHEN $42::boolean THEN $43 ELSE owner_email END,
             business_category = COALESCE($44, business_category),
-            counter_ordering_enabled = COALESCE($45, counter_ordering_enabled)
-        WHERE id = $46
+            counter_ordering_enabled = COALESCE($45, counter_ordering_enabled),
+            total_screens = COALESCE($46, total_screens),
+            total_seats = COALESCE($47, total_seats)
+        WHERE id = $48
       `, [
         name !== undefined ? name : null,
         tagline !== undefined ? tagline : null,
@@ -1826,6 +1902,8 @@ const handleUpdateSettings = async (req, res) => {
         cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
         cleanBusinessCategory,
         cleanCounterOrdering,
+        total_screens !== undefined && total_screens !== null ? Number(total_screens) : null,
+        total_seats !== undefined && total_seats !== null ? Number(total_seats) : null,
         targetId
       ]);
     } catch (sqlErr) {
@@ -2133,6 +2211,30 @@ router.post('/cinema/screens', authenticateToken, requireActiveSubscription, asy
     }
     const cleanName = String(name || `Screen ${num}`).trim().substring(0, 100);
 
+    // 🛡️ AUTHORITATIVE SAAS PLAN MAX_SCREENS QUOTA CHECK
+    const restoRows = await query('SELECT plan_tier, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
+    const currentResto = restoRows[0] || {};
+    const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
+    const planTier = (currentResto.plan_tier || 'cinema_pro').toLowerCase();
+
+    if (!isComplimentary) {
+      const planRows = await query('SELECT max_screens FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
+      const maxScreensAllowed = (planRows && planRows.length > 0 && planRows[0].max_screens !== null) ? Number(planRows[0].max_screens) : 9999;
+      const countRes = await query('SELECT COUNT(*) as count FROM restaurant_cinema_screens WHERE restaurant_id = $1 AND active = true', [targetId]);
+      const activeScreens = Number(countRes[0]?.count) || 0;
+
+      if (activeScreens >= maxScreensAllowed) {
+        return res.status(403).json({
+          success: false,
+          error: 'plan_limit_reached',
+          resource: 'screens',
+          limit: maxScreensAllowed,
+          current_count: activeScreens,
+          message: `Your current SaaS plan allows a maximum of ${maxScreensAllowed} Audi Screen${maxScreensAllowed > 1 ? 's' : ''}. You currently have ${activeScreens} active screen${activeScreens > 1 ? 's' : ''}. Please upgrade your plan to add more screens.`
+        });
+      }
+    }
+
     const existing = await query(
       'SELECT id FROM restaurant_cinema_screens WHERE restaurant_id = $1 AND screen_number = $2',
       [targetId, num]
@@ -2256,6 +2358,39 @@ router.post('/cinema/seats/batch', authenticateToken, requireActiveSubscription,
     }
     const screenNum = screenCheck[0].screen_number;
 
+    // 🛡️ AUTHORITATIVE SAAS PLAN MAX_SEATS QUOTA CHECK
+    const restoRows = await query('SELECT plan_tier, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
+    const currentResto = restoRows[0] || {};
+    const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
+    const planTier = (currentResto.plan_tier || 'cinema_pro').toLowerCase();
+
+    if (!isComplimentary) {
+      const planRows = await query('SELECT max_seats FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
+      const maxSeatsAllowed = (planRows && planRows.length > 0 && planRows[0].max_seats !== null) ? Number(planRows[0].max_seats) : 9999;
+      const countRes = await query('SELECT COUNT(*) as count FROM restaurant_cinema_seats WHERE restaurant_id = $1 AND active = true', [targetId]);
+      const activeSeats = Number(countRes[0]?.count) || 0;
+      const seatsToConfigure = (end - start + 1);
+
+      const existingRangeRes = await query(
+        'SELECT COUNT(*) as count FROM restaurant_cinema_seats WHERE restaurant_id = $1 AND screen_id = $2 AND UPPER(row_label) = $3 AND seat_number >= $4 AND seat_number <= $5 AND active = true',
+        [targetId, sid, row, start, end]
+      );
+      const existingInBatch = Number(existingRangeRes[0]?.count) || 0;
+      const netNewSeats = Math.max(0, seatsToConfigure - existingInBatch);
+
+      if (activeSeats + netNewSeats > maxSeatsAllowed) {
+        return res.status(403).json({
+          success: false,
+          error: 'plan_limit_reached',
+          resource: 'seats',
+          limit: maxSeatsAllowed,
+          current_count: activeSeats,
+          requested_count: activeSeats + netNewSeats,
+          message: `Your current SaaS plan allows a maximum of ${maxSeatsAllowed} total seats. You currently have ${activeSeats} active seats and requested adding ${netNewSeats} new seats. Please upgrade your plan to configure more seats.`
+        });
+      }
+    }
+
     let addedCount = 0;
     for (let s = start; s <= end; s++) {
       const seatCode = `S${screenNum}-${row}-${s}`;
@@ -2321,7 +2456,7 @@ router.get('/printers', authenticateToken, requireActiveSubscription, async (req
     const resto = restoRows[0];
     const isComplimentary = isAuthoritativeComplimentaryTenant(resto);
     const planTier = (resto.plan_tier || 'basic').toLowerCase();
-    let isDualAllowed = isComplimentary;
+    let isDualAllowed = isComplimentary || planTier.includes('enterprise') || planTier.includes('vip');
     if (!isDualAllowed) {
       const planRows = await query('SELECT dual_printer_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
       isDualAllowed = planRows && planRows.length > 0
@@ -2380,7 +2515,7 @@ const handleSavePrinters = async (req, res) => {
 
     const isComplimentary = isAuthoritativeComplimentaryTenant(restoRows[0]);
     const planTier = (restoRows[0].plan_tier || 'basic').toLowerCase();
-    let isDualAllowed = isComplimentary;
+    let isDualAllowed = isComplimentary || planTier.includes('enterprise') || planTier.includes('vip');
     if (!isDualAllowed) {
       const planRows = await query('SELECT dual_printer_enabled FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
       isDualAllowed = planRows && planRows.length > 0
@@ -3029,7 +3164,10 @@ router.get('/service-requests', authenticateToken, requireActiveSubscription, as
           is_expired: isExpired
         };
       }
-      return r;
+      return {
+        ...r,
+        space_type: r.space_type || 'table'
+      };
     }));
 
     res.json(enriched);
@@ -3792,14 +3930,16 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
     }
 
     // Check SaaS plan entitlement for analytics_export_enabled
-    const restoRows = await query('SELECT plan_tier, name FROM restaurants WHERE id = $1', [targetId]);
-    const planTier = restoRows[0]?.plan_tier || 'pro';
-    const restoName = restoRows[0]?.name || 'Restaurant';
+    const restoRows = await query('SELECT plan_tier, name, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
+    const currentResto = restoRows[0] || {};
+    const planTier = currentResto.plan_tier || 'pro';
+    const restoName = currentResto.name || 'Restaurant';
+    const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
 
     const planRows = await query('SELECT analytics_export_enabled FROM saas_plans WHERE key = $1', [planTier]);
-    const exportEnabled = planRows.length > 0
+    const exportEnabled = isComplimentary || (planRows.length > 0
       ? (planRows[0].analytics_export_enabled === 1 || planRows[0].analytics_export_enabled === true || planRows[0].analytics_export_enabled === '1')
-      : true;
+      : true);
 
     if (!exportEnabled) {
       return res.status(403).json({
@@ -4119,17 +4259,19 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     }
 
     // 1. Check SaaS plan entitlement for analytics_export_enabled
-    const restoRows = await query('SELECT plan_tier, name, currency_symbol FROM restaurants WHERE id = $1', [targetId]);
-    const planTier = restoRows[0]?.plan_tier || 'pro';
-    const restoName = restoRows[0]?.name || 'Restaurant';
-    const currencySym = (restoRows[0]?.currency_symbol !== null && restoRows[0]?.currency_symbol !== undefined) ? restoRows[0].currency_symbol : '₹';
+    const restoRows = await query('SELECT plan_tier, name, currency_symbol, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
+    const currentResto = restoRows[0] || {};
+    const planTier = currentResto.plan_tier || 'pro';
+    const restoName = currentResto.name || 'Restaurant';
+    const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
+    const currencySym = (currentResto.currency_symbol !== null && currentResto.currency_symbol !== undefined) ? currentResto.currency_symbol : '₹';
     const safeCurrency = String(currencySym).replace(/"/g, '""');
     const excelCurrencyFmt = `"${safeCurrency}"#,##0.00`;
 
     const planRows = await query('SELECT analytics_export_enabled FROM saas_plans WHERE key = $1', [planTier]);
-    const exportEnabled = planRows.length > 0
+    const exportEnabled = isComplimentary || (planRows.length > 0
       ? (planRows[0].analytics_export_enabled === 1 || planRows[0].analytics_export_enabled === true || planRows[0].analytics_export_enabled === '1')
-      : true;
+      : true);
 
     if (!exportEnabled) {
       return res.status(403).json({
@@ -5351,6 +5493,12 @@ router.get('/support/tickets', authenticateToken, async (req, res) => {
     const tickets = await query(sql, params);
     const totalPages = Math.ceil(total / limit) || 1;
 
+    let supportWhatsapp = '919876543210';
+    try {
+      const swRow = await query("SELECT value FROM system_settings WHERE key = 'support_whatsapp'");
+      if (swRow && swRow[0] && swRow[0].value) supportWhatsapp = swRow[0].value;
+    } catch (_) {}
+
     res.json({
       tickets: tickets || [],
       pagination: {
@@ -5358,7 +5506,8 @@ router.get('/support/tickets', authenticateToken, async (req, res) => {
         limit,
         total,
         totalPages
-      }
+      },
+      support_whatsapp: supportWhatsapp
     });
   } catch (err) {
     console.error('Fetch tenant support tickets error:', err.message);

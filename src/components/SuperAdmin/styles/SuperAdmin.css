@@ -523,6 +523,52 @@
   background: #FEE2E2;
 }
 
+/* 🔔 Live Notification Dropdown Popover */
+.sa-notif-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 330px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid var(--sa-border, #E2E8F0);
+  box-shadow: 0 12px 36px rgba(10, 35, 21, 0.18);
+  z-index: 10000;
+  overflow: hidden;
+  animation: saFadeIn 0.18s ease-out;
+}
+
+.sa-notif-backdrop {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .sa-notif-dropdown {
+    position: fixed !important;
+    top: 52px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 120px) !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35) !important;
+    border-radius: 16px !important;
+  }
+
+  .sa-notif-backdrop {
+    display: block !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(10, 35, 21, 0.45) !important;
+    backdrop-filter: blur(3px) !important;
+    -webkit-backdrop-filter: blur(3px) !important;
+    z-index: 9999 !important;
+  }
+}
+
 /* Desktop vs Mobile Search and SSL Visibility */
 .sa-desktop-only-search {
   display: block;
@@ -3261,5 +3307,140 @@
     gap: 10px !important;
     width: 100% !important;
     box-sizing: border-box !important;
+  }
+}
+
+
+/* ==========================================================================
+   Support Tickets Toolbar & Filter Bar Styling
+   ========================================================================== */
+.sa-tickets-toolbar {
+  background: var(--sa-surface);
+  border-radius: var(--sa-radius-lg);
+  border: 1px solid var(--sa-border);
+  padding: 16px;
+  box-shadow: var(--sa-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sa-tickets-toolbar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sa-tickets-search-wrap {
+  flex: 1 1 340px;
+  min-width: 260px;
+}
+
+.sa-tickets-toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid var(--sa-border);
+}
+
+.sa-tickets-filter-select {
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--sa-border);
+  padding: 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--sa-text-main);
+  background: var(--sa-surface);
+  outline: none;
+  cursor: pointer;
+  transition: var(--sa-transition);
+}
+
+.sa-tickets-filter-select:focus {
+  border-color: var(--sa-accent);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.18);
+}
+
+.sa-tickets-reset-btn {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px dashed var(--sa-border-strong);
+  background: var(--sa-surface);
+  color: var(--sa-text-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--sa-transition);
+}
+
+.sa-tickets-reset-btn:hover {
+  background: var(--sa-surface-subtle);
+  border-color: var(--sa-accent);
+  color: var(--sa-accent-hover);
+}
+
+.sa-ticket-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--sa-radius-full);
+  background: var(--sa-surface-subtle);
+  border: 1px solid var(--sa-border);
+  color: var(--sa-text-main);
+  font-size: 0.72rem;
+  font-weight: 700;
+  transition: var(--sa-transition);
+}
+
+.sa-ticket-chip button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sa-text-muted);
+  transition: color 0.15s ease;
+}
+
+.sa-ticket-chip button:hover {
+  color: #DC2626;
+}
+
+@media (max-width: 768px) {
+  .sa-tickets-toolbar {
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+  .sa-tickets-search-wrap {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+  }
+  .sa-tickets-toolbar-filters {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .sa-tickets-filter-select {
+    width: 100% !important;
+    height: 38px !important;
+    font-size: 0.76rem !important;
+  }
+  .sa-tickets-reset-btn {
+    grid-column: span 2 !important;
+    justify-content: center !important;
+    width: 100% !important;
   }
 }

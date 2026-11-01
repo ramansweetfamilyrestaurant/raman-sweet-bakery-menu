@@ -222,6 +222,19 @@ export default function SetupView({
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [showMapModal, setShowMapModal] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
+  const [showProgressMenu, setShowProgressMenu] = useState(false);
+  const progressMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showProgressMenu) return;
+    const handleClickOutside = (e) => {
+      if (progressMenuRef.current && !progressMenuRef.current.contains(e.target)) {
+        setShowProgressMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showProgressMenu]);
 
   // Security & Credentials Full-Page State
   const [securityModal, setSecurityModal] = useState(null); // 'username' | 'password' | 'kds_pin' | 'signout_all' | 'activity_log'
@@ -1124,10 +1137,11 @@ export default function SetupView({
   const isProfileConfigured = Boolean(settingsForm?.name && (settingsForm?.phone || restaurantInfo?.phone));
   const isLogoConfigured = Boolean(settingsForm?.logo || restaurantInfo?.logo);
   const isGpsConfigured = Boolean(settingsForm?.latitude && settingsForm?.longitude);
-  const isSecurityConfigured = true;
+  const isAlertsConfigured = Boolean(settingsForm?.audio_alarm_enabled !== false && settingsForm?.audio_alarm_enabled !== 0);
+  const isSecurityConfigured = isAlertsConfigured;
 
   const totalChecks = 4;
-  const passedChecks = [isProfileConfigured, isLogoConfigured, isGpsConfigured, isSecurityConfigured].filter(Boolean).length;
+  const passedChecks = [isProfileConfigured, isLogoConfigured, isGpsConfigured, isAlertsConfigured].filter(Boolean).length;
   const isFullySetup = passedChecks === totalChecks;
 
   const terms = getBusinessTerminology(restaurantInfo || settingsForm);
@@ -1881,13 +1895,17 @@ export default function SetupView({
               />
             </div>
 
-            {/* Business Type Selectable Row */}
+            {/* Business Type Verified & Locked Row */}
             <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                Business Type <span style={{ color: '#EF4444' }}>*</span>
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155' }}>
+                  Business Category & Industry
+                </label>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#065F46', background: '#D1FAE5', padding: '2px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  🔒 Verified Category
+                </span>
+              </div>
               <div
-                onClick={() => setActiveBpModal('business_type')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1896,21 +1914,26 @@ export default function SetupView({
                   padding: '0 14px',
                   borderRadius: '12px',
                   border: '1px solid #E2E8F0',
-                  background: '#F8FAFC',
-                  cursor: 'pointer',
-                  boxSizing: 'border-box',
-                  transition: 'border 0.15s ease'
+                  background: '#F1F5F9',
+                  cursor: 'not-allowed',
+                  boxSizing: 'border-box'
                 }}
+                title="Business category is bound to your SaaS plan. To change industry, please contact Super Admin support."
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontSize: '1.2rem' }}>
                     {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.icon || '🍽️'}
                   </span>
-                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', fontWeight: 700 }}>
-                    {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.label?.replace(/\s*\(.*\)/, '') || 'Restaurant'}
-                  </strong>
+                  <div>
+                    <strong style={{ fontSize: '0.86rem', color: '#0F172A', fontWeight: 700 }}>
+                      {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.label?.replace(/\s*\(.*\)/, '') || 'Restaurant'}
+                    </strong>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
+                      Managed centrally via SuperAdmin
+                    </span>
+                  </div>
                 </div>
-                <ChevronRight size={16} color="#94A3B8" />
+                <Lock size={15} color="#94A3B8" />
               </div>
             </div>
 
@@ -3184,34 +3207,38 @@ export default function SetupView({
             overflow: 'hidden',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
           }}>
-            {/* Row 1: Business Category */}
+            {/* Row 1: Business Category (Verified & Locked) */}
             <div
-              onClick={() => setActivePrefModal('business_type')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '13px 16px',
                 borderBottom: '1px solid #F1F5F9',
-                cursor: 'pointer',
+                cursor: 'not-allowed',
                 minHeight: '52px',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                background: '#F8FAFC'
               }}
+              title="Business category is locked to your SaaS plan. To change industry, please contact SuperAdmin."
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
                   {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.icon || '🏢'}
                 </div>
                 <div>
-                  <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Business Category</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Venue and establishment classification</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A' }}>Business Category</strong>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#065F46', background: '#D1FAE5', padding: '1px 6px', borderRadius: '4px' }}>🔒 Verified</span>
+                  </div>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Managed centrally by SuperAdmin</span>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>
                   {BUSINESS_TYPE_METADATA[settingsForm.business_type || 'restaurant']?.label?.replace(/\s*\(.*\)/, '') || 'Restaurant'}
                 </span>
-                <ChevronRight size={15} color="#94A3B8" />
+                <Lock size={14} color="#94A3B8" />
               </div>
             </div>
 
@@ -4880,7 +4907,10 @@ export default function SetupView({
     };
 
     const formattedDate = formatBillingDate(rawExpiryDate);
-    const renewalText = isComplimentary ? 'Complimentary Lifetime' : (formattedDate || '24 Jun 2026');
+    const isExplicitLifetime = !rawExpiryDate || String(rawExpiryDate).toLowerCase() === 'lifetime';
+    const renewalText = isComplimentary 
+      ? (isExplicitLifetime ? 'Complimentary Lifetime' : (formattedDate ? `Complimentary (Valid until ${formattedDate})` : 'Complimentary Lifetime'))
+      : (formattedDate || '24 Jun 2026');
 
     const autoRenewActive = !isComplimentary && (subData?.auto_renew === 1 || (subData?.auto_renew === undefined && subData?.mandate_status === 'active'));
     const isCancelRequested = Boolean(subData?.cancel_requested_at || subData?.auto_renew === 0 || subData?.mandate_status === 'cancelled');
@@ -9086,43 +9116,183 @@ export default function SetupView({
           </p>
         </div>
 
-        {/* Right Side: Setup Progress Indicator */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          background: '#FAF8F5',
-          padding: '8px 14px',
-          borderRadius: '12px',
-          border: '1px solid #EAE5DF',
-          cursor: 'pointer'
-        }}>
-          <div style={{ position: 'relative', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="32" height="32" viewBox="0 0 36 36">
-              <path
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                fill="none"
-                stroke="#E2E8F0"
-                strokeWidth="3.5"
-              />
-              <path
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                fill="none"
-                stroke="#16A34A"
-                strokeWidth="3.5"
-                strokeDasharray={`${(passedChecks / totalChecks) * 100}, 100`}
-                strokeLinecap="round"
-              />
-            </svg>
-            <Check size={14} color="#16A34A" style={{ position: 'absolute' }} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Setup Progress</div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span>{passedChecks} / {totalChecks} Complete</span>
-              <ChevronDown size={14} color="#64748B" />
+        {/* Right Side: Interactive Setup Progress Indicator */}
+        <div ref={progressMenuRef} style={{ position: 'relative' }}>
+          <div
+            onClick={() => setShowProgressMenu(prev => !prev)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              background: '#FAF8F5',
+              padding: '8px 14px',
+              borderRadius: '12px',
+              border: '1px solid #EAE5DF',
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'all 0.2s ease',
+              boxShadow: showProgressMenu ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+            }}
+          >
+            <div style={{ position: 'relative', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="32" height="32" viewBox="0 0 36 36">
+                <path
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="#E2E8F0"
+                  strokeWidth="3.5"
+                />
+                <path
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="#16A34A"
+                  strokeWidth="3.5"
+                  strokeDasharray={`${(passedChecks / totalChecks) * 100}, 100`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <Check size={14} color="#16A34A" style={{ position: 'absolute' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Setup Progress</div>
+              <div style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>{passedChecks} / {totalChecks} Complete</span>
+                <ChevronDown size={14} color="#64748B" style={{ transform: showProgressMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+              </div>
             </div>
           </div>
+
+          {/* Floating Interactive Checklist Menu */}
+          {showProgressMenu && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 0,
+              width: '290px',
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+              padding: '16px',
+              zIndex: 100
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Setup Checklist</span>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  color: isFullySetup ? '#15803D' : '#D97706',
+                  background: isFullySetup ? '#DCFCE7' : '#FEF3C7',
+                  padding: '2px 8px',
+                  borderRadius: '10px'
+                }}>
+                  {isFullySetup ? 'All Ready 🎉' : `${passedChecks}/${totalChecks} Done`}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* 1. Business Profile */}
+                <div 
+                  onClick={() => { setShowProgressMenu(false); setActiveSubPage('profile'); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    background: '#F8FAFC',
+                    cursor: 'pointer',
+                    border: '1px solid #F1F5F9'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isProfileConfigured ? '#DCFCE7' : '#FEE2E2', color: isProfileConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
+                      {isProfileConfigured ? '✓' : '!'}
+                    </span>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Business Profile</span>
+                  </div>
+                  <span style={{ fontSize: '0.70rem', color: isProfileConfigured ? '#16A34A' : '#DC2626', fontWeight: 700 }}>
+                    {isProfileConfigured ? 'Done' : 'Setup'}
+                  </span>
+                </div>
+
+                {/* 2. Brand Logo */}
+                <div 
+                  onClick={() => { setShowProgressMenu(false); setActiveSubPage('profile'); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    background: '#F8FAFC',
+                    cursor: 'pointer',
+                    border: '1px solid #F1F5F9'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isLogoConfigured ? '#DCFCE7' : '#FEE2E2', color: isLogoConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
+                      {isLogoConfigured ? '✓' : '!'}
+                    </span>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Brand Logo</span>
+                  </div>
+                  <span style={{ fontSize: '0.70rem', color: isLogoConfigured ? '#16A34A' : '#DC2626', fontWeight: 700 }}>
+                    {isLogoConfigured ? 'Done' : 'Upload'}
+                  </span>
+                </div>
+
+                {/* 3. Location & GPS */}
+                <div 
+                  onClick={() => { setShowProgressMenu(false); setActiveSubPage('location'); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    background: '#F8FAFC',
+                    cursor: 'pointer',
+                    border: '1px solid #F1F5F9'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isGpsConfigured ? '#DCFCE7' : '#FEE2E2', color: isGpsConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
+                      {isGpsConfigured ? '✓' : '!'}
+                    </span>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Location & GPS</span>
+                  </div>
+                  <span style={{ fontSize: '0.70rem', color: isGpsConfigured ? '#16A34A' : '#DC2626', fontWeight: 700 }}>
+                    {isGpsConfigured ? 'Done' : 'Set GPS'}
+                  </span>
+                </div>
+
+                {/* 4. Order Alerts */}
+                <div 
+                  onClick={() => { setShowProgressMenu(false); testAlarmSound(); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    background: '#F8FAFC',
+                    cursor: 'pointer',
+                    border: '1px solid #F1F5F9'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isAlertsConfigured ? '#DCFCE7' : '#FEE2E2', color: isAlertsConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
+                      {isAlertsConfigured ? '✓' : '!'}
+                    </span>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Order Alert Sound</span>
+                  </div>
+                  <span style={{ fontSize: '0.70rem', color: '#0284C7', fontWeight: 700 }}>
+                    Test 🔔
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -11346,43 +11516,37 @@ export default function SetupView({
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingLeft: '46px' }}>
-                  {/* Control A: Business Type */}
+                  {/* Control A: Business Type (Verified & Locked) */}
                   <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                       <label htmlFor="admin-business-type" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
-                        Business Type
+                        Business Type & Industry
                       </label>
-                      {isLegacyBiz && (
-                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#64748B', background: '#E2E8F0', padding: '2px 6px', borderRadius: '8px' }}>
-                          Using legacy setting
-                        </span>
-                      )}
+                      <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#065F46', background: '#D1FAE5', padding: '2px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        🔒 Verified Category
+                      </span>
                     </div>
                     <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
-                      Select the type of business or venue that operates this TouchQR account.
+                      Business vertical is bound to your account and SaaS plan. To request an industry change, please contact SuperAdmin.
                     </span>
-                    <select
-                      id="admin-business-type"
-                      value={currentBusinessType || 'restaurant'}
-                      onChange={(e) => {
-                        const newBiz = e.target.value;
-                        const safeResto = (currentFoodType === 'pure_veg' ? 'pure_veg' : currentFoodType === 'veg_nonveg' ? 'veg_nonveg' : (newBiz === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
-                        const autoService = resolveServiceModelForBusinessType(newBiz);
-                        setSettingsForm({
-                          ...settingsForm,
-                          business_type: newBiz,
-                          service_model: autoService,
-                          resto_type: safeResto
-                        });
-                      }}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
-                    >
-                      {BUSINESS_TYPES.map(type => (
-                        <option key={type} value={type}>
-                          {BUSINESS_TYPE_METADATA[type]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[type]?.label || type}
-                        </option>
-                      ))}
-                    </select>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      background: '#F1F5F9',
+                      color: '#0F172A',
+                      fontWeight: 700,
+                      fontSize: '0.84rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{BUSINESS_TYPE_METADATA[currentBusinessType || 'restaurant']?.icon || '🏢'}</span>
+                        <span>{BUSINESS_TYPE_METADATA[currentBusinessType || 'restaurant']?.label || currentBusinessType}</span>
+                      </div>
+                      <Lock size={14} color="#64748B" />
+                    </div>
                   </div>
 
                   {/* Control B: Food Type */}

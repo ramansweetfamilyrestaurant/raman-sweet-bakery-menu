@@ -178,6 +178,11 @@ const TYPE_KEY_ALIASES = {
 };
 
 export function getEffectiveReviewType(type, businessType = null) {
+  const cleanType = type ? String(type).trim().toLowerCase() : '';
+  const cleanBiz = businessType ? String(businessType).trim().toLowerCase() : '';
+  if (cleanType && (TEMPLATE_MATRIX[cleanType] || TYPE_KEY_ALIASES[cleanType])) {
+    return TEMPLATE_MATRIX[cleanType] ? cleanType : TYPE_KEY_ALIASES[cleanType];
+  }
   const candidate = businessType || type;
   if (!candidate) return 'multi_cuisine';
   const clean = String(candidate).trim().toLowerCase();

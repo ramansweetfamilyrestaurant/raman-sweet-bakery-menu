@@ -2,7 +2,7 @@ import React from 'react';
 import { LayoutDashboard, Store, CreditCard, Layers, Database, History, Megaphone, Settings, MessageSquare, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
 
-export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, onLogout, logoUrl, onOpenSupport, onOpenBroadcast }) {
+export default function Sidebar({ activeView, setActiveView, collapsed, setCollapsed, onLogout, logoUrl, onOpenSupport, onOpenBroadcast, badgeCounts = {} }) {
   const [logoErr, setLogoErr] = React.useState(false);
 
   let cachedLogo = '';
@@ -79,15 +79,40 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
+            const badgeNum = badgeCounts?.[item.id] || 0;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
                 className={`sa-nav-item ${isActive ? 'active' : ''}`}
-                title={collapsed ? item.label : undefined}
+                title={collapsed ? `${item.label}${badgeNum > 0 ? ` (${badgeNum} new)` : ''}` : undefined}
+                style={{ position: 'relative' }}
               >
-                <Icon size={18} className="sa-nav-icon" />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Icon size={18} className="sa-nav-icon" />
+                  {collapsed && badgeNum > 0 && (
+                    <span style={{
+                      position: 'absolute', top: '-3px', right: '-3px',
+                      width: '7px', height: '7px', borderRadius: '50%',
+                      background: '#EF4444', border: '1.5px solid #0A2315'
+                    }} />
+                  )}
+                </div>
                 {!collapsed && <span>{item.label}</span>}
+                {!collapsed && badgeNum > 0 && (
+                  <span style={{
+                    marginLeft: 'auto',
+                    background: '#EF4444',
+                    color: '#FFFFFF',
+                    borderRadius: '999px',
+                    padding: '1px 6px',
+                    fontSize: '0.65rem',
+                    fontWeight: 900,
+                    lineHeight: 1.3
+                  }}>
+                    {badgeNum}
+                  </span>
+                )}
               </button>
             );
           })}

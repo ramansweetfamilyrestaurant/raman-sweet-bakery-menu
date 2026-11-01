@@ -88,11 +88,12 @@ export async function fetchSuperAdminRestaurants(token) {
 }
 
 export async function createTenantRestaurant(restaurantData, token) {
+  const authToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('touchqr_superadmin_token') || localStorage.getItem('token')) : null);
   const res = await fetch(`${API_BASE}/superadmin/restaurants`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${authToken}`,
     },
     body: JSON.stringify(restaurantData),
   });
@@ -100,11 +101,12 @@ export async function createTenantRestaurant(restaurantData, token) {
 }
 
 export async function createSuperAdminBusinessCheckout(businessData, token) {
+  const authToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('touchqr_superadmin_token') || localStorage.getItem('token')) : null);
   const res = await fetch(`${API_BASE}/superadmin/checkout-business`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${authToken}`,
     },
     body: JSON.stringify(businessData),
   });
@@ -452,14 +454,14 @@ export async function fetchSuperAnnouncements(token) {
   return handleResponse(res, 'Failed to fetch announcements');
 }
 
-export async function createAnnouncement(message, type, token) {
+export async function createAnnouncement(message, type, token, audience = 'all') {
   const res = await fetch(`${API_BASE}/superadmin/announcements`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ message, type })
+    body: JSON.stringify({ message, type, audience })
   });
   return handleResponse(res, 'Failed to create announcement');
 }
@@ -931,8 +933,10 @@ export async function fetchSubscriptionStatus(token) {
   return handleResponse(res, 'Failed to fetch subscription status');
 }
 
-export async function fetchPublicPlans() {
-  const res = await fetch(`${API_BASE}/plans`);
+export async function fetchPublicPlans(industry = '') {
+  const cleanInd = industry ? String(industry).trim().toLowerCase() : '';
+  const url = cleanInd ? `${API_BASE}/plans?industry=${encodeURIComponent(cleanInd)}` : `${API_BASE}/plans`;
+  const res = await fetch(url);
   return handleResponse(res, 'Failed to fetch plans');
 }
 
@@ -1182,12 +1186,22 @@ export async function updateSuperAdminSupportTicket(ticketId, updateData, token)
   return handleResponse(res, 'Failed to update support ticket');
 }
 
-export async function addSuperAdminSupportTicketReply(ticketId, { message, status = '' }, token) {
+export async function addSuperAdminSupportTicketReply(ticketId, payload, token) {
+  let message = '';
+  let status = '';
+  let actualToken = token;
+  if (typeof payload === 'string') {
+    message = payload;
+  } else if (payload && typeof payload === 'object') {
+    message = payload.message || '';
+    status = payload.status || '';
+    if (payload.token) actualToken = payload.token;
+  }
   const res = await fetch(`${API_BASE}/superadmin/support/tickets/${encodeURIComponent(ticketId)}/reply`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${actualToken}`
     },
     body: JSON.stringify({ message, status })
   });

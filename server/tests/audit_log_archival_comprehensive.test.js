@@ -41,6 +41,7 @@ import {
   verifyArchiveIntegrity
 } from '../services/auditLogArchivalService.js';
 import { safeDeleteArchiveObject } from '../config/r2Archive.js';
+import { isCiTestMode } from './testDbGuard.js';
 
 const gzipAsync = promisify(zlib.gzip);
 const gunzipAsync = promisify(zlib.gunzip);
@@ -72,7 +73,19 @@ async function test(name, fn) {
 }
 
 async function run() {
-  const pool = new Pool({ connectionString: LOCAL_TEST_URL });
+  const pool = new Pool({ connectionString: LOCAL_TEST_URL, connectionTimeoutMillis: 1500 });
+
+  try {
+    await pool.query('SELECT 1;');
+  } catch (probeErr) {
+    if (probeErr.code === 'ECONNREFUSED' || probeErr.code === 'EACCES' || (probeErr.message && (probeErr.message.includes('ECONNREFUSED') || probeErr.message.includes('EACCES')))) {
+      if (!isCiTestMode()) {
+        console.log('⚠️  [NOT RUN] Local PostgreSQL (127.0.0.1:5432) is not reachable. Skipping archival comprehensive test suite.');
+        process.exit(0);
+      }
+    }
+    throw probeErr;
+  }
 
   try {
     // Step 0: Initialize Schema on disposable DB

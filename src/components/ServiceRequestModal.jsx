@@ -19,6 +19,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
     { id: 'water', label: 'Drinking Water 💧', icon: <Droplets size={20} color="#0284C7" />, desc: 'Bring fresh drinking water' },
     { id: 'bill', label: isHotel ? 'Room Folio / Bill 🧾' : 'Request Final Bill 🧾', icon: <Receipt size={20} color="#D97706" />, desc: isHotel ? 'Send folio / bill to room' : 'Send printed bill to your location' },
     { id: 'clean', label: isHotel ? 'Housekeeping Clean Up 🧹' : 'Clean Surface / Area 🧹', icon: <Sparkles size={20} color="#059669" />, desc: isHotel ? 'Request room housekeeping' : 'Wipe or clean space surface' },
+    ...(isHotel ? [{ id: 'amenities', label: 'Hotel Amenities & Toiletries 🪥', icon: <Sparkles size={20} color="#0D9488" />, desc: 'Fresh towels, dental kit, slippers, soap' }] : []),
     { id: 'waiter', label: isHotel ? 'Room Service Attendant 🛎️' : 'Call Staff / Attendant ❓', icon: <UserCheck size={20} color="#7C3AED" />, desc: isHotel ? 'Staff attendant needed at room' : 'Staff needed at location' }
   ];
 

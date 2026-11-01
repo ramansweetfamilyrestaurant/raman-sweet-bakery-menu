@@ -49,6 +49,7 @@ export default function SupportView({
   onBackToDashboard,
   onBackToSettings
 }) {
+  const effectiveToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('touchqr_admin_token') || localStorage.getItem('adminToken')) : null);
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
   const terms = getBusinessTerminology(restaurantInfo || settingsForm);
 
@@ -70,7 +71,8 @@ export default function SupportView({
   const [confirmedTicket, setConfirmedTicket] = useState(null);
 
   // Support WhatsApp Number from Restaurant or System Config
-  const supportWhatsapp = settingsForm?.support_whatsapp || restaurantInfo?.support_whatsapp || '919876543210';
+  const [serverWhatsapp, setServerWhatsapp] = useState('');
+  const supportWhatsapp = serverWhatsapp || settingsForm?.support_whatsapp || restaurantInfo?.support_whatsapp || '919876543210';
   const cleanWhatsappNumber = supportWhatsapp.replace(/[^0-9]/g, '');
   const businessSlug = settingsForm?.slug || restaurantInfo?.slug || 'default';
   const restoName = settingsForm?.name || restaurantInfo?.name || 'My Business';
@@ -91,12 +93,13 @@ export default function SupportView({
 
   // Fetch real tickets from backend
   const loadTickets = async (p = 1) => {
-    if (!token) return;
+    if (!effectiveToken) return;
     setLoadingTickets(true);
     try {
-      const res = await fetchTenantSupportTickets(token, { page: p, limit: 10 });
+      const res = await fetchTenantSupportTickets(effectiveToken, { page: p, limit: 10 });
       setTickets(res.tickets || []);
       setTicketPagination(res.pagination || { page: 1, limit: 10, total: 0, totalPages: 1 });
+      if (res.support_whatsapp) setServerWhatsapp(res.support_whatsapp);
     } catch (err) {
       console.warn('Failed to load support tickets from server:', err.message);
     } finally {
@@ -106,31 +109,35 @@ export default function SupportView({
 
   useEffect(() => {
     loadTickets(ticketPage);
-  }, [token, ticketPage]);
+  }, [effectiveToken, ticketPage]);
 
   // Load ticket conversation thread when a ticket is opened
-  const loadTicketThread = async (id) => {
-    if (!token || !id) return;
-    setLoadingThread(true);
+  const loadTicketThread = async (id, silent = false) => {
+    if (!effectiveToken || !id) return;
+    if (!silent) setLoadingThread(true);
     setReplyError('');
     try {
-      const res = await fetchTenantSupportTicketDetails(id, token);
+      const res = await fetchTenantSupportTicketDetails(id, effectiveToken);
       setActiveTicketData(res);
     } catch (err) {
       console.warn('Failed to load ticket thread:', err.message);
       setReplyError('Failed to load conversation thread. Please try again.');
     } finally {
-      setLoadingThread(false);
+      if (!silent) setLoadingThread(false);
     }
   };
 
   useEffect(() => {
     if (activeTicketId) {
       loadTicketThread(activeTicketId);
+      const interval = setInterval(() => {
+        loadTicketThread(activeTicketId, true);
+      }, 25000);
+      return () => clearInterval(interval);
     } else {
       setActiveTicketData(null);
     }
-  }, [activeTicketId]);
+  }, [activeTicketId, effectiveToken]);
 
   // Real backend submission with mandatory server persistence confirmation
   const handleCreateTicket = async (e) => {
@@ -149,7 +156,7 @@ export default function SupportView({
         category: supportCategory,
         message: supportMessage.trim(),
         priority: supportPriority
-      }, token);
+      }, effectiveToken);
 
       if (res && res.ticket) {
         // Backend confirmed and persisted!
@@ -180,7 +187,7 @@ export default function SupportView({
     setReplySubmitting(true);
     setReplyError('');
     try {
-      const res = await addTenantSupportTicketReply(activeTicketId, replyText.trim(), token);
+      const res = await addTenantSupportTicketReply(activeTicketId, replyText.trim(), effectiveToken);
       if (res && res.message) {
         setActiveTicketData(prev => ({
           ...prev,
@@ -382,6 +389,13 @@ export default function SupportView({
     }}>
       {/* Responsive Styles */}
       <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .spin-animate {
+          animation: spin 1s linear infinite;
+        }
         .support-page-grid {
           display: grid;
           grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
@@ -1603,22 +1617,48 @@ export default function SupportView({
                 </h3>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTicketId(null);
-                  setActiveTicketData(null);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#64748B',
-                  padding: '4px'
-                }}
-              >
-                <X size={20} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {activeTicketData?.ticket && activeTicketData.ticket.status !== 'closed' && (
+                  <a
+                    href={`https://wa.me/${cleanWhatsappNumber}?text=${encodeURIComponent(`*Support Ticket Escalation*\n\nRef: #${activeTicketData.ticket.ticket_ref}\nSubject: ${activeTicketData.ticket.subject}\nBusiness: ${restoName} (/${businessSlug})\n\nNeed urgent update on this ticket.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      background: '#ECFDF5',
+                      border: '1px solid #A7F3D0',
+                      color: '#065F46',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      textDecoration: 'none'
+                    }}
+                    title="Directly message TouchQR Support Team on WhatsApp"
+                  >
+                    <MessageCircle size={13} color="#059669" />
+                    <span>Escalate on WhatsApp</span>
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTicketId(null);
+                    setActiveTicketData(null);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748B',
+                    padding: '4px'
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Conversation Messages Thread */}

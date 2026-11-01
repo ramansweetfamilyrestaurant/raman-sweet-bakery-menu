@@ -1,56 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ShieldCheck, Sparkles, ArrowRight, CheckCircle2, AlertCircle, LogOut, Check, Zap, Crown, Rocket } from 'lucide-react';
 import { createCashfreeSubscription, verifyCashfreeSubscription } from '../api/client';
+import { SAAS_PLANS } from '../config/plans';
 
-const SAAS_PLANS = {
-  basic: {
-    key: 'basic',
-    name: 'Basic Starter Plan',
-    price: 499,
-    badge: '⚡ BASIC',
-    color: '#38BDF8',
-    description: 'Essential digital menu & QR ordering for small outlets',
-    features: [
-      'Digital QR Code Menu',
-      'Basic Order & Service Requests',
-      'Up to 3 Thalis & Combo Deals',
-      'Mobile-Optimized Interface',
-      'Standard Email & Chat Support'
-    ]
-  },
-  pro: {
-    key: 'pro',
-    name: 'Pro Luxury Plan',
-    price: 999,
-    badge: '👑 PRO (MOST POPULAR)',
-    color: '#DFBA67',
-    popular: true,
-    description: 'Complete digital menu, WhatsApp ordering & sales growth tools',
-    features: [
-      'Everything in Basic Plan',
-      'WhatsApp Direct Customer Ordering',
-      'Google Review Auto-Collector',
-      'Up to 10 Thalis & Combo Deals',
-      'Live Sales Analytics & Insights',
-      'Priority Support & Onboarding'
-    ]
-  },
-  enterprise: {
-    key: 'enterprise',
-    name: 'Enterprise VIP Plan',
-    price: 1999,
-    badge: '🚀 ENTERPRISE VIP',
-    color: '#A855F7',
-    description: 'Full-suite restaurant management, KOT & unlimited capabilities',
-    features: [
-      'Everything in Pro Luxury Plan',
-      'Direct Table Ordering & Kitchen (KOT)',
-      'Unlimited Combos, Thalis & Deals',
-      'Multi-Staff Access Accounts',
-      'Dedicated SaaS Account Manager',
-      '24/7 VIP Technical Support'
-    ]
+const resolveFeatureStrings = (plan) => {
+  if (Array.isArray(plan?.features)) return plan.features;
+  const list = [];
+  const planInd = (plan?.industry || (plan?.key?.startsWith('hotel') ? 'hotel' : plan?.key?.startsWith('cinema') ? 'cinema' : 'restaurant')).toLowerCase();
+  if (planInd === 'hotel') {
+    if (plan?.max_rooms && Number(plan.max_rooms) < 9999) list.push(`Capacity: Up to ${plan.max_rooms} Guest Rooms`);
+    else list.push('Capacity: Unlimited Guest Rooms');
+  } else if (planInd === 'cinema') {
+    if (plan?.max_screens && Number(plan.max_screens) < 9999) list.push(`Capacity: Up to ${plan.max_screens} Audi Screens & ${plan.max_seats || 800} Seats`);
+    else list.push('Capacity: Unlimited Screens & Multiplex Auditoriums');
+  } else {
+    if (plan?.max_tables && Number(plan.max_tables) < 9999) list.push(`Capacity: Up to ${plan.max_tables} Dining Tables`);
+    else list.push('Capacity: Unlimited Dining Tables');
   }
+
+  list.push('Digital QR Menu & Mobile Ordering Interface');
+  if (plan?.features?.whatsapp_enabled || plan?.whatsapp_enabled) list.push('📱 WhatsApp Instant Order Updates');
+  if (plan?.features?.direct_ordering_enabled || plan?.direct_ordering_enabled) list.push('⚡ Multi-Space QR Ordering (Tables/Rooms/Seats)');
+  if (plan?.features?.kds_enabled || plan?.kds_enabled) list.push('📺 Live Kitchen Operations Display (KDS)');
+  if (plan?.features?.dual_printer_enabled || plan?.dual_printer_enabled) list.push('🖨️ Dual Thermal Printer Routing (KOT + Bill)');
+  if (plan?.features?.gst_invoice_enabled || plan?.gst_invoice_enabled) list.push('🧾 5% GST Invoicing & Tax Calculations');
+  list.push('Priority 24/7 Phone & WhatsApp Support');
+  return list;
 };
 
 export default function SubscriptionBillingPage({ restoInfo, token, onProceedToDashboard }) {
@@ -390,8 +365,20 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
     window.location.href = '/register';
   };
 
-  const currentPlan = SAAS_PLANS[planKey] || SAAS_PLANS.pro;
+  const restoService = (activeResto?.service_model || '').toLowerCase();
+  const restoBiz = (activeResto?.business_type || '').toLowerCase();
+  const isHotel = restoService === 'hotel' || restoBiz === 'hotel_resort' || planKey.startsWith('hotel');
+  const isCinema = restoService === 'cinema' || restoService === 'seat_service' || restoBiz === 'cinema_theatre' || planKey.startsWith('cinema');
+  const targetIndustry = isHotel ? 'hotel' : (isCinema ? 'cinema' : 'restaurant');
+
+  const visiblePlans = useMemo(() => {
+    const list = Object.values(SAAS_PLANS).filter(p => (p.industry || 'restaurant') === targetIndustry || p.key.startsWith(targetIndustry));
+    return list.length > 0 ? list : Object.values(SAAS_PLANS).filter(p => ['basic', 'pro', 'enterprise'].includes(p.key));
+  }, [targetIndustry]);
+
+  const currentPlan = visiblePlans.find(p => p.key === planKey) || SAAS_PLANS[planKey] || visiblePlans[0] || SAAS_PLANS.pro;
   const monthlyPrice = currentPlan.price;
+  const planFeatureStrings = useMemo(() => resolveFeatureStrings(currentPlan), [currentPlan]);
 
   return (
     <div style={{
@@ -545,8 +532,9 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             borderRadius: '14px',
             border: '1px solid rgba(255,255,255,0.1)'
           }}>
-            {Object.values(SAAS_PLANS).map((p) => {
+            {visiblePlans.map((p) => {
               const isSelected = planKey === p.key;
+              const planColor = p.color || (p.key.endsWith('_enterprise') || p.key === 'enterprise' ? '#A855F7' : (p.key.endsWith('_pro') || p.key === 'pro' ? '#DFBA67' : '#38BDF8'));
               return (
                 <button
                   key={p.key}
@@ -557,7 +545,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
                   style={{
                     padding: '8px 4px',
                     borderRadius: '10px',
-                    border: isSelected ? `1.5px solid ${p.color}` : '1px solid transparent',
+                    border: isSelected ? `1.5px solid ${planColor}` : '1px solid transparent',
                     background: isSelected ? 'rgba(223,186,103,0.18)' : 'transparent',
                     color: isSelected ? '#FFFFFF' : '#94A3B8',
                     cursor: 'pointer',
@@ -569,10 +557,10 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <span style={{ fontSize: '0.75rem', fontWeight: 900, color: isSelected ? p.color : '#CBD5E1' }}>
-                    {p.key.toUpperCase()}
+                  <span style={{ fontSize: '0.72rem', fontWeight: 900, color: isSelected ? planColor : '#CBD5E1', textAlign: 'center' }}>
+                    {p.name?.replace(/\s*\(.*\)/, '') || p.key.toUpperCase()}
                   </span>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 900 }}>
+                  <span style={{ fontSize: '0.86rem', fontWeight: 900 }}>
                     ₹{p.price}/mo
                   </span>
                 </button>
@@ -628,7 +616,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             borderRadius: '12px',
             border: '1px solid rgba(255,255,255,0.08)'
           }}>
-            {currentPlan.features.map((feat, idx) => (
+            {planFeatureStrings.map((feat, idx) => (
               <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#E2E8F0' }}>
                 <CheckCircle2 size={14} color="#22C55E" style={{ flexShrink: 0 }} />
                 <span>{feat}</span>
@@ -773,7 +761,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
               </div>
               <div>Plan: <strong>{activeResto?.plan_name ? activeResto.plan_name.toUpperCase() : 'ENTERPRISE VIP ACCESS'}</strong></div>
               <div>Current Charge: <strong>₹0 / month (Free Access)</strong></div>
-              <div>Valid Until: <strong>{activeResto?.plan_expires_at ? (new Date(activeResto.plan_expires_at).getFullYear() > 2030 ? '♾️ Lifetime Access' : new Date(activeResto.plan_expires_at).toLocaleDateString('en-IN')) : '♾️ Lifetime Access'}</strong></div>
+              <div>Valid Until: <strong>{activeResto?.plan_expires_at ? (new Date(activeResto.plan_expires_at).getFullYear() >= 2099 ? '♾️ Lifetime Access' : new Date(activeResto.plan_expires_at).toLocaleDateString('en-IN')) : '♾️ Lifetime Access'}</strong></div>
               <div style={{ fontSize: '0.75rem', marginTop: '6px', color: '#CBD5E1' }}>
                 🛡️ Your account has been provided free of charge by TouchQR Super Admin. No Cashfree payment required.
               </div>

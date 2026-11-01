@@ -171,7 +171,16 @@ router.get('/settings', async (req, res) => {
 // GET public SaaS plans for Landing Page & Registration (no auth required)
 router.get('/plans', async (req, res) => {
   try {
-    const plans = await query('SELECT * FROM saas_plans ORDER BY price ASC');
+    const { industry } = req.query;
+    let querySql = 'SELECT * FROM saas_plans';
+    const params = [];
+    if (industry && typeof industry === 'string' && industry.trim() !== '' && industry !== 'all') {
+      querySql += ' WHERE LOWER(COALESCE(industry, \'restaurant\')) = $1';
+      params.push(industry.trim().toLowerCase());
+    }
+    querySql += ' ORDER BY price ASC';
+
+    const plans = await query(querySql, params);
     const isValTrue = (val, def = true) => val !== undefined && val !== null ? (val === 1 || val === true || val === '1') : def;
     const result = (plans || []).map(p => ({
       id: p.id,
@@ -179,10 +188,14 @@ router.get('/plans', async (req, res) => {
       name: p.name,
       price: Number(p.price) || 0,
       original_price: Number(p.original_price) || (Number(p.price) ? Math.round(Number(p.price) * 2 - 1) : 999),
+      industry: p.industry || 'restaurant',
       billing_interval: p.billing_interval || 'monthly',
       badge: p.badge || '👑 PLAN',
       description: p.description || '',
       max_tables: p.max_tables !== undefined && p.max_tables !== null ? Number(p.max_tables) : 9999,
+      max_rooms: p.max_rooms !== undefined && p.max_rooms !== null ? Number(p.max_rooms) : 9999,
+      max_screens: p.max_screens !== undefined && p.max_screens !== null ? Number(p.max_screens) : 9999,
+      max_seats: p.max_seats !== undefined && p.max_seats !== null ? Number(p.max_seats) : 9999,
       max_dishes: p.max_dishes !== undefined && p.max_dishes !== null ? Number(p.max_dishes) : 9999,
       max_categories: p.max_categories !== undefined && p.max_categories !== null ? Number(p.max_categories) : 9999,
       max_combos: p.max_combos !== undefined && p.max_combos !== null ? Number(p.max_combos) : 10,
@@ -202,7 +215,10 @@ router.get('/plans', async (req, res) => {
       ai_review_enabled: isValTrue(p.ai_review_enabled, true),
       multi_language_enabled: isValTrue(p.multi_language_enabled, true),
       watermark_removal_enabled: isValTrue(p.watermark_removal_enabled, true),
-      analytics_export_enabled: isValTrue(p.analytics_export_enabled, true)
+      analytics_export_enabled: isValTrue(p.analytics_export_enabled, true),
+      amenities_booking_enabled: isValTrue(p.amenities_booking_enabled, true),
+      seat_runner_dispatch_enabled: isValTrue(p.seat_runner_dispatch_enabled, true),
+      interval_rush_mode_enabled: isValTrue(p.interval_rush_mode_enabled, true)
     }));
     res.json(result);
   } catch (err) {
@@ -234,6 +250,72 @@ async function ensureRestoSecret(resto) {
   return resto;
 }
 
+const BUILTIN_DEMO_VENUE = {
+  id: -999,
+  is_builtin_demo: true,
+  name: 'TouchQR Experience Lounge',
+  slug: 'touchqr-demo',
+  tagline: 'Multi-Space Digital Menu & Ordering Showcase',
+  logo: null,
+  phone: '+91 98765 43210',
+  address: 'TouchQR Showcase Suite, Connaught Place, New Delhi',
+  opening_hours: '9:00 AM - 11:00 PM (Daily)',
+  active: 1,
+  industry: 'restaurant',
+  plan_tier: 'enterprise',
+  plan_price: 1999,
+  theme_color: 'gold',
+  direct_ordering_enabled: 1,
+  table_ordering_enabled: 1,
+  kds_enabled: 1,
+  dual_printer_enabled: 1,
+  bluetooth_kot_enabled: 1,
+  whatsapp_enabled: 1,
+  gst_invoice_enabled: 1,
+  gst_enabled: 1,
+  multi_language_enabled: 1,
+  ai_review_enabled: 1,
+  google_reviews_enabled: 1,
+  max_tables: 50,
+  max_rooms: 30,
+  max_screens: 5,
+  max_seats: 1000,
+  total_tables: 20,
+  total_rooms: 15,
+  total_screens: 2,
+  total_seats: 250,
+  currency_symbol: '₹',
+  is_complimentary: 1,
+  subscription_type: 'ADMIN_GRANTED',
+  mandate_status: 'admin_granted'
+};
+
+const BUILTIN_DEMO_MENU = {
+  categories: [
+    { id: -1, restaurant_id: -999, name: "Chef's Signature Starters", sort_order: 1, active: 1 },
+    { id: -2, restaurant_id: -999, name: "Artisan Pizzas & Mains", sort_order: 2, active: 1 },
+    { id: -3, restaurant_id: -999, name: "🏨 Luxury In-Room Dining", sort_order: 3, active: 1 },
+    { id: -4, restaurant_id: -999, name: "🎬 Cinema Concessions & Munchies", sort_order: 4, active: 1 },
+    { id: -5, restaurant_id: -999, name: "Craft Mocktails & Shakes", sort_order: 5, active: 1 }
+  ],
+  dishes: [
+    { id: -101, restaurant_id: -999, category_id: -1, category_name: "Chef's Signature Starters", name: "Truffle Butter Paneer Tikka", price: 340, is_veg: 1, must_try: 1, description: "Char-grilled cottage cheese infused with Himalayan truffle oil and saffron yogurt marinade.", available: 1 },
+    { id: -102, restaurant_id: -999, category_id: -1, category_name: "Chef's Signature Starters", name: "Smoked Chicken Tikka", price: 390, is_veg: 0, must_try: 1, description: "Succulent chicken chunks smoked in clay oven with robust spices.", available: 1 },
+    { id: -103, restaurant_id: -999, category_id: -2, category_name: "Artisan Pizzas & Mains", name: "Wood-Fired Margherita Basil Pizza", price: 420, is_veg: 1, must_try: 1, description: "San Marzano tomato base, fresh buffalo mozzarella, hand-torn basil and extra virgin olive oil.", available: 1 },
+    { id: -104, restaurant_id: -999, category_id: -2, category_name: "Artisan Pizzas & Mains", name: "Handcrafted Fettuccine Alfredo", price: 380, is_veg: 1, must_try: 0, description: "Silky fettuccine tossed in rich Parmesan cream with roasted garlic and herbs.", available: 1 },
+    { id: -105, restaurant_id: -999, category_id: -3, category_name: "🏨 Luxury In-Room Dining", name: "🏨 Luxury Club Sandwich & Wedges", price: 290, is_veg: 1, must_try: 1, description: "Triple-decker toasted sourdough with crisp lettuce, heirloom tomato, cheddar and rosemary wedges.", available: 1 },
+    { id: -106, restaurant_id: -999, category_id: -3, category_name: "🏨 Luxury In-Room Dining", name: "🏨 Midnight Butter Chicken & Paratha", price: 450, is_veg: 0, must_try: 1, description: "Slow-simmered velvety makhani gravy with boneless tender chicken and 2 flaky butter parathas.", available: 1 },
+    { id: -107, restaurant_id: -999, category_id: -4, category_name: "🎬 Cinema Concessions & Munchies", name: "🍿 Jumbo Caramel Crunch Popcorn Bucket", price: 220, is_veg: 1, must_try: 1, description: "Freshly popped warm golden corn glazed with artisan sea-salt caramel.", available: 1 },
+    { id: -108, restaurant_id: -999, category_id: -4, category_name: "🎬 Cinema Concessions & Munchies", name: "🎬 Gourmet Cheesy Loaded Nachos", price: 260, is_veg: 1, must_try: 1, description: "Crispy Mexican tortilla chips loaded with molten cheese sauce, jalapeños, and fresh salsa.", available: 1 },
+    { id: -109, restaurant_id: -999, category_id: -5, category_name: "Craft Mocktails & Shakes", name: "Electric Blue Lagoon Mocktail", price: 180, is_veg: 1, must_try: 0, description: "Curacao citrus fizz with mint sprigs, lime zest and sparkling soda.", available: 1 },
+    { id: -110, restaurant_id: -999, category_id: -5, category_name: "Craft Mocktails & Shakes", name: "Dark Chocolate Brownie Thick Shake", price: 210, is_veg: 1, must_try: 1, description: "Decadent fudge brownie blended with Belgian chocolate gelato and cocoa dust.", available: 1 }
+  ],
+  combos: [
+    { id: -201, restaurant_id: -999, name: "Royal Duo Feast Platter", price: 899, original_price: 1299, available: 1, description: "Complete feast with Truffle Paneer Tikka, Margherita Pizza, Fettuccine Alfredo & 2 Mocktails." },
+    { id: -202, restaurant_id: -999, name: "🍿 Multiplex Cinema Duo", price: 549, original_price: 740, available: 1, description: "The ultimate movie interval combo: Jumbo Popcorn + Cheesy Nachos + 2 Drinks." }
+  ]
+};
+
 async function resolveRestaurant(req, slug) {
   // 1. Explicit URL slug parameter passed in public route or query (e.g. /api/menu-bundle?slug=rama or /api/info?slug=rama)
   if (slug && typeof slug === 'string' && slug.trim() !== '') {
@@ -257,6 +339,11 @@ async function resolveRestaurant(req, slug) {
           restoResolveCache.set(cleanSlug, { data: securedResto, timestamp: Date.now() });
           return securedResto;
         }
+      }
+      if (cleanSlug === 'touchqr-demo' && process.env.DISALLOW_DEMO_FALLBACK !== 'true') {
+        const demoVenue = { ...BUILTIN_DEMO_VENUE };
+        restoResolveCache.set(cleanSlug, { data: demoVenue, timestamp: Date.now() });
+        return demoVenue;
       }
       return null;
     }
@@ -478,7 +565,7 @@ router.get('/menu-bundle', async (req, res) => {
     const sym = (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹';
 
     // Execute queries in parallel
-    const [categories, rawDishes, rawCombos, planRows] = await Promise.all([
+    let [categories, rawDishes, rawCombos, planRows] = await Promise.all([
       query("SELECT * FROM categories WHERE restaurant_id = $1 AND (active IS NULL OR active::text NOT IN ('0', 'false', 'f')) ORDER BY sort_order ASC, id ASC", [targetId]),
       query(`
         SELECT d.*, c.name as category_name 
@@ -490,6 +577,12 @@ router.get('/menu-bundle', async (req, res) => {
       query("SELECT * FROM combos WHERE restaurant_id = $1 AND (available IS NOT FALSE) ORDER BY sort_order ASC, id ASC", [targetId]),
       query('SELECT * FROM saas_plans WHERE key = $1 OR LOWER(key) = $1', [planTierKey]).catch(() => [])
     ]);
+
+    if (resto.slug === 'touchqr-demo' && (!categories || categories.length === 0)) {
+      categories = [...BUILTIN_DEMO_MENU.categories];
+      rawDishes = [...BUILTIN_DEMO_MENU.dishes];
+      rawCombos = [...BUILTIN_DEMO_MENU.combos];
+    }
 
     // Enrich dishes and combos with active promotions
     const { enrichedDishes, enrichedCombos, validOffers } = await enrichItemsWithActiveOffers(targetId, rawDishes, rawCombos, sym);
@@ -521,20 +614,21 @@ router.get('/menu-bundle', async (req, res) => {
     };
 
     const isComplimentary = isAuthoritativeComplimentaryTenant(resto);
+    const isUnlimitedPlan = planTierKey === 'enterprise' || planTierKey === 'vip_ultra' || planTierKey === 'vip_ultra_plan' || planTierKey === 'vip';
     const whatsappEnabled = isComplimentary ? true : resolvePermission(saasP.whatsapp_ordering_enabled ?? saasP.whatsapp_enabled, resto.whatsapp_enabled, planTierKey !== 'basic');
     const directOrderingEnabled = isComplimentary
       ? Boolean(resto.direct_ordering_enabled !== 0 && resto.direct_ordering_enabled !== false && resto.direct_ordering_enabled !== '0' && resto.direct_ordering_enabled !== 'false')
-      : resolvePermission(saasP.direct_ordering_enabled, resto.direct_ordering_enabled, planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan');
+      : resolvePermission(saasP.direct_ordering_enabled, resto.direct_ordering_enabled, isUnlimitedPlan);
     const googleReviewsEnabled = isComplimentary ? true : resolvePermission(saasP.google_reviews_enabled, resto.google_reviews_enabled, planTierKey !== 'basic');
     const multiLanguageEnabled = resolvePermission(saasP.multi_language_enabled, resto.multi_language_enabled, true);
 
     const watermarkRemoval = isFieldTrue(saasP.watermark_removal_enabled, true);
-    const customDomainEnabled = isComplimentary ? true : isFieldTrue(saasP.custom_domain_enabled, true);
+    const customDomainEnabled = isComplimentary ? true : isFieldTrue(saasP.custom_domain_enabled, isUnlimitedPlan);
     const analyticsExportEnabled = isFieldTrue(saasP.analytics_export_enabled, true);
     const gstInvoiceEnabled = isFieldTrue(saasP.gst_invoice_enabled, true);
     const aiReviewEnabled = isFieldTrue(saasP.ai_review_enabled, true);
-    const bluetoothKotEnabled = isFieldTrue(saasP.bluetooth_kot_enabled, true);
-    const dualPrinterEnabled = isComplimentary ? true : isFieldTrue(saasP.dual_printer_enabled, planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan');
+    const bluetoothKotEnabled = isFieldTrue(saasP.bluetooth_kot_enabled, isUnlimitedPlan);
+    const dualPrinterEnabled = isComplimentary ? true : isFieldTrue(saasP.dual_printer_enabled, isUnlimitedPlan);
 
     const effectiveGstActive = gstInvoiceEnabled && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true');
     const businessProfile = resolveBusinessProfile(resto);
@@ -562,7 +656,7 @@ router.get('/menu-bundle', async (req, res) => {
       filters_visibility: filtersVis,
       currency_symbol: sym,
       plan_tier: resto.plan_tier || 'pro',
-      plan_name: isComplimentary ? 'Enterprise VIP Access' : (saasP.name || (planTierKey === 'enterprise' ? 'Enterprise Plan' : planTierKey === 'basic' ? 'Basic Plan' : 'Pro Plan')),
+      plan_name: isComplimentary ? (planTierKey === 'enterprise' ? 'Enterprise VIP Access' : (saasP.name ? (saasP.name.includes('VIP') ? saasP.name : `${saasP.name} (VIP Access)`) : (planTierKey === 'basic' ? 'Basic Plan (VIP Access)' : 'Pro Plan (VIP Access)'))) : (saasP.name || (planTierKey === 'enterprise' ? 'Enterprise Plan' : planTierKey === 'basic' ? 'Basic Plan' : 'Pro Plan')),
       plan_price: isComplimentary ? 0 : Number(resto.plan_price || saasP.price || (planTierKey === 'enterprise' ? 1999 : planTierKey === 'basic' ? 499 : 999)),
       subscription_type: resto.subscription_type || (isComplimentary ? 'ADMIN_GRANTED' : 'PAID'),
       mandate_status: isComplimentary ? 'admin_granted' : (resto.mandate_status || (resto.mandate_id ? 'active' : 'pending')).toLowerCase(),
@@ -687,21 +781,25 @@ router.get('/info', async (req, res) => {
     const saasPlan = (planRows && planRows.length > 0) ? planRows[0] : {};
 
     const planPrice = isComplimentary ? 0 : Number(resto.plan_price || saasPlan.price || (planTierKey === 'enterprise' ? 1999 : planTierKey === 'basic' ? 499 : 999));
-    const whatsappEnabled = isComplimentary ? true : (saasPlan.whatsapp_enabled !== undefined ? (saasPlan.whatsapp_enabled === 1 || saasPlan.whatsapp_enabled === true || saasPlan.whatsapp_enabled === '1') : (planTierKey !== 'basic'));
-    const directOrderingEnabled = isComplimentary
-      ? Boolean(resto.direct_ordering_enabled !== 0 && resto.direct_ordering_enabled !== false && resto.direct_ordering_enabled !== '0' && resto.direct_ordering_enabled !== 'false')
-      : (saasPlan.direct_ordering_enabled !== undefined ? (saasPlan.direct_ordering_enabled === 1 || saasPlan.direct_ordering_enabled === true || saasPlan.direct_ordering_enabled === '1') : (planTierKey === 'enterprise'));
-    const googleReviewsEnabled = isComplimentary ? true : (saasPlan.google_reviews_enabled !== undefined ? (saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1') : (planTierKey !== 'basic'));
-    const maxCombos = isComplimentary ? 9999 : (saasPlan.max_combos !== undefined ? Number(saasPlan.max_combos) : (planTierKey === 'basic' ? 3 : planTierKey === 'pro' ? 10 : 9999));
+    const isUnlimited = planTierKey === 'enterprise' || planTierKey === 'vip_ultra' || planTierKey === 'vip_ultra_plan' || planTierKey === 'vip';
+    const waFlag = saasPlan.whatsapp_ordering_enabled ?? saasPlan.whatsapp_enabled;
+    const isPlanWaEnabled = (waFlag !== undefined && waFlag !== null) ? (waFlag === 1 || waFlag === true || waFlag === '1' || waFlag === 'true') : (planTierKey !== 'basic');
+    const whatsappEnabled = Boolean(isPlanWaEnabled && (resto.whatsapp_enabled !== 0 && resto.whatsapp_enabled !== false && resto.whatsapp_enabled !== '0' && resto.whatsapp_enabled !== 'false'));
+
+    const isPlanDirectOrdering = (saasPlan.direct_ordering_enabled !== undefined && saasPlan.direct_ordering_enabled !== null) ? (saasPlan.direct_ordering_enabled === 1 || saasPlan.direct_ordering_enabled === true || saasPlan.direct_ordering_enabled === '1' || saasPlan.direct_ordering_enabled === 'true') : isUnlimited;
+    const directOrderingEnabled = Boolean(isPlanDirectOrdering && (resto.direct_ordering_enabled !== 0 && resto.direct_ordering_enabled !== false && resto.direct_ordering_enabled !== '0' && resto.direct_ordering_enabled !== 'false'));
+
+    const googleReviewsEnabled = (saasPlan.google_reviews_enabled !== undefined ? (saasPlan.google_reviews_enabled === 1 || saasPlan.google_reviews_enabled === true || saasPlan.google_reviews_enabled === '1') : (planTierKey !== 'basic'));
+    const maxCombos = (saasPlan.max_combos !== undefined ? Number(saasPlan.max_combos) : (planTierKey === 'basic' ? 3 : planTierKey === 'pro' ? 10 : 9999));
     const watermarkRemovalEnabled = saasPlan.watermark_removal_enabled !== undefined ? (saasPlan.watermark_removal_enabled === 1 || saasPlan.watermark_removal_enabled === true || saasPlan.watermark_removal_enabled === '1') : true;
-    const customDomainEnabled = isComplimentary ? true : (saasPlan.custom_domain_enabled !== undefined ? (saasPlan.custom_domain_enabled === 1 || saasPlan.custom_domain_enabled === true || saasPlan.custom_domain_enabled === '1') : true);
+    const customDomainEnabled = (saasPlan.custom_domain_enabled !== undefined ? (saasPlan.custom_domain_enabled === 1 || saasPlan.custom_domain_enabled === true || saasPlan.custom_domain_enabled === '1') : isUnlimited);
     const multiLanguageEnabled = saasPlan.multi_language_enabled !== undefined ? (saasPlan.multi_language_enabled === 1 || saasPlan.multi_language_enabled === true || saasPlan.multi_language_enabled === '1') : true;
     const analyticsExportEnabled = saasPlan.analytics_export_enabled !== undefined ? (saasPlan.analytics_export_enabled === 1 || saasPlan.analytics_export_enabled === true || saasPlan.analytics_export_enabled === '1') : true;
-    const gstInvoiceEnabled = isComplimentary ? true : (saasPlan.gst_invoice_enabled !== undefined ? (saasPlan.gst_invoice_enabled === 1 || saasPlan.gst_invoice_enabled === true || saasPlan.gst_invoice_enabled === '1') : true);
+    const gstInvoiceEnabled = (saasPlan.gst_invoice_enabled !== undefined ? (saasPlan.gst_invoice_enabled === 1 || saasPlan.gst_invoice_enabled === true || saasPlan.gst_invoice_enabled === '1') : true);
     const aiReviewEnabled = saasPlan.ai_review_enabled !== undefined ? (saasPlan.ai_review_enabled === 1 || saasPlan.ai_review_enabled === true || saasPlan.ai_review_enabled === '1') : true;
-    const kdsEnabled = isComplimentary ? true : (saasPlan.kds_enabled !== undefined ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1') : (planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan'));
-    const bluetoothKotEnabled = saasPlan.bluetooth_kot_enabled !== undefined ? (saasPlan.bluetooth_kot_enabled === 1 || saasPlan.bluetooth_kot_enabled === true || saasPlan.bluetooth_kot_enabled === '1') : true;
-    const dualPrinterEnabled = isComplimentary ? true : (saasPlan.dual_printer_enabled !== undefined ? (saasPlan.dual_printer_enabled === 1 || saasPlan.dual_printer_enabled === true || saasPlan.dual_printer_enabled === '1') : (planTierKey === 'enterprise' || planTierKey === 'vip_ultra_plan'));
+    const kdsEnabled = (saasPlan.kds_enabled !== undefined ? (saasPlan.kds_enabled === 1 || saasPlan.kds_enabled === true || saasPlan.kds_enabled === '1') : isUnlimited);
+    const bluetoothKotEnabled = (saasPlan.bluetooth_kot_enabled !== undefined ? (saasPlan.bluetooth_kot_enabled === 1 || saasPlan.bluetooth_kot_enabled === true || saasPlan.bluetooth_kot_enabled === '1') : isUnlimited);
+    const dualPrinterEnabled = (saasPlan.dual_printer_enabled !== undefined ? (saasPlan.dual_printer_enabled === 1 || saasPlan.dual_printer_enabled === true || saasPlan.dual_printer_enabled === '1') : isUnlimited);
     const modifiersEnabled = saasPlan.modifiers_enabled !== undefined ? (saasPlan.modifiers_enabled === 1 || saasPlan.modifiers_enabled === true || saasPlan.modifiers_enabled === '1') : true;
     const effectiveGstActive = (saasPlan.gst_invoice_enabled !== 0 && saasPlan.gst_invoice_enabled !== false && saasPlan.gst_invoice_enabled !== '0' && saasPlan.gst_invoice_enabled !== 'false') && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true');
     const businessProfile = resolveBusinessProfile(resto);
@@ -733,7 +831,7 @@ router.get('/info', async (req, res) => {
       filters_visibility: filtersVis,
       currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
       plan_tier: resto.plan_tier || 'pro',
-      plan_name: isComplimentary ? 'Enterprise VIP Access' : (saasPlan.name || (planTierKey === 'enterprise' ? 'Enterprise Plan' : planTierKey === 'basic' ? 'Basic Plan' : 'Pro Plan')),
+      plan_name: isComplimentary ? (planTierKey === 'enterprise' ? 'Enterprise VIP Access' : (saasPlan.name ? (saasPlan.name.includes('VIP') ? saasPlan.name : `${saasPlan.name} (VIP Access)`) : (planTierKey === 'basic' ? 'Basic Plan (VIP Access)' : 'Pro Plan (VIP Access)'))) : (saasPlan.name || (planTierKey === 'enterprise' ? 'Enterprise Plan' : planTierKey === 'basic' ? 'Basic Plan' : 'Pro Plan')),
       plan_price: planPrice,
       subscription_type: resto.subscription_type || (isComplimentary ? 'ADMIN_GRANTED' : 'PAID'),
       mandate_status: isComplimentary ? 'admin_granted' : (resto.mandate_status || (resto.mandate_id ? 'active' : 'pending')).toLowerCase(),
@@ -768,6 +866,12 @@ router.get('/info', async (req, res) => {
       total_cabins: resto.total_cabins !== undefined && resto.total_cabins !== null ? Number(resto.total_cabins) : 0,
       total_rooms: resto.total_rooms !== undefined && resto.total_rooms !== null ? Number(resto.total_rooms) : 0,
       total_vip: resto.total_vip !== undefined && resto.total_vip !== null ? Number(resto.total_vip) : 0,
+      total_screens: resto.total_screens !== undefined && resto.total_screens !== null ? Number(resto.total_screens) : 0,
+      total_seats: resto.total_seats !== undefined && resto.total_seats !== null ? Number(resto.total_seats) : 0,
+      max_tables: saasPlan.max_tables !== undefined ? Number(saasPlan.max_tables) : 9999,
+      max_rooms: saasPlan.max_rooms !== undefined ? Number(saasPlan.max_rooms) : 9999,
+      max_screens: saasPlan.max_screens !== undefined ? Number(saasPlan.max_screens) : 9999,
+      max_seats: saasPlan.max_seats !== undefined ? Number(saasPlan.max_seats) : 9999,
       table_prefix: resto.table_prefix || 'table',
       counter_ordering_enabled: Boolean(resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1'),
       order_retention_days: resto.order_retention_days || 7,
@@ -1048,8 +1152,12 @@ router.get('/orders/presence-policy', async (req, res) => {
     }
 
     // 2. Resolve effective direct ordering
+    const isComplimentary = isAuthoritativeComplimentaryTenant(resto);
+    const isPlanDirectOrdering = (planPermissions?.direct_ordering_enabled !== undefined && planPermissions?.direct_ordering_enabled !== null)
+      ? (planPermissions.direct_ordering_enabled === 1 || planPermissions.direct_ordering_enabled === true || planPermissions.direct_ordering_enabled === '1' || planPermissions.direct_ordering_enabled === 'true')
+      : (resto.plan_tier === 'enterprise' || resto.plan_tier === 'vip');
     const isDirectOrderingActive = Boolean(
-      (planPermissions?.direct_ordering_enabled !== 0 && planPermissions?.direct_ordering_enabled !== false && planPermissions?.direct_ordering_enabled !== '0' && planPermissions?.direct_ordering_enabled !== 'false') &&
+      (isComplimentary || isPlanDirectOrdering) &&
       (resto.direct_ordering_enabled !== 0 && resto.direct_ordering_enabled !== false && resto.direct_ordering_enabled !== '0' && resto.direct_ordering_enabled !== 'false')
     );
 
@@ -1186,6 +1294,30 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
       return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
     }
 
+    if (resto.is_builtin_demo || resto.id === -999) {
+      const demoToken = 'tq_demo_' + crypto.randomBytes(16).toString('hex');
+      const presenceToken = generatePresenceToken({
+        verificationToken: demoToken,
+        restaurantId: -999,
+        slug: 'touchqr-demo',
+        spaceType: space_type || 'table',
+        spaceNumber: table_number || table || 'Demo Table 1',
+        verificationMethod: 'DEMO',
+        qrContextHash: 'demo_hash',
+        expiryMinutes: 60
+      });
+      return res.json({
+        success: true,
+        verified: true,
+        required: false,
+        verification_token: demoToken,
+        presence_token: presenceToken,
+        location_token: presenceToken,
+        method: 'DEMO',
+        message: 'Interactive Demo Mode: Location verified automatically.'
+      });
+    }
+
     // Step 3: Validate Restaurant is Active
     if (resto.active === 0 || resto.active === false || resto.active === 'false') {
       return res.status(403).json({ error: 'restaurant_inactive', message: 'Restaurant is currently inactive' });
@@ -1311,6 +1443,8 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
     const custLat = Number(latitude);
     const custLng = Number(longitude);
     const custAcc = Math.round(Number(accuracy) || 999);
+    const restoLat = Number(resto.latitude);
+    const restoLng = Number(resto.longitude);
 
     if (isNaN(custLat) || isNaN(custLng) || custLat === 0 || custLng === 0) {
       return res.status(400).json({
@@ -1505,8 +1639,12 @@ router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (
       if (planRows && planRows.length > 0) planPermissions = planRows[0];
     } catch (planErr) {}
 
+    const isComplimentary = isAuthoritativeComplimentaryTenant(resto);
+    const isPlanDirectOrdering = (planPermissions?.direct_ordering_enabled !== undefined && planPermissions?.direct_ordering_enabled !== null)
+      ? (planPermissions.direct_ordering_enabled === 1 || planPermissions.direct_ordering_enabled === true || planPermissions.direct_ordering_enabled === '1' || planPermissions.direct_ordering_enabled === 'true')
+      : (resto.plan_tier === 'enterprise' || resto.plan_tier === 'vip');
     const isDirectOrderingActive = Boolean(
-      (planPermissions?.direct_ordering_enabled !== 0 && planPermissions?.direct_ordering_enabled !== false && planPermissions?.direct_ordering_enabled !== '0' && planPermissions?.direct_ordering_enabled !== 'false') &&
+      (isComplimentary || isPlanDirectOrdering) &&
       (resto.direct_ordering_enabled !== 0 && resto.direct_ordering_enabled !== false && resto.direct_ordering_enabled !== '0' && resto.direct_ordering_enabled !== 'false')
     );
 
@@ -1649,6 +1787,26 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     }
     const targetId = resto.id;
 
+    if (resto.is_builtin_demo || resto.id === -999) {
+      const demoOrderId = Math.floor(100000 + Math.random() * 900000);
+      const demoTrackingToken = crypto.randomBytes(16).toString('hex');
+      return res.status(201).json({
+        success: true,
+        order_id: demoOrderId,
+        tracking_token: demoTrackingToken,
+        order: {
+          id: demoOrderId,
+          status: 'pending',
+          table_number: table_number || 'Demo Table 1',
+          space_type: space_type || 'table',
+          total_amount: Number(total_amount) || 450,
+          customer_name: customer_name || 'Demo Guest',
+          created_at: new Date().toISOString()
+        },
+        message: 'Interactive Demo: Order placed successfully! Kitchen siren dispatched.'
+      });
+    }
+
     // Step 3: Validate Restaurant is Active & Subscribed
     if (resto.active === 0 || resto.active === false || resto.active === 'false') {
       return res.status(403).json({
@@ -1665,11 +1823,12 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       if (planRows && planRows.length > 0) planPermissions = planRows[0];
     } catch (planErr) {}
 
+    const planTierKey = String(resto.plan_tier || 'pro').toLowerCase();
+    const isUnlimited = planTierKey === 'enterprise' || planTierKey === 'vip_ultra' || planTierKey === 'vip_ultra_plan' || planTierKey === 'vip';
     const isPlanDirectOrderingEnabled = isComplimentary || (
-      planPermissions?.direct_ordering_enabled !== 0 &&
-      planPermissions?.direct_ordering_enabled !== false &&
-      planPermissions?.direct_ordering_enabled !== '0' &&
-      planPermissions?.direct_ordering_enabled !== 'false'
+      (planPermissions?.direct_ordering_enabled !== undefined && planPermissions?.direct_ordering_enabled !== null)
+        ? (planPermissions.direct_ordering_enabled === 1 || planPermissions.direct_ordering_enabled === true || planPermissions.direct_ordering_enabled === '1' || planPermissions.direct_ordering_enabled === 'true')
+        : isUnlimited
     );
 
     const isDirectOrderingActive = Boolean(
@@ -2778,16 +2937,26 @@ router.post('/service-requests', serviceRequestRateLimiter, async (req, res) => 
     }
 
     const result = await query(`
-      INSERT INTO service_requests (restaurant_id, table_number, request_type, note, status)
-      VALUES ($1, $2, $3, $4, 'pending') RETURNING id
-    `, [resto.id, resolvedSpaceNum, cleanType, cleanNote]);
+      INSERT INTO service_requests (restaurant_id, table_number, space_type, request_type, note, status)
+      VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING id
+    `, [resto.id, resolvedSpaceNum, resolvedSpaceType, cleanType, cleanNote]);
 
     const requestId = result[0]?.id || result.lastInsertRowid;
+
+    const isHotel = resolvedSpaceType === 'room' || (resto.service_model === 'hotel') || (resto.business_type === 'hotel_resort');
+    const isCinema = resolvedSpaceType === 'cinema_seat' || resolvedSpaceType === 'cinema' || (resto.service_model === 'cinema') || (resto.business_type === 'cinema_theatre');
+
+    let successMsg = `🛎️ Staff notified for Table ${resolvedSpaceNum}! A waiter will attend shortly.`;
+    if (isHotel) {
+      successMsg = `🛎️ Room service notified for Room ${resolvedSpaceNum}! Staff will attend shortly.`;
+    } else if (isCinema) {
+      successMsg = `🛎️ Attendant notified for Seat ${resolvedSpaceNum}! Staff will assist shortly.`;
+    }
 
     res.json({
       success: true,
       request_id: requestId,
-      message: `🛎️ Staff notified for Table ${resolvedSpaceNum}! A waiter will attend shortly.`
+      message: successMsg
     });
   } catch (err) {
     console.error('Create service request error:', err);
@@ -2899,14 +3068,15 @@ export async function verifyKdsTenantAndEntitlement(restoOrSlug, queryFn = query
     return { authorized: false, status: 403, error: 'RESTAURANT_SUSPENDED', message: 'Restaurant account is suspended.' };
   }
 
-  // 4. Only for active restaurants, evaluate the authoritative complimentary/VIP entitlement exception
+  // 4. For complimentary/VIP, check if their granted plan includes KDS
+  const planTierKey = resto.plan_tier ? String(resto.plan_tier).trim().toLowerCase() : '';
+  const isEnterpriseOrVipUltra = (planTierKey === 'enterprise' || planTierKey === 'vip_ultra' || planTierKey === 'vip_ultra_plan' || planTierKey === 'vip');
   const isComplimentary = isAuthoritativeComplimentaryTenant(resto);
-  if (isComplimentary) {
+  if (isComplimentary && isEnterpriseOrVipUltra) {
     return { authorized: true, resto };
   }
 
   // 5. For other tenants, verify saas_plans.kds_enabled
-  const planTierKey = resto.plan_tier ? String(resto.plan_tier).trim().toLowerCase() : '';
   if (!planTierKey) {
     // 6. Reject disabled or missing plan entitlements with HTTP 403 and KDS_DISABLED
     return { authorized: false, status: 403, error: 'KDS_DISABLED', message: 'Kitchen Display System (KDS) is disabled on your SaaS plan tier.' };

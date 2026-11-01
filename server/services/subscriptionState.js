@@ -370,15 +370,19 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
   const isCatering = businessType === 'catering';
 
   const isValTrue = (val, def = true) => (val !== undefined && val !== null ? (val === 1 || val === true || val === '1' || val === 'true') : def);
+  const isUnlimitedPlan = tierKey.includes('enterprise') || tierKey.includes('vip') || tierKey === 'vip_ultra' || tierKey === 'vip_ultra_plan';
+  const isBasicPlan = tierKey === 'basic' || tierKey.endsWith('_basic') || tierKey.endsWith('basic');
 
-  const maxDishes = isComplimentary ? 9999 : (plan.max_dishes !== undefined && plan.max_dishes !== null ? Number(plan.max_dishes) : (plan.dish_limit ? Number(plan.dish_limit) : 500));
-  const maxCategories = isComplimentary ? 9999 : (plan.max_categories !== undefined && plan.max_categories !== null ? Number(plan.max_categories) : (plan.category_limit ? Number(plan.category_limit) : 50));
-  const maxCombos = isComplimentary ? 9999 : (plan.max_combos !== undefined && plan.max_combos !== null ? Number(plan.max_combos) : (tierKey === 'basic' ? 3 : tierKey === 'pro' ? 10 : 9999));
-  const maxTables = isComplimentary ? 9999 : (plan.max_tables !== undefined && plan.max_tables !== null ? Number(plan.max_tables) : (plan.table_limit ? Number(plan.table_limit) : 100));
-  const maxRooms = isHotel ? (isComplimentary ? 9999 : (plan.max_rooms !== undefined && plan.max_rooms !== null ? Number(plan.max_rooms) : (plan.room_limit ? Number(plan.room_limit) : (plan.table_limit ? Number(plan.table_limit) : 100)))) : null;
-  const maxSeats = isCinema ? (isComplimentary ? 9999 : (plan.max_seats !== undefined && plan.max_seats !== null ? Number(plan.max_seats) : (plan.seat_limit ? Number(plan.seat_limit) : (plan.table_limit ? Number(plan.table_limit) : 500)))) : null;
-  const maxStaff = isComplimentary ? 9999 : (plan.max_staff_accounts !== undefined && plan.max_staff_accounts !== null ? Number(plan.max_staff_accounts) : 9999);
-  const retentionDays = isComplimentary ? 365 : (plan.order_retention_days !== undefined && plan.order_retention_days !== null ? Number(plan.order_retention_days) : 365);
+  // Option B: Quotas strictly respect the granted plan tier and preserve explicit limits
+  const maxDishes = isUnlimitedPlan ? 9999 : ((resto?.max_dishes !== undefined && resto?.max_dishes !== null) ? Number(resto.max_dishes) : ((plan.max_dishes !== undefined && plan.max_dishes !== null) ? Number(plan.max_dishes) : ((plan.dish_limit !== undefined && plan.dish_limit !== null) ? Number(plan.dish_limit) : (isBasicPlan ? 50 : 500))));
+  const maxCategories = isUnlimitedPlan ? 9999 : ((resto?.max_categories !== undefined && resto?.max_categories !== null) ? Number(resto.max_categories) : ((plan.max_categories !== undefined && plan.max_categories !== null) ? Number(plan.max_categories) : ((plan.category_limit !== undefined && plan.category_limit !== null) ? Number(plan.category_limit) : (isBasicPlan ? 10 : 50))));
+  const maxCombos = isUnlimitedPlan ? 9999 : ((resto?.max_combos !== undefined && resto?.max_combos !== null) ? Number(resto.max_combos) : ((plan.max_combos !== undefined && plan.max_combos !== null) ? Number(plan.max_combos) : (isBasicPlan ? ((isHotel || isCinema) ? 5 : 3) : ((isHotel || isCinema) ? 20 : 10))));
+  const maxTables = isUnlimitedPlan ? 9999 : ((resto?.max_tables !== undefined && resto?.max_tables !== null) ? Number(resto.max_tables) : ((plan.max_tables !== undefined && plan.max_tables !== null) ? Number(plan.max_tables) : ((plan.table_limit !== undefined && plan.table_limit !== null) ? Number(plan.table_limit) : (isBasicPlan ? 20 : 100))));
+  const maxRooms = isHotel ? (isUnlimitedPlan ? 9999 : ((resto?.max_rooms !== undefined && resto?.max_rooms !== null) ? Number(resto.max_rooms) : ((plan.max_rooms !== undefined && plan.max_rooms !== null) ? Number(plan.max_rooms) : ((plan.room_limit !== undefined && plan.room_limit !== null) ? Number(plan.room_limit) : (isBasicPlan ? 20 : 60))))) : null;
+  const maxScreens = isCinema ? (isUnlimitedPlan ? 9999 : ((resto?.max_screens !== undefined && resto?.max_screens !== null) ? Number(resto.max_screens) : ((plan.max_screens !== undefined && plan.max_screens !== null) ? Number(plan.max_screens) : ((plan.screen_limit !== undefined && plan.screen_limit !== null) ? Number(plan.screen_limit) : (isBasicPlan ? 1 : 3))))) : null;
+  const maxSeats = isCinema ? (isUnlimitedPlan ? 9999 : ((resto?.max_seats !== undefined && resto?.max_seats !== null) ? Number(resto.max_seats) : ((plan.max_seats !== undefined && plan.max_seats !== null) ? Number(plan.max_seats) : ((plan.seat_limit !== undefined && plan.seat_limit !== null) ? Number(plan.seat_limit) : (isBasicPlan ? 200 : 800))))) : null;
+  const maxStaff = isUnlimitedPlan ? 9999 : ((resto?.max_staff_accounts !== undefined && resto?.max_staff_accounts !== null) ? Number(resto.max_staff_accounts) : ((plan.max_staff_accounts !== undefined && plan.max_staff_accounts !== null) ? Number(plan.max_staff_accounts) : (isBasicPlan ? 2 : 5)));
+  const retentionDays = isUnlimitedPlan ? 365 : ((resto?.order_retention_days !== undefined && resto?.order_retention_days !== null) ? Number(resto.order_retention_days) : ((plan.order_retention_days !== undefined && plan.order_retention_days !== null) ? Number(plan.order_retention_days) : (isBasicPlan ? 30 : 90)));
 
   const quotas = {
     dishes: maxDishes,
@@ -386,6 +390,7 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
     combos: maxCombos,
     tables: maxTables,
     rooms: maxRooms,
+    screens: maxScreens,
     seats: maxSeats,
     staff_accounts: maxStaff,
     max_dishes: maxDishes,
@@ -393,6 +398,7 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
     max_combos: maxCombos,
     max_tables: maxTables,
     max_rooms: maxRooms,
+    max_screens: maxScreens,
     max_seats: maxSeats,
     max_staff_accounts: maxStaff,
     order_retention_days: retentionDays
@@ -402,23 +408,27 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
   const isKdsApplicable = !isCinema && !isCatering && !isBakeryOrSweet;
   const isKotApplicable = !isCinema && !isCatering;
 
+  // Option B: Capabilities strictly respect the granted plan tier
   const capabilities = {
-    direct_ordering_enabled: isComplimentary ? true : isValTrue(plan.direct_ordering_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan'),
-    whatsapp_ordering_enabled: isComplimentary ? true : isValTrue(plan.whatsapp_ordering_enabled ?? plan.whatsapp_enabled, tierKey !== 'basic'),
-    kds_enabled: isKdsApplicable ? (isComplimentary ? true : isValTrue(plan.kds_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan')) : false,
-    bluetooth_kot_enabled: isKotApplicable ? (isComplimentary ? true : isValTrue(plan.bluetooth_kot_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan')) : false,
-    dual_printer_enabled: isKotApplicable ? (isComplimentary ? true : isValTrue(plan.dual_printer_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan')) : false,
-    cinema_ordering_enabled: isCinema ? (isComplimentary ? true : isValTrue(plan.cinema_ordering_enabled ?? plan.direct_ordering_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan')) : false,
-    room_ordering_enabled: isHotel ? (isComplimentary ? true : isValTrue(plan.room_ordering_enabled ?? plan.direct_ordering_enabled, tierKey === 'enterprise' || tierKey === 'vip_ultra_plan')) : false,
+    direct_ordering_enabled: isBasicPlan ? false : isValTrue(plan.direct_ordering_enabled, isUnlimitedPlan),
+    whatsapp_ordering_enabled: isValTrue(plan.whatsapp_ordering_enabled ?? plan.whatsapp_enabled, !isBasicPlan),
+    kds_enabled: (isBasicPlan || !isKdsApplicable) ? false : isValTrue(plan.kds_enabled, isUnlimitedPlan),
+    bluetooth_kot_enabled: (isBasicPlan || !isKotApplicable) ? false : isValTrue(plan.bluetooth_kot_enabled, isUnlimitedPlan),
+    dual_printer_enabled: (isBasicPlan || !isKotApplicable) ? false : isValTrue(plan.dual_printer_enabled, isUnlimitedPlan),
+    cinema_ordering_enabled: (isBasicPlan || !isCinema) ? false : isValTrue(plan.cinema_ordering_enabled ?? plan.direct_ordering_enabled, isUnlimitedPlan),
+    room_ordering_enabled: (isBasicPlan || !isHotel) ? false : isValTrue(plan.room_ordering_enabled ?? plan.direct_ordering_enabled, isUnlimitedPlan),
+    amenities_booking_enabled: isHotel ? isValTrue(plan.amenities_booking_enabled, true) : false,
+    seat_runner_dispatch_enabled: isCinema ? isValTrue(plan.seat_runner_dispatch_enabled, true) : false,
+    interval_rush_mode_enabled: isCinema ? isValTrue(plan.interval_rush_mode_enabled, true) : false,
     gst_invoice_enabled: isValTrue(plan.gst_invoice_enabled, true),
     analytics_export_enabled: isValTrue(plan.analytics_export_enabled, true),
     modifiers_enabled: isValTrue(plan.modifiers_enabled, true),
-    google_reviews_enabled: isComplimentary ? true : isValTrue(plan.google_reviews_enabled, tierKey !== 'basic'),
+    google_reviews_enabled: isValTrue(plan.google_reviews_enabled, !isBasicPlan),
     ai_review_enabled: isValTrue(plan.ai_review_enabled, true),
     watermark_removal_enabled: isValTrue(plan.watermark_removal_enabled, true),
-    custom_domain_enabled: isComplimentary ? true : isValTrue(plan.custom_domain_enabled, true),
+    custom_domain_enabled: isValTrue(plan.custom_domain_enabled, isUnlimitedPlan),
     staff_roles_enabled: isValTrue(plan.staff_roles_enabled, true),
-    allowed_themes: isComplimentary ? 'ALL' : (plan.allowed_themes || (tierKey === 'basic' ? 'gold' : tierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL'))
+    allowed_themes: (plan.allowed_themes || (isBasicPlan ? 'gold' : !isUnlimitedPlan ? 'gold,emerald,crimson,navy' : 'ALL'))
   };
 
   const feature_matrix = {
@@ -468,6 +478,27 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
       applicable: isHotel,
       status: isHotel ? (capabilities.room_ordering_enabled ? 'AVAILABLE' : 'LOCKED') : 'UNSUPPORTED',
       inapplicable_reason: 'Applicable to Hotel & Resort only'
+    },
+    amenities_booking_enabled: {
+      label: 'Hotel Amenities & Housekeeping Requests',
+      enabled: capabilities.amenities_booking_enabled,
+      applicable: isHotel,
+      status: isHotel ? (capabilities.amenities_booking_enabled ? 'AVAILABLE' : 'LOCKED') : 'UNSUPPORTED',
+      inapplicable_reason: 'Applicable to Hotel & Resort only'
+    },
+    seat_runner_dispatch_enabled: {
+      label: 'Cinema Seat Runner Dispatch Routing',
+      enabled: capabilities.seat_runner_dispatch_enabled,
+      applicable: isCinema,
+      status: isCinema ? (capabilities.seat_runner_dispatch_enabled ? 'AVAILABLE' : 'LOCKED') : 'UNSUPPORTED',
+      inapplicable_reason: 'Applicable to Cinema & Multiplex only'
+    },
+    interval_rush_mode_enabled: {
+      label: 'Interval Express Rush Queue',
+      enabled: capabilities.interval_rush_mode_enabled,
+      applicable: isCinema,
+      status: isCinema ? (capabilities.interval_rush_mode_enabled ? 'AVAILABLE' : 'LOCKED') : 'UNSUPPORTED',
+      inapplicable_reason: 'Applicable to Cinema & Multiplex only'
     },
     gst_invoice_enabled: {
       label: '5% GST Tax Invoicing',
@@ -519,10 +550,11 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
     }
   };
 
-  const effectivePlanTier = isComplimentary ? 'enterprise' : tierKey;
+  const effectivePlanTier = tierKey;
+  const basePlanName = plan.name || (resto?.plan_name ? resto.plan_name : `${tierKey.toUpperCase()} Plan`);
   const effectivePlanName = isComplimentary
-    ? 'Enterprise VIP Access'
-    : (plan.name || (resto?.plan_name ? resto.plan_name : `${tierKey.toUpperCase()} Plan`));
+    ? (tierKey === 'enterprise' ? 'Enterprise VIP Access' : (basePlanName.includes('VIP') ? basePlanName : `${basePlanName} (VIP Access)`))
+    : basePlanName;
   const rawPrice = (resto?.plan_price !== undefined && resto?.plan_price !== null && resto?.plan_price !== '')
     ? Number(resto.plan_price)
     : (sub && sub.amount !== undefined && sub.amount !== null && sub.amount !== ''
@@ -621,15 +653,24 @@ export function formatTenantPlanDisplay(tenant, now = new Date()) {
   const isVip = isAuthoritativeComplimentaryTenant(tenant, null, now);
 
   if (isVip) {
-    const rawBase = (tenant.plan_tier || '').trim();
-    const hasBaseTier = rawBase && rawBase.toLowerCase() !== 'enterprise';
-    const baseTier = hasBaseTier ? rawBase.toUpperCase() : null;
+    const rawBase = (tenant.effective_plan_tier || tenant.plan_tier || 'pro').trim().toLowerCase();
+    if (rawBase === 'enterprise') {
+      return {
+        primaryLabel: 'Enterprise VIP Access',
+        secondaryLabel: '₹0/mo',
+        badgeText: '★ VIP',
+        fullDisplay: 'Enterprise VIP Access (₹0/mo)'
+      };
+    }
+    const baseName = tenant.plan_name || (rawBase === 'basic' ? 'Basic Plan' : rawBase === 'pro' ? 'Pro Plan' : `${rawBase.toUpperCase()} Plan`);
+    const primaryLabel = baseName.includes('VIP') ? baseName : `${baseName} (VIP Access)`;
+    const baseTier = rawBase.toUpperCase();
 
     return {
-      primaryLabel: 'Enterprise VIP Access',
-      secondaryLabel: baseTier ? `₹0/mo (Base: ${baseTier})` : '₹0/mo',
+      primaryLabel,
+      secondaryLabel: `₹0/mo (Base: ${baseTier})`,
       badgeText: '★ VIP',
-      fullDisplay: `Enterprise VIP Access (₹0/mo${baseTier ? ` • Base: ${baseTier}` : ''})`
+      fullDisplay: `${primaryLabel} (₹0/mo • Base: ${baseTier})`
     };
   }
 

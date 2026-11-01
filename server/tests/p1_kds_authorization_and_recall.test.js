@@ -33,7 +33,7 @@ import assert from 'assert';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { checkTestDatabaseRequirement, validateTestDatabaseUrl } from './testDbGuard.js';
+import { checkTestDatabaseRequirement, validateTestDatabaseUrl, getTestDatabaseType, isCiTestMode } from './testDbGuard.js';
 import { query, initDb } from '../db.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import apiRouter, { verifyKdsTenantAndEntitlement } from '../routes/api.js';
@@ -51,8 +51,14 @@ if (!rawTestUrl) {
   }
 }
 
-// Strict local PostgreSQL verification: reject any non-local or production URL
 validateTestDatabaseUrl(rawTestUrl);
+
+if (getTestDatabaseType() !== 'POSTGRESQL') {
+  console.log('⚠️  [NOT RUN] P1 KDS Authorization Suite requires a PostgreSQL test database (touchqr_disposable_test). Skipping on SQLite.');
+  process.exit(0);
+}
+
+// Strict local PostgreSQL verification: reject any non-local or production URL
 const parsedUrl = new URL(rawTestUrl);
 const host = (parsedUrl.hostname || '').toLowerCase();
 const pathname = (parsedUrl.pathname || '').toLowerCase();

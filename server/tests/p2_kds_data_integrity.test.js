@@ -12,7 +12,7 @@ import assert from 'assert';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { validateTestDatabaseUrl } from './testDbGuard.js';
+import { checkTestDatabaseRequirement, validateTestDatabaseUrl, getTestDatabaseType, isCiTestMode } from './testDbGuard.js';
 import { query, initDb } from '../db.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import apiRouter from '../routes/api.js';
@@ -36,7 +36,17 @@ import {
   generateQrContextHash
 } from '../utils/presenceVerification.js';
 
-const LOCAL_TEST_URL = process.env.TEST_DATABASE_URL || 'sqlite:menu_live_e2e_disposable.db';
+const rawTestUrl = process.env.TEST_DATABASE_URL;
+if (!rawTestUrl) {
+  checkTestDatabaseRequirement('P2 KDS Data Integrity, Queue Consistency & Ticket Presentation');
+}
+if (getTestDatabaseType() !== 'POSTGRESQL') {
+  if (!isCiTestMode()) {
+    console.log('⚠️  [NOT RUN] P2 KDS Data Integrity Suite requires a PostgreSQL test database. Skipping on SQLite.');
+    process.exit(0);
+  }
+}
+const LOCAL_TEST_URL = process.env.TEST_DATABASE_URL;
 process.env.TEST_DATABASE_URL = LOCAL_TEST_URL;
 delete process.env.MIGRATION_DATABASE_URL;
 validateTestDatabaseUrl(process.env.TEST_DATABASE_URL);

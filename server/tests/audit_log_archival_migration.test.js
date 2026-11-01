@@ -13,9 +13,23 @@ import {
   ROLLBACK_STATEMENTS,
   runAuditLogArchivalMigration
 } from '../scripts/migrate_audit_log_archival.js';
+import { isCiTestMode } from './testDbGuard.js';
 
 const TEST_DB_URL = 'postgres://postgres:postgres@127.0.0.1:5432/touchqr_disposable_test';
 const { Pool } = pg;
+
+let isPostgresReachable = false;
+try {
+  const probePool = new Pool({ connectionString: TEST_DB_URL, connectionTimeoutMillis: 1500 });
+  await probePool.query('SELECT 1;');
+  await probePool.end();
+  isPostgresReachable = true;
+} catch (e) {
+  isPostgresReachable = false;
+  if (!isCiTestMode()) {
+    console.log('⚠️  [NOT RUN] Local PostgreSQL (127.0.0.1:5432) is not reachable. Skipping database migration subtests.');
+  }
+}
 
 test('ARCHIVAL_MIGRATION_DDL contains exact required tables and indexes', () => {
   const tableNames = ARCHIVAL_MIGRATION_DDL.filter(d => d.type === 'table').map(d => d.target);
@@ -74,7 +88,13 @@ test('runAuditLogArchivalMigration triggers production guard on production URL w
   );
 });
 
-test('runAuditLogArchivalMigration dry-run inspects schema without mutating database', async () => {
+test('runAuditLogArchivalMigration dry-run inspects schema without mutating database', async (t) => {
+  if (!isPostgresReachable) {
+    if (!isCiTestMode()) {
+      t.skip('Local PostgreSQL (127.0.0.1:5432) is not running');
+      return;
+    }
+  }
   const result = await runAuditLogArchivalMigration({
     migrationUrl: TEST_DB_URL,
     dryRun: true
@@ -90,7 +110,13 @@ test('runAuditLogArchivalMigration dry-run inspects schema without mutating data
   assert.ok(Array.isArray(result.inspected.existingArchivalIndexes));
 });
 
-test('runAuditLogArchivalMigration executes idempotently on disposable test database', async () => {
+test('runAuditLogArchivalMigration executes idempotently on disposable test database', async (t) => {
+  if (!isPostgresReachable) {
+    if (!isCiTestMode()) {
+      t.skip('Local PostgreSQL (127.0.0.1:5432) is not running');
+      return;
+    }
+  }
   // First run: ensures all tables & indexes exist
   const res1 = await runAuditLogArchivalMigration({
     migrationUrl: TEST_DB_URL,

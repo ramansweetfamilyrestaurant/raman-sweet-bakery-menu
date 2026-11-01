@@ -1,7 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, Store, CreditCard, Menu } from 'lucide-react';
 
-export default function BottomNavigation({ activeView, setActiveView, onOpenMoreDrawer }) {
+export default function BottomNavigation({ activeView, setActiveView, onOpenMoreDrawer, openTicketsCount = 0 }) {
   return (
     <nav className="sa-mobile-nav">
       <button
@@ -31,8 +31,18 @@ export default function BottomNavigation({ activeView, setActiveView, onOpenMore
       <button
         onClick={onOpenMoreDrawer}
         className={`sa-mobile-nav-item ${['tickets', 'plans', 'operations', 'activity', 'settings', 'communication'].includes(activeView) ? 'active' : ''}`}
+        style={{ position: 'relative' }}
       >
-        <Menu size={19} />
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Menu size={19} />
+          {openTicketsCount > 0 && (
+            <span style={{
+              position: 'absolute', top: '-2px', right: '-4px',
+              width: '8px', height: '8px', borderRadius: '50%',
+              background: '#EF4444', border: '1.5px solid #0A2315'
+            }} />
+          )}
+        </div>
         <span>More</span>
       </button>
     </nav>

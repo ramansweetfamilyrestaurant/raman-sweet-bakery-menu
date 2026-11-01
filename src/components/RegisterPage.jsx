@@ -10,6 +10,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
     owner_username: '',
     owner_password: '',
     confirm_password: '',
+    business_type: 'restaurant',
     plan_tier: 'pro',
     agree_terms: false
   });
@@ -26,8 +27,12 @@ export default function RegisterPage({ onRegisterSuccess }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const p = params.get('plan') || localStorage.getItem('selected_plan_tier') || sessionStorage.getItem('selected_plan_tier');
-    if (p && ['basic', 'pro', 'enterprise'].includes(p.toLowerCase())) {
-      setFormData(prev => ({ ...prev, plan_tier: p.toLowerCase() }));
+    if (p) {
+      const cleanP = p.toLowerCase().trim();
+      let derivedBiz = 'restaurant';
+      if (cleanP.startsWith('hotel')) derivedBiz = 'hotel_resort';
+      else if (cleanP.startsWith('cinema')) derivedBiz = 'cinema_theatre';
+      setFormData(prev => ({ ...prev, plan_tier: cleanP, business_type: derivedBiz }));
     }
     const err = params.get('error');
     if (err) {
@@ -172,7 +177,8 @@ export default function RegisterPage({ onRegisterSuccess }) {
           owner_email: cleanOwnerEmail,
           owner_username: formData.owner_username,
           owner_password: formData.owner_password,
-          plan_tier: formData.plan_tier
+          plan_tier: formData.plan_tier,
+          business_type: formData.business_type || 'restaurant'
         })
       });
 
@@ -589,40 +595,106 @@ export default function RegisterPage({ onRegisterSuccess }) {
               </div>
             </div>
 
-            {/* Select SaaS Subscription Plan */}
+            {/* Select Business Industry & Plan */}
             <div>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
+                BUSINESS INDUSTRY & CATEGORY *
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '10px' }}>
+                {[
+                  { id: 'restaurant', biz: 'restaurant', label: '🍽️ Restaurant', defaultPlan: 'pro' },
+                  { id: 'hotel', biz: 'hotel_resort', label: '🏨 Hotel', defaultPlan: 'hotel_pro' },
+                  { id: 'cinema', biz: 'cinema_theatre', label: '🎬 Cinema', defaultPlan: 'cinema_pro' }
+                ].map(cat => {
+                  const isSelected = (formData.business_type === cat.biz) ||
+                    (cat.id === 'restaurant' && (!formData.business_type || formData.business_type === 'restaurant' || formData.business_type === 'cafe'));
+                  return (
+                    <div
+                      key={cat.id}
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          business_type: cat.biz,
+                          plan_tier: cat.defaultPlan
+                        }));
+                      }}
+                      style={{
+                        padding: '8px 4px',
+                        borderRadius: '10px',
+                        border: isSelected ? '2px solid #FFD700' : '1px solid rgba(255,255,255,0.12)',
+                        background: isSelected ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.04)',
+                        color: isSelected ? '#FFD700' : '#E2E8F0',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {cat.label}
+                    </div>
+                  );
+                })}
+              </div>
+
               <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
                 SELECT PLAN TIER *
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
-                {(plans.length > 0 ? plans.map(p => ({
+              {(() => {
+                const isHotel = formData.business_type === 'hotel_resort';
+                const isCinema = formData.business_type === 'cinema_theatre';
+                const currentIndustry = isHotel ? 'hotel' : (isCinema ? 'cinema' : 'restaurant');
+
+                const availablePlans = plans.length > 0 
+                  ? plans.filter(p => (p.industry || 'restaurant').toLowerCase() === currentIndustry || p.key.startsWith(currentIndustry))
+                  : [];
+
+                const defaultFallbackPlans = isHotel ? [
+                  { key: 'hotel_basic', name: 'Basic (Rooms)', price: '₹999/mo', quota: '20 Rooms' },
+                  { key: 'hotel_pro', name: 'Pro Dining', price: '₹1,999/mo', quota: '60 Rooms', popular: true },
+                  { key: 'hotel_enterprise', name: 'Enterprise', price: '₹3,499/mo', quota: 'Unlimited' }
+                ] : isCinema ? [
+                  { key: 'cinema_basic', name: 'Basic Canteen', price: '₹1,499/mo', quota: '1 Screen · 200 Seats' },
+                  { key: 'cinema_pro', name: 'Pro In-Seat', price: '₹2,999/mo', quota: '3 Screens · 800 Seats', popular: true },
+                  { key: 'cinema_enterprise', name: 'Enterprise', price: '₹4,999/mo', quota: 'Multiplex Suite' }
+                ] : [
+                  { key: 'basic', name: 'Basic', price: '₹499/mo', quota: '20 Tables' },
+                  { key: 'pro', name: 'Pro', price: '₹999/mo', quota: '100 Tables', popular: true },
+                  { key: 'enterprise', name: 'Enterprise', price: '₹1,999/mo', quota: 'Unlimited' }
+                ];
+
+                const plansToDisplay = availablePlans.length > 0 ? availablePlans.map(p => ({
                   key: p.key,
-                  name: p.key === 'basic' ? 'Basic' : p.key === 'enterprise' ? 'Enterprise' : 'Pro',
+                  name: p.name?.replace(/\s*\(.*\)/, '') || p.key,
                   price: `₹${p.price}/mo`,
-                  popular: p.key === 'pro'
-                })) : [
-                  { key: 'basic', name: 'Basic', price: '₹499/mo' },
-                  { key: 'pro', name: 'Pro', price: '₹999/mo', popular: true },
-                  { key: 'enterprise', name: 'Enterprise', price: '₹1,999/mo' }
-                ]).map((p) => (
-                  <div
-                    key={p.key}
-                    onClick={() => {
-                      setFormData({ ...formData, plan_tier: p.key });
-                    }}
-                    style={{
-                      border: formData.plan_tier === p.key ? '2px solid #FFD700' : '1px solid rgba(255,255,255,0.15)',
-                      background: formData.plan_tier === p.key ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.03)',
-                      borderRadius: '10px', padding: '8px 4px', cursor: 'pointer', textAlign: 'center',
-                      position: 'relative'
-                    }}
-                  >
-                    {p.popular && <span style={{ position: 'absolute', top: '-7px', right: '3px', background: '#DFBA67', color: '#000', fontSize: '0.5rem', fontWeight: 900, padding: '1px 4px', borderRadius: '4px' }}>POPULAR</span>}
-                    <div style={{ fontSize: '0.78rem', fontWeight: 900, color: formData.plan_tier === p.key ? '#FFD700' : '#FFF' }}>{p.name}</div>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#34D399' }}>{p.price}</div>
+                  quota: (() => { const ind = (p.industry || (p.key.startsWith("hotel") ? "hotel" : p.key.startsWith("cinema") ? "cinema" : "restaurant")).toLowerCase(); if (ind === "hotel") return p.max_rooms && Number(p.max_rooms) < 1000 ? `${p.max_rooms} Rooms` : "Unlimited"; if (ind === "cinema") return p.max_screens && Number(p.max_screens) < 100 ? `${p.max_screens} Scrn` : "Multiplex"; return p.max_tables && Number(p.max_tables) < 1000 ? `${p.max_tables} Tbl` : "Unlimited"; })(),
+                  popular: p.key.endsWith('_pro') || p.key === 'pro'
+                })) : defaultFallbackPlans;
+
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                    {plansToDisplay.map((p) => (
+                      <div
+                        key={p.key}
+                        onClick={() => {
+                          setFormData({ ...formData, plan_tier: p.key });
+                        }}
+                        style={{
+                          border: formData.plan_tier === p.key ? '2px solid #FFD700' : '1px solid rgba(255,255,255,0.15)',
+                          background: formData.plan_tier === p.key ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.03)',
+                          borderRadius: '10px', padding: '8px 4px', cursor: 'pointer', textAlign: 'center',
+                          position: 'relative'
+                        }}
+                      >
+                        {p.popular && <span style={{ position: 'absolute', top: '-7px', right: '3px', background: '#DFBA67', color: '#000', fontSize: '0.5rem', fontWeight: 900, padding: '1px 4px', borderRadius: '4px' }}>POPULAR</span>}
+                        <div style={{ fontSize: '0.78rem', fontWeight: 900, color: formData.plan_tier === p.key ? '#FFD700' : '#FFF' }}>{p.name}</div>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#34D399' }}>{p.price}</div>
+                        {p.quota && <div style={{ fontSize: '0.62rem', color: '#94A3B8', marginTop: '2px' }}>{p.quota}</div>}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
 
             {/* Terms and Conditions Checkbox */}

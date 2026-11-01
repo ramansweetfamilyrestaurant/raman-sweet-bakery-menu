@@ -3,11 +3,12 @@ import {
   Database, Activity, RefreshCw, Server, HardDrive, Radio, Clock, 
   Sparkles, CheckCircle, AlertTriangle, ShieldCheck, Settings, 
   Layers, Utensils, CreditCard, Users, FileText, Zap, Cpu, Gauge, 
-  ChevronRight, ArrowRight, Sliders, Check
+  ChevronRight, ArrowRight, Sliders, Check, LifeBuoy, MessageSquare,
+  QrCode, Search, Image, Copy, Terminal
 } from 'lucide-react';
 import '../styles/SuperAdmin.css';
 
-export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
+export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys = () => {} }) {
   const [telemetry, setTelemetry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -16,6 +17,17 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
   const [keysSaving, setKeysSaving] = useState(false);
   const [keysMsg, setKeysMsg] = useState('');
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'tables', 'maintenance', 'policies'
+  const [tableSearch, setTableSearch] = useState('');
+  const [copiedReport, setCopiedReport] = useState(false);
+
+  const resolveToken = () => {
+    return token || 
+      localStorage.getItem('touchqr_superadmin_token') || 
+      localStorage.getItem('token') || 
+      localStorage.getItem('saas_super_token') || 
+      sessionStorage.getItem('touchqr_superadmin_token') || 
+      sessionStorage.getItem('saas_super_token');
+  };
 
   useEffect(() => {
     fetchTelemetry();
@@ -26,7 +38,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
     else setLoading(true);
 
     try {
-      const authToken = token || localStorage.getItem('saas_super_token') || sessionStorage.getItem('saas_super_token');
+      const authToken = resolveToken();
       const res = await fetch('/api/superadmin/operations/stats', {
         headers: {
           'Authorization': `Bearer ${authToken}`
@@ -48,7 +60,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
     setOptimizing(true);
     setOptimizeMsg('');
     try {
-      const authToken = token || localStorage.getItem('saas_super_token') || sessionStorage.getItem('saas_super_token');
+      const authToken = resolveToken();
       const res = await fetch('/api/superadmin/optimize-db', {
         method: 'POST',
         headers: {
@@ -75,20 +87,27 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
     setKeysSaving(true);
     setKeysMsg('');
     try {
-      const authToken = token || localStorage.getItem('saas_super_token') || sessionStorage.getItem('saas_super_token');
+      const authToken = resolveToken();
+      // Only send operational policy keys to prevent Cashfree production password guard triggers
+      const payload = {
+        global_order_retention_days: paymentKeys?.global_order_retention_days || '90',
+        default_trial_days: paymentKeys?.default_trial_days || '16',
+        support_whatsapp: paymentKeys?.support_whatsapp || ''
+      };
       const res = await fetch('/api/superadmin/settings', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json', 
           'Authorization': `Bearer ${authToken}` 
         },
-        body: JSON.stringify(paymentKeys)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (res.ok) {
         setKeysMsg(data.message || '✅ System settings & retention policies saved!');
+        setTimeout(() => setKeysMsg(''), 4000);
       } else {
-        setKeysMsg(`⚠️ ${data.error || 'Failed to save settings'}`);
+        setKeysMsg(`⚠️ ${data.error || data.message || 'Failed to save settings'}`);
       }
     } catch (err) {
       setKeysMsg(`⚠️ ${err.message || 'Error saving settings'}`);
@@ -102,15 +121,15 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
     provider: 'Neon PostgreSQL (Serverless)',
     version: 'PostgreSQL 16',
     ping_ms: 18,
-    total_size: '12.4 MB',
-    active_connections: 2,
+    total_size: 'Serverless Pool',
+    active_connections: 1,
     tables: []
   };
 
   const system = telemetry?.system || {
     node_version: 'v20.x',
     environment: 'production',
-    uptime_hours: '24.5',
+    uptime_hours: '24.0',
     memory: {
       heap_used_mb: 68,
       heap_total_mb: 124,
@@ -126,6 +145,53 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
     subscription_cron: { status: 'SCHEDULED', interval: 'Every 60 Minutes (Automated)' }
   };
 
+  const liveTelemetry = telemetry?.telemetry || {
+    active_sessions: { value: 0, active_orders_count: 0 },
+    dishes_hosted: { value: 0, available_dishes: 0 },
+    qr_scans_today: { total_all_time: 0 }
+  };
+
+  const storageTelemetry = telemetry?.storage || {
+    stored_images_count: 0,
+    stored_images_binary_pretty: '0 B'
+  };
+
+  const handleCopyDiagnosticReport = () => {
+    const report = [
+      `TOUCHQR PLATFORM OPERATIONS & DIAGNOSTICS REPORT`,
+      `Generated: ${new Date().toISOString()}`,
+      `--------------------------------------------------`,
+      `DATABASE INFRASTRUCTURE:`,
+      `- Provider: ${db.provider}`,
+      `- Engine Version: ${db.version}`,
+      `- Total Size: ${db.total_size}`,
+      `- Roundtrip Ping: ${db.ping_ms} ms`,
+      `- Active Connections: ${db.active_connections}`,
+      ``,
+      `SERVER RUNTIME (NODE.JS V8):`,
+      `- Node Version: ${system.node_version}`,
+      `- Environment: ${system.environment}`,
+      `- Worker Uptime: ${system.uptime_hours} hrs`,
+      `- Memory Heap: ${system.memory.heap_used_mb} MB / ${system.memory.heap_total_mb} MB (${system.memory.usage_percent}%)`,
+      ``,
+      `PLATFORM REALTIME WORKLOAD:`,
+      `- Active Dining Sessions: ${liveTelemetry.active_sessions?.value || 0} (${liveTelemetry.active_sessions?.active_orders_count || 0} active orders)`,
+      `- Dishes Hosted: ${liveTelemetry.dishes_hosted?.value || 0} (${liveTelemetry.dishes_hosted?.available_dishes || 0} active)`,
+      `- Lifetime QR Scans: ${(liveTelemetry.qr_scans_today?.total_all_time || 0).toLocaleString('en-IN')}`,
+      `- Stored Media: ${storageTelemetry.stored_images_count || 0} items (${storageTelemetry.stored_images_binary_pretty || '0 B'})`,
+      ``,
+      `INTEGRATED SUBSYSTEMS:`,
+      `- Cashfree Gateway: ${services.cashfree.configured ? 'Configured' : 'Unconfigured'} (${services.cashfree.env})`,
+      `- Storage Engine: ${services.cloudflare_r2.engine}`,
+      `- AI Engine: ${services.gemini_ai.model || 'Google Gemini 1.5 Flash'}`,
+      `- Subscription Maintenance Cron: ${services.subscription_cron.interval || 'Every 60 Minutes'}`
+    ].join('\n');
+
+    navigator.clipboard.writeText(report);
+    setCopiedReport(true);
+    setTimeout(() => setCopiedReport(false), 3000);
+  };
+
   const getTableIcon = (tableName) => {
     switch (tableName) {
       case 'restaurants': return <Utensils size={15} color="#D4AF37" />;
@@ -137,9 +203,37 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
       case 'audit_logs': return <Activity size={15} color="#EC4899" />;
       case 'admins': return <Users size={15} color="#6366F1" />;
       case 'saas_plans': return <Sparkles size={15} color="#D4AF37" />;
+      case 'support_tickets': return <LifeBuoy size={15} color="#06B6D4" />;
+      case 'ticket_messages': return <MessageSquare size={15} color="#3B82F6" />;
+      case 'stored_images': return <Image size={15} color="#EC4899" />;
+      case 'system_settings': return <Sliders size={15} color="#8B5CF6" />;
       default: return <Database size={15} color="#64748B" />;
     }
   };
+
+  const filteredTables = (db.tables || []).filter(t => 
+    !tableSearch || t.table_name.toLowerCase().includes(tableSearch.toLowerCase())
+  );
+
+  const totalRecordsSum = (db.tables || []).reduce((acc, t) => acc + (t.row_count || 0), 0);
+
+  if (loading && !telemetry) {
+    return (
+      <div style={{
+        background: '#FFFFFF', borderRadius: '16px', padding: '40px',
+        border: '1px solid var(--sa-border)', textAlign: 'center',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
+      }}>
+        <RefreshCw size={24} className="spin" color="var(--sa-primary)" />
+        <strong style={{ fontSize: '0.94rem', color: 'var(--sa-text-main)' }}>
+          Gathering Real-Time Database Health & Platform Telemetry...
+        </strong>
+        <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)' }}>
+          Pinging database connection, evaluating memory usage, and inspecting table relations.
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -181,13 +275,27 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
                 </span>
               </div>
               <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#A7F3D0', fontWeight: 600 }}>
-                Authoritative real-time Postgres telemetry, background workers, storage compaction & server health.
+                Authoritative real-time database telemetry, background workers, storage compaction & server health.
               </p>
             </div>
           </div>
 
           {/* Quick Refresh & Optimization Triggers */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handleCopyDiagnosticReport}
+              className="sa-btn"
+              style={{
+                background: 'rgba(255,255,255,0.1)', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.2)',
+                fontSize: '0.76rem', fontWeight: 800, padding: '8px 14px', borderRadius: '10px'
+              }}
+              title="Copy formatted diagnostic report to clipboard"
+            >
+              {copiedReport ? <Check size={14} color="#34D399" /> : <Copy size={14} />}
+              <span>{copiedReport ? 'Report Copied!' : 'Copy Diagnostics'}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => fetchTelemetry(true)}
@@ -217,16 +325,19 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
           </div>
         </div>
 
-        {/* 4 High-Impact Live Metric Cards */}
+        {/* High-Impact Live Metric Cards */}
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
           gap: '10px', marginTop: '18px', paddingTop: '14px',
           borderTop: '1px solid rgba(255,255,255,0.12)'
         }}>
           <div style={{ background: 'rgba(255,255,255,0.07)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: '0.65rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>NEON POSTGRESQL</div>
+            <div style={{ fontSize: '0.65rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>DATABASE ENGINE</div>
             <div style={{ fontSize: '0.90rem', fontWeight: 900, color: '#34D399', marginTop: '2px' }}>
               🟢 {db.total_size} ({db.active_connections} conn)
+            </div>
+            <div style={{ fontSize: '0.62rem', color: '#CBD5E1', fontWeight: 600, marginTop: '2px' }}>
+              {db.provider.includes('Neon') ? 'Neon Serverless' : 'Local SQLite'}
             </div>
           </div>
 
@@ -235,12 +346,18 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
             <div style={{ fontSize: '0.90rem', fontWeight: 900, color: '#FCD34D', marginTop: '2px' }}>
               ⚡ {db.ping_ms} ms Latency
             </div>
+            <div style={{ fontSize: '0.62rem', color: '#CBD5E1', fontWeight: 600, marginTop: '2px' }}>
+              Roundtrip response
+            </div>
           </div>
 
           <div style={{ background: 'rgba(255,255,255,0.07)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ fontSize: '0.65rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>MEMORY / HEAP</div>
             <div style={{ fontSize: '0.90rem', fontWeight: 900, color: '#60A5FA', marginTop: '2px' }}>
               🧠 {system.memory.heap_used_mb} MB ({system.memory.usage_percent}%)
+            </div>
+            <div style={{ fontSize: '0.62rem', color: '#CBD5E1', fontWeight: 600, marginTop: '2px' }}>
+              Node.js V8 Heap
             </div>
           </div>
 
@@ -250,10 +367,44 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
           >
             <div style={{ fontSize: '0.65rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>SERVER UPTIME</div>
             <div style={{ fontSize: '0.90rem', fontWeight: 900, color: '#F472B6', marginTop: '2px' }}>
-              ⏱️ {system.uptime_hours ? `${system.uptime_hours} hrs` : 'Unknown'}
+              ⏱️ {system.uptime_hours ? `${system.uptime_hours} hrs` : 'Active'}
             </div>
             <div style={{ fontSize: '0.62rem', color: '#CBD5E1', fontWeight: 600, marginTop: '2px' }}>
               Current worker uptime
+            </div>
+          </div>
+        </div>
+
+        {/* 🌟 Extra Row: Real-Time Platform Workload Telemetry */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gap: '10px', marginTop: '10px'
+        }}>
+          <div style={{ background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ fontSize: '0.62rem', color: '#94A3B8', fontWeight: 800 }}>LIVE SESSIONS</div>
+            <div style={{ fontSize: '0.84rem', fontWeight: 900, color: '#FBBF24', marginTop: '2px' }}>
+              {liveTelemetry.active_sessions?.value || 0} active ({liveTelemetry.active_sessions?.active_orders_count || 0} orders)
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ fontSize: '0.62rem', color: '#94A3B8', fontWeight: 800 }}>DISHES HOSTED</div>
+            <div style={{ fontSize: '0.84rem', fontWeight: 900, color: '#34D399', marginTop: '2px' }}>
+              {liveTelemetry.dishes_hosted?.value || 0} items ({liveTelemetry.dishes_hosted?.available_dishes || 0} available)
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ fontSize: '0.62rem', color: '#94A3B8', fontWeight: 800 }}>LIFETIME QR SCANS</div>
+            <div style={{ fontSize: '0.84rem', fontWeight: 900, color: '#A78BFA', marginTop: '2px' }}>
+              {(liveTelemetry.qr_scans_today?.total_all_time || 0).toLocaleString('en-IN')} scans
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ fontSize: '0.62rem', color: '#94A3B8', fontWeight: 800 }}>STORED MEDIA ASSETS</div>
+            <div style={{ fontSize: '0.84rem', fontWeight: 900, color: '#38BDF8', marginTop: '2px' }}>
+              {storageTelemetry.stored_images_count || 0} items ({storageTelemetry.stored_images_binary_pretty || '0 B'})
             </div>
           </div>
         </div>
@@ -269,7 +420,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
       >
         {[
           { id: 'overview', label: 'Telemetry & Services', icon: Gauge },
-          { id: 'tables', label: `Database Tables (${db.tables.length || 9})`, icon: Database },
+          { id: 'tables', label: `Database Tables (${db.tables.length || 13})`, icon: Database },
           { id: 'maintenance', label: 'Vacuum & Archival', icon: Zap },
           { id: 'policies', label: 'Operational Policies', icon: Settings }
         ].map(tab => {
@@ -318,7 +469,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
           {/* Subsystems Health Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
             
-            {/* 1. Neon PostgreSQL */}
+            {/* 1. PostgreSQL */}
             <div className="sa-stat-card">
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -326,7 +477,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#15803D' }}>🟢 Connected</div>
-                  <div style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>Neon PostgreSQL</div>
+                  <div style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>{db.provider}</div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)' }}>{db.total_size} • {db.ping_ms}ms</div>
                 </div>
               </div>
@@ -430,7 +581,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
               </div>
 
               <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>POSTGRESQL ENGINE</span>
+                <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>DATABASE ENGINE</span>
                 <strong style={{ color: 'var(--sa-text-main)', marginTop: '2px', display: 'block' }}>🐘 {db.version}</strong>
               </div>
 
@@ -454,23 +605,39 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
       {activeTab === 'tables' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--sa-border)', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--sa-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--sa-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
-                  PostgreSQL Relations & Record Ledger
+                  Platform Relations & Record Ledger
                 </h3>
                 <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
-                  Live row counts and allocated disk quotas across core tenant tables.
+                  Live row counts ({totalRecordsSum.toLocaleString('en-IN')} total platform rows) and disk quotas across core tables.
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => fetchTelemetry(true)}
-                className="sa-btn sa-btn-secondary sa-btn-sm"
-                style={{ fontSize: '0.74rem', padding: '6px 12px', fontWeight: 800 }}
-              >
-                <RefreshCw size={13} className={refreshing ? 'spin' : ''} /> Refresh Table Counts
-              </button>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ position: 'relative' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                  <input
+                    type="text"
+                    placeholder="Search table..."
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    style={{
+                      padding: '6px 12px 6px 30px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                      fontSize: '0.76rem', fontWeight: 700, width: '150px'
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fetchTelemetry(true)}
+                  className="sa-btn sa-btn-secondary sa-btn-sm"
+                  style={{ fontSize: '0.74rem', padding: '6px 12px', fontWeight: 800 }}
+                >
+                  <RefreshCw size={13} className={refreshing ? 'spin' : ''} /> Refresh Counts
+                </button>
+              </div>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
@@ -484,8 +651,8 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {db.tables && db.tables.length > 0 ? (
-                    db.tables.map(t => (
+                  {filteredTables && filteredTables.length > 0 ? (
+                    filteredTables.map(t => (
                       <tr key={t.table_name} style={{ borderBottom: '1px solid #F1F5F9' }}>
                         <td style={{ padding: '12px 18px', fontWeight: 800, color: 'var(--sa-text-main)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -502,7 +669,8 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
                         <td style={{ padding: '12px 18px' }}>
                           <span style={{
                             padding: '3px 8px', borderRadius: '6px', fontSize: '0.70rem', fontWeight: 900,
-                            background: '#DCFCE7', color: '#15803D'
+                            background: t.status === 'HEALTHY' ? '#DCFCE7' : '#FEF3C7',
+                            color: t.status === 'HEALTHY' ? '#15803D' : '#92400E'
                           }}>
                             {t.status}
                           </span>
@@ -512,7 +680,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
                   ) : (
                     <tr>
                       <td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: 'var(--sa-text-muted)' }}>
-                        Loading real-time table metrics...
+                        {tableSearch ? 'No matching tables found.' : 'Loading real-time table metrics...'}
                       </td>
                     </tr>
                   )}
@@ -529,14 +697,14 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
       {activeTab === 'maintenance' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
           
-          {/* Neon Database Optimization Card */}
+          {/* Database Optimization Card */}
           <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '16px', border: '1px solid var(--sa-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
             <div>
               <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: 'var(--sa-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Zap size={18} color="#D4AF37" /> Neon DB Vacuum & Index Optimization
+                <Zap size={18} color="#D4AF37" /> Database Vacuum & Index Optimization
               </h3>
               <p style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', lineHeight: 1.4, margin: '8px 0 14px 0' }}>
-                Performs non-blocking dead tuple cleanup, updates PostgreSQL planner statistics, defragments B-tree indexes, and reclaims storage on Neon DB.
+                Performs non-blocking dead tuple cleanup, updates query planner statistics, defragments B-tree indexes, and reclaims storage footprints.
               </p>
 
               <div style={{ background: '#EFF6FF', padding: '14px', borderRadius: '12px', border: '1px solid #BFDBFE', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.78rem' }}>
@@ -545,7 +713,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
                   <li>Dead-tuple removal from `orders` and `order_items`</li>
                   <li>Rebuild corrupted or bloated table indexes</li>
                   <li>Summarize archived historic records based on retention threshold</li>
-                  <li>Reclaim serverless compute & storage footprint</li>
+                  <li>Reclaim database storage & compute footprint</li>
                 </ul>
               </div>
             </div>
@@ -578,7 +746,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
                   ACTIVE RETENTION THRESHOLD:
                 </label>
                 <select
-                  value={paymentKeys.global_order_retention_days || '90'}
+                  value={paymentKeys?.global_order_retention_days || '90'}
                   onChange={(e) => setPaymentKeys({ ...paymentKeys, global_order_retention_days: e.target.value })}
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #86EFAC', fontSize: '0.82rem', fontWeight: 800, color: '#14532D', background: '#FFFFFF' }}
                 >
@@ -633,7 +801,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
                   min="1"
                   max="365"
                   placeholder="16"
-                  value={paymentKeys.default_trial_days || ''}
+                  value={paymentKeys?.default_trial_days || ''}
                   onChange={(e) => setPaymentKeys({ ...paymentKeys, default_trial_days: e.target.value })}
                   style={{ width: '90px', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 900, color: '#0F172A' }}
                 />
@@ -649,7 +817,7 @@ export default function OperationsView({ token, paymentKeys, setPaymentKeys }) {
               <input
                 type="text"
                 placeholder="919876543210"
-                value={paymentKeys.support_whatsapp || ''}
+                value={paymentKeys?.support_whatsapp || ''}
                 onChange={(e) => setPaymentKeys({ ...paymentKeys, support_whatsapp: e.target.value })}
                 style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #A7F3D0', fontSize: '0.86rem', fontWeight: 800, color: '#065F46' }}
               />
