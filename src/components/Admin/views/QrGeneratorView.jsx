@@ -32,6 +32,8 @@ export default function QrGeneratorView({
   tableNumber,
   setTableNumber,
   totalTablesCount,
+  onAddTable,
+  onDeleteTable,
   onPrintQR,
   settingsForm,
   token,
@@ -83,6 +85,28 @@ export default function QrGeneratorView({
   const [printingBulk, setPrintingBulk] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
   const [toastMessage, setToastMessage] = useState(null);
+
+  // Quick Table Setup & Capacity State
+  const [quickCount, setQuickCount] = useState(10);
+  const [savingQuick, setSavingQuick] = useState(false);
+  const [showCountModal, setShowCountModal] = useState(false);
+
+  const handleQuickSetSpaces = async (newCount) => {
+    const count = Math.max(1, parseInt(newCount, 10) || 1);
+    setSavingQuick(true);
+    try {
+      if (onAddTable) {
+        await onAddTable(count, isHotel ? 'room' : 'table');
+      }
+      showToast(`✓ Configured ${count} ${isHotel ? 'guest rooms' : 'dining tables'}! Generating QR codes...`);
+      setShowCountModal(false);
+    } catch (err) {
+      console.error('Failed to update space count:', err);
+      alert('Failed to set count: ' + (err.message || 'Error'));
+    } finally {
+      setSavingQuick(false);
+    }
+  };
 
   // Hidden Canvas Ref for High-Resolution Export
   const canvasRef = useRef(null);
@@ -740,9 +764,34 @@ export default function QrGeneratorView({
         <div className="standee-inventory-panel">
           {/* Inventory Count & Search Bar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A' }}>
-                Physical Spaces ({configuredSpaces.length})
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A' }}>
+                  Physical Spaces ({configuredSpaces.length})
+                </span>
+                {!isCinema && onAddTable && configuredSpaces.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleQuickSetSpaces(configuredSpaces.length + 1)}
+                    disabled={savingQuick}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: '#064E3B',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                    title={`Add 1 more ${isHotel ? 'room' : 'table'}`}
+                  >
+                    ➕ Add {isHotel ? 'Room' : 'Table'}
+                  </button>
+                )}
               </div>
               <div style={{ fontSize: '0.78rem', color: '#64748B' }}>
                 {selectedCount > 0 ? `${selectedCount} selected for bulk print` : 'Click card to preview'}
@@ -882,36 +931,87 @@ export default function QrGeneratorView({
           {/* SPACES LIST */}
           <div className="standee-spaces-list">
             {configuredSpaces.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748B' }}>
-                <AlertTriangle size={36} color="#D97706" style={{ margin: '0 auto 12px auto' }} />
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 6px 0' }}>
-                  {isHotel ? 'No Guest Rooms Configured' : 'No Physical Spaces Configured'}
+              <div style={{ padding: '32px 20px', textAlign: 'center', background: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#ECFDF5', color: '#065F46', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto', fontSize: '1.4rem' }}>
+                  {isHotel ? '🏨' : isCinema ? '🎬' : '🍽️'}
+                </div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0' }}>
+                  {isCinema ? 'Cinema Setup Required' : isHotel ? 'Generate Room QR Standees' : 'Generate Table QR Standees'}
                 </h3>
-                <p style={{ fontSize: '0.84rem', margin: '0 0 16px 0' }}>
+                <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '380px', margin: '0 auto 16px auto', lineHeight: 1.5 }}>
                   {isCinema
-                    ? 'No cinema screens or seats found in database. Configure seats in Cinema Setup.'
+                    ? 'Cinema seat ordering requires configuring auditorium screens and seats in Cinema Setup.'
                     : isHotel
-                    ? 'No hotel guest rooms configured. Set your Total Guest Rooms in Business Profile to generate room QR codes.'
-                    : 'Set your total tables or cabins in Business Setup to generate standees.'
+                    ? 'Enter your total number of guest rooms to instantly generate in-room QR standees with cryptographic signatures.'
+                    : 'Enter your total number of dining tables to instantly generate unique QR standees for each table.'
                   }
                 </p>
-                {onBackToSetup && (
-                  <button
-                    type="button"
-                    onClick={() => onBackToSetup(isCinema ? 'cinema' : isHotel ? 'profile' : 'general')}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: '#0F172A',
-                      color: '#FFFFFF',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {isCinema ? 'Go to Cinema Settings' : isHotel ? 'Go to Hotel Settings' : 'Go to Business Settings'}
-                  </button>
+
+                {!isCinema ? (
+                  <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', padding: '6px 12px', borderRadius: '12px', border: '1.5px solid #CBD5E1' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
+                        {isHotel ? 'Total Rooms:' : 'Total Tables:'}
+                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="500"
+                        value={quickCount}
+                        onChange={(e) => setQuickCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                        style={{ width: '64px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.92rem', textAlign: 'center' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleQuickSetSpaces(quickCount)}
+                        disabled={savingQuick}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: '#064E3B',
+                          color: '#FFFFFF',
+                          fontWeight: 800,
+                          fontSize: '0.84rem',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        {savingQuick ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                        <span>{savingQuick ? 'Generating...' : `Generate ${quickCount} QRs`}</span>
+                      </button>
+                    </div>
+                    {onBackToSetup && (
+                      <button
+                        type="button"
+                        onClick={() => onBackToSetup(isHotel ? 'profile' : 'general')}
+                        style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.76rem', textDecoration: 'underline', cursor: 'pointer' }}
+                      >
+                        Or configure in Business Settings
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  onBackToSetup && (
+                    <button
+                      type="button"
+                      onClick={() => onBackToSetup('cinema')}
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: '#0F172A',
+                        color: '#FFFFFF',
+                        fontSize: '0.84rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🎬 Go to Cinema Setup
+                    </button>
+                  )
                 )}
               </div>
             ) : filteredSpaces.length === 0 ? (
@@ -1071,7 +1171,7 @@ export default function QrGeneratorView({
               }}>
                 <ShieldCheck size={14} /> Ready to Print
               </span>
-            ) : (
+            ) : activeSpace ? (
               <span style={{
                 fontSize: '0.74rem',
                 fontWeight: 700,
@@ -1081,6 +1181,14 @@ export default function QrGeneratorView({
                 gap: '4px'
               }}>
                 <RefreshCw size={14} className="animate-spin" /> Fetching Token...
+              </span>
+            ) : (
+              <span style={{
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                color: '#64748B'
+              }}>
+                Standby
               </span>
             )}
           </div>
@@ -1227,7 +1335,7 @@ export default function QrGeneratorView({
                     alt="Standee QR Code"
                     style={{ width: '150px', height: '150px', display: 'block' }}
                   />
-                ) : (
+                ) : activeSpace ? (
                   <div style={{
                     width: '150px',
                     height: '150px',
@@ -1241,8 +1349,28 @@ export default function QrGeneratorView({
                     fontSize: '0.7rem',
                     gap: '6px'
                   }}>
-                    <QrCode size={28} color="#94A3B8" />
+                    <RefreshCw size={24} className="animate-spin" color="#94A3B8" />
                     <span>Signing Token...</span>
+                  </div>
+                ) : (
+                  <div style={{
+                    width: '150px',
+                    height: '150px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#F8FAFC',
+                    border: '1.5px dashed #CBD5E1',
+                    borderRadius: '8px',
+                    color: '#64748B',
+                    fontSize: '0.7rem',
+                    gap: '6px',
+                    padding: '8px',
+                    boxSizing: 'border-box'
+                  }}>
+                    <QrCode size={28} color="#94A3B8" />
+                    <span style={{ textAlign: 'center', fontSize: '0.66rem' }}>Configure tables to generate QR</span>
                   </div>
                 )}
               </div>

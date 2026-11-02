@@ -42,6 +42,8 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
       logo: restaurantInfo?.logo || '',
       openingHours: restaurantInfo?.openingHours || restaurantInfo?.opening_hours || '8:00 AM - 10:30 PM',
       resto_type: restaurantInfo?.resto_type || 'pure_veg',
+      total_tables: restaurantInfo?.total_tables ? Number(restaurantInfo.total_tables) : 10,
+      total_rooms: restaurantInfo?.total_rooms ? Number(restaurantInfo.total_rooms) : 15,
       business_type: restaurantInfo?.business_type || profile.business_type || 'restaurant',
       food_type: restaurantInfo?.food_type || profile.food_type || 'pure_veg',
       service_model: restaurantInfo?.service_model || profile.service_model || 'dine_in',
@@ -109,6 +111,8 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
         logo: prev.logo || restaurantInfo.logo || '',
         openingHours: prev.openingHours || restaurantInfo.openingHours || restaurantInfo.opening_hours || '8:00 AM - 10:30 PM',
         resto_type: prev.resto_type || restaurantInfo.resto_type || 'pure_veg',
+        total_tables: restaurantInfo.total_tables !== undefined ? Number(restaurantInfo.total_tables) : (prev.total_tables || 10),
+        total_rooms: restaurantInfo.total_rooms !== undefined ? Number(restaurantInfo.total_rooms) : (prev.total_rooms || 15),
         business_type: prev.business_type || restaurantInfo.business_type || profile.business_type || 'restaurant',
         food_type: prev.food_type || restaurantInfo.food_type || profile.food_type || 'pure_veg',
         service_model: prev.service_model || restaurantInfo.service_model || profile.service_model || 'dine_in',
@@ -340,6 +344,8 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
         business_type: formData.business_type,
         food_type: formData.food_type,
         service_model: formData.service_model,
+        total_tables: isDineIn ? (Number(formData.total_tables) || 10) : undefined,
+        total_rooms: isHotel ? (Number(formData.total_rooms) || 15) : undefined,
         resto_type: safeResto,
         theme_color: formData.theme_color,
         location_initialized: true
@@ -852,6 +858,49 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   </label>
                 </div>
               </div>
+
+              {/* Physical Space Capacity */}
+              {isDineIn && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>
+                    🍽️ Total Dining Tables *
+                  </label>
+                  <input
+                    type="number"
+                    name="total_tables"
+                    min="1"
+                    max="500"
+                    value={formData.total_tables !== undefined ? formData.total_tables : 10}
+                    onChange={(e) => setFormData(prev => ({ ...prev, total_tables: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                    placeholder="e.g. 10"
+                  />
+                  <span style={{ fontSize: '0.70rem', color: '#94A3B8', marginTop: '4px', display: 'block' }}>
+                    Unique QR standees will automatically be generated for Table 1 to Table {formData.total_tables || 10}.
+                  </span>
+                </div>
+              )}
+
+              {isHotel && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>
+                    🏨 Total Guest Rooms *
+                  </label>
+                  <input
+                    type="number"
+                    name="total_rooms"
+                    min="1"
+                    max="500"
+                    value={formData.total_rooms !== undefined ? formData.total_rooms : 15}
+                    onChange={(e) => setFormData(prev => ({ ...prev, total_rooms: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                    placeholder="e.g. 15"
+                  />
+                  <span style={{ fontSize: '0.70rem', color: '#94A3B8', marginTop: '4px', display: 'block' }}>
+                    Unique in-room QR standees will automatically be generated for Room 1 to Room {formData.total_rooms || 15}.
+                  </span>
+                </div>
+              )}
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>Opening Hours</label>
