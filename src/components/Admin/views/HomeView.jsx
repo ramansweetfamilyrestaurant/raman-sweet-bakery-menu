@@ -114,8 +114,8 @@ export default function HomeView({
 }) {
   const [hoveredPointIdx, setHoveredPointIdx] = useState(null);
   const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || settingsForm || {}), [restaurantInfo, settingsForm]);
-  const isHotel = terminology.serviceModel === 'hotel' || restaurantInfo?.business_type === 'hotel_resort' || restaurantInfo?.service_model === 'hotel';
-  const isCinema = terminology.serviceModel === 'cinema' || restaurantInfo?.business_type === 'cinema_theatre' || restaurantInfo?.service_model === 'cinema';
+  const isHotel = terminology.serviceModel === 'hotel';
+  const isCinema = terminology.serviceModel === 'cinema';
 
   // 1. Sanitize Orders & Service Requests
   const safeOrders = useMemo(() => {

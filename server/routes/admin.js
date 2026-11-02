@@ -1665,7 +1665,9 @@ const handleUpdateSettings = async (req, res) => {
     let effectiveBizType = cleanBusinessType || normalizedExistingBizType;
     let cleanServiceModel = resolveBusinessCategoryFromType(effectiveBizType);
     if (req.user?.role !== 'superadmin') {
-      cleanServiceModel = existingServiceModel;
+      if (existingServiceModel && isServiceModelValidForBusinessType(effectiveBizType, existingServiceModel)) {
+        cleanServiceModel = existingServiceModel;
+      }
     }
     const cleanBusinessCategory = cleanServiceModel;
 

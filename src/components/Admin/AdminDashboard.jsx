@@ -1300,7 +1300,11 @@ export default function AdminDashboard({
     const isReprint = Boolean(printedOrdersMap[printKey]);
 
     try {
-      const isDual = (settingsForm.printer_mode === 'dual' && (restaurantInfo?.dual_printer_enabled === 1 || restaurantInfo?.permissions?.dual_printer_enabled));
+      const isDual = (settingsForm.printer_mode === 'dual' && Boolean(
+        restaurantInfo?.dual_printer_enabled === 1 ||
+        restaurantInfo?.permissions?.dual_printer_enabled ||
+        resolveTenantCapabilities(restaurantInfo, settingsForm)?.dual_printer_enabled
+      ));
       const printerRole = isDual ? 'kitchen' : 'single';
       const paperWidth = settingsForm.printer_paper_width || '80mm';
 
@@ -1345,7 +1349,11 @@ export default function AdminDashboard({
     const isReprint = Boolean(printedOrdersMap[printKey]);
 
     try {
-      const isDual = (settingsForm.printer_mode === 'dual' && (restaurantInfo?.dual_printer_enabled === 1 || restaurantInfo?.permissions?.dual_printer_enabled));
+      const isDual = (settingsForm.printer_mode === 'dual' && Boolean(
+        restaurantInfo?.dual_printer_enabled === 1 ||
+        restaurantInfo?.permissions?.dual_printer_enabled ||
+        resolveTenantCapabilities(restaurantInfo, settingsForm)?.dual_printer_enabled
+      ));
       const printerRole = isDual ? 'billing' : 'single';
       const paperWidth = settingsForm.printer_paper_width || '80mm';
 
@@ -4321,7 +4329,11 @@ export default function AdminDashboard({
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
               {(() => {
-                const isDual = (settingsForm.printer_mode === 'dual' && (restaurantInfo?.dual_printer_enabled === 1 || restaurantInfo?.permissions?.dual_printer_enabled));
+                const isDual = (settingsForm.printer_mode === 'dual' && Boolean(
+        restaurantInfo?.dual_printer_enabled === 1 ||
+        restaurantInfo?.permissions?.dual_printer_enabled ||
+        resolveTenantCapabilities(restaurantInfo, settingsForm)?.dual_printer_enabled
+      ));
                 const sampleKOT = { id: 999, table_number: '1', customer_name: 'Sample Guest', total_amount: 280, items: [{ name: 'Paneer Butter Masala', quantity: 1, price: 220 }, { name: 'Butter Naan', quantity: 2, price: 30 }] };
                 const sampleBill = { id: 999, table_number: '1', customer_name: 'Sample Guest', total_amount: 280, items: [{ name: 'Paneer Butter Masala', quantity: 1, price: 220 }, { name: 'Butter Naan', quantity: 2, price: 30 }] };
 

@@ -65,8 +65,8 @@ export default function BillingView({
 
   const targetBiz = (settingsForm?.business_type || restaurantInfo?.business_type || 'restaurant').toLowerCase();
   const targetService = (settingsForm?.service_model || restaurantInfo?.service_model || 'dine_in').toLowerCase();
-  const isHotel = targetService === 'hotel' || targetBiz === 'hotel_resort';
-  const isCinema = targetService === 'cinema' || targetService === 'seat_service' || targetBiz === 'cinema_theatre';
+  const isHotel = terminology.serviceModel === 'hotel';
+  const isCinema = terminology.serviceModel === 'cinema';
   const targetIndustry = isHotel ? 'hotel' : (isCinema ? 'cinema' : 'restaurant');
 
   // Active Internal Tab: 'overview' | 'plans' | 'history' | 'invoices'
@@ -234,11 +234,22 @@ export default function BillingView({
   const maxCategories = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_categories ?? (subData?.permissions?.max_categories || 9999));
   const maxCombos = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_combos ?? (subData?.permissions?.max_combos || 10));
   const maxTables = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_tables ?? (subData?.permissions?.max_tables || 9999));
+  const maxRooms = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_rooms ?? (subData?.permissions?.max_rooms || 9999));
+  const maxScreens = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_screens ?? (subData?.permissions?.max_screens || 9999));
+  const maxSeats = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_seats ?? (subData?.permissions?.max_seats || 9999));
 
   const dishesCount = Array.isArray(dishes) ? dishes.length : 0;
   const categoriesCount = Array.isArray(categories) ? categories.length : 0;
   const combosCount = Array.isArray(combos) ? combos.length : 0;
   const tablesCount = Number(totalTablesCount || restaurantInfo?.total_tables || 0);
+  const roomsCount = Number(restaurantInfo?.total_rooms ?? settingsForm?.total_rooms ?? 0);
+  const screensCount = Number(restaurantInfo?.total_screens ?? settingsForm?.total_screens ?? (isCinema ? 1 : 0));
+  const seatsCount = Number(restaurantInfo?.total_seats ?? settingsForm?.total_seats ?? 0);
+
+  const primarySpaceCount = isHotel ? roomsCount : isCinema ? seatsCount : tablesCount;
+  const primarySpaceMax = isHotel ? maxRooms : isCinema ? maxSeats : maxTables;
+  const primarySpaceIcon = isHotel ? '🏨' : isCinema ? '🎬' : '🪑';
+  const primarySpaceLabel = isHotel ? (terminology.spacePlural || 'Guest Rooms') : isCinema ? 'Auditorium Seats' : (terminology.spacePlural || 'Tables & Counters');
 
   // Auto-renew toggle handler
   const handleConfirmCancelAutoRenew = async () => {
@@ -906,16 +917,16 @@ export default function BillingView({
               {/* Spaces / Tables */}
               <div style={{ background: '#FAF8F5', borderRadius: '12px', padding: '14px 16px', border: '1px solid #EAE5DF' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: '6px' }}>
-                  <span style={{ fontWeight: 700, color: '#0F172A' }}>🪑 {terminology.spacePlural || 'Tables & Counters'}</span>
-                  <strong style={{ color: '#064E3B' }}>{tablesCount} / {maxTables >= 9999 ? 'Unlimited' : maxTables}</strong>
+                  <span style={{ fontWeight: 700, color: '#0F172A' }}>{primarySpaceIcon} {primarySpaceLabel}</span>
+                  <strong style={{ color: '#064E3B' }}>{primarySpaceCount} / {primarySpaceMax >= 9999 ? 'Unlimited' : primarySpaceMax}</strong>
                 </div>
                 <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
                   <div style={{
-                    width: maxTables >= 9999
-                      ? (tablesCount > 0 ? `${Math.min(30, Math.max(8, Math.round(tablesCount * 1.5)))}%` : '0%')
-                      : `${Math.min(100, Math.round((tablesCount / maxTables) * 100))}%`,
+                    width: primarySpaceMax >= 9999
+                      ? (primarySpaceCount > 0 ? `${Math.min(30, Math.max(8, Math.round(primarySpaceCount * 1.5)))}%` : '0%')
+                      : `${Math.min(100, Math.round((primarySpaceCount / primarySpaceMax) * 100))}%`,
                     height: '100%',
-                    background: maxTables >= 9999 ? 'linear-gradient(90deg, #10B981, #059669)' : '#064E3B',
+                    background: primarySpaceMax >= 9999 ? 'linear-gradient(90deg, #10B981, #059669)' : '#064E3B',
                     borderRadius: '3px'
                   }} />
                 </div>

@@ -8,6 +8,7 @@ import {
   BUSINESS_TYPES,
   FOOD_TYPES,
   SERVICE_MODELS,
+  BUSINESS_TYPE_ALLOWED_SERVICE_MODELS,
   BUSINESS_TYPE_METADATA,
   FOOD_TYPE_METADATA,
   SERVICE_MODEL_METADATA,
@@ -2820,7 +2821,7 @@ export default function SetupView({
       modalTitle = 'Select Service Mode';
       content = (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {SERVICE_MODELS.map(model => (
+          {(BUSINESS_TYPE_ALLOWED_SERVICE_MODELS[resolveBusinessProfile(settingsForm || restaurantInfo || {}).business_type] || ['dine_in']).map(model => (
             <div
               key={model}
               onClick={() => {
@@ -4054,6 +4055,9 @@ export default function SetupView({
     );
 
     const isDualAllowed = Boolean(
+      resolvedCaps?.dual_printer_enabled ||
+      capabilities?.dual_printer_enabled ||
+      restaurantInfo?.permissions?.dual_printer_enabled ||
       settingsForm?.dual_printer_enabled === 1 ||
       settingsForm?.dual_printer_enabled === true ||
       settingsForm?.dual_printer_enabled === '1'
@@ -11246,7 +11250,10 @@ export default function SetupView({
               </div>
               {(() => {
                 const isDualAllowed = Boolean(
-                  settingsForm?.dual_printer_enabled === 1 ||
+                  resolvedCaps?.dual_printer_enabled ||
+      capabilities?.dual_printer_enabled ||
+      restaurantInfo?.permissions?.dual_printer_enabled ||
+      settingsForm?.dual_printer_enabled === 1 ||
                   settingsForm?.dual_printer_enabled === true ||
                   settingsForm?.dual_printer_enabled === '1'
                 );
@@ -11272,7 +11279,10 @@ export default function SetupView({
             <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {(() => {
                 const isDualAllowed = Boolean(
-                  settingsForm?.dual_printer_enabled === 1 ||
+                  resolvedCaps?.dual_printer_enabled ||
+      capabilities?.dual_printer_enabled ||
+      restaurantInfo?.permissions?.dual_printer_enabled ||
+      settingsForm?.dual_printer_enabled === 1 ||
                   settingsForm?.dual_printer_enabled === true ||
                   settingsForm?.dual_printer_enabled === '1'
                 );

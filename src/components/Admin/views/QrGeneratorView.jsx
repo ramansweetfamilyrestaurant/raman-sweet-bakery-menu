@@ -49,10 +49,10 @@ export default function QrGeneratorView({
   const profile = resolveBusinessProfile(settingsForm || restaurantInfo || {});
   const rawBiz = String(settingsForm?.business_type || restaurantInfo?.business_type || '').trim().toLowerCase();
   const rawService = String(settingsForm?.service_model || restaurantInfo?.service_model || '').trim().toLowerCase();
-  const effectiveBiz = String(profile?.business_type || rawBiz || 'restaurant').trim().toLowerCase();
-  const effectiveService = String(profile?.service_model || rawService || 'dine_in').trim().toLowerCase();
-  const isCinema = effectiveBiz === 'cinema_theatre' || effectiveBiz === 'cinema' || rawBiz === 'cinema_theatre' || rawBiz === 'cinema' || effectiveService === 'cinema' || effectiveService === 'seat_service' || rawService === 'cinema' || rawService === 'seat_service';
-  const isHotel = effectiveBiz === 'hotel_resort' || effectiveBiz === 'hotel' || rawBiz === 'hotel_resort' || rawBiz === 'hotel' || effectiveService === 'hotel' || effectiveService === 'in_room_dining' || rawService === 'hotel' || rawService === 'in_room_dining';
+  const effectiveBiz = String(profile?.business_type || 'restaurant').trim().toLowerCase();
+  const effectiveService = String(profile?.service_model || 'dine_in').trim().toLowerCase();
+  const isCinema = effectiveBiz === 'cinema_theatre' || effectiveService === 'cinema';
+  const isHotel = effectiveBiz === 'hotel_resort' || effectiveService === 'hotel';
 
   // Appearance & Customization State
   const [selectedTheme, setSelectedTheme] = useState('emerald');

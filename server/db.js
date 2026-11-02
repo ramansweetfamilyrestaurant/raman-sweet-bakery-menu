@@ -141,10 +141,16 @@ async function initDb(options = {}) {
           idleTimeoutMillis: 30000,
         });
       }
+      const probeClient = await pgPool.connect();
+      probeClient.release();
       dbType = 'postgres';
       console.log('⚡ Connected to PostgreSQL Database pool');
     } catch (err) {
       console.warn('⚠️ PostgreSQL connection failed. Falling back to SQLite database:', err.message);
+      if (pgPool) {
+        await pgPool.end().catch(() => {});
+        pgPool = null;
+      }
       dbType = 'sqlite';
     }
   }
@@ -1544,9 +1550,9 @@ async function createTables(options = {}) {
       if (!restoCols.some(c => c.name === 'city')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN city TEXT");
       if (!restoCols.some(c => c.name === 'state')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN state TEXT");
       if (!restoCols.some(c => c.name === 'pincode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN pincode TEXT");
-      if (!restoCols.some(c => c.name === 'service_model')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN service_model TEXT DEFAULT 'dine_in'");
-      sqliteDb.exec("UPDATE restaurants SET service_model = 'cinema' WHERE business_type = 'cinema_theatre' OR service_model = 'seat_service' OR service_model = 'cinema'");
-      sqliteDb.exec("UPDATE restaurants SET service_model = 'hotel' WHERE business_type = 'hotel_resort' OR service_model = 'in_room_dining' OR service_model = 'hotel'");
+      sqliteDb.exec("UPDATE restaurants SET service_model = 'cinema' WHERE business_type = 'cinema_theatre'");
+      sqliteDb.exec("UPDATE restaurants SET service_model = 'hotel' WHERE business_type = 'hotel_resort'");
+      sqliteDb.exec("UPDATE restaurants SET service_model = 'dine_in' WHERE business_type NOT IN ('cinema_theatre', 'hotel_resort') OR business_type IS NULL");
       if (!restoCols.some(c => c.name === 'onboarding_completed')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN onboarding_completed INTEGER DEFAULT 1");
       if (!restoCols.some(c => c.name === 'location_initialized')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN location_initialized INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'owner_email')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN owner_email TEXT DEFAULT NULL");
@@ -1559,7 +1565,7 @@ async function createTables(options = {}) {
       if (!planCols.some(c => c.name === 'display_order')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN display_order INTEGER DEFAULT 1");
       if (!planCols.some(c => c.name === 'features')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN features TEXT");
       if (!planCols.some(c => c.name === 'billing_interval')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN billing_interval TEXT DEFAULT 'monthly'");
-      if (!planCols.some(c => c.name === 'updated_at')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN updated_at TEXT DEFAULT CURRENT_TIMESTAMP");
+      if (!planCols.some(c => c.name === 'updated_at')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN updated_at TEXT");
       if (!planCols.some(c => c.name === 'max_dishes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_dishes INTEGER DEFAULT 9999");
       if (!planCols.some(c => c.name === 'max_categories')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_categories INTEGER DEFAULT 9999");
       if (!planCols.some(c => c.name === 'max_combos')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_combos INTEGER DEFAULT 9999");
@@ -1637,7 +1643,7 @@ async function createTables(options = {}) {
       if (!locCols.some(c => c.name === 'verification_method')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN verification_method TEXT DEFAULT 'GPS'");
       if (!locCols.some(c => c.name === 'session_id')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN session_id TEXT");
       if (!locCols.some(c => c.name === 'qr_context_hash')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN qr_context_hash TEXT");
-      if (!locCols.some(c => c.name === 'requested_at')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN requested_at TEXT DEFAULT CURRENT_TIMESTAMP");
+      if (!locCols.some(c => c.name === 'requested_at')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN requested_at TEXT");
       if (!locCols.some(c => c.name === 'approved_by_admin_id')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN approved_by_admin_id INTEGER");
       if (!locCols.some(c => c.name === 'rejection_reason')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN rejection_reason TEXT");
 

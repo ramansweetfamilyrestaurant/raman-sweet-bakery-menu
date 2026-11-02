@@ -166,8 +166,8 @@ export function isNavItemActive(item, activeTab, surface = 'desktop') {
 export function getLocalizedNavLabel(item, restaurantInfo = {}, surface = 'desktop') {
   if (!item) return '';
   const terms = getBusinessTerminology(restaurantInfo);
-  const isHotel = terms.serviceModel === 'hotel' || restaurantInfo?.business_type === 'hotel_resort' || restaurantInfo?.service_model === 'hotel';
-  const isCinema = terms.serviceModel === 'cinema' || restaurantInfo?.business_type === 'cinema_theatre' || restaurantInfo?.service_model === 'cinema';
+  const isHotel = terms.serviceModel === 'hotel';
+  const isCinema = terms.serviceModel === 'cinema';
 
   if (item.id === 'orders') {
     if (surface === 'bottomNav') {

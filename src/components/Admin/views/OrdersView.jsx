@@ -75,8 +75,8 @@ export default function OrdersView({
   const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || settingsForm || {}), [restaurantInfo, settingsForm]);
   const effectiveBiz = profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type;
   const effectiveService = profile?.service_model || settingsForm?.service_model || restaurantInfo?.service_model;
-  const isCinema = effectiveBiz === 'cinema_theatre' || effectiveService === 'cinema' || effectiveService === 'seat_service';
-  const isHotel = effectiveBiz === 'hotel_resort' || effectiveBiz === 'hotel' || effectiveService === 'hotel' || effectiveService === 'in_room_dining';
+  const isCinema = terminology.serviceModel === 'cinema';
+  const isHotel = terminology.serviceModel === 'hotel';
   const isDining = !isCinema && !isHotel;
 
   const [cinemaScreens, setCinemaScreens] = useState([]);
