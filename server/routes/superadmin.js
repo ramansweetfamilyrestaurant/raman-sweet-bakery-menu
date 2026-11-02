@@ -973,7 +973,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
     const { id } = req.params;
     const { 
       name, tagline, logo, phone, address, fssai_lic_no, owner_username, owner_password, 
-      plan_tier, plan_price, plan_expires_at, whatsapp_number, whatsapp_enabled, 
+      plan_tier, plan_price, plan_expires_at, trial_ends_at, trial_days, whatsapp_number, whatsapp_enabled, 
       direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, 
       custom_domain, owner_name, owner_email, business_type, service_model, business_category,
       total_tables, total_rooms, total_seats, total_screens
@@ -1021,6 +1021,13 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       }
     }
 
+    let effectiveTrialEndsAt = currentResto.trial_ends_at;
+    if (trial_ends_at !== undefined) {
+      effectiveTrialEndsAt = trial_ends_at || null;
+    } else if (trial_days !== undefined && !isNaN(parseInt(trial_days, 10)) && parseInt(trial_days, 10) > 0) {
+      effectiveTrialEndsAt = new Date(Date.now() + parseInt(trial_days, 10) * 86400 * 1000).toISOString();
+    }
+
     // Update restaurant info & Feature Control Matrix & Capacities
     await query(`
       UPDATE restaurants
@@ -1036,8 +1043,9 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
           total_tables = COALESCE($22, total_tables),
           total_rooms = COALESCE($23, total_rooms),
           total_seats = COALESCE($24, total_seats),
-          total_screens = COALESCE($25, total_screens)
-      WHERE id = $26
+          total_screens = COALESCE($25, total_screens),
+          trial_ends_at = COALESCE($26, trial_ends_at)
+      WHERE id = $27
     `, [
       name || currentResto.name,
       tagline !== undefined ? tagline : (currentResto.tagline || ''),
@@ -1064,6 +1072,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       total_rooms !== undefined ? Number(total_rooms) : null,
       total_seats !== undefined ? Number(total_seats) : null,
       total_screens !== undefined ? Number(total_screens) : null,
+      effectiveTrialEndsAt,
       id
     ]);
 
