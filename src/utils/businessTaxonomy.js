@@ -31,10 +31,7 @@ export const BUSINESS_TYPES = Object.freeze([
 export const FOOD_TYPES = Object.freeze([
   'pure_veg',
   'veg_nonveg',
-  'vegan',
-  'eggitarian',
-  'mixed',
-  'not_applicable'
+  'non_veg'
 ]);
 
 export const SERVICE_MODELS = Object.freeze([
@@ -77,11 +74,8 @@ export const BUSINESS_TYPE_METADATA = Object.freeze({
 
 export const FOOD_TYPE_METADATA = Object.freeze({
   pure_veg: { label: '100% Pure Veg 🟢', icon: '🟢', desc: 'Strictly vegetarian menu (No meat, fish, or egg)' },
-  veg_nonveg: { label: 'Veg & Non-Veg 🔴', icon: '🔴', desc: 'Serves both vegetarian and non-vegetarian dishes' },
-  vegan: { label: '100% Vegan (Plant-Based) 🌱', icon: '🌱', desc: 'Strictly plant-based without dairy or animal products' },
-  eggitarian: { label: 'Eggitarian (Veg + Egg) 🟡', icon: '🟡', desc: 'Vegetarian menu with egg options' },
-  mixed: { label: 'Multi-Dietary Mixed 🍱', icon: '🍱', desc: 'Specialized dietary sections across all profiles' },
-  not_applicable: { label: 'Not Applicable ⚪', icon: '⚪', desc: 'General retail or non-food venue' }
+  veg_nonveg: { label: 'Veg & Non-Veg 🟢🔴', icon: '🟢🔴', desc: 'Serves both vegetarian and non-vegetarian dishes' },
+  non_veg: { label: 'Non-Veg Only 🔴', icon: '🔴', desc: 'Strictly non-vegetarian menu (Chicken, mutton, seafood)' }
 });
 
 export const SERVICE_MODEL_METADATA = Object.freeze({
@@ -118,11 +112,19 @@ export const BUSINESS_TYPE_ALIASES = Object.freeze({
 export const FOOD_TYPE_ALIASES = Object.freeze({
   'veg': 'pure_veg',
   'vegetarian': 'pure_veg',
-  'non_veg': 'veg_nonveg',
-  'nonveg': 'veg_nonveg',
+  'pure_veg': 'pure_veg',
+  'vegan': 'pure_veg',
+  'veg_nonveg': 'veg_nonveg',
   'both': 'veg_nonveg',
-  'egg': 'eggitarian',
-  'na': 'not_applicable'
+  'veg_non_veg': 'veg_nonveg',
+  'nonveg': 'non_veg',
+  'non_veg': 'non_veg',
+  'non-veg': 'non_veg',
+  'egg': 'veg_nonveg',
+  'eggitarian': 'veg_nonveg',
+  'mixed': 'veg_nonveg',
+  'not_applicable': 'veg_nonveg',
+  'na': 'veg_nonveg'
 });
 
 export const SERVICE_MODEL_ALIASES = Object.freeze({
@@ -273,7 +275,9 @@ export function resolveBusinessProfile(restaurant = {}) {
     food_type = FOOD_TYPE_ALIASES[rawFood];
   } else if (legacyResto === 'pure_veg') {
     food_type = 'pure_veg';
-  } else if (legacyResto === 'veg_nonveg' || legacyResto === 'non_veg') {
+  } else if (legacyResto === 'non_veg') {
+    food_type = 'non_veg';
+  } else if (legacyResto === 'veg_nonveg') {
     food_type = 'veg_nonveg';
   } else {
     food_type = null;
@@ -290,7 +294,7 @@ export function resolveBusinessProfile(restaurant = {}) {
     service_model = resolveServiceModelForBusinessType(business_type);
   }
 
-  const is_pure_veg = food_type === 'pure_veg' || food_type === 'vegan' || (food_type === null && legacyResto === 'pure_veg');
+  const is_pure_veg = food_type === 'pure_veg' || (food_type === null && legacyResto === 'pure_veg');
 
   return {
     business_type,
@@ -306,8 +310,6 @@ export function resolveBannerBadge(restaurant = {}) {
   const profile = resolveBusinessProfile(safeResto);
   const { business_type, food_type, is_pure_veg } = profile;
 
-  if (food_type === 'vegan') return '100% Vegan (Plant-Based)';
-
   if (is_pure_veg) {
     if (business_type === 'bakery_confectionery') return '100% Pure Veg Bakery';
     if (business_type === 'sweet_shop') return '100% Pure Veg Sweets';
@@ -317,7 +319,12 @@ export function resolveBannerBadge(restaurant = {}) {
     return '100% Pure Veg';
   }
 
-  if (food_type === 'eggitarian') return 'Egg & Vegetarian';
+  if (food_type === 'non_veg') {
+    if (business_type === 'cinema_theatre') return 'Cinema Non-Veg Concessions';
+    if (business_type === 'hotel_resort') return 'Hotel Non-Veg Dining';
+    return 'Non-Veg Only';
+  }
+
   if (food_type === 'veg_nonveg') return 'Veg & Non-Veg';
 
   if (business_type === 'bakery_confectionery') return 'Bakery & Confectionery';

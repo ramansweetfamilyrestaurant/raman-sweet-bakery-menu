@@ -2790,7 +2790,7 @@ export default function SetupView({
                 setSettingsForm({
                   ...settingsForm,
                   food_type: type,
-                  resto_type: type === 'pure_veg' ? 'pure_veg' : type === 'veg_nonveg' ? 'veg_nonveg' : 'pure_veg'
+                  resto_type: type === 'pure_veg' ? 'pure_veg' : type === 'non_veg' ? 'non_veg' : 'veg_nonveg'
                 });
                 closeModal();
               }}
@@ -11576,7 +11576,7 @@ export default function SetupView({
                       value={currentFoodType || 'pure_veg'}
                       onChange={(e) => {
                         const newFood = e.target.value;
-                        const safeResto = (newFood === 'pure_veg' ? 'pure_veg' : newFood === 'veg_nonveg' ? 'veg_nonveg' : (currentBusinessType === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
+                        const safeResto = (newFood === 'pure_veg' ? 'pure_veg' : newFood === 'non_veg' ? 'non_veg' : (currentBusinessType === 'bakery_confectionery' ? 'bakery' : 'veg_nonveg'));
                         setSettingsForm({
                           ...settingsForm,
                           food_type: newFood,

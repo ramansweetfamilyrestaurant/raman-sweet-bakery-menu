@@ -333,7 +333,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
     setSaving(true);
     setErrorMsg('');
     try {
-      const safeResto = (formData.food_type === 'pure_veg' ? 'pure_veg' : formData.food_type === 'veg_nonveg' ? 'veg_nonveg' : (formData.business_type === 'bakery_confectionery' ? 'bakery' : (formData.resto_type || 'pure_veg')));
+      const safeResto = (formData.food_type === 'pure_veg' ? 'pure_veg' : formData.food_type === 'non_veg' ? 'non_veg' : (formData.business_type === 'bakery_confectionery' ? 'bakery' : 'veg_nonveg'));
       await updateTenantSettings(token, {
         logo: formData.logo,
         openingHours: formData.openingHours,
@@ -980,7 +980,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                       value={formData.food_type || 'pure_veg'}
                       onChange={(e) => {
                         const newFood = e.target.value;
-                        const safeResto = (newFood === 'pure_veg' ? 'pure_veg' : newFood === 'veg_nonveg' ? 'veg_nonveg' : (formData.business_type === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
+                        const safeResto = (newFood === 'pure_veg' ? 'pure_veg' : newFood === 'non_veg' ? 'non_veg' : (formData.business_type === 'bakery_confectionery' ? 'bakery' : 'veg_nonveg'));
                         setFormData(prev => ({
                           ...prev,
                           food_type: newFood,
@@ -989,7 +989,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                       }}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
                     >
-                      {FOOD_TYPES.filter(t => t !== 'not_applicable').map(type => (
+                      {FOOD_TYPES.map(type => (
                         <option key={type} value={type}>
                           {FOOD_TYPE_METADATA[type]?.icon || '🥗'} {FOOD_TYPE_METADATA[type]?.label || type}
                         </option>
