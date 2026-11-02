@@ -70,22 +70,25 @@ export async function exchangeAuthCode(code) {
 
   // 3. Fetch Admin Record for ID binding
   const adminRows = await query(
-    `SELECT id, username, restaurant_id FROM admins WHERE restaurant_id = $1 AND LOWER(username) = LOWER($2) LIMIT 1`,
+    `SELECT id, username, restaurant_id, role FROM admins WHERE restaurant_id = $1 AND LOWER(username) = LOWER($2) LIMIT 1`,
     [record.restaurant_id, record.username]
   );
 
-  const adminId = adminRows[0]?.id;
+  const admin = adminRows[0];
+  const adminId = admin?.id;
   if (!adminId) {
     return { success: false, status: 401, error: 'Admin user account not found for this restaurant' };
   }
 
-  // 4. Issue standard JWT token
+  const effectiveRole = admin.role || 'restaurant_admin';
+
+  // 4. Issue standard JWT token with authoritative restaurant_admin role
   const token = jwt.sign(
     {
       id: adminId,
       username: record.username,
       restaurant_id: record.restaurant_id,
-      role: 'admin'
+      role: effectiveRole
     },
     JWT_SECRET,
     { expiresIn: '7d' }

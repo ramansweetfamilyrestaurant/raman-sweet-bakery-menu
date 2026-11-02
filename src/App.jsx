@@ -1229,12 +1229,13 @@ export default function App() {
         });
         if (res.ok) {
           const data = await res.json();
-          const isAllowed = data.is_allowed !== undefined ? Boolean(data.is_allowed) : (data.active === true || data.status === 'active' || data.status === 'trialing');
+          const isTrial = data.status === 'trialing' || data.is_trial === true;
+          const isAllowed = data.is_allowed !== undefined ? Boolean(data.is_allowed) : (data.active === true || data.status === 'active' || isTrial);
           const billingReq = data.billing_required !== undefined ? Boolean(data.billing_required) : false;
-          return isAllowed && !billingReq;
+          return isAllowed && (!billingReq || isTrial);
         }
-        if (res.status === 401 || res.status === 403) {
-          console.warn('Expired token detected in checkMandateGating. Clearing stored credentials.');
+        if (res.status === 401) {
+          console.warn('Unauthorized token in checkMandateGating. Clearing stored credentials.');
           localStorage.removeItem('touchqr_admin_token');
           localStorage.removeItem('touchqr_admin_user');
           localStorage.removeItem('touchqr_admin_slug');
@@ -1399,6 +1400,10 @@ export default function App() {
             }
           }).catch(() => {});
         } else {
+          const currentUrlParams = new URLSearchParams(window.location.search);
+          if (currentUrlParams.get('code') || currentUrlParams.get('token') || view === 'auth-exchanging') {
+            return;
+          }
           setView('admin-login');
         }
       } else if (isRootPath) {
@@ -1830,8 +1835,7 @@ export default function App() {
           setAdminUsername(res.username || 'Admin');
           setAdminSlug(res.slug);
           setNewlyRegisteredResto(res);
-          window.history.pushState({}, '', '/billing');
-          setView('billing');
+          handleAdminLoginSuccess(res.token, res.username || 'Admin', res.slug, res.restaurant || res);
         }} />
       </Suspense>
     );

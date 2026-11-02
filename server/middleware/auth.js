@@ -113,7 +113,7 @@ export function requireActiveSubscription(req, res, next) {
 }
 
 export function requireAdminRole(req, res, next) {
-  const allowedRoles = ['restaurant_admin', 'superadmin'];
+  const allowedRoles = ['restaurant_admin', 'admin', 'superadmin'];
   if (req.user && allowedRoles.includes(req.user.role)) {
     return next();
   }
