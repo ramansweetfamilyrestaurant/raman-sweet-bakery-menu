@@ -349,14 +349,11 @@ export function getAvailableSpaceTypesForBusiness(businessType, serviceModel, op
 
 /**
  * Resolves standard space configuration (singular, plural, badge, param) for a given space type prefix.
- * @param {string} prefix - 'table' | 'cabin' | 'room' | 'vip' | 'cinema_seat' | 'counter'
+ * @param {string} prefix - 'table' | 'cabin' | 'room' | 'vip' | 'cinema_seat'
  * @returns {{ id: string, label: string, singular: string, plural: string, badge: string, param: string }}
  */
 export function getSpaceConfig(prefix = 'table') {
   const t = String(prefix || 'table').toLowerCase();
-  if (t === 'counter') {
-    return { id: 'counter', label: '🧾 Billing Counter', singular: 'Counter', plural: 'Counters', badge: 'BILLING COUNTER', param: 'counter' };
-  }
   if (t === 'cinema_seat' || t === 'cinema') {
     return { id: 'cinema_seat', label: '🎬 Cinema Seat', singular: 'Cinema Seat', plural: 'Cinema Seats', badge: 'CINEMA SEAT', param: 'cinema' };
   }

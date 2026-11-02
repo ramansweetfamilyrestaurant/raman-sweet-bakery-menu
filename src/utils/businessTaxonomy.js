@@ -51,7 +51,7 @@ export const BUSINESS_TYPE_METADATA = Object.freeze({
   fast_food_qsr: { label: 'Fast Food / QSR', icon: '🍔', desc: 'Quick-service burgers, rolls, pizzas, and chaat' },
   dhaba: { label: 'Dhaba / Highway Eatery', icon: '🥘', desc: 'Authentic local cuisine and highway dining' },
   food_court: { label: 'Food Court / Multi-Vendor Hub', icon: '🏬', desc: 'Mall or collective multi-brand food court' },
-  cloud_kitchen: { label: 'Cloud Kitchen / Takeaway', icon: '🏪', desc: 'Commercial kitchen with counter takeaway & parcel' },
+  cloud_kitchen: { label: 'Cloud Kitchen / Takeaway', icon: '🏪', desc: 'Commercial kitchen with food preparation & dining operations' },
   canteen_cafeteria: { label: 'Canteen / Cafeteria', icon: '🏢', desc: 'Corporate, office, or campus food facility' },
   hotel_resort: { label: 'Hotel & Resort Dining', icon: '🏨', desc: 'In-room guest dining and resort dining rooms' },
   cinema_theatre: { label: 'Cinema & Theatre Dining', icon: '🎬', desc: 'Multiplex seat food ordering and concessions' },
@@ -355,14 +355,11 @@ export function getAvailableSpaceTypesForBusiness(businessType, serviceModel, op
 
 /**
  * Resolves standard space configuration (singular, plural, badge, param) for a given space type prefix.
- * @param {string} prefix - 'table' | 'cabin' | 'room' | 'vip' | 'cinema_seat' | 'counter'
+ * @param {string} prefix - 'table' | 'cabin' | 'room' | 'vip' | 'cinema_seat'
  * @returns {{ id: string, label: string, singular: string, plural: string, badge: string, param: string }}
  */
 export function getSpaceConfig(prefix = 'table') {
   const t = String(prefix || 'table').toLowerCase();
-  if (t === 'counter') {
-    return { id: 'counter', label: '🧾 Billing Counter', singular: 'Counter', plural: 'Counters', badge: 'BILLING COUNTER', param: 'counter' };
-  }
   if (t === 'cinema_seat' || t === 'cinema') {
     return { id: 'cinema_seat', label: '🎬 Cinema Seat', singular: 'Cinema Seat', plural: 'Cinema Seats', badge: 'CINEMA SEAT', param: 'cinema' };
   }
