@@ -4949,7 +4949,7 @@ export default function SetupView({
         badge: '⚡ Starter',
         description: 'Essential digital menu & QR ordering for cafes & quick food joints',
         features: [
-          '5 Spaces & counters',
+          '5 Dining Spaces',
           '50 Items & 10 categories',
           'Full digital QR menu',
           'GST compliant billing'
@@ -4975,7 +4975,7 @@ export default function SetupView({
         badge: '👑 Enterprise',
         description: 'High-volume dining, Kitchen Display System (KDS) & dual printers',
         features: [
-          'Unlimited spaces & counters',
+          'Unlimited Dining Spaces',
           'Unlimited items & categories',
           'Kitchen / Dispatch Display System (KDS)',
           'Thermal printer auto-routing',
@@ -11273,7 +11273,7 @@ export default function SetupView({
               })()}
             </div>
             <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0', lineHeight: 1.45, paddingLeft: '46px' }}>
-              Configure Kitchen Order Ticket (KOT) and Counter Customer Bill thermal printing.
+              Configure Kitchen Order Ticket (KOT) and Customer Bill thermal printing.
             </p>
 
             <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -11305,7 +11305,7 @@ export default function SetupView({
                       >
                         <option value="single">🟢 Single Printer (Same Printer for KOT & Customer Bill)</option>
                         {isDualAllowed && (
-                          <option value="dual">⚡ Dual Separate Printers (Kitchen KOT + Counter Bill)</option>
+                          <option value="dual">⚡ Dual Separate Printers (Kitchen KOT + Customer Bill)</option>
                         )}
                       </select>
                     </div>
@@ -11405,9 +11405,9 @@ export default function SetupView({
                         <div style={{ padding: '14px', background: '#E0F2FE', borderRadius: '12px', border: '1px solid #BAE6FD', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <strong style={{ fontSize: '0.86rem', color: '#0369A1', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              🧾 COUNTER BILLING PRINTER (Customer Invoices Only)
+                              🧾 CUSTOMER BILL PRINTER (Customer Invoices Only)
                             </strong>
-                            <span style={{ fontSize: '0.70rem', background: '#0284C7', color: '#FFF', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>COUNTER</span>
+                            <span style={{ fontSize: '0.70rem', background: '#0284C7', color: '#FFF', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>BILLING</span>
                           </div>
                           <div>
                             <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#075985', display: 'block', marginBottom: '2px' }}>
@@ -11415,7 +11415,7 @@ export default function SetupView({
                             </label>
                             <input
                               type="text"
-                              placeholder="e.g. Counter_Bill_Thermal or 192.168.1.201"
+                              placeholder="e.g. Bill_Thermal_Printer or 192.168.1.201"
                               value={settingsForm.bill_printer_target || ''}
                               onChange={(e) => setSettingsForm({ ...settingsForm, bill_printer_target: e.target.value })}
                               style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BAE6FD', fontSize: '0.84rem', boxSizing: 'border-box' }}
@@ -11504,14 +11504,11 @@ export default function SetupView({
             const serviceModelMeta = SERVICE_MODEL_METADATA[currentServiceModel] || SERVICE_MODEL_METADATA.dine_in;
             const bannerBadgeText = resolveBannerBadge(settingsForm);
 
-            const isCounterOnly = ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck', 'ice_cream_dessert', 'juice_beverage'].includes(currentBusinessType);
             const serviceModeDescription = currentServiceModel === 'hotel'
               ? '🏨 In-Room Guest Dining'
               : currentServiceModel === 'cinema'
               ? '🎬 Cinema Seat Ordering'
-              : isCounterOnly
-              ? '🧾 Counter Pickup & Takeaway'
-              : '🍽️ Table & Counter QR Ordering';
+              : '🍽️ Dine-In Table Ordering';
 
             return (
               <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>

@@ -373,8 +373,6 @@ export default function CustomerLocationModal({
                 ? 'To place an order from this room, we need to verify that you are currently at the hotel.'
                 : spaceType === 'cinema_seat' || spaceType === 'cinema'
                 ? 'To place an order from this seat, we need to verify that you are currently inside the theatre.'
-                : spaceType === 'counter'
-                ? 'To place an order at this counter, we need to verify that you are currently at the store.'
                 : `To place an order from ${tableLabel || `this ${terminology.spaceLabel.toLowerCase()}`}, we need to verify that you are currently at the premises.`}
             </p>
 

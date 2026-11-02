@@ -19,12 +19,6 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
     const bizType = String(info?.business_type || '').toLowerCase();
     const serviceModel = String(info?.service_model || '').toLowerCase();
 
-    // 1. Counter / Takeaway
-    if (prefix === 'counter' || str.toLowerCase() === 'counter' || str.toLowerCase() === 'counter:counter' || /^counter/i.test(str)) {
-      const cleanNum = str.replace(/^counter\s*#?/i, '').trim();
-      return cleanNum && cleanNum.toUpperCase() !== 'COUNTER' ? `🧾 Counter ${cleanNum}` : '🧾 Billing Counter';
-    }
-
     // 2. Cinema Seats
     if (bizType === 'cinema_theatre' || serviceModel === 'cinema' || prefix === 'cinema_seat' || prefix === 'cinema' || prefix === 'seat') {
       return str.toLowerCase().startsWith('screen') ? `🎬 ${str}` : `🎬 Seat ${str.replace(/^seat\s*#?/i, '')}`;

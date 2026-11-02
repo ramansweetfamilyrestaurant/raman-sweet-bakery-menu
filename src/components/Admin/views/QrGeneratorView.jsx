@@ -1177,26 +1177,20 @@ export default function QrGeneratorView({
               </div>
 
               {/* Tagline */}
-              {(() => {
-                const isCounter = activeSpace?.spaceType === 'counter' || activeSpace?.paramName === 'counter';
-                return (
-                  <div style={{
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    color: theme.subtitleColor,
-                    marginBottom: '10px'
-                  }}>
-                    {settingsForm?.tagline || (
-                      isCinema ? 'IN-SEAT FOOD ORDERING' :
-                      isHotel ? 'IN-ROOM GUEST DINING' :
-                      isCounter ? 'INSTANT COUNTER DIGITAL MENU' :
-                      'SCAN QR CODE FOR DIGITAL MENU'
-                    )}
-                  </div>
-                );
-              })()}
+              <div style={{
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                color: theme.subtitleColor,
+                marginBottom: '10px'
+              }}>
+                {settingsForm?.tagline || (
+                  isCinema ? 'IN-SEAT FOOD ORDERING' :
+                  isHotel ? 'IN-ROOM GUEST DINING' :
+                  'SCAN QR CODE FOR DIGITAL MENU'
+                )}
+              </div>
 
               {/* QR Plaque Box */}
               <div style={{
@@ -1254,36 +1248,28 @@ export default function QrGeneratorView({
               </div>
 
               {/* Bilingual Instructions */}
-              {(() => {
-                const isCounter = activeSpace?.spaceType === 'counter' || activeSpace?.paramName === 'counter';
-                return (
-                  <>
-                    <div style={{ fontSize: '0.74rem', fontWeight: 800, color: theme.instructionEn, marginBottom: '2px' }}>
-                      📱 POINT CAMERA AT QR TO ORDER
-                    </div>
-                    <div style={{ fontSize: '0.66rem', fontWeight: 600, color: theme.instructionHi, marginBottom: '6px' }}>
-                      {isCinema ? 'स्कैन करें और सीट पर मंगाएं' :
-                        isHotel ? 'स्कैन करें और कमरे में खाना मंगाएं' :
-                        isCounter ? 'स्कैन करें और काउंटर से तुरंत ऑर्डर करें' :
-                        'कैमरे से स्कैन करें और खाना ऑर्डर करें'}
-                    </div>
+              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: theme.instructionEn, marginBottom: '2px' }}>
+                📱 POINT CAMERA AT QR TO ORDER
+              </div>
+              <div style={{ fontSize: '0.66rem', fontWeight: 600, color: theme.instructionHi, marginBottom: '6px' }}>
+                {isCinema ? 'स्कैन करें और सीट पर मंगाएं' :
+                  isHotel ? 'स्कैन करें और कमरे में खाना मंगाएं' :
+                  'कैमरे से स्कैन करें और खाना ऑर्डर करें'}
+              </div>
 
-                    {/* 3-Step Bar */}
-                    <div style={{
-                      background: theme.stepBg,
-                      border: `1px solid ${theme.stepBorder}`,
-                      color: theme.stepText,
-                      borderRadius: '6px',
-                      padding: '3px 4px',
-                      fontSize: '0.58rem',
-                      fontWeight: 800,
-                      marginBottom: '6px'
-                    }}>
-                      ① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; {isCounter ? '③ Pickup at Counter' : '③ Order Food'}
-                    </div>
-                  </>
-                );
-              })()}
+              {/* 3-Step Bar */}
+              <div style={{
+                background: theme.stepBg,
+                border: `1px solid ${theme.stepBorder}`,
+                color: theme.stepText,
+                borderRadius: '6px',
+                padding: '3px 4px',
+                fontSize: '0.58rem',
+                fontWeight: 800,
+                marginBottom: '6px'
+              }}>
+                ① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food
+              </div>
 
               {/* Reassurance */}
               {showReassurance && (

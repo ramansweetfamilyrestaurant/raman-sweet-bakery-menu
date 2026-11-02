@@ -151,11 +151,9 @@ export function buildStandeeCardHtml({
   const currentName = restaurant.name || 'Digital Menu';
   const isCinema = space.spaceType === 'cinema_seat' || space.spaceType === 'cinema';
   const isHotel = space.spaceType === 'room';
-  const isCounter = space.spaceType === 'counter' || space.paramName === 'counter';
   const currentTagline = restaurant.tagline || (
     isCinema ? 'In-Seat Food Ordering' :
     isHotel ? 'In-Room Guest Dining' :
-    isCounter ? 'Instant Counter Digital Menu' :
     'Scan QR Code for Digital Menu'
   );
   const badgeLabel = space.badge || space.label || 'TABLE';
@@ -216,7 +214,6 @@ export function buildStandeeCardHtml({
       <div class="instruction-hi" style="color: ${theme.instructionHi};">${
         isCinema ? 'स्कैन करें और सीट पर मंगाएं' :
         isHotel ? 'स्कैन करें और कमरे में खाना मंगाएं' :
-        isCounter ? 'स्कैन करें और काउंटर से तुरंत ऑर्डर करें' :
         'कैमरे से स्कैन करें और स्वादिष्ट खाना ऑर्डर करें'
       }</div>
       <div class="steps-bar" style="
@@ -224,7 +221,7 @@ export function buildStandeeCardHtml({
         border: 1px solid ${theme.stepBorder};
         color: ${theme.stepText};
       ">
-        ${isCounter ? '① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Pickup at Counter' : '① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food'}
+        ① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food
       </div>
       ${reassuranceHtml}
       <div class="footer-info" style="color: ${theme.isDark ? '#94A3B8' : '#64748B'};">
@@ -698,11 +695,9 @@ export async function renderStandeeToCanvas(canvas, {
   // Measure Tagline & Wrap
   const isCinema = space.spaceType === 'cinema_seat' || space.spaceType === 'cinema';
   const isHotel = space.spaceType === 'room';
-  const isCounter = space.spaceType === 'counter' || space.paramName === 'counter';
   const taglineText = restaurant.tagline || (
     isCinema ? 'IN-SEAT FOOD ORDERING' :
     isHotel ? 'IN-ROOM GUEST DINING' :
-    isCounter ? 'INSTANT COUNTER DIGITAL MENU' :
     'SCAN QR CODE FOR DIGITAL MENU'
   );
   const taglineFontSize = 18 * scale;
@@ -888,7 +883,6 @@ export async function renderStandeeToCanvas(canvas, {
   ctx.fillText(
     isCinema ? 'स्कैन करें और सीट पर मंगाएं' :
     isHotel ? 'स्कैन करें और कमरे में खाना मंगाएं' :
-    isCounter ? 'स्कैन करें और काउंटर से तुरंत ऑर्डर करें' :
     'कैमरे से स्कैन करें और खाना ऑर्डर करें',
     targetWidth / 2,
     curY + (instructionHiHeight / 2)
@@ -896,7 +890,7 @@ export async function renderStandeeToCanvas(canvas, {
   curY += instructionHiHeight + (16 * scale);
 
   // 11. 3-Step Bar
-  const stepText = isCounter ? '① Open Camera   ➔   ② Scan QR   ➔   ③ Pickup at Counter' : '① Open Camera   ➔   ② Scan QR   ➔   ③ Order Food';
+  const stepText = '① Open Camera   ➔   ② Scan QR   ➔   ③ Order Food';
   ctx.font = `bold ${16 * scale}px "Plus Jakarta Sans", sans-serif`;
   const stepW = ctx.measureText(stepText).width + (38 * scale);
   const stepX = (targetWidth - stepW) / 2;

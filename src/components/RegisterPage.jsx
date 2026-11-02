@@ -397,7 +397,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
           {/* Feature Highlights */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[
-              'Instant Digital QR Menus & Space Standees (Tables/Rooms/Seats/Counters)',
+              'Instant Digital QR Menus & Space Standees (Tables/Rooms/Seats)',
               'Live Dispatch Display & Siren Audio Alarms',
               'Dynamic Thali, Combo & Weight Deals Builder',
               'Direct WhatsApp Orders & Customer Feedback'

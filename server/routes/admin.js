@@ -2550,7 +2550,7 @@ const handleSavePrinters = async (req, res) => {
       for (const p of printers) {
         if (!p.role) continue;
         const pRole = String(p.role).toLowerCase();
-        const pName = p.name ? String(p.name).trim() : (pRole === 'kitchen' ? 'Kitchen KOT Printer' : pRole === 'billing' ? 'Counter Billing Printer' : 'Main Receipt Printer');
+        const pName = p.name ? String(p.name).trim() : (pRole === 'kitchen' ? 'Kitchen KOT Printer' : pRole === 'billing' ? 'Customer Bill Printer' : 'Main Receipt Printer');
         const pConn = p.connection_type || 'browser_dialog';
         const pTarget = p.target_address || '';
         const pWidth = p.paper_width === '58mm' ? '58mm' : '80mm';

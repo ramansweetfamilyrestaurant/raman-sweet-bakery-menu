@@ -41,7 +41,7 @@ export const FEATURE_METADATA = Object.freeze({
   },
   dual_printer_enabled: {
     name: 'Dual Printer Routing',
-    benefit: 'Route kitchen tickets to kitchen thermal printer and final customer receipts to counter thermal printer automatically.',
+    benefit: 'Route kitchen tickets to kitchen thermal printer and final customer receipts to billing printer automatically.',
     icon: '🖨️',
     minTier: 'VIP'
   },
@@ -217,8 +217,6 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
 export function getFeatureState(featureKey, capabilities = {}, businessType = 'restaurant', serviceModel = null) {
   const isHotel = serviceModel === 'hotel' || businessType === 'hotel_resort';
   const isCinema = serviceModel === 'cinema' || businessType === 'cinema_theatre';
-  const isBakeryOrSweet = businessType === 'bakery_confectionery' || businessType === 'sweet_shop';
-  const isCatering = businessType === 'catering';
 
   if (featureKey === 'cinema_management' || featureKey === 'cinema_ordering_enabled') {
     if (!isCinema) {
@@ -233,13 +231,13 @@ export function getFeatureState(featureKey, capabilities = {}, businessType = 'r
   }
 
   if (featureKey === 'kds_enabled') {
-    if (isCinema || isCatering) {
+    if (isCinema) {
       return FEATURE_STATES.UNSUPPORTED;
     }
   }
 
   if (featureKey === 'bluetooth_kot_enabled' || featureKey === 'dual_printer_enabled') {
-    if (isCinema || isCatering) {
+    if (isCinema) {
       return FEATURE_STATES.UNSUPPORTED;
     }
   }

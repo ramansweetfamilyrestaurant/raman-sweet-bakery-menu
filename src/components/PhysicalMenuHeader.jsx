@@ -45,7 +45,6 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
               if (terminology.businessType === 'hotel_resort') return '🟢 ROOM SERVICE MENU CARD';
               if (terminology.businessType === 'bakery_confectionery') return '🟢 BAKERY & PASTRY MENU CARD';
               if (terminology.businessType === 'sweet_shop') return '🟢 SWEETS & MITHAI MENU CARD';
-              if (info?.table_prefix === 'counter') return '🟢 COUNTER QR MENU CARD';
               return '🟢 DIGITAL QR MENU CARD';
             })()}
           </span>
