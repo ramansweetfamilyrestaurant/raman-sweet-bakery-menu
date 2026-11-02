@@ -1005,8 +1005,7 @@ export default function AdminDashboard({
     const bizType = String(restaurantInfo?.business_type || '').toLowerCase();
     const isHotel = bizType === 'hotel_resort';
     const isCinema = bizType === 'cinema_theatre';
-    const isCounterBiz = ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(bizType);
-    const ticketTitle = isHotel ? 'IN-ROOM DINING TICKET' : isCinema ? 'CONCESSION DISPATCH TICKET' : isCounterBiz ? 'ORDER DISPATCH TICKET' : 'KITCHEN ORDER TICKET';
+    const ticketTitle = isHotel ? 'IN-ROOM DINING TICKET' : isCinema ? 'CONCESSION DISPATCH TICKET' : 'KITCHEN ORDER TICKET';
 
     parsedItems.forEach(i => {
       const q = Number(i.quantity) || 1;
@@ -1108,13 +1107,13 @@ export default function AdminDashboard({
           <div class="meta">
             <div><strong>Location:</strong> ${spaceLoc}</div>
             <div><strong>Date & Time:</strong> ${formatDateTimeString(order.created_at)}</div>
-            <div><strong>Customer:</strong> ${order.customer_name || (isHotel ? 'In-Room Guest' : isCounterBiz ? 'Counter Customer' : isCinema ? 'Cinema Guest' : 'Dine-In Guest')}</div>
+            <div><strong>Customer:</strong> ${order.customer_name || (isHotel ? 'In-Room Guest' : isCinema ? 'Cinema Guest' : 'Dine-In Guest')}</div>
           </div>
 
           <table>
             <thead>
               <tr style="border-bottom:2px solid #000;text-align:left;font-size:13px;">
-                <th style="padding-bottom:4px;">${isCounterBiz ? 'ITEMS TO PACK' : 'ITEMS TO PREPARE'}</th>
+                <th style="padding-bottom:4px;">ITEMS TO PREPARE</th>
               </tr>
             </thead>
             <tbody>
@@ -1128,7 +1127,7 @@ export default function AdminDashboard({
           </div>
 
           <div class="footer">
-            *** ${isCounterBiz ? 'PREPARE & PACK ONLY ITEMS LISTED IN THIS TICKET' : 'COOK ONLY THE ITEMS LISTED IN THIS KOT'} ***
+            *** COOK ONLY THE ITEMS LISTED IN THIS KOT ***
           </div>
         </body>
       </html>
@@ -1149,7 +1148,7 @@ export default function AdminDashboard({
     const bizType = String(restaurantInfo?.business_type || '').toLowerCase();
     const isHotel = bizType === 'hotel_resort';
     const isCinema = bizType === 'cinema_theatre';
-    const isCounterBiz = ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(bizType);
+
 
     let itemsHtml = '';
 
@@ -1275,7 +1274,7 @@ export default function AdminDashboard({
           </div>
 
           <div class="footer">
-            <p style="margin:0;font-weight:bold;">${isHotel ? 'Thank you for choosing In-Room Dining!' : isCinema ? 'Enjoy the show and your snacks!' : isCounterBiz ? 'Thank you for your purchase!' : 'Thank you for dining with us!'}</p>
+            <p style="margin:0;font-weight:bold;">${isHotel ? 'Thank you for choosing In-Room Dining!' : isCinema ? 'Enjoy the show and your snacks!' : 'Thank you for dining with us!'}</p>
             <p style="margin:2px 0 0 0;">${isHotel ? 'Have a wonderful stay 🙏' : 'Please Visit Again 🙏'}</p>
           </div>
         </body>

@@ -233,7 +233,7 @@ export function getFeatureState(featureKey, capabilities = {}, businessType = 'r
   }
 
   if (featureKey === 'kds_enabled') {
-    if (isCinema || isCatering || isBakeryOrSweet) {
+    if (isCinema || isCatering) {
       return FEATURE_STATES.UNSUPPORTED;
     }
   }

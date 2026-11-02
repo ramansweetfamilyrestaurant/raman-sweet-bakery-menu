@@ -337,17 +337,11 @@ export function getAvailableSpaceTypesForBusiness(businessType, serviceModel, op
   }
 
   // All other dining / food service models (dine_in_table)
-  const spaces = [
+  return [
     { id: 'table', label: '🍽️ Dining Table', singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' },
     { id: 'cabin', label: '🛋️ Private Cabin', singular: 'Cabin', plural: 'Cabins', badge: 'CABIN NO.', param: 'cabin' },
     { id: 'vip', label: '👑 VIP Lounge', singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' }
   ];
-
-  if (safeOptions.counter_ordering_enabled === 1 || safeOptions.counter_ordering_enabled === true || safeOptions.counter_ordering_enabled === '1') {
-    spaces.push({ id: 'counter', label: '🧾 Billing Counter', singular: 'Counter', plural: 'Counters', badge: 'BILLING COUNTER', param: 'counter' });
-  }
-
-  return spaces;
 }
 
 /**

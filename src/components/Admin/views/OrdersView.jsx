@@ -160,9 +160,7 @@ export default function OrdersView({
     ? 'Guest not reachable in room' 
     : isCinema 
       ? 'Customer not present at seat' 
-      : ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen'].includes(effectiveBiz) 
-        ? 'Customer not at pickup counter' 
-        : 'Customer not visible at table';
+      : 'Customer not visible at table';
   const [selectedRejectReason, setSelectedRejectReason] = useState(defaultRejectReason);
   const [customRejectReason, setCustomRejectReason] = useState('');
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -317,29 +315,7 @@ export default function OrdersView({
       });
     }
 
-    // 4. Billing Counter (when enabled or for counter-first verticals)
-    const isCounterEnabled = Boolean(
-      settingsForm?.counter_ordering_enabled === 1 ||
-      settingsForm?.counter_ordering_enabled === true ||
-      settingsForm?.counter_ordering_enabled === '1' ||
-      restaurantInfo?.counter_ordering_enabled === 1 ||
-      restaurantInfo?.counter_ordering_enabled === true ||
-      restaurantInfo?.counter_ordering_enabled === '1' ||
-      ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(effectiveBiz)
-    );
 
-    if (isCounterEnabled) {
-      spaces.push({
-        id: 'counter_COUNTER',
-        space_type: 'counter',
-        space_number: 'COUNTER',
-        category: 'counter',
-        label: 'COUNTER',
-        displayLabel: '🧾 COUNTER',
-        icon: '🧾',
-        prefix: 'Counter'
-      });
-    }
 
     return spaces;
   }, [isCinema, isHotel, effectiveBiz, restaurantInfo?.total_tables, settingsForm?.total_tables, restaurantInfo?.total_cabins, settingsForm?.total_cabins, restaurantInfo?.total_vip, settingsForm?.total_vip, restaurantInfo?.total_rooms, settingsForm?.total_rooms, restaurantInfo?.counter_ordering_enabled, settingsForm?.counter_ordering_enabled]);
@@ -685,7 +661,7 @@ export default function OrdersView({
             }}
           >
             <MapPin size={15} />
-            <span>{isCinema ? `Seats Map (${cinemaSeats.length})` : isHotel ? `Room Status (${spaceInventory.length})` : ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen'].includes(effectiveBiz) ? `Space & Counters (${spaceInventory.length})` : `Tables Map (${spaceInventory.length})`}</span>
+            <span>{isCinema ? `Seats Map (${cinemaSeats.length})` : isHotel ? `Room Status (${spaceInventory.length})` : `Tables Map (${spaceInventory.length})`}</span>
           </button>
 
           {/* Service Requests Subtab */}
@@ -1806,7 +1782,6 @@ export default function OrdersView({
               { id: 'all', label: `All Spaces (${spaceGrid.length})` },
               { id: 'room', label: `🏨 Rooms (${spaceGrid.filter(s => s.category === 'room').length})` },
               { id: 'table', label: `🍽️ Tables (${spaceGrid.filter(s => s.category === 'table').length})` },
-              { id: 'counter', label: `🧾 Counter (${spaceGrid.filter(s => s.category === 'counter').length})` },
               { id: 'cabin', label: `🛋️ Cabins (${spaceGrid.filter(s => s.category === 'cabin').length})` },
               { id: 'vip', label: `👑 VIP (${spaceGrid.filter(s => s.category === 'vip').length})` }
             ].filter(f => f.id === 'all' || spaceGrid.filter(s => s.category === f.id).length > 0).map(tab => (
@@ -2336,7 +2311,7 @@ export default function OrdersView({
           <PlanLockedCard
             featureKey="kds_enabled"
             featureName={isCinema ? "Concession & Seat Dispatch Display (KDS)" : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? "Dispatch & Order Display (KDS)" : "Kitchen Display System (KDS)"}
-            featureDescription={isCinema ? "Dedicated concession terminal with real-time seat dispatch management, ticking timers, PIN security, and loud audio chimes." : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? "Dedicated packing terminal with real-time counter dispatch management, ticking timers, PIN security, and loud audio chimes." : "Dedicated chef terminal with real-time kitchen ticket management, ticking timers, PIN security, and loud audio chimes."}
+            featureDescription={isCinema ? "Dedicated concession terminal with real-time seat dispatch management, ticking timers, PIN security, and loud audio chimes." : "Dedicated chef terminal with real-time kitchen ticket management, ticking timers, PIN security, and loud audio chimes."}
             requiredPlanName="Pro Plan or Higher"
             onUpgradeClick={() => onNavigateToSetup && onNavigateToSetup('subscription')}
           />
@@ -2826,7 +2801,7 @@ export default function OrdersView({
                       boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
                     }}
                   >
-                    {isCinema ? 'Accept & Send to Concession' : isHotel ? 'Accept & Send to Room Service Kitchen' : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? 'Accept & Send to Prep Counter' : 'Accept & Send to Kitchen'}
+                    {isCinema ? 'Accept & Send to Concession' : isHotel ? 'Accept & Send to Room Service Kitchen' : 'Accept & Send to Kitchen'}
                   </button>
                   <button
                     onClick={() => {
@@ -2872,9 +2847,7 @@ export default function OrdersView({
                   >
                     {(() => {
                       const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
-                      if (isCounter || ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen'].includes(effectiveBiz)) {
-                        return 'Mark Ready for Pickup at Counter';
-                      }
+
                       if (isCinema) {
                         return '🎬 Deliver to Seat';
                       }
