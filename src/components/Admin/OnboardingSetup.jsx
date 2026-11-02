@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Sparkles, Search, ExternalLink, Compass, Map } from 'lucide-react';
+import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Sparkles, Search, ExternalLink, Compass, Map, Lock, ShieldCheck } from 'lucide-react';
 import { uploadImage, updateTenantSettings, completeOnboarding } from '../../api/client';
 import LocationPickerModal from '../Common/LocationPickerModal';
 import {
   BUSINESS_TYPES,
   FOOD_TYPES,
   SERVICE_MODELS,
+  DINE_IN_SUBTYPES,
   BUSINESS_TYPE_METADATA,
   FOOD_TYPE_METADATA,
   SERVICE_MODEL_METADATA,
   resolveBusinessProfile,
+  resolveBannerBadge,
+  resolveBusinessCategoryFromType,
   resolveServiceModelForBusinessType
 } from '../../utils/businessTaxonomy';
 
@@ -50,6 +53,40 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [locationStatus, setLocationStatus] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // Authoritative Business Model resolution (Locked to registered subscription)
+  const resolvedProfile = resolveBusinessProfile(formData);
+  const currentServiceModel = formData.service_model || resolvedProfile.service_model || resolveBusinessCategoryFromType(formData.business_type);
+  const isHotel = currentServiceModel === 'hotel' || formData.business_type === 'hotel_resort';
+  const isCinema = currentServiceModel === 'cinema' || formData.business_type === 'cinema_theatre';
+  const isDineIn = !isHotel && !isCinema;
+
+  const modelInfo = isHotel
+    ? {
+        name: 'Hotel & Resort Dining',
+        icon: '🏨',
+        tag: 'HOTEL',
+        subtitle: 'In-Room Guest Dining & Room Delivery',
+        accent: '#3B82F6',
+        bg: 'rgba(59, 130, 246, 0.12)'
+      }
+    : isCinema
+    ? {
+        name: 'Cinema & Theatre Dining',
+        icon: '🎬',
+        tag: 'CINEMA',
+        subtitle: 'Auditorium Seat Ordering & Concessions',
+        accent: '#EC4899',
+        bg: 'rgba(236, 72, 153, 0.12)'
+      }
+    : {
+        name: 'Dine-In Restaurant',
+        icon: '🍽️',
+        tag: 'DINE-IN',
+        subtitle: 'Table QR Ordering & Physical Table Management',
+        accent: '#22C55E',
+        bg: 'rgba(34, 197, 94, 0.12)'
+      };
 
   // Sync state if restaurantInfo loads asynchronously
   useEffect(() => {
@@ -377,33 +414,36 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            marginTop: '20px'
+            marginTop: '20px',
+            flexWrap: 'nowrap',
+            overflowX: 'auto',
+            padding: '4px 0'
           }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '9999px',
-              fontSize: '0.78rem', fontWeight: 800,
+              fontSize: '0.78rem', fontWeight: 800, flexShrink: 0, whiteSpace: 'nowrap',
               background: currentStep === 1 ? '#DFBA67' : 'rgba(255,255,255,0.08)',
               color: currentStep === 1 ? '#0A2315' : '#94A3B8'
             }}>
-              <span>1</span> Basic Details
+              <span>1</span> Basic Info
             </div>
-            <div style={{ width: '20px', height: '2px', background: currentStep >= 2 ? '#DFBA67' : 'rgba(255,255,255,0.1)' }} />
+            <div style={{ width: '20px', height: '2px', flexShrink: 0, background: currentStep >= 2 ? '#DFBA67' : 'rgba(255,255,255,0.1)' }} />
             <div style={{
               display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '9999px',
-              fontSize: '0.78rem', fontWeight: 800,
+              fontSize: '0.78rem', fontWeight: 800, flexShrink: 0, whiteSpace: 'nowrap',
               background: currentStep === 2 ? '#DFBA67' : 'rgba(255,255,255,0.08)',
               color: currentStep === 2 ? '#0A2315' : '#94A3B8'
             }}>
-              <span>2</span> Location
+              <span>2</span> Location & GPS
             </div>
-            <div style={{ width: '20px', height: '2px', background: currentStep >= 3 ? '#DFBA67' : 'rgba(255,255,255,0.1)' }} />
+            <div style={{ width: '20px', height: '2px', flexShrink: 0, background: currentStep >= 3 ? '#DFBA67' : 'rgba(255,255,255,0.1)' }} />
             <div style={{
               display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '9999px',
-              fontSize: '0.78rem', fontWeight: 800,
+              fontSize: '0.78rem', fontWeight: 800, flexShrink: 0, whiteSpace: 'nowrap',
               background: currentStep === 3 ? '#DFBA67' : 'rgba(255,255,255,0.08)',
               color: currentStep === 3 ? '#0A2315' : '#94A3B8'
             }}>
-              <span>3</span> Branding
+              <span>3</span> Space & Branding
             </div>
           </div>
         </div>
@@ -825,43 +865,112 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                 />
               </div>
 
-              {/* 3-Tier Business Profile Controls */}
+              {/* Authoritative Business Profile & Model (Locked to Registered Subscription) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: '#071A0E', padding: '16px', borderRadius: '16px', border: '1px solid rgba(223, 186, 103, 0.3)' }}>
-                <strong style={{ fontSize: '0.86rem', color: '#DFBA67', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  🏢 Business Profile Taxonomy
-                </strong>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '0.86rem', color: '#DFBA67', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🏢 Business Profile & Model
+                  </strong>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    color: '#86EFAC',
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <Lock size={11} /> Locked by Plan
+                  </span>
+                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  {/* Control 1: Business Type */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '4px' }}>
-                      Business Type
-                    </label>
-                    <select
-                      name="business_type"
-                      value={formData.business_type || 'restaurant'}
-                      onChange={(e) => {
-                        const newBiz = e.target.value;
-                        const safeResto = (formData.food_type === 'pure_veg' ? 'pure_veg' : formData.food_type === 'veg_nonveg' ? 'veg_nonveg' : (newBiz === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
-                        const autoService = resolveServiceModelForBusinessType(newBiz, formData.service_model);
-                        setFormData(prev => ({
-                          ...prev,
-                          business_type: newBiz,
-                          service_model: autoService,
-                          resto_type: safeResto
-                        }));
-                      }}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
-                    >
-                      {BUSINESS_TYPES.map(type => (
-                        <option key={type} value={type}>
-                          {BUSINESS_TYPE_METADATA[type]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[type]?.label || type}
-                        </option>
-                      ))}
-                    </select>
+                {/* Locked Business Model Card */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  background: modelInfo.bg,
+                  border: `1px solid ${modelInfo.accent}40`,
+                  boxSizing: 'border-box'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: 'rgba(0,0,0,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.4rem',
+                      flexShrink: 0
+                    }}>
+                      {modelInfo.icon}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '0.90rem', fontWeight: 800, color: '#FFFFFF' }}>
+                          {modelInfo.name}
+                        </span>
+                        <span style={{
+                          fontSize: '0.62rem',
+                          fontWeight: 900,
+                          color: modelInfo.accent,
+                          background: 'rgba(0,0,0,0.4)',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          border: `1px solid ${modelInfo.accent}60`
+                        }}>
+                          {modelInfo.tag}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: '#CBD5E1', display: 'block', marginTop: '2px' }}>
+                        {modelInfo.subtitle}
+                      </span>
+                    </div>
                   </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94A3B8', fontSize: '0.70rem', fontStyle: 'italic', flexShrink: 0 }}>
+                    <ShieldCheck size={14} color="#86EFAC" /> Active
+                  </div>
+                </div>
 
-                  {/* Control 2: Food Type */}
+                {/* Sub-Concept Selector (Dine-In Only) + Food Dietary Type */}
+                <div style={{ display: 'grid', gridTemplateColumns: isDineIn ? '1fr 1fr' : '1fr', gap: '12px' }}>
+                  {isDineIn && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '4px' }}>
+                        Outlet Concept (Optional)
+                      </label>
+                      <select
+                        name="business_type"
+                        value={formData.business_type || 'restaurant'}
+                        onChange={(e) => {
+                          const newBiz = e.target.value;
+                          const safeResto = (formData.food_type === 'pure_veg' ? 'pure_veg' : formData.food_type === 'veg_nonveg' ? 'veg_nonveg' : (newBiz === 'bakery_confectionery' ? 'bakery' : 'pure_veg'));
+                          setFormData(prev => ({
+                            ...prev,
+                            business_type: newBiz,
+                            service_model: 'dine_in',
+                            resto_type: safeResto
+                          }));
+                        }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
+                      >
+                        {DINE_IN_SUBTYPES.map(type => (
+                          <option key={type} value={type}>
+                            {BUSINESS_TYPE_METADATA[type]?.icon || '🍽️'} {BUSINESS_TYPE_METADATA[type]?.label || type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Control: Food Dietary Type */}
                   <div>
                     <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '4px' }}>
                       Food Dietary Type
@@ -880,7 +989,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                       }}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
                     >
-                      {FOOD_TYPES.map(type => (
+                      {FOOD_TYPES.filter(t => t !== 'not_applicable').map(type => (
                         <option key={type} value={type}>
                           {FOOD_TYPE_METADATA[type]?.icon || '🥗'} {FOOD_TYPE_METADATA[type]?.label || type}
                         </option>
@@ -889,18 +998,38 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   </div>
                 </div>
 
-                {/* Live Preview */}
-                <div style={{ padding: '8px 12px', background: 'rgba(223, 186, 103, 0.08)', borderRadius: '10px', border: '1px dashed rgba(223, 186, 103, 0.3)', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#DFBA67' }}>
-                    {BUSINESS_TYPE_METADATA[formData.business_type]?.icon || '🍽️'} {BUSINESS_TYPE_METADATA[formData.business_type]?.label?.replace(/\s*\(.*\)/, '') || formData.business_type}
+                {/* Live Preview (Zero Contradiction Guarantee) */}
+                <div style={{
+                  padding: '10px 14px',
+                  background: 'rgba(223, 186, 103, 0.08)',
+                  borderRadius: '12px',
+                  border: '1px dashed rgba(223, 186, 103, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px'
+                }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#DFBA67', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    {BUSINESS_TYPE_METADATA[formData.business_type]?.icon || modelInfo.icon} {BUSINESS_TYPE_METADATA[formData.business_type]?.label?.replace(/\s*\(.*\)/, '') || modelInfo.name}
                   </span>
                   <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#86EFAC' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#86EFAC', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     {FOOD_TYPE_METADATA[formData.food_type]?.icon || '🟢'} {FOOD_TYPE_METADATA[formData.food_type]?.label || formData.food_type}
                   </span>
                   <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#93C5FD' }}>
-                    🏷️ {BUSINESS_TYPE_METADATA[formData.business_type]?.banner_badge || '🍽️ RESTAURANT'}
+                  <span style={{
+                    fontSize: '0.70rem',
+                    fontWeight: 900,
+                    color: '#93C5FD',
+                    background: 'rgba(59, 130, 246, 0.15)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    🏷️ {resolveBannerBadge(formData) || BUSINESS_TYPE_METADATA[formData.business_type]?.banner_badge || modelInfo.name}
                   </span>
                 </div>
               </div>

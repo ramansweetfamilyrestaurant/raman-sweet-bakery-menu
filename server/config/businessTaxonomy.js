@@ -297,6 +297,8 @@ export function resolveBannerBadge(restaurant = {}) {
     if (business_type === 'bakery_confectionery') return '100% Pure Veg Bakery';
     if (business_type === 'sweet_shop') return '100% Pure Veg Sweets';
     if (business_type === 'cafe') return '100% Pure Veg Cafe';
+    if (business_type === 'cinema_theatre') return '100% Pure Veg Cinema';
+    if (business_type === 'hotel_resort') return '100% Pure Veg Hotel';
     return '100% Pure Veg';
   }
 

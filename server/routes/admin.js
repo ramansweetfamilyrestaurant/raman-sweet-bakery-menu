@@ -1651,15 +1651,19 @@ const handleUpdateSettings = async (req, res) => {
     const normalizedExistingBizType = BUSINESS_TYPE_ALIASES[normExisting] || (isValidBusinessType(normExisting) ? normExisting : 'restaurant');
     const existingServiceModel = currentRestoForBiz && currentRestoForBiz.length > 0 ? (currentRestoForBiz[0].service_model || 'dine_in') : 'dine_in';
 
-    // Business type / category can ONLY be modified centrally by SuperAdmin
+    // Business vertical / industry model (dine_in vs hotel vs cinema) can ONLY be modified centrally by SuperAdmin
     if (req.user?.role !== 'superadmin') {
-      if (cleanBusinessType && cleanBusinessType !== normalizedExistingBizType) {
+      const existingCategory = resolveBusinessCategoryFromType(normalizedExistingBizType);
+      const newCategory = cleanBusinessType ? resolveBusinessCategoryFromType(cleanBusinessType) : existingCategory;
+      if (cleanBusinessType && newCategory !== existingCategory) {
         return res.status(403).json({
           error: 'business_type_locked',
           message: 'Business industry type is locked and managed centrally by SuperAdmin. Please contact SuperAdmin to change your business category.'
         });
       }
-      cleanBusinessType = normalizedExistingBizType;
+      if (!cleanBusinessType) {
+        cleanBusinessType = normalizedExistingBizType;
+      }
     }
 
     let effectiveBizType = cleanBusinessType || normalizedExistingBizType;
