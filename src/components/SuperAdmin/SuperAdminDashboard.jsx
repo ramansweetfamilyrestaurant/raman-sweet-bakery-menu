@@ -664,30 +664,24 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     return getTenantStatus(r) === filter;
   };
 
-  // Industry Taxonomy Filter Helper
+  // Industry Taxonomy Filter Helper (Strictly 3 Models: Dine-In, Hotel, Cinema)
   const matchesIndustryFilter = (r, filter) => {
     if (!filter || filter === 'all') return true;
     const bType = (r.business_type || '').toLowerCase();
     const sModel = (r.service_model || '').toLowerCase();
-    const isBakery = bType === 'bakery_confectionery' || bType === 'sweet_shop' || bType === 'ice_cream_dessert';
-    const isQsr = bType === 'fast_food_qsr' || bType === 'fast_food' || bType === 'food_truck' || bType === 'cloud_kitchen';
     const isHotel = sModel === 'hotel' || bType === 'hotel_resort';
     const isCinema = sModel === 'cinema' || bType === 'cinema_theatre';
-    if (filter === 'hotels') return isHotel;
-    if (filter === 'cinemas') return isCinema;
-    if (filter === 'bakeries') return isBakery;
-    if (filter === 'qsr') return isQsr;
-    if (filter === 'restaurants') return !(isHotel || isCinema || isBakery || isQsr);
+    if (filter === 'hotels' || filter === 'hotel') return isHotel;
+    if (filter === 'cinemas' || filter === 'cinema') return isCinema;
+    if (filter === 'restaurants' || filter === 'dine_in') return !(isHotel || isCinema);
     return true;
   };
 
   const getIndustryFilterPills = () => [
     { id: 'all', label: 'All Industries', count: restaurants.length },
-    { id: 'restaurants', label: '🍽️ Dine-In & Cafes', count: restaurants.filter(r => matchesIndustryFilter(r, 'restaurants')).length },
+    { id: 'restaurants', label: '🍽️ Dine-In', count: restaurants.filter(r => matchesIndustryFilter(r, 'restaurants')).length },
     { id: 'hotels', label: '🏨 Hotels & Resorts', count: restaurants.filter(r => matchesIndustryFilter(r, 'hotels')).length },
     { id: 'cinemas', label: '🎬 Cinemas & Theatres', count: restaurants.filter(r => matchesIndustryFilter(r, 'cinemas')).length },
-    { id: 'bakeries', label: '🍰 Bakeries & Sweets', count: restaurants.filter(r => matchesIndustryFilter(r, 'bakeries')).length },
-    { id: 'qsr', label: '🍔 QSR & Fast Food', count: restaurants.filter(r => matchesIndustryFilter(r, 'qsr')).length },
   ];
 
   // Synchronized Filter Pills Configuration
@@ -1129,7 +1123,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 const isVip = isVipTenant(r);
                 const isLifetime = isLifetimeVipTenant(r);
                 const isExpired = (!isLifetime && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
-                const bizMeta = BUSINESS_TYPE_METADATA[r.business_type] || { icon: '🏢', label: r.business_type || 'Restaurant' };
+                const isHotel = r.service_model === 'hotel' || r.business_type === 'hotel_resort';
+                const isCinema = r.service_model === 'cinema' || r.business_type === 'cinema_theatre';
+                const bizMeta = isHotel
+                  ? { icon: '🏨', label: 'HOTEL & RESORT' }
+                  : isCinema
+                    ? { icon: '🎬', label: 'CINEMA & THEATRE' }
+                    : { icon: '🍽️', label: 'DINE-IN' };
 
                 return (
                   <tr key={r.id}>
@@ -1262,7 +1262,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             const isVip = isVipTenant(r);
             const isLifetime = isLifetimeVipTenant(r);
             const isExpired = (!isLifetime && daysLeft !== null && daysLeft <= 0) || r.subscription_status === 'expired';
-            const bizMeta = BUSINESS_TYPE_METADATA[r.business_type] || { icon: '🏢', label: r.business_type || 'Restaurant' };
+            const isHotelModel = r.service_model === 'hotel' || r.business_type === 'hotel_resort';
+            const isCinemaModel = r.service_model === 'cinema' || r.business_type === 'cinema_theatre';
+            const bizMeta = isHotelModel
+              ? { icon: '🏨', label: 'HOTEL & RESORT' }
+              : isCinemaModel
+                ? { icon: '🎬', label: 'CINEMA & THEATRE' }
+                : { icon: '🍽️', label: 'DINE-IN' };
 
             return (
               <div
@@ -3849,11 +3855,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   }}
                   style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', outline: 'none', background: '#FFFFFF', fontWeight: 700 }}
                 >
-                  {BUSINESS_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {BUSINESS_TYPE_METADATA[type]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[type]?.label || type}
-                    </option>
-                  ))}
+                  <option value="restaurant">🍽️ Dine-In (Restaurant, Cafe & Dining)</option>
+                  <option value="hotel_resort">🏨 Hotel & Resort (In-Room Dining)</option>
+                  <option value="cinema_theatre">🎬 Cinema & Theatre (Seat Ordering)</option>
                 </select>
               </div>
 

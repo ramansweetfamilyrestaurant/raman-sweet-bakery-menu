@@ -963,11 +963,9 @@ Need assistance? Reply directly to this message.`;
                   onChange={e => handleBusinessTypeChange(e.target.value)}
                   style={{ width: '100%', minHeight: '44px', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, outline: 'none', background: '#FFFFFF', boxSizing: 'border-box' }}
                 >
-                  {BUSINESS_TYPES.map(type => (
-                    <option key={type} value={type}>
-                      {BUSINESS_TYPE_METADATA[type]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[type]?.label || type}
-                    </option>
-                  ))}
+                  <option value="restaurant">🍽️ Dine-In (Restaurant, Cafe & Dining)</option>
+                  <option value="hotel_resort">🏨 Hotel & Resort (In-Room Dining)</option>
+                  <option value="cinema_theatre">🎬 Cinema & Theatre (Seat Ordering)</option>
                 </select>
               </div>
 

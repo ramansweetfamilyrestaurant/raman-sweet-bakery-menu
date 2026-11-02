@@ -116,8 +116,13 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
             ) : (
               filtered.map(r => {
                 const isLifetime = isLifetimeVipTenant(r);
-                const canonicalType = BUSINESS_TYPE_ALIASES[r.business_type] || r.business_type;
-                const bizMeta = BUSINESS_TYPE_METADATA[canonicalType] || { icon: '🏢', label: canonicalType || 'Restaurant' };
+                const isHotel = r.service_model === 'hotel' || r.business_type === 'hotel_resort';
+                const isCinema = r.service_model === 'cinema' || r.business_type === 'cinema_theatre';
+                const bizMeta = isHotel
+                  ? { icon: '🏨', label: 'HOTEL & RESORT' }
+                  : isCinema
+                    ? { icon: '🎬', label: 'CINEMA & THEATRE' }
+                    : { icon: '🍽️', label: 'DINE-IN' };
 
                 return (
                   <tr key={r.id}>

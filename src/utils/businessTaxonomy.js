@@ -82,11 +82,14 @@ export const SERVICE_MODEL_METADATA = Object.freeze({
 });
 
 export const BUSINESS_TYPE_ALIASES = Object.freeze({
-  'bakery': 'bakery_confectionery',
-  'sweets': 'sweet_shop',
-  'sweet': 'sweet_shop',
-  'fast_food': 'fast_food_qsr',
-  'qsr': 'fast_food_qsr',
+  'bakery': 'restaurant',
+  'bakery_confectionery': 'restaurant',
+  'sweets': 'restaurant',
+  'sweet_shop': 'restaurant',
+  'sweet': 'restaurant',
+  'fast_food': 'restaurant',
+  'fast_food_qsr': 'restaurant',
+  'qsr': 'restaurant',
   'hotel': 'hotel_resort',
   'resort': 'hotel_resort',
   'cinema': 'cinema_theatre',

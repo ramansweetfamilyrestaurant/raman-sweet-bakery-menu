@@ -527,7 +527,7 @@ export default function TenantDetailsView({
             <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>BUSINESS / CUISINE TYPE</span>
               <strong style={{ textTransform: 'capitalize', fontSize: '0.88rem', color: 'var(--sa-text-main)', marginTop: '2px', display: 'block' }}>
-                🍴 {tenant.business_type || 'Family Restaurant & Bakery'}
+                🍴 {tenant.service_model === 'hotel' || tenant.business_type === 'hotel_resort' ? 'Hotel & Resort (In-Room Dining)' : tenant.service_model === 'cinema' || tenant.business_type === 'cinema_theatre' ? 'Cinema & Theatre (Seat Ordering)' : 'Dine-In Restaurant'}
               </strong>
             </div>
 
