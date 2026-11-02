@@ -453,31 +453,46 @@ export function generateStandeePrintDocument({
   <body>
     ${pagesHtml.join('\n')}
     <script>
-      window.onload = function() {
-        // Wait for all images to render before printing
-        var images = document.images;
-        var loaded = 0;
-        var total = images.length;
-        if (total === 0) {
-          window.print();
-        } else {
-          for (var i = 0; i < total; i++) {
-            if (images[i].complete) {
-              loaded++;
-              if (loaded === total) window.print();
-            } else {
-              images[i].addEventListener('load', function() {
+      (function() {
+        var printed = false;
+        var nativePrint = window.print;
+        window.print = function() {
+          if (printed) return;
+          printed = true;
+          try {
+            nativePrint.call(window);
+          } catch (e) {
+            console.error('Native print error:', e);
+          }
+        };
+        window.onload = function() {
+          var images = document.images;
+          var loaded = 0;
+          var total = images.length;
+          function trigger() {
+            window.print();
+          }
+          if (total === 0) {
+            trigger();
+          } else {
+            for (var i = 0; i < total; i++) {
+              if (images[i].complete) {
                 loaded++;
-                if (loaded === total) window.print();
-              });
-              images[i].addEventListener('error', function() {
-                loaded++;
-                if (loaded === total) window.print();
-              });
+                if (loaded === total) trigger();
+              } else {
+                images[i].addEventListener('load', function() {
+                  loaded++;
+                  if (loaded === total) trigger();
+                });
+                images[i].addEventListener('error', function() {
+                  loaded++;
+                  if (loaded === total) trigger();
+                });
+              }
             }
           }
-        }
-      };
+        };
+      })();
     </script>
   </body>
 </html>`;

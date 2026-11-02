@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   ChevronRight,
   Settings,
-  HelpCircle
+  HelpCircle,
+  Trash2
 } from 'lucide-react';
 import { normalizeSpaceType, normalizeSpaceNumber, isValidHmacTokenFormat } from '../../../utils/qrSecurity';
 import { fetchCinemaScreens, fetchCinemaSeats, generateQrTokensApi } from '../../../api/client';
@@ -579,31 +580,47 @@ export default function QrGeneratorView({
   };
 
   const executeIframePrint = (htmlContent, title) => {
+    // 1. Clean up any existing print iframe
+    const oldIframe = document.getElementById('touchqr-standee-print-frame');
+    if (oldIframe && oldIframe.parentNode) {
+      oldIframe.parentNode.removeChild(oldIframe);
+    }
+
     const iframe = document.createElement('iframe');
+    iframe.id = 'touchqr-standee-print-frame';
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
     iframe.style.bottom = '0';
     iframe.style.width = '0';
     iframe.style.height = '0';
     iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
     document.body.appendChild(iframe);
+
+    // 2. Guaranteed single-flight guard: print dialog is opened at most once
+    let hasPrinted = false;
+    const triggerSinglePrint = () => {
+      if (hasPrinted) return;
+      hasPrinted = true;
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (e) {
+        console.error('Print trigger failed:', e);
+      } finally {
+        setTimeout(() => {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        }, 3000);
+      }
+    };
 
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(htmlContent);
     doc.close();
 
-    setTimeout(() => {
-      try {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-      } catch (e) {
-        console.error('Print trigger failed:', e);
-      }
-      setTimeout(() => {
-        if (iframe.parentNode) document.body.removeChild(iframe);
-      }, 5000);
-    }, 800);
+    // 3. Single deterministic trigger after document renders
+    setTimeout(triggerSinglePrint, 400);
   };
 
   // --------------------------------------------------------------------------
@@ -790,6 +807,34 @@ export default function QrGeneratorView({
                     title={`Add 1 more ${isHotel ? 'room' : 'table'}`}
                   >
                     ➕ Add {isHotel ? 'Room' : 'Table'}
+                  </button>
+                )}
+                {!isCinema && onDeleteTable && configuredSpaces.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const spaceType = isHotel ? 'Room' : 'Table';
+                      if (window.confirm(`Are you sure you want to remove ${spaceType} ${configuredSpaces.length}?`)) {
+                        await onDeleteTable(configuredSpaces.length, isHotel ? 'room' : 'table');
+                      }
+                    }}
+                    disabled={savingQuick}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #FECACA',
+                      background: '#FEF2F2',
+                      color: '#DC2626',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                    title={`Remove last ${isHotel ? 'room' : 'table'}`}
+                  >
+                    <Trash2 size={12} /> Remove {isHotel ? 'Room' : 'Table'}
                   </button>
                 )}
               </div>
@@ -1133,6 +1178,36 @@ export default function QrGeneratorView({
                           <AlertTriangle size={12} />
                           <span>Missing Token</span>
                         </span>
+                      )}
+
+                      {/* Delete individual space */}
+                      {!isCinema && onDeleteTable && (
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const spaceName = sp.label || `Space ${sp.spaceNumber}`;
+                            if (window.confirm(`Are you sure you want to delete ${spaceName}?`)) {
+                              await onDeleteTable(sp.spaceNumber, isHotel ? 'room' : 'table');
+                            }
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '6px',
+                            border: '1px solid #FECACA',
+                            background: '#FEF2F2',
+                            color: '#DC2626',
+                            cursor: 'pointer',
+                            padding: 0
+                          }}
+                          title={`Delete ${sp.label}`}
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       )}
 
                       <ChevronRight size={16} color={isCurrentlyPreviewed ? '#0A2315' : '#CBD5E1'} />
@@ -1581,6 +1656,38 @@ export default function QrGeneratorView({
                 <Download size={16} />
                 <span>{exportingPng ? 'Exporting...' : 'Download PNG'}</span>
               </button>
+
+              {/* Delete Active Space Button */}
+              {!isCinema && onDeleteTable && activeSpace && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const spaceName = activeSpace.label || `Table ${activeSpace.spaceNumber}`;
+                    if (window.confirm(`Are you sure you want to delete ${spaceName}?`)) {
+                      await onDeleteTable(activeSpace.spaceNumber, isHotel ? 'room' : 'table');
+                    }
+                  }}
+                  className="standee-export-btn"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #FECACA',
+                    background: '#FEF2F2',
+                    color: '#DC2626',
+                    fontSize: '0.84rem',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                  title={`Delete ${activeSpace.label}`}
+                >
+                  <Trash2 size={16} />
+                  <span>Delete {activeSpace.label}</span>
+                </button>
+              )}
             </div>
 
             {/* Print as PDF Note */}
