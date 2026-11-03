@@ -1645,7 +1645,7 @@ export default function AdminDashboard({
     const t = String(prefix || settingsForm.table_prefix || 'table').toLowerCase();
     if (t === 'cabin') return 'total_cabins';
     if (t === 'room') return 'total_rooms';
-    if (t === 'vip') return 'total_vip';
+    if (t === 'vip' || t === 'lounge') return 'total_vip';
     return 'total_tables';
   };
 
@@ -1705,7 +1705,7 @@ export default function AdminDashboard({
     }
 
     try {
-      await fetch('/api/admin/settings', {
+      const res = await fetch('/api/admin/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1713,6 +1713,24 @@ export default function AdminDashboard({
         },
         body: JSON.stringify(updatedForm)
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        // Revert local optimistic state upon rejection
+        setSettingsForm(prev => ({ ...prev, [field]: currentCount }));
+        setRestaurantInfo(prev => prev ? ({ ...prev, [field]: currentCount }) : prev);
+        if (currentSlug) {
+          const cached = localStorage.getItem(`admin_cache_${currentSlug}_info`);
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              parsed[field] = currentCount;
+              localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
+            } catch {}
+          }
+        }
+        alert(errData.message || errData.error || 'Cannot update space count. Plan limit reached or feature locked.');
+        return;
+      }
     } catch (err) {
       console.error('Failed to add space unit:', err);
     }
@@ -1725,14 +1743,49 @@ export default function AdminDashboard({
     const currentCount = Number(settingsForm[field]) || 0;
     if (currentCount <= 0) {
       showToast(`⚠️ No ${spaceInfo.plural.toLowerCase()} to remove!`, 2000);
-      return;
+      return false;
     }
     const targetNum = (tableNumToDelete !== null && tableNumToDelete !== undefined) ? tableNumToDelete : currentCount;
 
+    // 🛡️ Live Order Safety Shield: Check if there is an active/unpaid order on this space
+    const activeOrderOnSpace = (orders || []).find(o => {
+      const status = String(o.status || '').toLowerCase();
+      const isLive = status !== 'completed' && status !== 'cancelled' && status !== 'rejected';
+      if (!isLive) return false;
+
+      const tblStr = String(o.table_number || '').trim().toLowerCase();
+      const tgtStr = String(targetNum).trim().toLowerCase();
+
+      if (prefix === 'table') {
+        return tblStr === tgtStr || tblStr === `table ${tgtStr}` || tblStr === `t-${tgtStr}` || tblStr === `table no. ${tgtStr}`;
+      }
+      if (prefix === 'cabin') {
+        return tblStr === `cabin ${tgtStr}` || tblStr === `cabin no. ${tgtStr}` || (tblStr.includes('cabin') && tblStr.includes(tgtStr));
+      }
+      if (prefix === 'vip') {
+        return tblStr === `lounge ${tgtStr}` || tblStr === `vip lounge ${tgtStr}` || (tblStr.includes('lounge') && tblStr.includes(tgtStr)) || (tblStr.includes('vip') && tblStr.includes(tgtStr));
+      }
+      if (prefix === 'room') {
+        return tblStr === `room ${tgtStr}` || tblStr === `room no. ${tgtStr}` || (tblStr.includes('room') && tblStr.includes(tgtStr));
+      }
+      return tblStr === tgtStr;
+    });
+
+    if (activeOrderOnSpace) {
+      alert(`⚠️ Cannot delete ${spaceInfo.singular} ${targetNum}!\n\nActive Order #${activeOrderOnSpace.id} is currently in progress (${(activeOrderOnSpace.status || 'ACTIVE').toUpperCase()}).\nPlease settle the bill or complete/cancel the order before removing this space.`);
+      return false;
+    }
+
     const newCount = Math.max(0, currentCount - 1);
-    const updatedForm = { ...settingsForm, [field]: newCount, table_prefix: prefix };
+    let nextInactive = settingsForm.inactive_spaces || '';
+    const keyToRemove = `${prefix}:${targetNum}`.toLowerCase();
+    if (nextInactive.includes(keyToRemove)) {
+      nextInactive = nextInactive.split(',').filter(k => k.trim().toLowerCase() !== keyToRemove).join(',');
+    }
+
+    const updatedForm = { ...settingsForm, [field]: newCount, table_prefix: prefix, inactive_spaces: nextInactive };
     setSettingsForm(updatedForm);
-    setRestaurantInfo(prev => prev ? ({ ...prev, [field]: newCount, table_prefix: prefix }) : prev);
+    setRestaurantInfo(prev => prev ? ({ ...prev, [field]: newCount, table_prefix: prefix, inactive_spaces: nextInactive }) : prev);
     setTableNumber(String(Math.max(1, Math.min(Number(tableNumber || 1), newCount))));
     showToast(`🗑️ ${spaceInfo.singular} ${targetNum} removed. Total: ${newCount}`, 2000);
 
@@ -1745,6 +1798,58 @@ export default function AdminDashboard({
           const parsed = JSON.parse(cached);
           parsed[field] = newCount;
           parsed.table_prefix = prefix;
+          parsed.inactive_spaces = nextInactive;
+          localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
+        } catch { }
+      }
+    }
+
+    try {
+      await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedForm)
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed to delete space unit:', err);
+      return false;
+    }
+  };
+
+  // ⏸️ / 🟢 Toggle Space Active / Paused State
+  const handleToggleSpaceActive = async (spaceKey) => {
+    if (!spaceKey) return;
+    const currentInactive = String(settingsForm.inactive_spaces || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const keyLower = String(spaceKey).trim().toLowerCase();
+    let nextInactiveList;
+    let isNowActive;
+
+    if (currentInactive.includes(keyLower)) {
+      nextInactiveList = currentInactive.filter(k => k !== keyLower);
+      isNowActive = true;
+    } else {
+      nextInactiveList = [...currentInactive, keyLower];
+      isNowActive = false;
+    }
+
+    const nextInactiveStr = nextInactiveList.join(',');
+    const updatedForm = { ...settingsForm, inactive_spaces: nextInactiveStr };
+    setSettingsForm(updatedForm);
+    setRestaurantInfo(prev => prev ? ({ ...prev, inactive_spaces: nextInactiveStr }) : prev);
+
+    showToast(isNowActive ? `🟢 ${spaceKey} is now Active (Online)` : `⏸️ ${spaceKey} is now Paused (Offline)`, 2500);
+
+    const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+    if (currentSlug) {
+      const cached = localStorage.getItem(`admin_cache_${currentSlug}_info`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          parsed.inactive_spaces = nextInactiveStr;
           localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
         } catch { }
       }
@@ -1760,7 +1865,7 @@ export default function AdminDashboard({
         body: JSON.stringify(updatedForm)
       });
     } catch (err) {
-      console.error('Failed to delete space unit:', err);
+      console.error('Failed to toggle space status:', err);
     }
   };
 
@@ -3612,6 +3717,8 @@ export default function AdminDashboard({
                     setActiveTab('billing');
                   }}
                   onUpdateSpaceType={handleUpdateSpaceType}
+                  onToggleSpaceActive={handleToggleSpaceActive}
+                  orders={orders}
                 />
               )}
 

@@ -16,7 +16,9 @@ import {
   ChevronRight,
   Settings,
   HelpCircle,
-  Trash2
+  Trash2,
+  Plus,
+  X
 } from 'lucide-react';
 import { normalizeSpaceType, normalizeSpaceNumber, isValidHmacTokenFormat } from '../../../utils/qrSecurity';
 import { fetchCinemaScreens, fetchCinemaSeats, generateQrTokensApi } from '../../../api/client';
@@ -40,7 +42,9 @@ export default function QrGeneratorView({
   token,
   restaurantInfo,
   capabilities,
-  onBackToSetup
+  onBackToSetup,
+  onToggleSpaceActive,
+  orders
 }) {
   // Tenant Identity
   const activeSlug = settingsForm?.slug || restaurantInfo?.slug || '';
@@ -66,6 +70,23 @@ export default function QrGeneratorView({
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all');
+  const [showAddSpaceMenu, setShowAddSpaceMenu] = useState(false);
+
+  // Close Add Space dropdown on outside click
+  useEffect(() => {
+    if (!showAddSpaceMenu) return;
+    const handleOutsideClick = () => setShowAddSpaceMenu(false);
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, [showAddSpaceMenu]);
+
+  // Inactive / Paused Spaces Derivation
+  const inactiveList = useMemo(() => {
+    return String(settingsForm?.inactive_spaces ?? restaurantInfo?.inactive_spaces ?? '')
+      .split(',')
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean);
+  }, [settingsForm?.inactive_spaces, restaurantInfo?.inactive_spaces]);
 
   // Cinema Screens & Seats State
   const [cinemaScreens, setCinemaScreens] = useState([]);
@@ -80,6 +101,7 @@ export default function QrGeneratorView({
   // Selection & Active Preview State
   const [selectedSpaceKeys, setSelectedSpaceKeys] = useState(new Set());
   const [activePreviewKey, setActivePreviewKey] = useState(null);
+  const [mobileViewTab, setMobileViewTab] = useState('list'); // 'list' | 'preview'
 
   // Action / Progress State
   const [exportingPng, setExportingPng] = useState(false);
@@ -91,6 +113,31 @@ export default function QrGeneratorView({
   const [quickCount, setQuickCount] = useState(10);
   const [savingQuick, setSavingQuick] = useState(false);
   const [showCountModal, setShowCountModal] = useState(false);
+
+  // Safe Permanent Deletion Modal State
+  const [spaceToDelete, setSpaceToDelete] = useState(null);
+  const [deletingSpace, setDeletingSpace] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!spaceToDelete || !onDeleteTable) return;
+    setDeletingSpace(true);
+    try {
+      const spaceLabel = spaceToDelete.label || `Space ${spaceToDelete.spaceNumber}`;
+      const success = await onDeleteTable(
+        spaceToDelete.spaceNumber,
+        spaceToDelete.spaceType || (isHotel ? 'room' : 'table')
+      );
+      if (success !== false) {
+        showToast(`🗑️ ${spaceLabel} permanently removed.`);
+      }
+      setSpaceToDelete(null);
+    } catch (err) {
+      console.error('Failed to delete space:', err);
+      showToast('⚠️ Failed to delete space. Please try again.');
+    } finally {
+      setDeletingSpace(false);
+    }
+  };
 
   const handleQuickSetSpaces = async (newCount) => {
     const count = Math.max(1, parseInt(newCount, 10) || 1);
@@ -360,15 +407,38 @@ export default function QrGeneratorView({
   // 4. FILTERING & SEARCH
   // --------------------------------------------------------------------------
   const availableCategories = useMemo(() => {
-    const cats = new Map();
-    configuredSpaces.forEach(sp => {
-      if (!cats.has(sp.category)) {
-        cats.set(sp.category, { id: sp.category, label: sp.categoryLabel, icon: sp.icon, count: 0 });
-      }
-      cats.get(sp.category).count++;
-    });
-    return Array.from(cats.values());
-  }, [configuredSpaces]);
+    if (isCinema) {
+      return [{ id: 'cinema_seat', label: 'Cinema Seats', icon: '🎬', count: configuredSpaces.length }];
+    }
+    if (isHotel) {
+      const rCount = Math.max(0, Number(settingsForm?.total_rooms ?? restaurantInfo?.total_rooms ?? configuredSpaces.length));
+      return [{ id: 'room', label: 'Guest Rooms', icon: '🏨', count: rCount }];
+    }
+    const tCount = Math.max(0, Number(settingsForm?.total_tables ?? restaurantInfo?.total_tables ?? totalTablesCount ?? 0));
+    const cCount = Math.max(0, Number(settingsForm?.total_cabins ?? restaurantInfo?.total_cabins ?? 0));
+    const vCount = Math.max(0, Number(settingsForm?.total_vip ?? restaurantInfo?.total_vip ?? 0));
+    const isCabinsAllowed = Boolean(capabilities?.cabins_enabled);
+    const isVipAllowed = Boolean(capabilities?.vip_enabled);
+
+    return [
+      { id: 'table', label: 'Dining Tables', icon: '🍽️', count: tCount },
+      { id: 'cabin', label: isCabinsAllowed ? 'Private Cabins' : 'Private Cabins 🔒', icon: '🛋️', count: cCount },
+      { id: 'vip', label: isVipAllowed ? 'VIP Lounges' : 'VIP Lounges 🔒', icon: '👑', count: vCount }
+    ];
+  }, [
+    isCinema,
+    isHotel,
+    configuredSpaces.length,
+    settingsForm?.total_tables,
+    settingsForm?.total_cabins,
+    settingsForm?.total_vip,
+    settingsForm?.total_rooms,
+    restaurantInfo?.total_tables,
+    restaurantInfo?.total_cabins,
+    restaurantInfo?.total_vip,
+    restaurantInfo?.total_rooms,
+    totalTablesCount
+  ]);
 
   const filteredSpaces = useMemo(() => {
     return configuredSpaces.filter(sp => {
@@ -624,6 +694,68 @@ export default function QrGeneratorView({
   };
 
   // --------------------------------------------------------------------------
+  // 7.5 AUTHORITATIVE SPACE PLAN LIMITS & FEATURE LOCK VALIDATION
+  // --------------------------------------------------------------------------
+  const currentTablesCount = Math.max(0, Number(settingsForm?.total_tables ?? restaurantInfo?.total_tables ?? totalTablesCount ?? 0));
+  const currentCabinsCount = Math.max(0, Number(settingsForm?.total_cabins ?? restaurantInfo?.total_cabins ?? 0));
+  const currentVipCount = Math.max(0, Number(settingsForm?.total_vip ?? restaurantInfo?.total_vip ?? 0));
+  const currentRoomsCount = Math.max(0, Number(settingsForm?.total_rooms ?? restaurantInfo?.total_rooms ?? 0));
+
+  const isTablesEnabled = capabilities?.tables_enabled !== false && capabilities?.tables_enabled !== 0;
+  const isCabinsEnabled = Boolean(capabilities?.cabins_enabled);
+  const isVipEnabled = Boolean(capabilities?.vip_enabled);
+  const isRoomsEnabled = capabilities?.rooms_enabled !== false && capabilities?.rooms_enabled !== 0;
+
+  const maxTables = capabilities?.max_tables ?? 20;
+  const maxCabins = capabilities?.max_cabins ?? 0;
+  const maxVip = capabilities?.max_vip ?? 0;
+  const maxRooms = capabilities?.max_rooms ?? 60;
+
+  const handleAddSpaceCheck = (spaceType) => {
+    if (spaceType === 'table') {
+      if (!isTablesEnabled) {
+        alert('Dining Tables are disabled in your current SaaS plan.');
+        return;
+      }
+      if (currentTablesCount >= maxTables) {
+        alert(`Plan Limit Reached: Your current SaaS plan allows a maximum of ${maxTables} dining tables. Please upgrade your SaaS plan to add more.`);
+        return;
+      }
+      onAddTable(currentTablesCount + 1, 'table');
+    } else if (spaceType === 'cabin') {
+      if (!isCabinsEnabled) {
+        alert('Private Cabins are not included in your current SaaS plan. Please upgrade to Pro Plan to unlock Private Cabins.');
+        return;
+      }
+      if (currentCabinsCount >= maxCabins) {
+        alert(`Plan Limit Reached: Your current SaaS plan allows a maximum of ${maxCabins} private cabins. Please upgrade to Enterprise to add more.`);
+        return;
+      }
+      onAddTable(currentCabinsCount + 1, 'cabin');
+    } else if (spaceType === 'vip') {
+      if (!isVipEnabled) {
+        alert('VIP Lounges are not included in your current SaaS plan. Please upgrade to Pro Plan to unlock VIP Lounges.');
+        return;
+      }
+      if (currentVipCount >= maxVip) {
+        alert(`Plan Limit Reached: Your current SaaS plan allows a maximum of ${maxVip} VIP lounges. Please upgrade to Enterprise to add more.`);
+        return;
+      }
+      onAddTable(currentVipCount + 1, 'vip');
+    } else if (spaceType === 'room') {
+      if (!isRoomsEnabled) {
+        alert('Guest Rooms are disabled in your current SaaS plan.');
+        return;
+      }
+      if (currentRoomsCount >= maxRooms) {
+        alert(`Plan Limit Reached: Your current SaaS plan allows a maximum of ${maxRooms} guest rooms. Please upgrade your SaaS plan to add more.`);
+        return;
+      }
+      onAddTable(currentRoomsCount + 1, 'room');
+    }
+  };
+
+  // --------------------------------------------------------------------------
   // 8. RENDER MASTER-DETAIL LAYOUT (PHASE 2)
   // --------------------------------------------------------------------------
   const theme = STANDEE_THEMES[selectedTheme] || STANDEE_THEMES.emerald;
@@ -668,28 +800,22 @@ export default function QrGeneratorView({
         paddingBottom: '16px'
       }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
               QR Standee Management
             </h1>
-            <span style={{
-              background: '#ECFDF5',
-              color: '#065F46',
-              border: '1px solid #A7F3D0',
-              padding: '2px 8px',
-              borderRadius: '12px',
-              fontSize: '0.74rem',
-              fontWeight: 700
-            }}>
-              Server-Authoritative
-            </span>
           </div>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748B' }}>
-            Manage physical QR standees & stickers with cryptographically signed QR codes. Changes in Setup reflect automatically.
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: '#64748B' }}>
+            {isHotel 
+              ? 'Manage and print tamper-proof QR standees for your guest rooms.'
+              : isCinema 
+              ? 'Manage and print tamper-proof QR standees for your cinema screens and seats.'
+              : 'Manage and print tamper-proof QR standees for your tables, cabins & lounges.'
+            }
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
             onClick={prefetchTokens}
@@ -698,41 +824,41 @@ export default function QrGeneratorView({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 14px',
+              padding: '7px 12px',
               borderRadius: '8px',
               border: '1px solid #CBD5E1',
               background: '#FFFFFF',
               color: '#334155',
-              fontSize: '0.82rem',
+              fontSize: '0.80rem',
               fontWeight: 600,
               cursor: loadingTokens ? 'wait' : 'pointer'
             }}
-            title="Refresh server signatures for all spaces"
+            title="Refresh cryptographic signatures for all spaces"
           >
-            <RefreshCw size={14} className={loadingTokens ? 'animate-spin' : ''} />
+            <RefreshCw size={13} className={loadingTokens ? 'animate-spin' : ''} />
             <span>{loadingTokens ? 'Signing...' : 'Sync Tokens'}</span>
           </button>
 
-          {onBackToSetup && (
+          {isCinema && onBackToSetup && (
             <button
               type="button"
-              onClick={() => onBackToSetup(isCinema ? 'cinema' : 'general')}
+              onClick={() => onBackToSetup('cinema')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '8px 14px',
+                padding: '7px 12px',
                 borderRadius: '8px',
                 border: '1px solid #E2E8F0',
                 background: '#F8FAFC',
                 color: '#475569',
-                fontSize: '0.82rem',
+                fontSize: '0.80rem',
                 fontWeight: 600,
                 cursor: 'pointer'
               }}
             >
-              <Settings size={14} />
-              <span>{isCinema ? 'Cinema Setup' : 'Configure Spaces'}</span>
+              <Settings size={13} />
+              <span>Cinema Setup</span>
             </button>
           )}
         </div>
@@ -772,95 +898,71 @@ export default function QrGeneratorView({
         </div>
       )}
 
+      {/* MOBILE SEGMENTED VIEW SWITCHER (< 768px) */}
+      <div className="standee-mobile-tabs">
+        <button
+          type="button"
+          onClick={() => setMobileViewTab('list')}
+          className={`standee-mobile-tab-btn ${mobileViewTab === 'list' ? 'active' : ''}`}
+        >
+          <span>📋 Spaces ({configuredSpaces.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileViewTab('preview')}
+          className={`standee-mobile-tab-btn ${mobileViewTab === 'preview' ? 'active' : ''}`}
+        >
+          <span>👁️ Standee {activeSpace ? `(${activeSpace.label})` : 'Preview'}</span>
+        </button>
+      </div>
+
       {/* MASTER-DETAIL RESPONSIVE GRID */}
       <div className="standee-workspace-grid">
         
         {/* ================================================================= */}
         {/* LEFT PANEL: CONFIGURED SPACES & INVENTORY MANAGEMENT              */}
         {/* ================================================================= */}
-        <div className="standee-inventory-panel">
-          {/* Inventory Count & Search Bar */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px' }}>
+        <div className={`standee-inventory-panel ${mobileViewTab !== 'list' ? 'mobile-hidden' : ''}`}>
+          {/* Capacity Hub & Spaces Overview Deck */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+            {/* Header Title Row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A' }}>
-                  Physical Spaces ({configuredSpaces.length})
+                <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                  Physical Spaces
                 </span>
-                {!isCinema && onAddTable && configuredSpaces.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => handleQuickSetSpaces(configuredSpaces.length + 1)}
-                    disabled={savingQuick}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      border: '1px solid #CBD5E1',
-                      background: '#FFFFFF',
-                      color: '#064E3B',
-                      fontSize: '0.74rem',
-                      fontWeight: 800,
-                      cursor: 'pointer'
-                    }}
-                    title={`Add 1 more ${isHotel ? 'room' : 'table'}`}
-                  >
-                    ➕ Add {isHotel ? 'Room' : 'Table'}
-                  </button>
-                )}
-                {!isCinema && onDeleteTable && configuredSpaces.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const spaceType = isHotel ? 'Room' : 'Table';
-                      if (window.confirm(`Are you sure you want to remove ${spaceType} ${configuredSpaces.length}?`)) {
-                        await onDeleteTable(configuredSpaces.length, isHotel ? 'room' : 'table');
-                      }
-                    }}
-                    disabled={savingQuick}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      border: '1px solid #FECACA',
-                      background: '#FEF2F2',
-                      color: '#DC2626',
-                      fontSize: '0.74rem',
-                      fontWeight: 800,
-                      cursor: 'pointer'
-                    }}
-                    title={`Remove last ${isHotel ? 'room' : 'table'}`}
-                  >
-                    <Trash2 size={12} /> Remove {isHotel ? 'Room' : 'Table'}
-                  </button>
-                )}
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, background: '#0F172A', color: '#DFBA67', padding: '2px 8px', borderRadius: '12px' }}>
+                  {configuredSpaces.length} Total
+                </span>
               </div>
-              <div style={{ fontSize: '0.78rem', color: '#64748B' }}>
-                {selectedCount > 0 ? `${selectedCount} selected for bulk print` : 'Click card to preview'}
+              <div style={{ fontSize: '0.76rem', color: '#64748B' }}>
+                {selectedCount === 1 
+                  ? '1 space selected' 
+                  : selectedCount > 1 
+                  ? `${selectedCount} spaces selected for bulk print` 
+                  : 'Click card to live-preview'}
               </div>
             </div>
 
-            {/* Search Input */}
-            <div style={{ position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: '12px', top: '10px', color: '#94A3B8' }} />
+            {/* Search Input Bar */}
+            <div style={{ position: 'relative', width: '100%' }}>
+              <Search
+                size={16}
+                color="#64748B"
+                style={{
+                  position: 'absolute',
+                  left: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  pointerEvents: 'none'
+                }}
+              />
               <input
                 type="text"
-                placeholder="Search by space name, number or seat..."
+                placeholder={isHotel ? "Search rooms (e.g. Room 101)..." : isCinema ? "Search seats or screens..." : "Search tables, cabins, lounges..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: '8px 12px 8px 36px',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '0.84rem',
-                  outline: 'none',
-                  background: '#F8FAFC'
-                }}
+                className="standee-search-input"
               />
               {searchQuery && (
                 <button
@@ -869,34 +971,45 @@ export default function QrGeneratorView({
                   style={{
                     position: 'absolute',
                     right: '10px',
-                    top: '8px',
-                    background: 'transparent',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: '#E2E8F0',
                     border: 'none',
-                    color: '#94A3B8',
+                    borderRadius: '50%',
+                    width: '18px',
+                    height: '18px',
+                    color: '#475569',
                     cursor: 'pointer',
-                    fontSize: '0.8rem'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
                   }}
+                  title="Clear search"
                 >
-                  ✕
+                  <X size={11} />
                 </button>
               )}
             </div>
 
-            {/* Category Filter Chips */}
-            {availableCategories.length > 1 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {/* Category Filter Chips & Contextual Section Add Action */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', width: '100%' }}>
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', flexWrap: 'nowrap', maxWidth: '100%', paddingBottom: '4px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
                 <button
                   type="button"
                   onClick={() => setActiveCategoryFilter('all')}
                   style={{
-                    padding: '4px 10px',
-                    borderRadius: '14px',
+                    padding: '5px 12px',
+                    borderRadius: '16px',
                     fontSize: '0.75rem',
                     fontWeight: 700,
                     border: activeCategoryFilter === 'all' ? '1.5px solid #0F172A' : '1px solid #E2E8F0',
                     background: activeCategoryFilter === 'all' ? '#0F172A' : '#FFFFFF',
                     color: activeCategoryFilter === 'all' ? '#FFFFFF' : '#475569',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   All ({configuredSpaces.length})
@@ -910,14 +1023,17 @@ export default function QrGeneratorView({
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
-                      padding: '4px 10px',
-                      borderRadius: '14px',
+                      padding: '5px 12px',
+                      borderRadius: '16px',
                       fontSize: '0.75rem',
                       fontWeight: 700,
                       border: activeCategoryFilter === cat.id ? '1.5px solid #0F172A' : '1px solid #E2E8F0',
                       background: activeCategoryFilter === cat.id ? '#0F172A' : '#FFFFFF',
                       color: activeCategoryFilter === cat.id ? '#FFFFFF' : '#475569',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     <span>{cat.icon}</span>
@@ -925,7 +1041,261 @@ export default function QrGeneratorView({
                   </button>
                 ))}
               </div>
-            )}
+
+              {/* Contextual Single Add Button: Exclusively for Current Section with Plan Guard */}
+              {!isCinema && onAddTable && (
+                <div style={{ position: 'relative' }}>
+                  {activeCategoryFilter === 'table' && (
+                    <button
+                      type="button"
+                      onClick={() => handleAddSpaceCheck('table')}
+                      disabled={savingQuick}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: currentTablesCount >= maxTables ? '#94A3B8' : '#064E3B',
+                        color: '#FFFFFF',
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        cursor: savingQuick ? 'wait' : 'pointer',
+                        boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
+                      }}
+                      title={currentTablesCount >= maxTables ? `Max limit of ${maxTables} dining tables reached` : "Add 1 more Dining Table"}
+                    >
+                      <Plus size={14} /> {currentTablesCount >= maxTables ? `Limit Reached (${maxTables})` : 'Add Table'}
+                    </button>
+                  )}
+
+                  {activeCategoryFilter === 'cabin' && (
+                    <button
+                      type="button"
+                      onClick={() => handleAddSpaceCheck('cabin')}
+                      disabled={savingQuick}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: !isCabinsEnabled ? '#D97706' : (currentCabinsCount >= maxCabins ? '#94A3B8' : '#1E40AF'),
+                        color: '#FFFFFF',
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        cursor: savingQuick ? 'wait' : 'pointer',
+                        boxShadow: '0 2px 6px rgba(30, 64, 175, 0.25)'
+                      }}
+                      title={!isCabinsEnabled ? "Private Cabins locked in current plan. Upgrade to Pro." : (currentCabinsCount >= maxCabins ? `Max limit of ${maxCabins} cabins reached` : "Add 1 more Private Cabin")}
+                    >
+                      <Plus size={14} /> {!isCabinsEnabled ? '🔒 Unlock Cabins (Pro)' : (currentCabinsCount >= maxCabins ? `Limit Reached (${maxCabins})` : 'Add Cabin')}
+                    </button>
+                  )}
+
+                  {activeCategoryFilter === 'vip' && (
+                    <button
+                      type="button"
+                      onClick={() => handleAddSpaceCheck('vip')}
+                      disabled={savingQuick}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: !isVipEnabled ? '#D97706' : (currentVipCount >= maxVip ? '#94A3B8' : '#7C3AED'),
+                        color: '#FFFFFF',
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        cursor: savingQuick ? 'wait' : 'pointer',
+                        boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)'
+                      }}
+                      title={!isVipEnabled ? "VIP Lounges locked in current plan. Upgrade to Pro." : (currentVipCount >= maxVip ? `Max limit of ${maxVip} lounges reached` : "Add 1 more VIP Lounge")}
+                    >
+                      <Plus size={14} /> {!isVipEnabled ? '🔒 Unlock Lounges (Pro)' : (currentVipCount >= maxVip ? `Limit Reached (${maxVip})` : 'Add Lounge')}
+                    </button>
+                  )}
+
+                  {activeCategoryFilter === 'room' && (
+                    <button
+                      type="button"
+                      onClick={() => handleAddSpaceCheck('room')}
+                      disabled={savingQuick}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: currentRoomsCount >= maxRooms ? '#94A3B8' : '#064E3B',
+                        color: '#FFFFFF',
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        cursor: savingQuick ? 'wait' : 'pointer',
+                        boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
+                      }}
+                      title={currentRoomsCount >= maxRooms ? `Max limit of ${maxRooms} rooms reached` : "Add 1 more Guest Room"}
+                    >
+                      <Plus size={14} /> {currentRoomsCount >= maxRooms ? `Limit Reached (${maxRooms})` : 'Add Room'}
+                    </button>
+                  )}
+
+                  {activeCategoryFilter === 'all' && (
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowAddSpaceMenu(prev => !prev);
+                        }}
+                        disabled={savingQuick}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #CBD5E1',
+                          background: '#FFFFFF',
+                          color: '#0F172A',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: savingQuick ? 'wait' : 'pointer',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                        }}
+                      >
+                        <Plus size={14} /> Add Space ▾
+                      </button>
+                      {showAddSpaceMenu && (
+                        <div
+                          className="standee-add-dropdown"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {isHotel ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowAddSpaceMenu(false);
+                                handleAddSpaceCheck('room');
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '9px 14px',
+                                textAlign: 'left',
+                                background: 'none',
+                                border: 'none',
+                                fontSize: '0.82rem',
+                                fontWeight: 700,
+                                color: '#0F172A',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                whiteSpace: 'nowrap'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                            >
+                              <span style={{ fontSize: '1rem', flexShrink: 0 }}>🏨</span>
+                              <span>Add Room</span>
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowAddSpaceMenu(false);
+                                  handleAddSpaceCheck('table');
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '9px 14px',
+                                  textAlign: 'left',
+                                  background: 'none',
+                                  border: 'none',
+                                  fontSize: '0.82rem',
+                                  fontWeight: 700,
+                                  color: '#0F172A',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                              >
+                                <span style={{ fontSize: '1rem', flexShrink: 0 }}>🍽️</span>
+                                <span>Add Table</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowAddSpaceMenu(false);
+                                  handleAddSpaceCheck('cabin');
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '9px 14px',
+                                  textAlign: 'left',
+                                  background: 'none',
+                                  border: 'none',
+                                  fontSize: '0.82rem',
+                                  fontWeight: 700,
+                                  color: isCabinsEnabled ? '#0F172A' : '#94A3B8',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                              >
+                                <span style={{ fontSize: '1rem', flexShrink: 0 }}>🛋️</span>
+                                <span>{isCabinsEnabled ? 'Add Cabin' : 'Add Cabin 🔒 (Pro)'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowAddSpaceMenu(false);
+                                  handleAddSpaceCheck('vip');
+                                }}
+                                style={{
+                                  width: '100%',
+                                  padding: '9px 14px',
+                                  textAlign: 'left',
+                                  background: 'none',
+                                  border: 'none',
+                                  fontSize: '0.82rem',
+                                  fontWeight: 700,
+                                  color: isVipEnabled ? '#0F172A' : '#94A3B8',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                              >
+                                <span style={{ fontSize: '1rem', flexShrink: 0 }}>👑</span>
+                                <span>{isVipEnabled ? 'Add Lounge' : 'Add Lounge 🔒 (Pro)'}</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Bulk Selection Toolbar */}
             {filteredSpaces.length > 0 && (
@@ -941,33 +1311,78 @@ export default function QrGeneratorView({
                 </label>
 
                 {selectedCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleBulkPrintSelected}
-                    disabled={printingBulk}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 14px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: '#0A2315',
-                      color: '#DFBA67',
-                      fontSize: '0.78rem',
-                      fontWeight: 800,
-                      cursor: printingBulk ? 'wait' : 'pointer',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    <Printer size={14} />
-                    <span>
-                      {printingBulk 
-                        ? `Generating (${bulkProgress.current}/${bulkProgress.total})...`
-                        : `Bulk Print Selected (${selectedCount})`
-                      }
-                    </span>
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSpaceKeys(new Set())}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#64748B',
+                        fontSize: '0.74rem',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        padding: '2px 4px'
+                      }}
+                      title="Clear selection"
+                    >
+                      Clear
+                    </button>
+                    {selectedCount > 1 ? (
+                      <button
+                        type="button"
+                        onClick={handleBulkPrintSelected}
+                        disabled={printingBulk}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 14px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: '#0A2315',
+                          color: '#DFBA67',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: printingBulk ? 'wait' : 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <Printer size={14} />
+                        <span>
+                          {printingBulk 
+                            ? `Generating (${bulkProgress.current}/${bulkProgress.total})...`
+                            : `Bulk Print (${selectedCount})`
+                          }
+                        </span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleBulkPrintSelected}
+                        disabled={printingBulk}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #CBD5E1',
+                          background: '#FFFFFF',
+                          color: '#0F172A',
+                          fontSize: '0.76rem',
+                          fontWeight: 700,
+                          cursor: printingBulk ? 'wait' : 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <Printer size={13} />
+                        <span>
+                          {printingBulk ? 'Generating...' : 'Print Selected (1)'}
+                        </span>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -1060,25 +1475,43 @@ export default function QrGeneratorView({
                 )}
               </div>
             ) : filteredSpaces.length === 0 ? (
-              <div style={{ padding: '30px 20px', textAlign: 'center', color: '#64748B', fontSize: '0.85rem' }}>
-                No spaces match "{searchQuery}". <button type="button" onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', color: '#2563EB', textDecoration: 'underline', cursor: 'pointer' }}>Clear search</button>
+              <div style={{ padding: '36px 20px', textAlign: 'center', color: '#64748B', fontSize: '0.85rem' }}>
+                {searchQuery ? (
+                  <>No spaces match "{searchQuery}". <button type="button" onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', color: '#2563EB', textDecoration: 'underline', cursor: 'pointer' }}>Clear search</button></>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '2rem' }}>
+                      {activeCategoryFilter === 'cabin' ? '🛋️' : activeCategoryFilter === 'vip' ? '👑' : activeCategoryFilter === 'room' ? '🏨' : '🍽️'}
+                    </span>
+                    <strong style={{ fontSize: '0.92rem', color: '#334155' }}>
+                      No {activeCategoryFilter === 'cabin' ? 'Private Cabins' : activeCategoryFilter === 'vip' ? 'VIP Lounges' : activeCategoryFilter === 'room' ? 'Guest Rooms' : 'Dining Tables'} Configured
+                    </strong>
+                    <span style={{ fontSize: '0.78rem', color: '#94A3B8', maxWidth: '300px' }}>
+                      Click the "+ Add" button above to configure your first {activeCategoryFilter === 'cabin' ? 'private cabin' : activeCategoryFilter === 'vip' ? 'VIP lounge' : activeCategoryFilter === 'room' ? 'guest room' : 'dining table'}.
+                    </span>
+                  </div>
+                )}
               </div>
             ) : (
               filteredSpaces.map(sp => {
                 const isSelectedForPrint = selectedSpaceKeys.has(sp.key);
                 const isCurrentlyPreviewed = activePreviewKey === sp.key;
                 const hasValidToken = Boolean(tokenMap[sp.key] && isValidHmacTokenFormat(tokenMap[sp.key]));
+                const isSpaceInactive = inactiveList.includes(sp.key.toLowerCase());
 
                 return (
                   <div
                     key={sp.key}
-                    onClick={() => setActivePreviewKey(sp.key)}
+                    onClick={() => {
+                      setActivePreviewKey(sp.key);
+                      setMobileViewTab('preview');
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      borderRadius: '10px',
+                      padding: '12px 14px',
+                      borderRadius: '12px',
                       border: isCurrentlyPreviewed ? '2px solid #0A2315' : '1px solid #E2E8F0',
                       background: isCurrentlyPreviewed ? '#F0FDF4' : '#FFFFFF',
                       cursor: 'pointer',
@@ -1086,131 +1519,112 @@ export default function QrGeneratorView({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-                      {/* Checkbox for bulk selection */}
-                      <input
-                        type="checkbox"
-                        checked={isSelectedForPrint}
-                        onChange={(e) => {
+                      {/* Checkbox for selection with complete stopPropagation */}
+                      <div
+                        onClick={(e) => {
                           e.stopPropagation();
-                          handleToggleSpaceSelection(sp.key);
                         }}
-                        style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
-                      />
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '6px',
+                          margin: '-6px 0 -6px -4px',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelectedForPrint}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleToggleSpaceSelection(sp.key);
+                          }}
+                          style={{ cursor: 'pointer', width: '18px', height: '18px', flexShrink: 0 }}
+                        />
+                      </div>
 
-                      <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{sp.icon}</span>
+                      <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>{sp.icon}</span>
 
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {/* Info Column */}
+                      <div style={{ minWidth: 0, flex: 1, paddingRight: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {sp.label}
                           </span>
                           {isCurrentlyPreviewed && (
                             <span style={{
-                              fontSize: '0.66rem',
-                              fontWeight: 800,
+                              fontSize: '0.62rem',
+                              fontWeight: 900,
                               background: '#0A2315',
                               color: '#DFBA67',
-                              padding: '1px 6px',
+                              padding: '1px 5px',
                               borderRadius: '4px',
                               whiteSpace: 'nowrap',
                               flexShrink: 0
                             }}>
-                              PREVIEWING
+                              PREVIEW
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: '0.74rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ marginTop: '2px', fontSize: '0.72rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {sp.categoryLabel}
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                      {/* Security / Token Status Badge */}
-                      {hasValidToken ? (
-                        <span style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          color: '#059669',
-                          background: '#ECFDF5',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          border: '1px solid #A7F3D0',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          <ShieldCheck size={12} />
-                          <span>HMAC Secured</span>
-                        </span>
-                      ) : loadingTokens ? (
-                        <span style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          color: '#D97706',
-                          background: '#FFFBEB',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          border: '1px solid #FDE68A',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          <RefreshCw size={12} className="animate-spin" />
-                          <span>Signing...</span>
-                        </span>
-                      ) : (
-                        <span style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          color: '#DC2626',
-                          background: '#FEF2F2',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          border: '1px solid #FECACA',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          <AlertTriangle size={12} />
-                          <span>Missing Token</span>
-                        </span>
-                      )}
-
-                      {/* Delete individual space */}
-                      {!isCinema && onDeleteTable && (
+                    {/* Right Column: Dedicated 2-Row Stack (Active Button + Secured Token) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '4px', flexShrink: 0 }}>
+                      {/* Active / Inactive Pause Toggle */}
+                      {onToggleSpaceActive && (
                         <button
                           type="button"
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            const spaceName = sp.label || `Space ${sp.spaceNumber}`;
-                            if (window.confirm(`Are you sure you want to delete ${spaceName}?`)) {
-                              await onDeleteTable(sp.spaceNumber, isHotel ? 'room' : 'table');
-                            }
+                            onToggleSpaceActive(sp.key);
                           }}
                           style={{
-                            display: 'flex',
+                            display: 'inline-flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '26px',
-                            height: '26px',
+                            gap: '3px',
+                            padding: '3px 8px',
                             borderRadius: '6px',
-                            border: '1px solid #FECACA',
-                            background: '#FEF2F2',
-                            color: '#DC2626',
+                            fontSize: '0.68rem',
+                            fontWeight: 800,
+                            border: isSpaceInactive ? '1px solid #FCD34D' : '1px solid #BBF7D0',
+                            background: isSpaceInactive ? '#FFFBEB' : '#ECFDF5',
+                            color: isSpaceInactive ? '#B45309' : '#059669',
                             cursor: 'pointer',
-                            padding: 0
+                            whiteSpace: 'nowrap'
                           }}
-                          title={`Delete ${sp.label}`}
+                          title={isSpaceInactive ? 'Space is paused (offline). Click to Activate.' : 'Space is active (online). Click to Pause.'}
                         >
-                          <Trash2 size={13} />
+                          {isSpaceInactive ? '⏸️ Paused' : '🟢 Active'}
                         </button>
                       )}
 
-                      <ChevronRight size={16} color={isCurrentlyPreviewed ? '#0A2315' : '#CBD5E1'} />
+                      {/* Cryptographic Signature Status */}
+                      <div style={{ fontSize: '0.68rem', lineHeight: 1 }}>
+                        {hasValidToken ? (
+                          <span style={{ color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
+                            <ShieldCheck size={11} /> Secured
+                          </span>
+                        ) : loadingTokens ? (
+                          <span style={{ color: '#D97706', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
+                            <RefreshCw size={11} className="animate-spin" /> Signing...
+                          </span>
+                        ) : (
+                          <span style={{ color: '#DC2626', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
+                            <AlertTriangle size={11} /> No Token
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -1222,7 +1636,29 @@ export default function QrGeneratorView({
         {/* ================================================================= */}
         {/* RIGHT PANEL: LIVE STANDEE PREVIEW & EXPORT ACTIONS               */}
         {/* ================================================================= */}
-        <div className="standee-preview-panel">
+        <div className={`standee-preview-panel ${mobileViewTab !== 'preview' ? 'mobile-hidden' : ''}`}>
+          {/* Mobile Quick Back to List Button */}
+          <div className="standee-mobile-back-row">
+            <button
+              type="button"
+              onClick={() => setMobileViewTab('list')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                background: '#F8FAFC',
+                color: '#334155',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              ← Back to Spaces List
+            </button>
+          </div>
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
             <div>
@@ -1230,45 +1666,140 @@ export default function QrGeneratorView({
                 Live Standee Preview
               </span>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '2px 0 0 0' }}>
-                {activeSpace ? activeSpace.label : 'Select a Space'}
+                {activeSpace ? activeSpace.label : configuredSpaces.length === 0 ? 'No Spaces Configured' : 'Select a Space'}
               </h3>
             </div>
 
-            {/* Token Status Indicator */}
-            {isActiveTokenReady ? (
-              <span style={{
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                color: '#059669',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}>
-                <ShieldCheck size={14} /> Ready to Print
-              </span>
-            ) : activeSpace ? (
-              <span style={{
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                color: '#D97706',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}>
-                <RefreshCw size={14} className="animate-spin" /> Fetching Token...
-              </span>
-            ) : (
-              <span style={{
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                color: '#64748B'
-              }}>
-                Standby
-              </span>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Token Status Indicator */}
+              {isActiveTokenReady ? (
+                <span style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  color: '#059669',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <ShieldCheck size={14} /> Ready to Print
+                </span>
+              ) : activeSpace ? (
+                <span style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  color: '#D97706',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <RefreshCw size={14} className="animate-spin" /> Fetching Token...
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748B' }}>
+                  {configuredSpaces.length === 0 ? 'No Spaces' : 'Standby'}
+                </span>
+              )}
+
+              {/* Safe Delete Active Space Button in Header */}
+              {!isCinema && onDeleteTable && activeSpace && (
+                <button
+                  type="button"
+                  onClick={() => setSpaceToDelete(activeSpace)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #E2E8F0',
+                    background: '#F8FAFC',
+                    color: '#64748B',
+                    fontSize: '0.70rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#FECACA';
+                    e.currentTarget.style.color = '#DC2626';
+                    e.currentTarget.style.background = '#FEF2F2';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#E2E8F0';
+                    e.currentTarget.style.color = '#64748B';
+                    e.currentTarget.style.background = '#F8FAFC';
+                  }}
+                  title={`Delete ${activeSpace.label}`}
+                >
+                  <Trash2 size={12} />
+                  <span>Delete Space</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* REALISTIC STANDEE PREVIEW CONTAINER */}
+          {configuredSpaces.length === 0 ? (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '60px 24px',
+              textAlign: 'center',
+              background: '#F8FAFC',
+              borderRadius: '16px',
+              border: '2px dashed #CBD5E1',
+              marginTop: '16px',
+              minHeight: '380px'
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '16px',
+                background: '#ECFDF5',
+                color: '#065F46',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.8rem',
+                marginBottom: '16px'
+              }}>
+                {isHotel ? '🏨' : isCinema ? '🎬' : '🍽️'}
+              </div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 8px 0' }}>
+                No Physical Spaces to Preview
+              </h3>
+              <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '320px', margin: '0 0 20px 0', lineHeight: 1.5 }}>
+                You haven't created any {isHotel ? 'guest rooms' : isCinema ? 'cinema screens' : 'dining tables, cabins, or lounges'} yet. Create your first space to generate and preview standees.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileViewTab('list');
+                  handleAddSpaceCheck(isHotel ? 'room' : 'table');
+                }}
+                disabled={savingQuick}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#0A2315',
+                  color: '#DFBA67',
+                  fontSize: '0.84rem',
+                  fontWeight: 800,
+                  cursor: savingQuick ? 'wait' : 'pointer',
+                  boxShadow: '0 4px 12px rgba(10,35,21,0.2)'
+                }}
+              >
+                <Plus size={16} /> Add First {isHotel ? 'Room' : isCinema ? 'Screen' : 'Table'}
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* REALISTIC STANDEE PREVIEW CONTAINER */}
           <div style={{
             background: '#F8FAFC',
             borderRadius: '16px',
@@ -1339,7 +1870,7 @@ export default function QrGeneratorView({
                 boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
                 marginBottom: '8px'
               }}>
-                ✦ {activeSpace ? activeSpace.badge : 'TABLE NO. 1'} ✦
+                ✦ {activeSpace?.badge || 'NO SPACE SELECTED'} ✦
               </div>
 
               {/* Restaurant Name */}
@@ -1465,13 +1996,77 @@ export default function QrGeneratorView({
                 background: theme.stepBg,
                 border: `1px solid ${theme.stepBorder}`,
                 color: theme.stepText,
-                borderRadius: '6px',
-                padding: '3px 4px',
+                borderRadius: '20px',
+                padding: '4px 10px',
                 fontSize: '0.58rem',
-                fontWeight: 800,
-                marginBottom: '6px'
+                fontWeight: 700,
+                marginBottom: '8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
               }}>
-                ① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '13px',
+                    height: '13px',
+                    minWidth: '13px',
+                    borderRadius: '50%',
+                    background: theme.isDark ? '#38BDF8' : '#0A2315',
+                    color: theme.isDark ? '#0F172A' : '#DFBA67',
+                    fontSize: '0.50rem',
+                    fontWeight: 900,
+                    lineHeight: '13px',
+                    textAlign: 'center',
+                    flexShrink: 0
+                  }}>1</span>
+                  <span>Open Camera</span>
+                </span>
+                <span style={{ opacity: 0.5, fontSize: '0.54rem', display: 'inline-flex', alignItems: 'center' }}>➔</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '13px',
+                    height: '13px',
+                    minWidth: '13px',
+                    borderRadius: '50%',
+                    background: theme.isDark ? '#38BDF8' : '#0A2315',
+                    color: theme.isDark ? '#0F172A' : '#DFBA67',
+                    fontSize: '0.50rem',
+                    fontWeight: 900,
+                    lineHeight: '13px',
+                    textAlign: 'center',
+                    flexShrink: 0
+                  }}>2</span>
+                  <span>Scan QR</span>
+                </span>
+                <span style={{ opacity: 0.5, fontSize: '0.54rem', display: 'inline-flex', alignItems: 'center' }}>➔</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '13px',
+                    height: '13px',
+                    minWidth: '13px',
+                    borderRadius: '50%',
+                    background: theme.isDark ? '#38BDF8' : '#0A2315',
+                    color: theme.isDark ? '#0F172A' : '#DFBA67',
+                    fontSize: '0.50rem',
+                    fontWeight: 900,
+                    lineHeight: '13px',
+                    textAlign: 'center',
+                    flexShrink: 0
+                  }}>3</span>
+                  <span>Order Food</span>
+                </span>
               </div>
 
               {/* Reassurance */}
@@ -1657,37 +2252,7 @@ export default function QrGeneratorView({
                 <span>{exportingPng ? 'Exporting...' : 'Download PNG'}</span>
               </button>
 
-              {/* Delete Active Space Button */}
-              {!isCinema && onDeleteTable && activeSpace && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const spaceName = activeSpace.label || `Table ${activeSpace.spaceNumber}`;
-                    if (window.confirm(`Are you sure you want to delete ${spaceName}?`)) {
-                      await onDeleteTable(activeSpace.spaceNumber, isHotel ? 'room' : 'table');
-                    }
-                  }}
-                  className="standee-export-btn"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #FECACA',
-                    background: '#FEF2F2',
-                    color: '#DC2626',
-                    fontSize: '0.84rem',
-                    fontWeight: 800,
-                    cursor: 'pointer'
-                  }}
-                  title={`Delete ${activeSpace.label}`}
-                >
-                  <Trash2 size={16} />
-                  <span>Delete {activeSpace.label}</span>
-                </button>
-              )}
+
             </div>
 
             {/* Print as PDF Note */}
@@ -1707,9 +2272,235 @@ export default function QrGeneratorView({
               </span>
             </div>
           </div>
-        </div>
+        </>
+      )}
+    </div>
 
       </div>
+
+      {/* ================================================================= */}
+      {/* PERMANENT DELETION SAFETY CONFIRMATION MODAL                      */}
+      {/* ================================================================= */}
+      {spaceToDelete && (
+        <div
+          onClick={() => !deletingSpace && setSpaceToDelete(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '16px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              border: '1px solid #CBD5E1',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 20px',
+              borderBottom: '1px solid #F1F5F9',
+              background: '#FFF1F2'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: '#FEE2E2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#DC2626'
+                }}>
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#991B1B', margin: 0 }}>
+                    Delete Physical Space?
+                  </h4>
+                  <span style={{ fontSize: '0.72rem', color: '#B91C1C', fontWeight: 600 }}>
+                    Permanent Action • Destroys Printed Standee
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !deletingSpace && setSpaceToDelete(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94A3B8',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '6px'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Space Target Identifier */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0'
+              }}>
+                <span style={{ fontSize: '1.4rem' }}>
+                  {spaceToDelete.icon || '🍽️'}
+                </span>
+                <div>
+                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', display: 'block' }}>
+                    {spaceToDelete.label}
+                  </strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                    {spaceToDelete.categoryLabel || 'Physical Space'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Warning Callout */}
+              <div style={{
+                padding: '12px 14px',
+                borderRadius: '12px',
+                background: '#FEF2F2',
+                border: '1px solid #FECACA',
+                display: 'flex',
+                gap: '10px'
+              }}>
+                <AlertTriangle size={18} color="#DC2626" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ fontSize: '0.78rem', color: '#991B1B', lineHeight: 1.45 }}>
+                  <strong>Do you have a printed standee for this space?</strong>
+                  <div style={{ marginTop: '4px' }}>
+                    Deleting <strong>{spaceToDelete.label}</strong> will immediately and permanently revoke its cryptographic QR signature. If a customer scans the physical standee on this table, they will get a <strong>"Space Not Found"</strong> error.
+                  </div>
+                </div>
+              </div>
+
+              {/* Safe Alternative Callout */}
+              {onToggleSpaceActive && (
+                <div style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: '#F0FDF4',
+                  border: '1px solid #BBF7D0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '10px'
+                }}>
+                  <div style={{ fontSize: '0.74rem', color: '#166534', lineHeight: 1.4 }}>
+                    <strong>💡 Safer Alternative:</strong> Just pause this space while not in use. Your physical QR standee stays valid.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleSpaceActive(spaceToDelete.key);
+                      showToast(`Space status updated for ${spaceToDelete.label}`);
+                      setSpaceToDelete(null);
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #86EFAC',
+                      background: '#FFFFFF',
+                      color: '#15803D',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0
+                    }}
+                  >
+                    ⏸️ Pause Instead
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '10px',
+              padding: '14px 20px',
+              borderTop: '1px solid #F1F5F9',
+              background: '#F8FAFC'
+            }}>
+              <button
+                type="button"
+                onClick={() => setSpaceToDelete(null)}
+                disabled={deletingSpace}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deletingSpace}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#DC2626',
+                  color: '#FFFFFF',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  cursor: deletingSpace ? 'wait' : 'pointer',
+                  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)'
+                }}
+              >
+                {deletingSpace ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>Permanently Delete</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

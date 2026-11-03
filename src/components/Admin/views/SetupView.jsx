@@ -1938,60 +1938,70 @@ export default function SetupView({
               </div>
             </div>
 
-            {/* Hotel Guest Rooms Configuration (Hotel / Resort Only) */}
-            {isHotel && (
-              <div style={{
-                background: '#F0FDF4',
-                border: '1.5px solid #86EFAC',
-                borderRadius: '12px',
-                padding: '14px 16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>🏨 Total Guest Rooms</span>
-                    <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#15803D', background: '#DCFCE7', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: '10px' }}>
-                    In-Room Dining
+            {/* Physical Spaces & QR Standees Overview (Managed in QR Standees Workspace) */}
+            <div style={{
+              background: '#F8FAFC',
+              border: '1.5px solid #E2E8F0',
+              borderRadius: '12px',
+              padding: '14px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: '#ECFDF5',
+                  color: '#064E3B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.2rem',
+                  border: '1px solid #A7F3D0'
+                }}>
+                  {isHotel ? '🏨' : isCinema ? '🎬' : '🍽️'}
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block', fontWeight: 800 }}>
+                    {isHotel ? 'Hotel Rooms & Standees' : isCinema ? 'Auditorium Screens & Seats' : 'Physical Dining Spaces'}
+                  </strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                    {isHotel
+                      ? `${Number(settingsForm.total_rooms) || 0} Rooms configured`
+                      : isCinema
+                      ? `${Number(settingsForm.total_screens) || 0} Screens • ${Number(settingsForm.total_seats) || 0} Seats`
+                      : `${Number(settingsForm.total_tables) || 0} Tables • ${Number(settingsForm.total_cabins) || 0} Cabins • ${Number(settingsForm.total_vip) || 0} Lounges`}
                   </span>
                 </div>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  placeholder="e.g. 25"
-                  value={settingsForm.total_rooms !== undefined && settingsForm.total_rooms !== null ? settingsForm.total_rooms : ''}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw === '') {
-                      setSettingsForm({ ...settingsForm, total_rooms: '' });
-                      return;
-                    }
-                    const num = parseInt(raw, 10);
-                    setSettingsForm({ ...settingsForm, total_rooms: isNaN(num) ? 0 : Math.max(0, num) });
-                  }}
-                  style={{
-                    width: '100%',
-                    height: '46px',
-                    padding: '0 14px',
-                    borderRadius: '10px',
-                    border: '1px solid #86EFAC',
-                    background: '#FFFFFF',
-                    fontSize: '0.90rem',
-                    fontWeight: 700,
-                    color: '#0F172A',
-                    boxSizing: 'border-box',
-                    outline: 'none'
-                  }}
-                />
-                <span style={{ fontSize: '0.68rem', color: '#166534', lineHeight: 1.4 }}>
-                  Total active guest rooms (Room 1 to Room {Number(settingsForm.total_rooms) || 0}) available for in-room QR menu ordering, room service / staff calls, and live room status tracking.
-                </span>
               </div>
-            )}
+
+              {onNavigate && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate(isCinema ? 'cinema' : 'qr-codes')}
+                  style={{
+                    background: '#064E3B',
+                    color: '#FFFFFF',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(6, 78, 59, 0.2)'
+                  }}
+                >
+                  ⚡ Manage in QR Standees →
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -10418,45 +10428,36 @@ export default function SetupView({
                 borderRadius: '12px',
                 padding: '12px 14px',
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '6px'
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px'
               }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>🏨 Total Guest Rooms</span>
-                  <span style={{ color: '#EF4444' }}>*</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  placeholder="e.g. 25"
-                  value={settingsForm.total_rooms !== undefined && settingsForm.total_rooms !== null ? settingsForm.total_rooms : ''}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw === '') {
-                      setSettingsForm({ ...settingsForm, total_rooms: '' });
-                      return;
-                    }
-                    const num = parseInt(raw, 10);
-                    setSettingsForm({ ...settingsForm, total_rooms: isNaN(num) ? 0 : Math.max(0, num) });
-                  }}
-                  style={{
-                    width: '100%',
-                    height: '44px',
-                    padding: '0 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #86EFAC',
-                    background: '#FFFFFF',
-                    fontSize: '0.86rem',
-                    fontWeight: 700,
-                    color: '#0F172A',
-                    boxSizing: 'border-box',
-                    outline: 'none'
-                  }}
-                />
-                <span style={{ fontSize: '0.66rem', color: '#166534' }}>
-                  Configured rooms for in-room guest QR codes (Room 1 .. {Number(settingsForm.total_rooms) || 0}).
-                </span>
+                <div>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🏨 Hotel Guest Rooms</span>
+                  </label>
+                  <span style={{ fontSize: '0.68rem', color: '#166534', display: 'block', marginTop: '2px' }}>
+                    {Number(settingsForm.total_rooms) || 0} active rooms configured. Managed in QR Standees.
+                  </span>
+                </div>
+                {onNavigate && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('qr-codes')}
+                    style={{
+                      background: '#15803D',
+                      color: '#FFFFFF',
+                      fontSize: '0.70rem',
+                      fontWeight: 800,
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Manage Rooms →
+                  </button>
+                )}
               </div>
             )}
           </div>

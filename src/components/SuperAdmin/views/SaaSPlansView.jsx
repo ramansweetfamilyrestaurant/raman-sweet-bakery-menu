@@ -28,8 +28,16 @@ const INITIAL_CREATE_FORM = {
   theme_color: 'gold',
   allowed_themes: 'gold,emerald,crimson,navy',
   max_tables: 50,
+  tables_enabled: 1,
+  cabins_enabled: 0,
+  max_cabins: 0,
+  vip_enabled: 0,
+  max_vip: 0,
+  rooms_enabled: 1,
   max_rooms: 60,
+  screens_enabled: 1,
   max_screens: 3,
+  seats_enabled: 1,
   max_seats: 800,
   max_dishes: 9999,
   max_categories: 9999,
@@ -114,8 +122,16 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
           ...p,
           industry: planInd,
           max_tables: p.max_tables !== undefined ? parseInt(p.max_tables, 10) : 9999,
+          tables_enabled: toBoolInt(p.tables_enabled, 1),
+          cabins_enabled: toBoolInt(p.cabins_enabled, 0),
+          max_cabins: p.max_cabins !== undefined ? parseInt(p.max_cabins, 10) : 0,
+          vip_enabled: toBoolInt(p.vip_enabled, 0),
+          max_vip: p.max_vip !== undefined ? parseInt(p.max_vip, 10) : 0,
+          rooms_enabled: toBoolInt(p.rooms_enabled, 1),
           max_rooms: p.max_rooms !== undefined ? parseInt(p.max_rooms, 10) : 9999,
+          screens_enabled: toBoolInt(p.screens_enabled, 1),
           max_screens: p.max_screens !== undefined ? parseInt(p.max_screens, 10) : 9999,
+          seats_enabled: toBoolInt(p.seats_enabled, 1),
           max_seats: p.max_seats !== undefined ? parseInt(p.max_seats, 10) : 9999,
           direct_ordering_enabled: directOrderingVal,
           presence_verification_enabled: directOrderingVal,
@@ -182,8 +198,16 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         original_price: createForm.original_price ? parseFloat(createForm.original_price) : (numericPrice * 2 - 1),
         industry: createForm.industry || 'restaurant',
         max_tables: parseInt(createForm.max_tables, 10) || 50,
+        tables_enabled: toBoolInt(createForm.tables_enabled, 1),
+        cabins_enabled: toBoolInt(createForm.cabins_enabled, 0),
+        max_cabins: parseInt(createForm.max_cabins, 10) || 0,
+        vip_enabled: toBoolInt(createForm.vip_enabled, 0),
+        max_vip: parseInt(createForm.max_vip, 10) || 0,
+        rooms_enabled: toBoolInt(createForm.rooms_enabled, 1),
         max_rooms: parseInt(createForm.max_rooms, 10) || 60,
+        screens_enabled: toBoolInt(createForm.screens_enabled, 1),
         max_screens: parseInt(createForm.max_screens, 10) || 3,
+        seats_enabled: toBoolInt(createForm.seats_enabled, 1),
         max_seats: parseInt(createForm.max_seats, 10) || 800,
         direct_ordering_enabled: directOrderingVal,
         presence_verification_enabled: directOrderingVal,
@@ -229,8 +253,16 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         ...editingPlan,
         industry: planInd,
         max_tables: editingPlan.max_tables !== undefined ? parseInt(editingPlan.max_tables, 10) : 9999,
+        tables_enabled: toBoolInt(editingPlan.tables_enabled, 1),
+        cabins_enabled: toBoolInt(editingPlan.cabins_enabled, 0),
+        max_cabins: editingPlan.max_cabins !== undefined ? parseInt(editingPlan.max_cabins, 10) : 0,
+        vip_enabled: toBoolInt(editingPlan.vip_enabled, 0),
+        max_vip: editingPlan.max_vip !== undefined ? parseInt(editingPlan.max_vip, 10) : 0,
+        rooms_enabled: toBoolInt(editingPlan.rooms_enabled, 1),
         max_rooms: editingPlan.max_rooms !== undefined ? parseInt(editingPlan.max_rooms, 10) : 9999,
+        screens_enabled: toBoolInt(editingPlan.screens_enabled, 1),
         max_screens: editingPlan.max_screens !== undefined ? parseInt(editingPlan.max_screens, 10) : 9999,
+        seats_enabled: toBoolInt(editingPlan.seats_enabled, 1),
         max_seats: editingPlan.max_seats !== undefined ? parseInt(editingPlan.max_seats, 10) : 9999,
         direct_ordering_enabled: directOrderingVal,
         presence_verification_enabled: directOrderingVal,
@@ -495,7 +527,9 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
     if (selectedIndustry === 'restaurant') {
       fields.push(
-        { key: 'max_tables', label: '🍽️ Max Dining Tables / Standees Limit (Quota)', placeholder: '50' },
+        { key: 'max_tables', label: '🍽️ Max Dining Tables Limit (Quota)', placeholder: '20' },
+        { key: 'max_cabins', label: '🛋️ Max Private Cabins Limit (Quota)', placeholder: '4' },
+        { key: 'max_vip', label: '👑 Max VIP Lounges Limit (Quota)', placeholder: '2' },
         { key: 'max_dishes', label: '🍲 Max Food Menu Items / Dishes', placeholder: '9999' },
         { key: 'max_categories', label: '📑 Max Menu Categories', placeholder: '9999' },
         { key: 'max_combos', label: '🍱 Max Thali & Combo Deals Quota', placeholder: '10' },
@@ -544,6 +578,9 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
   const getToggleFieldsForIndustry = () => {
     if (selectedIndustry === 'restaurant') {
       return [
+        { key: 'tables_enabled', label: '🍽️ Allow Dining Tables (Dine-In Tables)' },
+        { key: 'cabins_enabled', label: '🛋️ Allow Private Cabins (Exclusive Dining Suites)' },
+        { key: 'vip_enabled', label: '👑 Allow VIP Lounges (Premium Lounges)' },
         { key: 'direct_ordering_enabled', label: '📋 Customer Dining Table QR Ordering & Live Orders Page' },
         { key: 'modifiers_enabled', label: '🌶️ Dish Modifiers & Half/Full Variants' },
         { key: 'whatsapp_ordering_enabled', label: '💬 WhatsApp Customer Food Ordering' },
@@ -563,6 +600,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
     if (selectedIndustry === 'hotel') {
       return [
+        { key: 'rooms_enabled', label: '🏨 Allow Guest Rooms (In-Room QR Dining Operations)' },
         { key: 'direct_ordering_enabled', label: '🚪 Guest In-Room QR Food & Beverage Dining (Room Scan)' },
         { key: 'amenities_booking_enabled', label: '🛎️ Hotel Amenities & Guest Services Booking (Spa, Laundry, Towels, Cab)' },
         { key: 'whatsapp_ordering_enabled', label: '💬 WhatsApp Guest Concierge & Butler Chat' },
@@ -582,6 +620,8 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
     if (selectedIndustry === 'cinema') {
       return [
+        { key: 'screens_enabled', label: '🎬 Allow Cinema Audi Screens' },
+        { key: 'seats_enabled', label: '💺 Allow In-Seat Ordering' },
         { key: 'direct_ordering_enabled', label: '💺 In-Seat QR Delivery (Customer orders from Audi Seat)' },
         { key: 'interval_rush_mode_enabled', label: '⚡ Interval Express Rush Mode (15-min interval fast-pass order queue)' },
         { key: 'seat_runner_dispatch_enabled', label: '🏃 Seat Runner Dispatch Routing (Auto-tags Audi, Row & Seat #)' },
@@ -636,6 +676,8 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     const ind = resolveIndustry(p);
     if (ind === 'hotel') {
       const rooms = Number(p.max_rooms);
+      const enabled = p.rooms_enabled !== 0 && p.rooms_enabled !== false;
+      if (!enabled) return '🏨 Rooms Disabled';
       return rooms >= 9999 ? 'Unlimited Guest Rooms' : `Up to ${rooms || 60} Guest Rooms`;
     }
     if (ind === 'cinema') {
@@ -644,8 +686,19 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
       if (screens >= 9999) return 'Unlimited Screens & Seats';
       return `${screens || 1} Screen${screens > 1 ? 's' : ''} · Up to ${seats || 200} Seats`;
     }
-    const tables = Number(p.max_tables);
-    return tables >= 9999 ? 'Unlimited Dining Tables' : `Up to ${tables || 50} Dining Tables`;
+    // Restaurant: Tables, Cabins, Lounges
+    const tables = Number(p.max_tables) || 0;
+    const cabins = Number(p.max_cabins) || 0;
+    const vip = Number(p.max_vip) || 0;
+    const tablesOn = p.tables_enabled !== 0 && p.tables_enabled !== false;
+    const cabinsOn = p.cabins_enabled === 1 || p.cabins_enabled === true;
+    const vipOn = p.vip_enabled === 1 || p.vip_enabled === true;
+
+    const parts = [];
+    if (tablesOn) parts.push(tables >= 9999 ? '∞ Tables' : `${tables} Tables`);
+    if (cabinsOn) parts.push(cabins >= 9999 ? '∞ Cabins' : `${cabins} Cabins`);
+    if (vipOn) parts.push(vip >= 9999 ? '∞ Lounges' : `${vip} Lounges`);
+    return parts.length > 0 ? parts.join(' • ') : 'No spaces enabled';
   };
 
   return (
@@ -1308,10 +1361,18 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                 </div>
               </div>
 
-              {/* Dynamic Capacity Fields based on Industry */}
+              {/* Dynamic Capacity & Spaces Allocation Controls */}
               {(editingPlan.industry === 'hotel' || resolveIndustry(editingPlan) === 'hotel') ? (
-                <div>
-                  <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>🏨 MAX GUEST ROOMS LIMIT (QUOTA)</label>
+                <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--sa-border)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.80rem', fontWeight: 800, marginBottom: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={editingPlan.rooms_enabled !== 0 && editingPlan.rooms_enabled !== false}
+                      onChange={e => setEditingPlan({ ...editingPlan, rooms_enabled: e.target.checked ? 1 : 0 })}
+                    />
+                    🏨 Allow Guest Rooms (In-Room QR Dining)
+                  </label>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>MAX GUEST ROOMS LIMIT (QUOTA)</label>
                   <input
                     type="number"
                     min="1"
@@ -1322,41 +1383,116 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                   />
                 </div>
               ) : (editingPlan.industry === 'cinema' || resolveIndustry(editingPlan) === 'cinema') ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>🎬 MAX SCREENS</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="9999"
-                      value={editingPlan.max_screens || 3}
-                      onChange={e => setEditingPlan({ ...editingPlan, max_screens: parseInt(e.target.value, 10) || 3 })}
-                      className="sa-input"
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>🎬 MAX SEATS</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10000"
-                      value={editingPlan.max_seats || 800}
-                      onChange={e => setEditingPlan({ ...editingPlan, max_seats: parseInt(e.target.value, 10) || 800 })}
-                      className="sa-input"
-                    />
+                <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--sa-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 800, marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={editingPlan.screens_enabled !== 0 && editingPlan.screens_enabled !== false}
+                          onChange={e => setEditingPlan({ ...editingPlan, screens_enabled: e.target.checked ? 1 : 0 })}
+                        />
+                        🎬 Allow Screens
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="9999"
+                        value={editingPlan.max_screens || 3}
+                        onChange={e => setEditingPlan({ ...editingPlan, max_screens: parseInt(e.target.value, 10) || 3 })}
+                        className="sa-input"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 800, marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={editingPlan.seats_enabled !== 0 && editingPlan.seats_enabled !== false}
+                          onChange={e => setEditingPlan({ ...editingPlan, seats_enabled: e.target.checked ? 1 : 0 })}
+                        />
+                        💺 Allow In-Seat Orders
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10000"
+                        value={editingPlan.max_seats || 800}
+                        onChange={e => setEditingPlan({ ...editingPlan, max_seats: parseInt(e.target.value, 10) || 800 })}
+                        className="sa-input"
+                      />
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div>
-                  <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>🍽️ MAX DINING TABLES LIMIT (QUOTA)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="9999"
-                    value={editingPlan.max_tables || 50}
-                    onChange={e => setEditingPlan({ ...editingPlan, max_tables: parseInt(e.target.value, 10) || 50 })}
-                    className="sa-input"
-                  />
+                <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--sa-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 900, color: '#1E293B', textTransform: 'uppercase' }}>
+                    🏢 Physical Space Allocations & Plan Limits:
+                  </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                    {/* Tables */}
+                    <div style={{ background: '#FFFFFF', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 800, marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={editingPlan.tables_enabled !== 0 && editingPlan.tables_enabled !== false}
+                          onChange={e => setEditingPlan({ ...editingPlan, tables_enabled: e.target.checked ? 1 : 0 })}
+                        />
+                        🍽️ Tables
+                      </label>
+                      <label style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginBottom: '2px' }}>Max Tables</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="9999"
+                        value={editingPlan.max_tables ?? 20}
+                        onChange={e => setEditingPlan({ ...editingPlan, max_tables: parseInt(e.target.value, 10) || 0 })}
+                        className="sa-input"
+                        style={{ height: '34px', fontSize: '0.82rem' }}
+                      />
+                    </div>
+                    {/* Cabins */}
+                    <div style={{ background: '#FFFFFF', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 800, marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={editingPlan.cabins_enabled === 1 || editingPlan.cabins_enabled === true}
+                          onChange={e => setEditingPlan({ ...editingPlan, cabins_enabled: e.target.checked ? 1 : 0 })}
+                        />
+                        🛋️ Cabins
+                      </label>
+                      <label style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginBottom: '2px' }}>Max Cabins</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="9999"
+                        value={editingPlan.max_cabins ?? 0}
+                        onChange={e => setEditingPlan({ ...editingPlan, max_cabins: parseInt(e.target.value, 10) || 0 })}
+                        className="sa-input"
+                        style={{ height: '34px', fontSize: '0.82rem' }}
+                      />
+                    </div>
+                    {/* VIP Lounges */}
+                    <div style={{ background: '#FFFFFF', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 800, marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={editingPlan.vip_enabled === 1 || editingPlan.vip_enabled === true}
+                          onChange={e => setEditingPlan({ ...editingPlan, vip_enabled: e.target.checked ? 1 : 0 })}
+                        />
+                        👑 Lounges
+                      </label>
+                      <label style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginBottom: '2px' }}>Max Lounges</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="9999"
+                        value={editingPlan.max_vip ?? 0}
+                        onChange={e => setEditingPlan({ ...editingPlan, max_vip: parseInt(e.target.value, 10) || 0 })}
+                        className="sa-input"
+                        style={{ height: '34px', fontSize: '0.82rem' }}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1578,10 +1714,16 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
               {/* Dynamic Capacity inputs based on selected industry */}
               {createForm.industry === 'hotel' ? (
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>
-                    🏨 MAX GUEST ROOMS LIMIT (QUOTA)
+                <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--sa-border)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.80rem', fontWeight: 800, marginBottom: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={createForm.rooms_enabled !== 0 && createForm.rooms_enabled !== false}
+                      onChange={e => setCreateForm({ ...createForm, rooms_enabled: e.target.checked ? 1 : 0 })}
+                    />
+                    🏨 Allow Guest Rooms (In-Room QR Dining)
                   </label>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>MAX GUEST ROOMS LIMIT (QUOTA)</label>
                   <input
                     type="number"
                     min="1"
@@ -1592,47 +1734,113 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                   />
                 </div>
               ) : createForm.industry === 'cinema' ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>
-                      🎬 MAX SCREENS
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="9999"
-                      value={createForm.max_screens}
-                      onChange={e => setCreateForm({ ...createForm, max_screens: parseInt(e.target.value, 10) || 3 })}
-                      className="sa-input"
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>
-                      🎬 MAX SEATS
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10000"
-                      value={createForm.max_seats}
-                      onChange={e => setCreateForm({ ...createForm, max_seats: parseInt(e.target.value, 10) || 800 })}
-                      className="sa-input"
-                    />
+                <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--sa-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 800, marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={createForm.screens_enabled !== 0 && createForm.screens_enabled !== false}
+                          onChange={e => setCreateForm({ ...createForm, screens_enabled: e.target.checked ? 1 : 0 })}
+                        />
+                        🎬 Allow Screens
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="9999"
+                        value={createForm.max_screens}
+                        onChange={e => setCreateForm({ ...createForm, max_screens: parseInt(e.target.value, 10) || 3 })}
+                        className="sa-input"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 800, marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={createForm.seats_enabled !== 0 && createForm.seats_enabled !== false}
+                          onChange={e => setCreateForm({ ...createForm, seats_enabled: e.target.checked ? 1 : 0 })}
+                        />
+                        💺 Allow In-Seat Orders
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10000"
+                        value={createForm.max_seats}
+                        onChange={e => setCreateForm({ ...createForm, max_seats: parseInt(e.target.value, 10) || 800 })}
+                        className="sa-input"
+                      />
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>
-                    🍽️ MAX DINING TABLES LIMIT (QUOTA)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="9999"
-                    value={createForm.max_tables}
-                    onChange={e => setCreateForm({ ...createForm, max_tables: parseInt(e.target.value, 10) || 50 })}
-                    className="sa-input"
-                  />
+                <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--sa-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 900, color: '#1E293B', textTransform: 'uppercase' }}>
+                    🏢 Physical Space Allocations & Plan Limits:
+                  </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                    <div style={{ background: '#FFFFFF', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 800, marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={createForm.tables_enabled !== 0 && createForm.tables_enabled !== false}
+                          onChange={e => setCreateForm({ ...createForm, tables_enabled: e.target.checked ? 1 : 0 })}
+                        />
+                        🍽️ Tables
+                      </label>
+                      <label style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginBottom: '2px' }}>Max Tables</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="9999"
+                        value={createForm.max_tables ?? 20}
+                        onChange={e => setCreateForm({ ...createForm, max_tables: parseInt(e.target.value, 10) || 0 })}
+                        className="sa-input"
+                        style={{ height: '34px', fontSize: '0.82rem' }}
+                      />
+                    </div>
+                    <div style={{ background: '#FFFFFF', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 800, marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={createForm.cabins_enabled === 1 || createForm.cabins_enabled === true}
+                          onChange={e => setCreateForm({ ...createForm, cabins_enabled: e.target.checked ? 1 : 0 })}
+                        />
+                        🛋️ Cabins
+                      </label>
+                      <label style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginBottom: '2px' }}>Max Cabins</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="9999"
+                        value={createForm.max_cabins ?? 0}
+                        onChange={e => setCreateForm({ ...createForm, max_cabins: parseInt(e.target.value, 10) || 0 })}
+                        className="sa-input"
+                        style={{ height: '34px', fontSize: '0.82rem' }}
+                      />
+                    </div>
+                    <div style={{ background: '#FFFFFF', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 800, marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={createForm.vip_enabled === 1 || createForm.vip_enabled === true}
+                          onChange={e => setCreateForm({ ...createForm, vip_enabled: e.target.checked ? 1 : 0 })}
+                        />
+                        👑 Lounges
+                      </label>
+                      <label style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginBottom: '2px' }}>Max Lounges</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="9999"
+                        value={createForm.max_vip ?? 0}
+                        onChange={e => setCreateForm({ ...createForm, max_vip: parseInt(e.target.value, 10) || 0 })}
+                        className="sa-input"
+                        style={{ height: '34px', fontSize: '0.82rem' }}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 

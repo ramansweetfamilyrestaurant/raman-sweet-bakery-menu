@@ -375,7 +375,7 @@ export function getSpaceConfig(prefix = 'table') {
   if (t === 'room') {
     return { id: 'room', label: '🏨 Hotel Room', singular: 'Room', plural: 'Rooms', badge: 'ROOM NO.', param: 'room' };
   }
-  if (t === 'vip') {
+  if (t === 'vip' || t === 'lounge') {
     return { id: 'vip', label: '👑 VIP Lounge', singular: 'VIP Lounge', plural: 'VIP Lounges', badge: 'VIP LOUNGE', param: 'vip' };
   }
   return { id: 'table', label: '🍽️ Dining Table', singular: 'Table', plural: 'Tables', badge: 'TABLE NO.', param: 'table' };

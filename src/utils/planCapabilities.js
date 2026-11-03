@@ -198,16 +198,26 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
     presence_verification_enabled: isBoolTrue(actualResto?.presence_verification_enabled ?? perms?.presence_verification_enabled, true),
     allowed_themes: actualResto?.allowed_themes || perms?.allowed_themes || (isBasic ? 'gold' : !isUnlimitedPlan ? 'gold,emerald,crimson,navy' : 'ALL'),
 
+    // Space Type Activation Toggles (Super-Admin Authoritative)
+    tables_enabled: isBoolTrue(actualResto?.tables_enabled ?? perms?.tables_enabled, true),
+    cabins_enabled: isUnlimitedPlan ? true : isBoolTrue(actualResto?.cabins_enabled ?? perms?.cabins_enabled, !isBasic),
+    vip_enabled: isUnlimitedPlan ? true : isBoolTrue(actualResto?.vip_enabled ?? perms?.vip_enabled, !isBasic),
+    rooms_enabled: isHotel ? isBoolTrue(actualResto?.rooms_enabled ?? perms?.rooms_enabled, true) : false,
+    screens_enabled: isCinema ? isBoolTrue(actualResto?.screens_enabled ?? perms?.screens_enabled, true) : false,
+    seats_enabled: isCinema ? isBoolTrue(actualResto?.seats_enabled ?? perms?.seats_enabled, true) : false,
+
     // Quotas (Option B: aligned with server entitlements)
-    max_dishes: isUnlimitedPlan ? 9999 : getNum(actualResto?.max_dishes ?? perms?.max_dishes ?? actualSub?.max_dishes, isBasic ? 50 : 500),
-    max_categories: isUnlimitedPlan ? 9999 : getNum(actualResto?.max_categories ?? perms?.max_categories ?? actualSub?.max_categories, isBasic ? 10 : 50),
-    max_combos: isUnlimitedPlan ? 9999 : getNum(actualResto?.max_combos ?? perms?.max_combos ?? actualSub?.max_combos, isBasic ? (isHotel || isCinema ? 5 : 3) : (isHotel || isCinema ? 20 : 10)),
-    max_tables: isUnlimitedPlan ? 9999 : getNum(actualResto?.max_tables ?? perms?.max_tables ?? actualSub?.max_tables, isBasic ? 20 : 100),
-    max_rooms: isHotel ? (isUnlimitedPlan ? 9999 : getNum(actualResto?.max_rooms ?? perms?.max_rooms ?? actualSub?.max_rooms, isBasic ? 20 : 60)) : null,
-    max_screens: isCinema ? (isUnlimitedPlan ? 9999 : getNum(actualResto?.max_screens ?? perms?.max_screens ?? actualSub?.max_screens, isBasic ? 1 : 3)) : null,
-    max_seats: isCinema ? (isUnlimitedPlan ? 9999 : getNum(actualResto?.max_seats ?? perms?.max_seats ?? actualSub?.max_seats, isBasic ? 200 : 800)) : null,
-    max_staff_accounts: isUnlimitedPlan ? 9999 : getNum(actualResto?.max_staff_accounts ?? perms?.max_staff_accounts, isBasic ? 2 : 5),
-    order_retention_days: isUnlimitedPlan ? 365 : getNum(actualResto?.order_retention_days ?? perms?.order_retention_days, isBasic ? 30 : 90)
+    max_dishes: getNum(actualResto?.max_dishes ?? perms?.max_dishes ?? actualSub?.max_dishes, isUnlimitedPlan ? 9999 : (isBasic ? 50 : 500)),
+    max_categories: getNum(actualResto?.max_categories ?? perms?.max_categories ?? actualSub?.max_categories, isUnlimitedPlan ? 9999 : (isBasic ? 10 : 50)),
+    max_combos: getNum(actualResto?.max_combos ?? perms?.max_combos ?? actualSub?.max_combos, isUnlimitedPlan ? 9999 : (isBasic ? (isHotel || isCinema ? 5 : 3) : (isHotel || isCinema ? 20 : 10))),
+    max_tables: getNum(actualResto?.max_tables ?? perms?.max_tables ?? actualSub?.max_tables, isUnlimitedPlan ? 9999 : (isBasic ? 20 : 100)),
+    max_cabins: getNum(actualResto?.max_cabins ?? perms?.max_cabins ?? actualSub?.max_cabins, isUnlimitedPlan ? 9999 : (isBasic ? 0 : 4)),
+    max_vip: getNum(actualResto?.max_vip ?? perms?.max_vip ?? actualSub?.max_vip, isUnlimitedPlan ? 9999 : (isBasic ? 0 : 2)),
+    max_rooms: isHotel ? getNum(actualResto?.max_rooms ?? perms?.max_rooms ?? actualSub?.max_rooms, isUnlimitedPlan ? 9999 : (isBasic ? 20 : 60)) : null,
+    max_screens: isCinema ? getNum(actualResto?.max_screens ?? perms?.max_screens ?? actualSub?.max_screens, isUnlimitedPlan ? 9999 : (isBasic ? 1 : 3)) : null,
+    max_seats: isCinema ? getNum(actualResto?.max_seats ?? perms?.max_seats ?? actualSub?.max_seats, isUnlimitedPlan ? 9999 : (isBasic ? 200 : 800)) : null,
+    max_staff_accounts: getNum(actualResto?.max_staff_accounts ?? perms?.max_staff_accounts, isUnlimitedPlan ? 9999 : (isBasic ? 2 : 5)),
+    order_retention_days: getNum(actualResto?.order_retention_days ?? perms?.order_retention_days, isUnlimitedPlan ? 365 : (isBasic ? 30 : 90))
   };
 }
 

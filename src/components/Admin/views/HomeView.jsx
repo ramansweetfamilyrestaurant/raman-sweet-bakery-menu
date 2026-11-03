@@ -1432,7 +1432,7 @@ export default function HomeView({
             }}>
               {/* Capacity Quota */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', marginBottom: '6px' }}>
                   <span style={{ color: '#0F172A', fontWeight: 600 }}>
                     {isHotel ? 'Rooms Quota' : isCinema ? 'Seats Quota' : 'Tables Quota'}
                   </span>
@@ -1440,62 +1440,126 @@ export default function HomeView({
                     {isHotel ? roomQuota.display : isCinema ? seatQuota.display : tableQuota.display}
                   </strong>
                 </div>
-                <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ 
-                    width: `${isHotel ? (roomQuota.isUnlimited ? 100 : Math.min(100, Math.round((roomQuota.count / (roomQuota.limit || 1)) * 100))) : isCinema ? (seatQuota.isUnlimited ? 100 : Math.min(100, Math.round((seatQuota.count / (seatQuota.limit || 1)) * 100))) : (tableQuota.isUnlimited ? 100 : Math.min(100, Math.round((tableQuota.count / (tableQuota.limit || 1)) * 100))) }%`, 
-                    height: '100%', 
-                    background: (isHotel ? roomQuota.isAtLimit : isCinema ? seatQuota.isAtLimit : tableQuota.isAtLimit) ? '#DC2626' : '#0D3823', 
-                    borderRadius: '4px' 
-                  }} />
-                </div>
+                {(isHotel ? roomQuota.isUnlimited : isCinema ? seatQuota.isUnlimited : tableQuota.isUnlimited) ? (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: '#ECFDF5',
+                    color: '#065F46',
+                    fontSize: '0.68rem',
+                    fontWeight: 700
+                  }}>
+                    <span>♾️</span> Unlimited
+                  </div>
+                ) : (
+                  <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${Math.min(100, Math.round(((isHotel ? roomQuota.count : isCinema ? seatQuota.count : tableQuota.count) / ((isHotel ? roomQuota.limit : isCinema ? seatQuota.limit : tableQuota.limit) || 1)) * 100))}%`, 
+                      height: '100%', 
+                      background: (isHotel ? roomQuota.isAtLimit : isCinema ? seatQuota.isAtLimit : tableQuota.isAtLimit) ? '#DC2626' : (isHotel ? roomQuota.isNearLimit : isCinema ? seatQuota.isNearLimit : tableQuota.isNearLimit) ? '#D97706' : '#0D3823', 
+                      borderRadius: '4px' 
+                    }} />
+                  </div>
+                )}
               </div>
 
               {/* Dishes */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', marginBottom: '6px' }}>
                   <span style={{ color: '#0F172A', fontWeight: 600 }}>{terminology.dishPlural || 'Dishes'}</span>
                   <strong style={{ color: dishQuota.isAtLimit ? '#DC2626' : '#0F172A' }}>{dishQuota.display}</strong>
                 </div>
-                <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ 
-                    width: `${dishQuota.isUnlimited ? Math.min(100, Math.max(10, Math.round((dishQuota.count / 50) * 100))) : Math.min(100, Math.round((dishQuota.count / (dishQuota.limit || 1)) * 100))}%`, 
-                    height: '100%', 
-                    background: dishQuota.isAtLimit ? '#DC2626' : '#0D3823', 
-                    borderRadius: '4px' 
-                  }} />
-                </div>
+                {dishQuota.isUnlimited ? (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: '#ECFDF5',
+                    color: '#065F46',
+                    fontSize: '0.68rem',
+                    fontWeight: 700
+                  }}>
+                    <span>♾️</span> Unlimited
+                  </div>
+                ) : (
+                  <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${Math.min(100, Math.round((dishQuota.count / (dishQuota.limit || 1)) * 100))}%`, 
+                      height: '100%', 
+                      background: dishQuota.isAtLimit ? '#DC2626' : dishQuota.isNearLimit ? '#D97706' : '#0D3823', 
+                      borderRadius: '4px' 
+                    }} />
+                  </div>
+                )}
               </div>
 
               {/* Categories */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', marginBottom: '6px' }}>
                   <span style={{ color: '#0F172A', fontWeight: 600 }}>Categories</span>
                   <strong style={{ color: catQuota.isAtLimit ? '#DC2626' : '#0F172A' }}>{catQuota.display}</strong>
                 </div>
-                <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ 
-                    width: `${catQuota.isUnlimited ? Math.min(100, Math.max(10, Math.round((catQuota.count / 20) * 100))) : Math.min(100, Math.round((catQuota.count / (catQuota.limit || 1)) * 100))}%`, 
-                    height: '100%', 
-                    background: catQuota.isAtLimit ? '#DC2626' : '#0D3823', 
-                    borderRadius: '4px' 
-                  }} />
-                </div>
+                {catQuota.isUnlimited ? (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: '#ECFDF5',
+                    color: '#065F46',
+                    fontSize: '0.68rem',
+                    fontWeight: 700
+                  }}>
+                    <span>♾️</span> Unlimited
+                  </div>
+                ) : (
+                  <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${Math.min(100, Math.round((catQuota.count / (catQuota.limit || 1)) * 100))}%`, 
+                      height: '100%', 
+                      background: catQuota.isAtLimit ? '#DC2626' : catQuota.isNearLimit ? '#D97706' : '#0D3823', 
+                      borderRadius: '4px' 
+                    }} />
+                  </div>
+                )}
               </div>
 
               {/* Combos */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', marginBottom: '6px' }}>
                   <span style={{ color: '#0F172A', fontWeight: 600 }}>Combos</span>
                   <strong style={{ color: comboQuota.isAtLimit ? '#DC2626' : '#0F172A' }}>{comboQuota.display}</strong>
                 </div>
-                <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ 
-                    width: `${comboQuota.isUnlimited ? Math.min(100, Math.max(10, Math.round((comboQuota.count / 10) * 100))) : Math.min(100, Math.round((comboQuota.count / (comboQuota.limit || 1)) * 100))}%`, 
-                    height: '100%', 
-                    background: comboQuota.isAtLimit ? '#DC2626' : '#D97706', 
-                    borderRadius: '4px' 
-                  }} />
-                </div>
+                {comboQuota.isUnlimited ? (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: '#ECFDF5',
+                    color: '#065F46',
+                    fontSize: '0.68rem',
+                    fontWeight: 700
+                  }}>
+                    <span>♾️</span> Unlimited
+                  </div>
+                ) : (
+                  <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${Math.min(100, Math.round((comboQuota.count / (comboQuota.limit || 1)) * 100))}%`, 
+                      height: '100%', 
+                      background: comboQuota.isAtLimit ? '#DC2626' : comboQuota.isNearLimit ? '#D97706' : '#0D3823', 
+                      borderRadius: '4px' 
+                    }} />
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -688,6 +688,7 @@ router.get('/menu-bundle', async (req, res) => {
       table_verification_mode: resto.table_verification_mode || 'GPS_WITH_STAFF_FALLBACK',
       staff_verification_timeout_seconds: Number(resto.staff_verification_timeout_seconds) || 120,
       location_initialized: Boolean(resto.location_initialized === true || resto.location_initialized === 1 || resto.location_initialized === 'true'),
+      inactive_spaces: resto.inactive_spaces || '',
       active: true
     };
 
@@ -868,10 +869,15 @@ router.get('/info', async (req, res) => {
       total_vip: resto.total_vip !== undefined && resto.total_vip !== null ? Number(resto.total_vip) : 0,
       total_screens: resto.total_screens !== undefined && resto.total_screens !== null ? Number(resto.total_screens) : 0,
       total_seats: resto.total_seats !== undefined && resto.total_seats !== null ? Number(resto.total_seats) : 0,
-      max_tables: saasPlan.max_tables !== undefined ? Number(saasPlan.max_tables) : 9999,
-      max_rooms: saasPlan.max_rooms !== undefined ? Number(saasPlan.max_rooms) : 9999,
-      max_screens: saasPlan.max_screens !== undefined ? Number(saasPlan.max_screens) : 9999,
-      max_seats: saasPlan.max_seats !== undefined ? Number(saasPlan.max_seats) : 9999,
+      max_dishes: (saasPlan.max_dishes !== undefined && saasPlan.max_dishes !== null) ? Number(saasPlan.max_dishes) : 9999,
+      max_categories: (saasPlan.max_categories !== undefined && saasPlan.max_categories !== null) ? Number(saasPlan.max_categories) : 9999,
+      max_combos: maxCombos,
+      max_tables: (saasPlan.max_tables !== undefined && saasPlan.max_tables !== null) ? Number(saasPlan.max_tables) : 9999,
+      max_cabins: (saasPlan.max_cabins !== undefined && saasPlan.max_cabins !== null) ? Number(saasPlan.max_cabins) : 4,
+      max_vip: (saasPlan.max_vip !== undefined && saasPlan.max_vip !== null) ? Number(saasPlan.max_vip) : 2,
+      max_rooms: (saasPlan.max_rooms !== undefined && saasPlan.max_rooms !== null) ? Number(saasPlan.max_rooms) : 9999,
+      max_screens: (saasPlan.max_screens !== undefined && saasPlan.max_screens !== null) ? Number(saasPlan.max_screens) : 9999,
+      max_seats: (saasPlan.max_seats !== undefined && saasPlan.max_seats !== null) ? Number(saasPlan.max_seats) : 9999,
       table_prefix: resto.table_prefix || 'table',
       counter_ordering_enabled: Boolean(resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1'),
       order_retention_days: resto.order_retention_days || 7,
@@ -1350,6 +1356,16 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
       return res.status(400).json({
         error: capResult.error || 'invalid_table_number',
         message: capResult.message
+      });
+    }
+
+    // Step 6.1: Check if Space is Temporarily Inactive / Paused by Admin
+    const targetSpaceKey = `${resolvedSpaceType}:${resolvedSpaceNum}`.toLowerCase();
+    const inactiveList = (resto.inactive_spaces || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    if (inactiveList.includes(targetSpaceKey)) {
+      return res.status(403).json({
+        error: 'space_inactive',
+        message: `${cleanTable} is temporarily out of service. Please contact restaurant staff.`
       });
     }
 
@@ -1865,6 +1881,16 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       return res.status(400).json({
         error: capResult.error || 'invalid_table_number',
         message: capResult.message
+      });
+    }
+
+    // Step 6.1: Check if Space is Temporarily Inactive / Paused by Admin
+    const targetSpaceKey = `${resolvedSpaceType}:${resolvedSpaceNum}`.toLowerCase();
+    const inactiveList = (resto.inactive_spaces || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    if (inactiveList.includes(targetSpaceKey)) {
+      return res.status(403).json({
+        error: 'space_inactive',
+        message: `${cleanTable} is temporarily out of service. Please contact restaurant staff.`
       });
     }
 

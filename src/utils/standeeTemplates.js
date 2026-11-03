@@ -220,8 +220,30 @@ export function buildStandeeCardHtml({
         background-color: ${theme.stepBg};
         border: 1px solid ${theme.stepBorder};
         color: ${theme.stepText};
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: 700;
+        box-sizing: border-box;
       ">
-        ① Open Camera &nbsp;➔&nbsp; ② Scan QR &nbsp;➔&nbsp; ③ Order Food
+        <span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;min-width:13px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:9px;font-weight:900;line-height:13px;text-align:center;">1</span>
+          <span>Open Camera</span>
+        </span>
+        <span style="opacity:0.5;font-size:9px;">➔</span>
+        <span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;min-width:13px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:9px;font-weight:900;line-height:13px;text-align:center;">2</span>
+          <span>Scan QR</span>
+        </span>
+        <span style="opacity:0.5;font-size:9px;">➔</span>
+        <span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;min-width:13px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:9px;font-weight:900;line-height:13px;text-align:center;">3</span>
+          <span>Order Food</span>
+        </span>
       </div>
       ${reassuranceHtml}
       <div class="footer-info" style="color: ${theme.isDark ? '#94A3B8' : '#64748B'};">
@@ -905,7 +927,7 @@ export async function renderStandeeToCanvas(canvas, {
   curY += instructionHiHeight + (16 * scale);
 
   // 11. 3-Step Bar
-  const stepText = '① Open Camera   ➔   ② Scan QR   ➔   ③ Order Food';
+  const stepText = '1. Open Camera   ➔   2. Scan QR   ➔   3. Order Food';
   ctx.font = `bold ${16 * scale}px "Plus Jakarta Sans", sans-serif`;
   const stepW = ctx.measureText(stepText).width + (38 * scale);
   const stepX = (targetWidth - stepW) / 2;

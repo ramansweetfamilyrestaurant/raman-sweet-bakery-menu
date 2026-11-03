@@ -1516,6 +1516,7 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
       whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, google_reviews_enabled, 
       presence_verification_enabled, allowed_verification_modes,
       theme_color, allowed_themes, industry, max_tables, max_rooms, max_screens, max_seats,
+      tables_enabled, cabins_enabled, max_cabins, vip_enabled, max_vip, rooms_enabled, screens_enabled, seats_enabled,
       max_dishes, max_categories, max_combos, max_staff_accounts, order_retention_days,
       modifiers_enabled, staff_roles_enabled, audio_alarm_enabled, order_status_whatsapp_enabled,
       kds_enabled, bluetooth_kot_enabled, dual_printer_enabled, ai_review_enabled, stories_enabled,
@@ -1538,6 +1539,7 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
         whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, 
         google_reviews_enabled, presence_verification_enabled, allowed_verification_modes,
         theme_color, allowed_themes, industry, max_tables, max_rooms, max_screens, max_seats,
+        tables_enabled, cabins_enabled, max_cabins, vip_enabled, max_vip, rooms_enabled, screens_enabled, seats_enabled,
         max_dishes, max_categories, max_combos, max_staff_accounts, order_retention_days,
         modifiers_enabled, staff_roles_enabled, audio_alarm_enabled, order_status_whatsapp_enabled,
         kds_enabled, bluetooth_kot_enabled, dual_printer_enabled, ai_review_enabled, stories_enabled,
@@ -1548,7 +1550,8 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
         $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
         $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-        $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41
+        $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
+        $42, $43, $44, $45, $46, $47, $48, $49
       )
     `, [
       cleanKey,
@@ -1570,6 +1573,14 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
       max_rooms !== undefined ? parseInt(max_rooms, 10) : 9999,
       max_screens !== undefined ? parseInt(max_screens, 10) : 9999,
       max_seats !== undefined ? parseInt(max_seats, 10) : 9999,
+      toBoolInt(tables_enabled, 1),
+      toBoolInt(cabins_enabled, 0),
+      max_cabins !== undefined ? parseInt(max_cabins, 10) : 0,
+      toBoolInt(vip_enabled, 0),
+      max_vip !== undefined ? parseInt(max_vip, 10) : 0,
+      toBoolInt(rooms_enabled, 1),
+      toBoolInt(screens_enabled, 1),
+      toBoolInt(seats_enabled, 1),
       max_dishes !== undefined ? parseInt(max_dishes, 10) : 9999,
       max_categories !== undefined ? parseInt(max_categories, 10) : 9999,
       max_combos !== undefined ? parseInt(max_combos, 10) : 10,
@@ -1621,6 +1632,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       analytics_export_enabled, multi_language_enabled, watermark_removal_enabled, custom_domain_enabled, dual_printer_enabled,
       presence_verification_enabled, allowed_verification_modes, theme_color, allowed_themes,
       industry, max_rooms, max_screens, max_seats,
+      tables_enabled, cabins_enabled, max_cabins, vip_enabled, max_vip, rooms_enabled, screens_enabled, seats_enabled,
       amenities_booking_enabled, seat_runner_dispatch_enabled, interval_rush_mode_enabled
     } = req.body;
 
@@ -1665,6 +1677,14 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       max_rooms !== undefined ? parseInt(max_rooms, 10) : (existingPlan.max_rooms ?? 9999),
       max_screens !== undefined ? parseInt(max_screens, 10) : (existingPlan.max_screens ?? 9999),
       max_seats !== undefined ? parseInt(max_seats, 10) : (existingPlan.max_seats ?? 9999),
+      toBoolInt(tables_enabled, existingPlan.tables_enabled ?? 1),
+      toBoolInt(cabins_enabled, existingPlan.cabins_enabled ?? 0),
+      max_cabins !== undefined ? parseInt(max_cabins, 10) : (existingPlan.max_cabins ?? 0),
+      toBoolInt(vip_enabled, existingPlan.vip_enabled ?? 0),
+      max_vip !== undefined ? parseInt(max_vip, 10) : (existingPlan.max_vip ?? 0),
+      toBoolInt(rooms_enabled, existingPlan.rooms_enabled ?? 1),
+      toBoolInt(screens_enabled, existingPlan.screens_enabled ?? 1),
+      toBoolInt(seats_enabled, existingPlan.seats_enabled ?? 1),
       toBoolInt(amenities_booking_enabled, existingPlan.amenities_booking_enabled ?? 1),
       toBoolInt(seat_runner_dispatch_enabled, existingPlan.seat_runner_dispatch_enabled ?? 1),
       toBoolInt(interval_rush_mode_enabled, existingPlan.interval_rush_mode_enabled ?? 1),
@@ -1681,8 +1701,11 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
             google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
             analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
             dual_printer_enabled = $27, presence_verification_enabled = $28, allowed_verification_modes = $29,
-            theme_color = $30, allowed_themes = $31, industry = $32, max_rooms = $33, max_screens = $34, max_seats = $35, amenities_booking_enabled = $36, seat_runner_dispatch_enabled = $37, interval_rush_mode_enabled = $38
-        WHERE key = $39
+            theme_color = $30, allowed_themes = $31, industry = $32, max_rooms = $33, max_screens = $34, max_seats = $35,
+            tables_enabled = $36, cabins_enabled = $37, max_cabins = $38, vip_enabled = $39, max_vip = $40,
+            rooms_enabled = $41, screens_enabled = $42, seats_enabled = $43,
+            amenities_booking_enabled = $44, seat_runner_dispatch_enabled = $45, interval_rush_mode_enabled = $46
+        WHERE key = $47
       `, queryParams);
     } catch (dbErr) {
       console.warn('[SAAS PLAN MATRIX] Auto-healing table schema for missing columns...', dbErr.message);
@@ -1699,6 +1722,14 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_rooms INT DEFAULT 9999;").catch(() => {});
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_screens INT DEFAULT 9999;").catch(() => {});
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_seats INT DEFAULT 9999;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS tables_enabled INT DEFAULT 1;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS cabins_enabled INT DEFAULT 0;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_cabins INT DEFAULT 0;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS vip_enabled INT DEFAULT 0;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_vip INT DEFAULT 0;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS rooms_enabled INT DEFAULT 1;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS screens_enabled INT DEFAULT 1;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS seats_enabled INT DEFAULT 1;").catch(() => {});
       
       await query(`
         UPDATE saas_plans
@@ -1709,11 +1740,15 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
             google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
             analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
             dual_printer_enabled = $27, presence_verification_enabled = $28, allowed_verification_modes = $29,
-            theme_color = $30, allowed_themes = $31, industry = $32, max_rooms = $33, max_screens = $34, max_seats = $35, amenities_booking_enabled = $36, seat_runner_dispatch_enabled = $37, interval_rush_mode_enabled = $38
-        WHERE key = $39
+            theme_color = $30, allowed_themes = $31, industry = $32, max_rooms = $33, max_screens = $34, max_seats = $35,
+            tables_enabled = $36, cabins_enabled = $37, max_cabins = $38, vip_enabled = $39, max_vip = $40,
+            rooms_enabled = $41, screens_enabled = $42, seats_enabled = $43,
+            amenities_booking_enabled = $44, seat_runner_dispatch_enabled = $45, interval_rush_mode_enabled = $46
+        WHERE key = $47
       `, queryParams);
     }
 
+    clearSubStatusCache();
     await logAudit(null, 'superadmin', 'Update SaaS Plan Matrix', `Updated 24-point plan matrix for '${key}'`);
     res.json({ success: true, message: `SaaS Plan '${name || key}' matrix updated successfully!` });
   } catch (err) {

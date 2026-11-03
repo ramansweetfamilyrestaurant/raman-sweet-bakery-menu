@@ -844,6 +844,14 @@ async function createTables(options = {}) {
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS amenities_booking_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS seat_runner_dispatch_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS interval_rush_mode_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS tables_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS cabins_enabled INT DEFAULT 0;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_cabins INT DEFAULT 0;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS vip_enabled INT DEFAULT 0;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_vip INT DEFAULT 0;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS rooms_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS screens_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS seats_enabled INT DEFAULT 1;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(50);`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'cash';`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0;`,
@@ -884,6 +892,7 @@ async function createTables(options = {}) {
       // Step 2.1 Table Presence Verification Foundation
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_verification_mode VARCHAR(50) DEFAULT 'GPS_WITH_STAFF_FALLBACK';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS staff_verification_timeout_seconds INT DEFAULT 120;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS inactive_spaces TEXT DEFAULT '';`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS presence_verification_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS allowed_verification_modes VARCHAR(255) DEFAULT 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY';`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS theme_color VARCHAR(50) DEFAULT 'gold';`,
@@ -1624,6 +1633,7 @@ async function createTables(options = {}) {
       if (!restoCols.some(c => c.name === 'kds_auth_version')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_auth_version INTEGER DEFAULT 1");
       if (!restoCols.some(c => c.name === 'table_verification_mode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN table_verification_mode TEXT DEFAULT 'GPS_WITH_STAFF_FALLBACK'");
       if (!restoCols.some(c => c.name === 'staff_verification_timeout_seconds')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN staff_verification_timeout_seconds INTEGER DEFAULT 120");
+      if (!restoCols.some(c => c.name === 'inactive_spaces')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN inactive_spaces TEXT DEFAULT ''");
 
       if (!planCols.some(c => c.name === 'presence_verification_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN presence_verification_enabled INTEGER DEFAULT 1");
       if (!planCols.some(c => c.name === 'allowed_verification_modes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN allowed_verification_modes TEXT DEFAULT 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY'");
@@ -1636,6 +1646,14 @@ async function createTables(options = {}) {
       if (!planCols.some(c => c.name === 'amenities_booking_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN amenities_booking_enabled INTEGER DEFAULT 1");
       if (!planCols.some(c => c.name === 'seat_runner_dispatch_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN seat_runner_dispatch_enabled INTEGER DEFAULT 1");
       if (!planCols.some(c => c.name === 'interval_rush_mode_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN interval_rush_mode_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'tables_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN tables_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'cabins_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN cabins_enabled INTEGER DEFAULT 0");
+      if (!planCols.some(c => c.name === 'max_cabins')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_cabins INTEGER DEFAULT 0");
+      if (!planCols.some(c => c.name === 'vip_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN vip_enabled INTEGER DEFAULT 0");
+      if (!planCols.some(c => c.name === 'max_vip')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN max_vip INTEGER DEFAULT 0");
+      if (!planCols.some(c => c.name === 'rooms_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN rooms_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'screens_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN screens_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'seats_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN seats_enabled INTEGER DEFAULT 1");
 
       const locCols = sqliteDb.pragma("table_info(table_location_verifications)");
       if (!locCols.some(c => c.name === 'space_type')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN space_type TEXT DEFAULT 'table'");
@@ -1955,6 +1973,19 @@ async function seedData(options = {}) {
       await query("UPDATE saas_plans SET max_rooms = 60, max_dishes = 500, max_combos = 20, direct_ordering_enabled = 1, kds_enabled = 1, bluetooth_kot_enabled = 1 WHERE key = 'hotel_pro'");
       await query("UPDATE saas_plans SET max_screens = 1, max_seats = 200, max_dishes = 50, max_combos = 5 WHERE key = 'cinema_basic'");
       await query("UPDATE saas_plans SET max_screens = 3, max_seats = 800, max_dishes = 500, max_combos = 20, direct_ordering_enabled = 1, kds_enabled = 1, bluetooth_kot_enabled = 1 WHERE key = 'cinema_pro'");
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS tables_enabled INT DEFAULT 1").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS cabins_enabled INT DEFAULT 0").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_cabins INT DEFAULT 0").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS vip_enabled INT DEFAULT 0").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_vip INT DEFAULT 0").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS rooms_enabled INT DEFAULT 1").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS screens_enabled INT DEFAULT 1").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS seats_enabled INT DEFAULT 1").catch(() => {});
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 0, max_cabins = 0, vip_enabled = 0, max_vip = 0 WHERE key = 'basic'").catch(() => {});
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 4, vip_enabled = 1, max_vip = 2 WHERE key = 'pro'").catch(() => {});
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 9999, vip_enabled = 1, max_vip = 9999 WHERE key = 'enterprise'").catch(() => {});
+      await query("UPDATE saas_plans SET rooms_enabled = 1 WHERE industry = 'hotel' OR key LIKE 'hotel_%'").catch(() => {});
+      await query("UPDATE saas_plans SET screens_enabled = 1, seats_enabled = 1 WHERE industry = 'cinema' OR key LIKE 'cinema_%'").catch(() => {});
     } catch {}
 
     try {
@@ -1993,13 +2024,17 @@ async function seedData(options = {}) {
     const pCount = parseInt(planCheck[0]?.count || 0, 10);
     if (pCount === 0) {
       await query(`
-        INSERT INTO saas_plans (key, name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, max_combos, max_tables)
+        INSERT INTO saas_plans (key, name, price, original_price, badge, description, whatsapp_enabled, direct_ordering_enabled, google_reviews_enabled, max_combos, max_tables, tables_enabled, cabins_enabled, max_cabins, vip_enabled, max_vip, rooms_enabled, screens_enabled, seats_enabled)
         VALUES 
-        ('basic', 'Basic Starter Plan', 499, 999, '⚡ BASIC', 'Digital Menu Viewing & Custom Themes', 0, 0, 0, 3, 20),
-        ('pro', 'Pro Luxury Plan', 999, 1999, '👑 PRO', 'Menu + WhatsApp Ordering + Google Reviews', 1, 0, 1, 10, 100),
-        ('enterprise', 'Enterprise VIP Plan', 1999, 3999, '🚀 ENTERPRISE', 'All Features + Direct Table QR KOT Ordering & Kitchen System', 1, 1, 1, 9999, 9999)
+        ('basic', 'Basic Starter Plan', 499, 999, '⚡ BASIC', 'Digital Menu Viewing & Custom Themes', 0, 0, 0, 3, 20, 1, 0, 0, 0, 0, 1, 1, 1),
+        ('pro', 'Pro Luxury Plan', 999, 1999, '👑 PRO', 'Menu + WhatsApp Ordering + Google Reviews', 1, 0, 1, 10, 100, 1, 1, 4, 1, 2, 1, 1, 1),
+        ('enterprise', 'Enterprise VIP Plan', 1999, 3999, '🚀 ENTERPRISE', 'All Features + Direct Table QR KOT Ordering & Kitchen System', 1, 1, 1, 9999, 9999, 1, 1, 9999, 1, 9999, 1, 1, 1)
       `);
       console.log('💳 Seeded default SaaS Plans into saas_plans table');
+    } else {
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 0, max_cabins = 0, vip_enabled = 0, max_vip = 0 WHERE key = 'basic' AND cabins_enabled IS NULL").catch(() => {});
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 4, vip_enabled = 1, max_vip = 2 WHERE key = 'pro' AND (cabins_enabled IS NULL OR max_cabins = 0)").catch(() => {});
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 9999, vip_enabled = 1, max_vip = 9999 WHERE key = 'enterprise' AND (cabins_enabled IS NULL OR max_cabins = 0)").catch(() => {});
     }
 
     // Auto-seed industry specific plans (Hotel & Cinema) if not present

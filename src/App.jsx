@@ -298,13 +298,26 @@ export default function App() {
     new URLSearchParams(window.location.search).get('mode') === 'view'
   );
 
+  // Check if Scanned Space is Paused / Inactive by Admin
+  const isCurrentSpacePaused = useMemo(() => {
+    if (!info?.inactive_spaces) return false;
+    const targetType = currentSpaceType || initialSpaceInfo.type || 'table';
+    const targetNum = effectiveTableNum || currentTableNum || initialSpaceInfo.num || '';
+    if (!targetNum) return false;
+    const key = `${targetType}:${targetNum}`.toLowerCase();
+    const inactiveList = String(info.inactive_spaces).split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    return inactiveList.includes(key);
+  }, [info?.inactive_spaces, currentSpaceType, initialSpaceInfo, effectiveTableNum, currentTableNum]);
+
   // Direct Table Ordering is active ONLY when:
   // 1. Not in view-only URL mode
   // 2. An authenticated Table/Cabin/Room QR code is scanned with valid token (hasScannedSpace)
   // 3. Restaurant has direct_ordering_enabled = 1
   // 4. SaaS Plan permissions allow direct ordering
+  // 5. Scanned space is NOT paused by admin (!isCurrentSpacePaused)
   const isDirectOrderingActive = Boolean(
     !isViewOnlyUrl &&
+    !isCurrentSpacePaused &&
     hasScannedSpace &&
     info &&
     (info.direct_ordering_enabled === true || info.direct_ordering_enabled === 1 || info.direct_ordering_enabled === '1') &&
@@ -2283,6 +2296,32 @@ export default function App() {
           }
         }}
       />
+
+      {/* ⏸️ Inactive / Paused Space Customer Banner */}
+      {isCurrentSpacePaused && (
+        <div style={{
+          background: '#FFFBEB',
+          border: '1.5px solid #FCD34D',
+          borderRadius: '12px',
+          padding: '12px 16px',
+          margin: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          color: '#92400E',
+          boxShadow: '0 2px 8px rgba(245, 158, 11, 0.15)'
+        }}>
+          <span style={{ fontSize: '1.4rem' }}>⏸️</span>
+          <div>
+            <strong style={{ display: 'block', fontSize: '0.88rem', color: '#92400E' }}>
+              {getDynamicSpaceLabel() || 'This space'} is temporarily paused
+            </strong>
+            <span style={{ fontSize: '0.76rem', color: '#B45309', display: 'block', marginTop: '2px' }}>
+              Digital ordering is offline for this space. Please contact staff or visit another table.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* 🛎️ Live Dine-In Customer Order Tracker Banner */}
       {activeOrderTrack && (info?.direct_ordering_enabled !== false && info?.direct_ordering_enabled !== 0) && (

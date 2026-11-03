@@ -417,10 +417,18 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
 
     const isUnlimitedPlan = tierKey === 'enterprise' || tierKey === 'vip_ultra' || tierKey === 'vip_ultra_plan' || tierKey === 'vip';
     const matrixPermissions = {
-      max_dishes: isUnlimitedPlan ? 9999 : ((r.max_dishes !== undefined && r.max_dishes !== null) ? Number(r.max_dishes) : ((saasPlan.max_dishes !== undefined && saasPlan.max_dishes !== null) ? Number(saasPlan.max_dishes) : ((saasPlan.dish_limit !== undefined && saasPlan.dish_limit !== null) ? Number(saasPlan.dish_limit) : (tierKey === 'basic' ? 50 : 500)))),
-      max_categories: isUnlimitedPlan ? 9999 : ((r.max_categories !== undefined && r.max_categories !== null) ? Number(r.max_categories) : ((saasPlan.max_categories !== undefined && saasPlan.max_categories !== null) ? Number(saasPlan.max_categories) : ((saasPlan.category_limit !== undefined && saasPlan.category_limit !== null) ? Number(saasPlan.category_limit) : (tierKey === 'basic' ? 10 : 50)))),
-      max_combos: isUnlimitedPlan ? 9999 : ((r.max_combos !== undefined && r.max_combos !== null) ? Number(r.max_combos) : ((saasPlan.max_combos !== undefined && saasPlan.max_combos !== null) ? Number(saasPlan.max_combos) : (tierKey === 'basic' ? 3 : 10))),
-      max_tables: isUnlimitedPlan ? 9999 : ((r.max_tables !== undefined && r.max_tables !== null) ? Number(r.max_tables) : ((saasPlan.max_tables !== undefined && saasPlan.max_tables !== null) ? Number(saasPlan.max_tables) : ((saasPlan.table_limit !== undefined && saasPlan.table_limit !== null) ? Number(saasPlan.table_limit) : (tierKey === 'basic' ? 20 : 100)))),
+      max_dishes: (r.max_dishes !== undefined && r.max_dishes !== null) ? Number(r.max_dishes) : ((saasPlan.max_dishes !== undefined && saasPlan.max_dishes !== null) ? Number(saasPlan.max_dishes) : (isUnlimitedPlan ? 9999 : ((saasPlan.dish_limit !== undefined && saasPlan.dish_limit !== null) ? Number(saasPlan.dish_limit) : (tierKey === 'basic' ? 50 : 500)))),
+      max_categories: (r.max_categories !== undefined && r.max_categories !== null) ? Number(r.max_categories) : ((saasPlan.max_categories !== undefined && saasPlan.max_categories !== null) ? Number(saasPlan.max_categories) : (isUnlimitedPlan ? 9999 : ((saasPlan.category_limit !== undefined && saasPlan.category_limit !== null) ? Number(saasPlan.category_limit) : (tierKey === 'basic' ? 10 : 50)))),
+      max_combos: (r.max_combos !== undefined && r.max_combos !== null) ? Number(r.max_combos) : ((saasPlan.max_combos !== undefined && saasPlan.max_combos !== null) ? Number(saasPlan.max_combos) : (isUnlimitedPlan ? 9999 : (tierKey === 'basic' ? 3 : 10))),
+      max_tables: (r.max_tables !== undefined && r.max_tables !== null) ? Number(r.max_tables) : ((saasPlan.max_tables !== undefined && saasPlan.max_tables !== null) ? Number(saasPlan.max_tables) : (isUnlimitedPlan ? 9999 : ((saasPlan.table_limit !== undefined && saasPlan.table_limit !== null) ? Number(saasPlan.table_limit) : (tierKey === 'basic' ? 20 : 100)))),
+      tables_enabled: isValTrue(saasPlan.tables_enabled, true),
+      cabins_enabled: isValTrue(saasPlan.cabins_enabled, tierKey !== 'basic'),
+      max_cabins: isUnlimitedPlan ? 9999 : ((saasPlan.max_cabins !== undefined && saasPlan.max_cabins !== null) ? Number(saasPlan.max_cabins) : (tierKey === 'basic' ? 0 : 4)),
+      vip_enabled: isValTrue(saasPlan.vip_enabled, tierKey !== 'basic'),
+      max_vip: isUnlimitedPlan ? 9999 : ((saasPlan.max_vip !== undefined && saasPlan.max_vip !== null) ? Number(saasPlan.max_vip) : (tierKey === 'basic' ? 0 : 2)),
+      rooms_enabled: isValTrue(saasPlan.rooms_enabled, true),
+      screens_enabled: isValTrue(saasPlan.screens_enabled, true),
+      seats_enabled: isValTrue(saasPlan.seats_enabled, true),
       max_staff_accounts: isUnlimitedPlan ? 9999 : ((r.max_staff_accounts !== undefined && r.max_staff_accounts !== null) ? Number(r.max_staff_accounts) : ((saasPlan.max_staff_accounts !== undefined && saasPlan.max_staff_accounts !== null) ? Number(saasPlan.max_staff_accounts) : (tierKey === 'basic' ? 2 : 5))),
       order_retention_days: isUnlimitedPlan ? 365 : ((r.order_retention_days !== undefined && r.order_retention_days !== null) ? Number(r.order_retention_days) : ((saasPlan.order_retention_days !== undefined && saasPlan.order_retention_days !== null) ? Number(saasPlan.order_retention_days) : (tierKey === 'basic' ? 30 : 90))),
       modifiers_enabled: isValTrue(saasPlan.modifiers_enabled, true),
@@ -1531,7 +1539,18 @@ const handleUpdateSettings = async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, business_category, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, total_screens, total_seats, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds, counter_ordering_enabled } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, business_category, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, total_screens, total_seats, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds, counter_ordering_enabled, inactive_spaces } = req.body;
+
+    let cleanInactiveSpaces = undefined;
+    if (inactive_spaces !== undefined) {
+      if (Array.isArray(inactive_spaces)) {
+        cleanInactiveSpaces = inactive_spaces.filter(Boolean).map(s => String(s).trim().toLowerCase()).join(',');
+      } else if (typeof inactive_spaces === 'string') {
+        cleanInactiveSpaces = inactive_spaces.trim().toLowerCase();
+      } else if (inactive_spaces === null) {
+        cleanInactiveSpaces = '';
+      }
+    }
 
     let cleanOwnerEmail = undefined;
     if (owner_email !== undefined) {
@@ -1688,7 +1707,7 @@ const handleUpdateSettings = async (req, res) => {
       const isHotelTenant = (effectiveBizType === 'hotel_resort' || currentResto.business_type === 'hotel_resort' || planTier.startsWith('hotel_'));
       const isCinemaTenant = (effectiveBizType === 'cinema_theatre' || currentResto.business_type === 'cinema_theatre' || planTier.startsWith('cinema_'));
 
-      const planRows = await query('SELECT max_tables, max_rooms, max_screens, max_seats, industry FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
+      const planRows = await query('SELECT max_tables, tables_enabled, max_cabins, cabins_enabled, max_vip, vip_enabled, max_rooms, rooms_enabled, max_screens, screens_enabled, max_seats, seats_enabled, industry FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
       const planRow = planRows && planRows.length > 0 ? planRows[0] : {};
 
       const parseSpaceInput = (val, existingVal, fieldName) => {
@@ -1713,6 +1732,15 @@ const handleUpdateSettings = async (req, res) => {
       }
 
       if (isHotelTenant) {
+        if (reqRooms > 0 && planRow.rooms_enabled === 0 && !isComplimentary) {
+          return res.status(403).json({
+            success: false,
+            error: 'feature_locked',
+            feature: 'rooms_enabled',
+            message: 'Guest Rooms are disabled in your current SaaS plan. Please upgrade your plan to unlock guest rooms.'
+          });
+        }
+
         const rawMaxRooms = planRow.max_rooms;
         const maxRoomsAllowed = isComplimentary ? 9999 : (rawMaxRooms !== null && rawMaxRooms !== undefined ? Number(rawMaxRooms) : 9999);
         const existingRooms = Number(currentResto.total_rooms) || 0;
@@ -1728,6 +1756,15 @@ const handleUpdateSettings = async (req, res) => {
           });
         }
       } else if (isCinemaTenant) {
+        if (reqScreens > 0 && planRow.screens_enabled === 0 && !isComplimentary) {
+          return res.status(403).json({
+            success: false,
+            error: 'feature_locked',
+            feature: 'screens_enabled',
+            message: 'Cinema screens are disabled in your current SaaS plan. Please upgrade your plan to unlock screens.'
+          });
+        }
+
         const rawMaxScreens = planRow.max_screens;
         const maxScreensAllowed = isComplimentary ? 9999 : (rawMaxScreens !== null && rawMaxScreens !== undefined ? Number(rawMaxScreens) : 9999);
         const existingScreens = Number(currentResto.total_screens) || 0;
@@ -1740,6 +1777,15 @@ const handleUpdateSettings = async (req, res) => {
             limit: maxScreensAllowed,
             current_count: reqScreens,
             message: `Your current SaaS plan allows a maximum of ${maxScreensAllowed} auditorium screens. Requested: ${reqScreens}. Please upgrade your plan to configure more screens.`
+          });
+        }
+
+        if (reqSeats > 0 && planRow.seats_enabled === 0 && !isComplimentary) {
+          return res.status(403).json({
+            success: false,
+            error: 'feature_locked',
+            feature: 'seats_enabled',
+            message: 'Auditorium seat ordering is disabled in your current SaaS plan. Please upgrade your plan to unlock seat ordering.'
           });
         }
 
@@ -1758,19 +1804,78 @@ const handleUpdateSettings = async (req, res) => {
           });
         }
       } else {
+        // Authoritative Restaurant Spaces: Tables, Cabins, Lounges
+        // 1. Dining Tables
+        if (reqTables > 0 && planRow.tables_enabled === 0 && !isComplimentary) {
+          return res.status(403).json({
+            success: false,
+            error: 'feature_locked',
+            feature: 'tables_enabled',
+            message: 'Dining Tables are disabled in your current SaaS plan.'
+          });
+        }
         const rawMaxTables = planRow.max_tables;
         const maxTablesAllowed = isComplimentary ? 9999 : (rawMaxTables !== null && rawMaxTables !== undefined ? Number(rawMaxTables) : 9999);
-        const existingDiningSpaces = (Number(currentResto.total_tables) || 0) + (Number(currentResto.total_cabins) || 0) + (Number(currentResto.total_vip) || 0);
-        const requestedDiningSpaces = reqTables + reqCabins + reqVip;
+        const existingTables = Number(currentResto.total_tables) || 0;
 
-        if (requestedDiningSpaces > maxTablesAllowed && requestedDiningSpaces > existingDiningSpaces) {
+        if (reqTables > maxTablesAllowed && reqTables > existingTables) {
           return res.status(403).json({
             success: false,
             error: 'plan_limit_reached',
             resource: 'tables',
             limit: maxTablesAllowed,
-            current_count: requestedDiningSpaces,
-            message: `Your current SaaS plan allows a maximum of ${maxTablesAllowed} dining spaces (tables, cabins, VIP lounges). Requested: ${requestedDiningSpaces}. Please upgrade your plan to configure more spaces.`
+            current_count: reqTables,
+            message: `Your current SaaS plan allows a maximum of ${maxTablesAllowed} dining tables. Requested: ${reqTables}. Please upgrade your plan to configure more tables.`
+          });
+        }
+
+        // 2. Private Cabins
+        const cabinsPermitted = isComplimentary || (planRow.cabins_enabled !== 0 && planRow.cabins_enabled !== false && planRow.cabins_enabled !== null);
+        if (reqCabins > 0 && !cabinsPermitted) {
+          return res.status(403).json({
+            success: false,
+            error: 'feature_locked',
+            feature: 'cabins_enabled',
+            message: 'Private Cabins are not included in your current SaaS plan. Please upgrade to Pro Plan to unlock Private Cabins.'
+          });
+        }
+        const rawMaxCabins = planRow.max_cabins;
+        const maxCabinsAllowed = isComplimentary ? 9999 : (rawMaxCabins !== null && rawMaxCabins !== undefined ? Number(rawMaxCabins) : 9999);
+        const existingCabins = Number(currentResto.total_cabins) || 0;
+
+        if (reqCabins > maxCabinsAllowed && reqCabins > existingCabins) {
+          return res.status(403).json({
+            success: false,
+            error: 'plan_limit_reached',
+            resource: 'cabins',
+            limit: maxCabinsAllowed,
+            current_count: reqCabins,
+            message: `Your current SaaS plan allows a maximum of ${maxCabinsAllowed} private cabins. Requested: ${reqCabins}. Please upgrade your plan to configure more cabins.`
+          });
+        }
+
+        // 3. VIP Lounges
+        const vipPermitted = isComplimentary || (planRow.vip_enabled !== 0 && planRow.vip_enabled !== false && planRow.vip_enabled !== null);
+        if (reqVip > 0 && !vipPermitted) {
+          return res.status(403).json({
+            success: false,
+            error: 'feature_locked',
+            feature: 'vip_enabled',
+            message: 'VIP Lounges are not included in your current SaaS plan. Please upgrade to Pro Plan to unlock VIP Lounges.'
+          });
+        }
+        const rawMaxVip = planRow.max_vip;
+        const maxVipAllowed = isComplimentary ? 9999 : (rawMaxVip !== null && rawMaxVip !== undefined ? Number(rawMaxVip) : 9999);
+        const existingVip = Number(currentResto.total_vip) || 0;
+
+        if (reqVip > maxVipAllowed && reqVip > existingVip) {
+          return res.status(403).json({
+            success: false,
+            error: 'plan_limit_reached',
+            resource: 'vip',
+            limit: maxVipAllowed,
+            current_count: reqVip,
+            message: `Your current SaaS plan allows a maximum of ${maxVipAllowed} VIP lounges. Requested: ${reqVip}. Please upgrade your plan to configure more lounges.`
           });
         }
       }
@@ -1860,8 +1965,9 @@ const handleUpdateSettings = async (req, res) => {
             business_category = COALESCE($44, business_category),
             counter_ordering_enabled = COALESCE($45, counter_ordering_enabled),
             total_screens = COALESCE($46, total_screens),
-            total_seats = COALESCE($47, total_seats)
-        WHERE id = $48
+            total_seats = COALESCE($47, total_seats),
+            inactive_spaces = CASE WHEN $48::boolean THEN $49 ELSE inactive_spaces END
+        WHERE id = $50
       `, [
         name !== undefined ? name : null,
         tagline !== undefined ? tagline : null,
@@ -1910,6 +2016,8 @@ const handleUpdateSettings = async (req, res) => {
         cleanCounterOrdering,
         total_screens !== undefined && total_screens !== null ? Number(total_screens) : null,
         total_seats !== undefined && total_seats !== null ? Number(total_seats) : null,
+        cleanInactiveSpaces !== undefined,
+        cleanInactiveSpaces !== undefined ? cleanInactiveSpaces : '',
         targetId
       ]);
     } catch (sqlErr) {
