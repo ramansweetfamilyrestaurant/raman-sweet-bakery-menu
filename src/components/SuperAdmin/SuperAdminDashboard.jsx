@@ -1521,14 +1521,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               const d = getDaysRemaining(r.plan_expires_at);
               return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
             }).length,
-            pending: restaurants.filter(r => matchesStatusFilter(r, 'suspended')).length,
+            pending: 0,
             total: (openTicketsCount || 0) +
               restaurants.filter(r => matchesStatusFilter(r, 'failed')).length +
               restaurants.filter(r => {
                 const d = getDaysRemaining(r.plan_expires_at);
                 return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
-              }).length +
-              restaurants.filter(r => matchesStatusFilter(r, 'suspended')).length
+              }).length
           }}
           onNavigate={(view, statusFilterVal) => {
             setActiveView(view);
@@ -1731,7 +1730,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         const d = getDaysRemaining(r.plan_expires_at);
                         return d !== null && d > 0 && d <= 7 && r.subscription_type !== 'ADMIN_GRANTED';
                       }).length;
-                      const pendingApprovalCount = restaurants.filter(r => matchesStatusFilter(r, 'suspended')).length;
+                      const suspendedAccountsCount = restaurants.filter(r => matchesStatusFilter(r, 'suspended')).length;
 
                       return (
                         <div className="sa-attention-list">
@@ -1827,16 +1826,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             </button>
                           </div>
 
-                          {/* Row 4: Pending Approvals */}
-                          <div className="sa-attention-row" style={{ opacity: pendingApprovalCount === 0 ? 0.75 : 1 }}>
+                          {/* Row 4: Suspended Accounts */}
+                          <div className="sa-attention-row" style={{ opacity: suspendedAccountsCount === 0 ? 0.75 : 1 }}>
                             <div className="sa-attention-left">
-                              <div className="sa-attention-icon-box" style={{ background: pendingApprovalCount > 0 ? '#F0FDF4' : '#F1F5F9', color: pendingApprovalCount > 0 ? '#16A34A' : '#64748B' }}>
+                              <div className="sa-attention-icon-box" style={{ background: suspendedAccountsCount > 0 ? '#FEF2F2' : '#F1F5F9', color: suspendedAccountsCount > 0 ? '#DC2626' : '#64748B' }}>
                                 <UserCheck size={14} />
                               </div>
                               <div className="sa-attention-info">
-                                <span className="sa-attention-name" style={{ color: pendingApprovalCount > 0 ? 'var(--sa-text-main)' : '#64748B' }}>Pending Approvals</span>
-                                <span className="sa-attention-count" style={{ color: pendingApprovalCount > 0 ? '#16A34A' : '#94A3B8', fontWeight: pendingApprovalCount > 0 ? 800 : 600 }}>
-                                  {pendingApprovalCount} requests
+                                <span className="sa-attention-name" style={{ color: suspendedAccountsCount > 0 ? 'var(--sa-text-main)' : '#64748B' }}>Suspended Accounts</span>
+                                <span className="sa-attention-count" style={{ color: suspendedAccountsCount > 0 ? '#DC2626' : '#94A3B8', fontWeight: suspendedAccountsCount > 0 ? 800 : 600 }}>
+                                  {suspendedAccountsCount} accounts
                                 </span>
                               </div>
                             </div>
@@ -1844,7 +1843,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                               type="button"
                               onClick={() => { setActiveView('tenants'); setStatusFilter('suspended'); setIndustryFilter('all'); setSearchQuery(''); }}
                               className="sa-attention-action-btn"
-                              style={{ opacity: pendingApprovalCount === 0 ? 0.6 : 1 }}
+                              style={{ opacity: suspendedAccountsCount === 0 ? 0.6 : 1 }}
                             >
                               Review
                             </button>
