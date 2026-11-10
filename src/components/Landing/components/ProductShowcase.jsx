@@ -1,14 +1,28 @@
-import React, { useState } from 'react';
-import { Smartphone, Bell, TrendingUp, CheckCircle, Star, Building2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Smartphone, Bell, TrendingUp, CheckCircle, Star, Building2, Film, Utensils, Clock, Check } from 'lucide-react';
 
-export default function ProductShowcase() {
+export default function ProductShowcase({ selectedIndustry = 'restaurant', onSelectIndustry }) {
   const [activeTab, setActiveTab] = useState('qr');
+  const [serviceSubMode, setServiceSubMode] = useState('hotel');
+
+  useEffect(() => {
+    if (selectedIndustry === 'hotel') {
+      setActiveTab('hotel_cinema');
+      setServiceSubMode('hotel');
+    } else if (selectedIndustry === 'cinema') {
+      setActiveTab('hotel_cinema');
+      setServiceSubMode('cinema');
+    } else if (selectedIndustry === 'restaurant') {
+      setActiveTab('qr');
+    }
+  }, [selectedIndustry]);
 
   return (
-    <div className="km-showcase-wrapper">
-      {/* Showcase Mobile Tab Switcher */}
+    <div id="showcase" className="km-showcase-wrapper">
+      {/* Showcase Mobile & Desktop Tab Switcher */}
       <div className="km-showcase-tabs-container">
         <button
+          type="button"
           className={`km-showcase-tab ${activeTab === 'qr' ? 'active' : ''}`}
           onClick={() => setActiveTab('qr')}
         >
@@ -17,6 +31,7 @@ export default function ProductShowcase() {
         </button>
 
         <button
+          type="button"
           className={`km-showcase-tab ${activeTab === 'hotel_cinema' ? 'active' : ''}`}
           onClick={() => setActiveTab('hotel_cinema')}
         >
@@ -25,6 +40,7 @@ export default function ProductShowcase() {
         </button>
 
         <button
+          type="button"
           className={`km-showcase-tab ${activeTab === 'kot' ? 'active' : ''}`}
           onClick={() => setActiveTab('kot')}
         >
@@ -33,6 +49,7 @@ export default function ProductShowcase() {
         </button>
 
         <button
+          type="button"
           className={`km-showcase-tab ${activeTab === 'growth' ? 'active' : ''}`}
           onClick={() => setActiveTab('growth')}
         >
@@ -127,20 +144,20 @@ export default function ProductShowcase() {
           <div className="km-showcase-grid reverse">
             <div>
               <div className="km-badge">
-                <Building2 size={14} color="#6366F1" />
+                <Building2 size={14} color="#3B82F6" />
                 <span>HOTELS, RESORTS & CINEMAS</span>
               </div>
               <h2 className="km-title-lg">Room Service & Seat Concessions Made Frictionless</h2>
               <p className="km-subtitle">
-                Hotel guests scan room QR standees for 24x7 In-Room Dining without dialing reception. Moviegoers scan seat QRs for hot snacks delivered directly to their cinema audi seat.
+                Hotel guests scan room QR standees for 24x7 In-Room Dining without dialing reception. Moviegoers scan seat QRs for hot snacks delivered directly to their cinema audi seat before intermission ends.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                   <CheckCircle size={18} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
-                    <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Hotel In-Room Dining QR</strong>
-                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Each room receives a custom branded QR linked directly to their room number.</span>
+                    <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Hotel In-Room Dining & Amenities</strong>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Each room receives a custom branded QR linked directly to their room number for dining & housekeeping.</span>
                   </div>
                 </div>
 
@@ -148,74 +165,161 @@ export default function ProductShowcase() {
                   <CheckCircle size={18} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
                     <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Cinema Screen & Audi Seat Delivery</strong>
-                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Orders automatically include Audi number, Row, and Seat number for quick usher delivery.</span>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Orders automatically encode Audi number, Row, and Seat number for rapid runner delivery.</span>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                   <CheckCircle size={18} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
-                    <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Zero Phone Calls & Automated Billing</strong>
-                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Reduce front-desk congestion with digital payment or bill-to-room settlement.</span>
+                    <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Zero Phone Calls & Digital Billing</strong>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Eliminate front-desk telephone bottlenecks with room folio charge or instant UPI payment.</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Visual Box A2 */}
+            {/* Visual Box A2: Interactive Hotel & Cinema Preview */}
             <div className="km-showcase-box">
-              <div style={{ background: '#0F172A', borderRadius: '16px', padding: '20px', color: '#FFF' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '16px' }}>
+              <div style={{ background: '#0F172A', borderRadius: '16px', padding: '20px', color: '#FFF', border: '1px solid rgba(255,255,255,0.08)' }}>
+                
+                {/* Sub-toggle: Hotel vs Cinema */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: 'rgba(255,255,255,0.06)', padding: '4px', borderRadius: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setServiceSubMode('hotel')}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      border: 'none',
+                      background: serviceSubMode === 'hotel' ? '#2563EB' : 'transparent',
+                      color: serviceSubMode === 'hotel' ? '#FFF' : '#94A3B8',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <Building2 size={14} />
+                    <span>Hotel Room 408</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setServiceSubMode('cinema')}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      border: 'none',
+                      background: serviceSubMode === 'cinema' ? '#D97706' : 'transparent',
+                      color: serviceSubMode === 'cinema' ? '#FFF' : '#94A3B8',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <Film size={14} />
+                    <span>Cinema Audi 3 • D-12</span>
+                  </button>
+                </div>
+
+                {serviceSubMode === 'hotel' ? (
+                  /* Hotel Room Service Mockup */
                   <div>
-                    <div style={{ fontSize: '1rem', fontWeight: 900, color: '#60A5FA' }}>Room 408 • Grand Suite</div>
-                    <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Hotel In-Room Dining Service</div>
-                  </div>
-                  <span style={{ background: 'rgba(96,165,250,0.2)', color: '#60A5FA', fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '50px' }}>
-                    DISPATCHED
-                  </span>
-                </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '14px' }}>
+                      <div>
+                        <div style={{ fontSize: '1rem', fontWeight: 900, color: '#60A5FA' }}>Room 408 • Grand Luxury Suite</div>
+                        <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>24x7 In-Room Dining & Butler Call</div>
+                      </div>
+                      <span style={{ background: 'rgba(96,165,250,0.2)', color: '#60A5FA', fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '50px' }}>
+                        DISPATCHED
+                      </span>
+                    </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '8px', fontSize: '0.84rem' }}>
-                    <span>Grilled Chicken Club Sandwich x2</span>
-                    <strong style={{ color: '#60A5FA' }}>₹520</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '8px', fontSize: '0.84rem' }}>
-                    <span>Fresh Watermelon Juice x2</span>
-                    <strong style={{ color: '#60A5FA' }}>₹240</strong>
-                  </div>
-                </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '8px', fontSize: '0.84rem' }}>
+                        <span>Grilled Chicken Club Sandwich x2</span>
+                        <strong style={{ color: '#60A5FA' }}>₹520</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '8px', fontSize: '0.84rem' }}>
+                        <span>Fresh Watermelon Juice x2</span>
+                        <strong style={{ color: '#60A5FA' }}>₹240</strong>
+                      </div>
+                    </div>
 
-                <div style={{ background: '#1E293B', borderRadius: '8px', padding: '10px', fontSize: '0.75rem', color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>🎬 Also works for: <strong>Audi 3 • Seat D-12</strong></span>
-                  <span style={{ color: '#F59E0B', fontWeight: 800 }}>Popcorn & Coke</span>
-                </div>
+                    <div style={{ background: 'rgba(37,99,235,0.15)', border: '1px solid rgba(37,99,235,0.3)', borderRadius: '8px', padding: '10px 12px', fontSize: '0.78rem', color: '#93C5FD', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Bell size={15} style={{ flexShrink: 0 }} />
+                      <span><strong>Butler Request:</strong> 2 extra bath towels & morning call at 7:30 AM</span>
+                    </div>
+                  </div>
+                ) : (
+                  /* Cinema Seat Concession Mockup */
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '14px' }}>
+                      <div>
+                        <div style={{ fontSize: '1rem', fontWeight: 900, color: '#F59E0B' }}>Audi 3 • Row D • Seat 12</div>
+                        <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Concession Seat Delivery Express</div>
+                      </div>
+                      <span style={{ background: 'rgba(245,158,11,0.2)', color: '#FCD34D', fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '50px' }}>
+                        RUNNER ON THE WAY
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '8px', fontSize: '0.84rem' }}>
+                        <span>Jumbo Caramel Popcorn Tub x1</span>
+                        <strong style={{ color: '#F59E0B' }}>₹290</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '8px', fontSize: '0.84rem' }}>
+                        <span>Chilled Iced Americano x2</span>
+                        <strong style={{ color: '#F59E0B' }}>₹220</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '8px', padding: '10px 12px', fontSize: '0.78rem', color: '#FDE68A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Clock size={15} style={{ flexShrink: 0 }} />
+                      <span><strong>Intermission Rush Timer:</strong> 08:42 Remaining • Delivered to Seat D-12</span>
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Showcase Section B: Real Time Kitchen KOT */}
+      {/* Showcase Section B: Real Time Kitchen KOT & Multi-Industry Dispatch */}
       <section className={`km-showcase-section dark ${activeTab === 'kot' ? 'tab-active' : 'tab-hidden-mobile'}`}>
         <div className="km-container">
           <div className="km-showcase-grid reverse">
             <div>
               <div className="km-badge km-badge-dark">
                 <Bell size={14} color="#F59E0B" />
-                <span>KITCHEN OPERATIONS</span>
+                <span>KITCHEN & DISPATCH OPERATIONS</span>
               </div>
-              <h2 className="km-title-lg">Run Your Kitchen in Real Time</h2>
+              <h2 className="km-title-lg">Run Kitchens, Pantries & Runners in Real Time</h2>
               <p className="km-subtitle">
-                Never miss an order. When a customer scans and places an order, your kitchen dashboard sounds an audio siren alarm, displays itemized tickets, and auto-prints KOT receipts.
+                Never miss an order. When a customer or guest scans and places an order, your staff dashboard sounds an audio siren alarm, displays itemized tickets, and auto-prints KOT receipts.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                   <CheckCircle size={18} color="#34D399" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
-                    <strong style={{ display: 'block', fontSize: '0.92rem', color: '#FFF' }}>Instant Kitchen Alarm Siren</strong>
-                    <span style={{ fontSize: '0.84rem', color: '#94A3B8' }}>Loud notification sound alerts kitchen staff immediately on new orders.</span>
+                    <strong style={{ display: 'block', fontSize: '0.92rem', color: '#FFF' }}>Instant Siren Sound Alert</strong>
+                    <span style={{ fontSize: '0.84rem', color: '#94A3B8' }}>Loud notification sound alerts kitchen or dispatch staff immediately on new orders.</span>
                   </div>
                 </div>
 
@@ -223,15 +327,15 @@ export default function ProductShowcase() {
                   <CheckCircle size={18} color="#34D399" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
                     <strong style={{ display: 'block', fontSize: '0.92rem', color: '#FFF' }}>0.5s Thermal KOT & Customer Invoices</strong>
-                    <span style={{ fontSize: '0.84rem', color: '#94A3B8' }}>Supports Bluetooth & USB 2-inch/3-inch thermal receipt printers.</span>
+                    <span style={{ fontSize: '0.84rem', color: '#94A3B8' }}>Supports Bluetooth & USB 2-inch/3-inch thermal receipt printers for kitchens and billing counters.</span>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                   <CheckCircle size={18} color="#34D399" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
-                    <strong style={{ display: 'block', fontSize: '0.92rem', color: '#FFF' }}>Dining Hall Table Floor Map</strong>
-                    <span style={{ fontSize: '0.84rem', color: '#94A3B8' }}>Track occupied tables, available tables, and pending service requests in real time.</span>
+                    <strong style={{ display: 'block', fontSize: '0.92rem', color: '#FFF' }}>Live Floor Map, Rooms & Audi Matrix</strong>
+                    <span style={{ fontSize: '0.84rem', color: '#94A3B8' }}>Track dining tables, occupied hotel rooms, or cinema seats and pending service requests in real time.</span>
                   </div>
                 </div>
               </div>
@@ -246,6 +350,14 @@ export default function ProductShowcase() {
                     <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Just now</span>
                   </div>
                   <div style={{ fontSize: '0.82rem', color: '#CBD5E1' }}>Table 3 • Veg Hakka Noodles x2, Veg Manchurian x1</div>
+                </div>
+
+                <div style={{ background: '#1E293B', padding: '14px', borderRadius: '12px', borderLeft: '4px solid #3B82F6', color: '#FFF' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <strong style={{ fontSize: '0.9rem', color: '#60A5FA' }}>🏨 Hotel Pantry Dispatch</strong>
+                    <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>1 min ago</span>
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: '#CBD5E1' }}>Room 302 • Club Sandwich x2, Fresh Orange Juice x2 • Priority</div>
                 </div>
 
                 <div style={{ background: '#1E293B', padding: '14px', borderRadius: '12px', borderLeft: '4px solid #10B981', color: '#FFF' }}>
@@ -288,7 +400,7 @@ export default function ProductShowcase() {
                   <CheckCircle size={18} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
                     <strong style={{ display: 'block', fontSize: '0.92rem', color: 'var(--km-text)' }}>Daily & Monthly Sales Analytics</strong>
-                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Export CSV sales reports and track peak ordering hours.</span>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Export CSV sales reports and track peak ordering hours across tables, rooms, and screens.</span>
                   </div>
                 </div>
               </div>

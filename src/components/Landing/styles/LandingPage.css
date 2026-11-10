@@ -1637,6 +1637,14 @@
   transform: translateY(-2px);
 }
 
+.km-category-chip.active {
+  background: var(--km-gold);
+  border-color: #FFF;
+  color: #0A2315;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.5);
+  transform: translateY(-2px);
+}
+
 .km-category-icon {
   font-size: 0.95rem;
 }
@@ -1645,10 +1653,83 @@
    STANDEE & RECEIPT HARDWARE PREVIEW STYLING
    ========================================================================== */
 .km-standee-section {
-  padding: 48px 0;
+  padding: 56px 0;
   background: var(--km-white);
   border-top: 1px solid var(--km-border);
   border-bottom: 1px solid var(--km-border);
+}
+
+/* Multi-Vertical Interactive Mode Switcher Tabs */
+.km-standee-tab-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.km-standee-tab-strip-label {
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  color: var(--km-muted);
+  text-transform: uppercase;
+}
+
+.km-standee-tab-group {
+  display: flex;
+  background: #F1F5F9;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  gap: 4px;
+}
+
+.km-standee-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.km-standee-tab-btn:hover {
+  color: var(--km-text);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.km-standee-tab-btn.active.restaurant {
+  background: #0A2315;
+  color: var(--km-gold);
+  box-shadow: 0 4px 12px rgba(10, 35, 21, 0.2);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.km-standee-tab-btn.active.hotel {
+  background: #1E3A8A;
+  color: #93C5FD;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
+  border-color: rgba(147, 197, 253, 0.4);
+}
+
+.km-standee-tab-btn.active.cinema {
+  background: #78350F;
+  color: #FDE68A;
+  box-shadow: 0 4px 12px rgba(120, 53, 15, 0.2);
+  border-color: rgba(253, 230, 138, 0.4);
+}
+
+.km-standee-tab-icon {
+  font-size: 1rem;
 }
 
 .km-standee-grid {
@@ -1691,6 +1772,20 @@
   line-height: 1.4;
 }
 
+.km-standee-reassurance {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 10px 14px;
+  background: #ECFDF5;
+  border-radius: 8px;
+  border: 1px solid #A7F3D0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #065F46;
+}
+
 .km-standee-visual-box {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1701,15 +1796,39 @@
   .km-standee-visual-box {
     grid-template-columns: 1fr;
   }
+  .km-standee-tab-group {
+    width: 100%;
+    flex-direction: column;
+  }
+  .km-standee-tab-btn {
+    justify-content: center;
+  }
 }
 
 .km-standee-card {
-  background: linear-gradient(135deg, #0A2315 0%, #164E2A 100%);
   border-radius: 14px;
   padding: 16px;
   color: #FFF;
-  box-shadow: 0 8px 20px rgba(10, 35, 21, 0.25);
-  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s ease;
+}
+
+.km-standee-card.km-theme-restaurant {
+  background: linear-gradient(135deg, #0A2315 0%, #164E2A 100%);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  box-shadow: 0 8px 20px rgba(10, 35, 21, 0.3);
+}
+
+.km-standee-card.km-theme-hotel {
+  background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  box-shadow: 0 8px 20px rgba(30, 58, 138, 0.3);
+}
+
+.km-standee-card.km-theme-cinema {
+  background: linear-gradient(135deg, #18181B 0%, #27272A 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.2);
 }
 
 .km-standee-header {
@@ -1718,7 +1837,6 @@
   gap: 6px;
   font-size: 0.72rem;
   font-weight: 900;
-  color: var(--km-gold);
   letter-spacing: 0.5px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 8px;
@@ -1744,14 +1862,38 @@
 }
 
 .km-standee-qr-badge {
-  background: var(--km-green);
-  color: var(--km-gold);
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   font-weight: 900;
   padding: 2px 6px;
   border-radius: 4px;
   margin-top: 3px;
   letter-spacing: 0.3px;
+}
+
+.km-standee-brand-name {
+  font-size: 0.86rem;
+  font-weight: 900;
+  color: #FFF;
+  margin-top: 10px;
+  letter-spacing: 0.2px;
+}
+
+.km-standee-space-pill {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  padding: 2px 10px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #F1F5F9;
+  margin: 4px 0 6px 0;
+  letter-spacing: 0.5px;
+}
+
+.km-standee-subtext {
+  font-size: 0.7rem;
+  color: #94A3B8;
+  display: block;
 }
 
 .km-receipt-card {
@@ -1768,7 +1910,6 @@
   gap: 6px;
   font-size: 0.72rem;
   font-weight: 900;
-  color: #10B981;
   letter-spacing: 0.5px;
   border-bottom: 1px dashed #CBD5E1;
   padding-bottom: 8px;
@@ -1798,18 +1939,27 @@
   margin-bottom: 4px;
 }
 
+.km-receipt-tag {
+  color: #D4AF37;
+  font-weight: 800;
+  font-size: 0.72rem;
+}
+
 .km-receipt-note {
   font-size: 0.7rem;
-  color: #64748B;
+  color: #475569;
   margin-top: 6px;
   font-style: italic;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 4px 6px;
+  border-radius: 4px;
 }
 
 .km-receipt-footer {
   text-align: center;
   font-size: 0.7rem;
   font-weight: 800;
-  color: #10B981;
+  color: #059669;
   margin-top: 10px;
   padding-top: 6px;
   border-top: 1px dashed #CBD5E1;

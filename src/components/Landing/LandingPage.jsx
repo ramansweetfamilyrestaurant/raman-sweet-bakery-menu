@@ -100,7 +100,10 @@ export default function LandingPage({
       <TrustStats trialDays={trialDays} />
 
       {/* Indian Food Business Category Badge Strip */}
-      <CategoryStrip />
+      <CategoryStrip 
+        selectedIndustry={selectedIndustry}
+        onSelectIndustry={setSelectedIndustry}
+      />
 
       {/* "Why TouchQR" Core Features */}
       <Features />
@@ -109,10 +112,16 @@ export default function LandingPage({
       <HowItWorks />
 
       {/* Table QR Standee & Thermal KOT Hardware Preview */}
-      <StandeePreview />
+      <StandeePreview 
+        selectedIndustry={selectedIndustry}
+        onSelectIndustry={setSelectedIndustry}
+      />
 
       {/* Product Showcase Sections (Mobile Tab Switcher Enabled) */}
-      <ProductShowcase />
+      <ProductShowcase 
+        selectedIndustry={selectedIndustry}
+        onSelectIndustry={setSelectedIndustry}
+      />
 
       {/* Dynamic Database SaaS Pricing */}
       <Pricing 
