@@ -288,6 +288,32 @@ async function runSuite() {
       assert.strictEqual(changeBody.error, 'industry_mismatch');
     });
 
+    // -----------------------------------------------------------------------------------------------------
+    await test('7. SuperAdmin GET /plans correctly aggregates enrolled_count for hotel and cinema vertical plans', async () => {
+      // Seed a hotel business with generic 'enterprise' tier and a cinema business with 'pro'
+      await query(`
+        INSERT INTO restaurants (name, slug, business_type, service_model, plan_tier)
+        VALUES 
+          ('Grand Hotel Test', 'grand-hotel-test', 'hotel_resort', 'hotel', 'enterprise'),
+          ('Star Cinema Test', 'star-cinema-test', 'cinema_theatre', 'cinema', 'pro')
+      `);
+
+      const res = await fetch(`${saBaseUrl}/plans`, {
+        headers: { Authorization: `Bearer ${superAdminToken}` }
+      });
+      assert.strictEqual(res.status, 200);
+      const plans = await res.json();
+      const planMap = new Map(plans.map(p => [p.key.toLowerCase(), p]));
+
+      // Verify hotel_enterprise has at least 1 enrolled hotel
+      assert(planMap.has('hotel_enterprise'), 'hotel_enterprise plan must exist');
+      assert.strictEqual(planMap.get('hotel_enterprise').enrolled_count >= 1, true, `hotel_enterprise should count hotel businesses with enterprise tier, got ${planMap.get('hotel_enterprise').enrolled_count}`);
+
+      // Verify cinema_pro has at least 1 enrolled cinema
+      assert(planMap.has('cinema_pro'), 'cinema_pro plan must exist');
+      assert.strictEqual(planMap.get('cinema_pro').enrolled_count >= 1, true, `cinema_pro should count cinema businesses with pro tier, got ${planMap.get('cinema_pro').enrolled_count}`);
+    });
+
   } finally {
     server.close();
     if (process.env.TEST_DATABASE_URL.startsWith('sqlite:')) {

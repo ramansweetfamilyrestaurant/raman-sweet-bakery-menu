@@ -356,6 +356,41 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     return 'restaurant';
   };
 
+  // Robust matcher between a tenant business and a SaaS plan, respecting industry verticals
+  const matchesPlanSubscriber = (resto, plan) => {
+    if (!resto || !plan) return false;
+    const rTier = String(resto.plan_tier || 'pro').toLowerCase().trim();
+    const pKey = String(plan.key || '').toLowerCase().trim();
+    const planInd = String(plan.industry || resolveIndustry(plan) || 'restaurant').toLowerCase();
+
+    const sModel = String(resto.service_model || '').toLowerCase();
+    const bType = String(resto.business_type || '').toLowerCase();
+    const bCat = String(resto.business_category || '').toLowerCase();
+
+    const isHotel = sModel === 'hotel' || bType.includes('hotel') || bCat === 'hotel';
+    const isCinema = sModel === 'cinema' || sModel === 'seat_service' || bType.includes('cinema') || bType.includes('theatre') || bCat === 'cinema';
+    const bizInd = isHotel ? 'hotel' : (isCinema ? 'cinema' : 'restaurant');
+
+    if (bizInd !== planInd) return false;
+    if (rTier === pKey) return true;
+
+    if (bizInd === 'hotel') {
+      if (rTier === 'basic' && pKey === 'hotel_basic') return true;
+      if (rTier === 'pro' && pKey === 'hotel_pro') return true;
+      if ((rTier === 'enterprise' || rTier.includes('vip')) && pKey === 'hotel_enterprise') return true;
+    } else if (bizInd === 'cinema') {
+      if (rTier === 'basic' && pKey === 'cinema_basic') return true;
+      if (rTier === 'pro' && pKey === 'cinema_pro') return true;
+      if ((rTier === 'enterprise' || rTier.includes('vip')) && pKey === 'cinema_enterprise') return true;
+    } else {
+      if (rTier === 'vip_ultra_plan' && pKey === 'vip_ultra_plan') return true;
+      if (rTier === 'enterprise' && pKey === 'enterprise') return true;
+      if (rTier === 'vip' && (pKey === 'vip_ultra_plan' || pKey === 'enterprise')) return true;
+    }
+
+    return false;
+  };
+
   const restaurantPlans = useMemo(() => plans.filter(p => resolveIndustry(p) === 'restaurant'), [plans]);
   const hotelPlans = useMemo(() => plans.filter(p => resolveIndustry(p) === 'hotel'), [plans]);
   const cinemaPlans = useMemo(() => plans.filter(p => resolveIndustry(p) === 'cinema'), [plans]);
@@ -384,7 +419,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
   }
 
   const renderPlanCard = (p) => {
-    const subscriberCount = (restaurants || []).filter(r => (r.plan_tier || 'pro').toLowerCase() === p.key.toLowerCase()).length;
+    const subscriberCount = (restaurants || []).filter(r => matchesPlanSubscriber(r, p)).length;
     const isProtected = protectedPlans.includes(p.key.toLowerCase());
     const isPopular = p.key.toLowerCase().endsWith('_pro') || p.key.toLowerCase() === 'pro';
     const themeBadge = getThemeSummaryBadge(p.allowed_themes);
@@ -991,7 +1026,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
             <tbody>
               {plans.map(p => {
                 const ind = resolveIndustry(p);
-                const subscriberCount = (restaurants || []).filter(r => (r.plan_tier || 'pro').toLowerCase() === p.key.toLowerCase()).length;
+                const subscriberCount = (restaurants || []).filter(r => matchesPlanSubscriber(r, p)).length;
                 const isProtected = protectedPlans.includes(p.key.toLowerCase());
                 const themeBadge = getThemeSummaryBadge(p.allowed_themes);
                 const indBadge = ind === 'hotel' 

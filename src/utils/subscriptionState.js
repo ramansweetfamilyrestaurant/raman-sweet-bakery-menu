@@ -259,12 +259,17 @@ export function formatTenantPlanDisplay(tenant) {
 
   if (isVip) {
     const rawBase = (tenant.effective_plan_tier || tenant.plan_tier || 'pro').trim().toLowerCase();
-    if (rawBase === 'enterprise') {
+    if (rawBase === 'enterprise' || rawBase === 'hotel_enterprise' || rawBase === 'cinema_enterprise') {
+      const label = rawBase === 'hotel_enterprise'
+        ? 'Hotel Enterprise VIP Access'
+        : rawBase === 'cinema_enterprise'
+          ? 'Cinema Enterprise VIP Access'
+          : 'Enterprise VIP Access';
       return {
-        primaryLabel: 'Enterprise VIP Access',
+        primaryLabel: label,
         secondaryLabel: '₹0/mo',
         badgeText: '★ VIP',
-        fullDisplay: 'Enterprise VIP Access (₹0/mo)'
+        fullDisplay: `${label} (₹0/mo)`
       };
     }
     const baseName = tenant.plan_name || (rawBase === 'basic' ? 'Basic Plan' : rawBase === 'pro' ? 'Pro Plan' : `${rawBase.toUpperCase()} Plan`);

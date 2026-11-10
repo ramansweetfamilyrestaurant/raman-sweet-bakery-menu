@@ -30,6 +30,40 @@ function getAppBaseUrl(req) {
   return 'https://touchqr.in';
 }
 
+function matchesPlanSubscriber(resto, plan) {
+  if (!resto || !plan) return false;
+  const rTier = String(resto.plan_tier || 'pro').toLowerCase().trim();
+  const pKey = String(plan.key || '').toLowerCase().trim();
+  const planInd = String(plan.industry || (pKey.startsWith('hotel') ? 'hotel' : pKey.startsWith('cinema') ? 'cinema' : 'restaurant')).toLowerCase();
+
+  const sModel = String(resto.service_model || '').toLowerCase();
+  const bType = String(resto.business_type || '').toLowerCase();
+  const bCat = String(resto.business_category || '').toLowerCase();
+
+  const isHotel = sModel === 'hotel' || bType.includes('hotel') || bCat === 'hotel';
+  const isCinema = sModel === 'cinema' || sModel === 'seat_service' || bType.includes('cinema') || bType.includes('theatre') || bCat === 'cinema';
+  const bizInd = isHotel ? 'hotel' : (isCinema ? 'cinema' : 'restaurant');
+
+  if (bizInd !== planInd) return false;
+  if (rTier === pKey) return true;
+
+  if (bizInd === 'hotel') {
+    if (rTier === 'basic' && pKey === 'hotel_basic') return true;
+    if (rTier === 'pro' && pKey === 'hotel_pro') return true;
+    if ((rTier === 'enterprise' || rTier.includes('vip')) && pKey === 'hotel_enterprise') return true;
+  } else if (bizInd === 'cinema') {
+    if (rTier === 'basic' && pKey === 'cinema_basic') return true;
+    if (rTier === 'pro' && pKey === 'cinema_pro') return true;
+    if ((rTier === 'enterprise' || rTier.includes('vip')) && pKey === 'cinema_enterprise') return true;
+  } else {
+    if (rTier === 'vip_ultra_plan' && pKey === 'vip_ultra_plan') return true;
+    if (rTier === 'enterprise' && pKey === 'enterprise') return true;
+    if (rTier === 'vip' && (pKey === 'vip_ultra_plan' || pKey === 'enterprise')) return true;
+  }
+
+  return false;
+}
+
 function projectTenantSummary(r, sub, countMap, adminMap, planMap, paidSub = null, todayScansMap = {}) {
   const isSuspended = r.active === false || r.active === 0 || r.active === '0' || r.active === 'false';
   const effectiveSub = (sub && (sub.subscription_type === 'ADMIN_GRANTED' || sub.gateway === 'admin_granted') && sub.status !== 'active' && paidSub && paidSub.status === 'active')
@@ -38,8 +72,24 @@ function projectTenantSummary(r, sub, countMap, adminMap, planMap, paidSub = nul
   const isVip = isAuthoritativeComplimentaryTenant(r, effectiveSub);
   const canonicalState = resolveCanonicalSubscriptionState({ resto: r, sub: effectiveSub, now: new Date() });
   const tierKey = (r.plan_tier || 'pro').toLowerCase().trim();
-  const matchedPlan = planMap ? planMap[tierKey] : null;
   const profile = resolveBusinessProfile(r || {});
+  const sModel = (profile.service_model || r.service_model || '').toLowerCase();
+  const bType = (profile.business_type || r.business_type || '').toLowerCase();
+  const isHotel = sModel === 'hotel' || bType.includes('hotel');
+  const isCinema = sModel === 'cinema' || sModel === 'seat_service' || bType.includes('cinema') || bType.includes('theatre');
+
+  let resolvedTierKey = tierKey;
+  if (isHotel && !resolvedTierKey.startsWith('hotel_')) {
+    if (resolvedTierKey === 'basic') resolvedTierKey = 'hotel_basic';
+    else if (resolvedTierKey === 'pro') resolvedTierKey = 'hotel_pro';
+    else if (resolvedTierKey === 'enterprise' || resolvedTierKey.includes('vip')) resolvedTierKey = 'hotel_enterprise';
+  } else if (isCinema && !resolvedTierKey.startsWith('cinema_')) {
+    if (resolvedTierKey === 'basic') resolvedTierKey = 'cinema_basic';
+    else if (resolvedTierKey === 'pro') resolvedTierKey = 'cinema_pro';
+    else if (resolvedTierKey === 'enterprise' || resolvedTierKey.includes('vip')) resolvedTierKey = 'cinema_enterprise';
+  }
+
+  const matchedPlan = planMap ? (planMap[resolvedTierKey] || planMap[tierKey]) : null;
 
   const basePlanName = matchedPlan?.name || (r.plan_name || `${tierKey.toUpperCase()} Plan`);
   const effectivePlanName = isVip
@@ -324,9 +374,25 @@ router.get('/restaurants/:id/360', authenticateToken, requireSuperAdmin, async (
     const canonicalState = resolveCanonicalSubscriptionState({ resto, sub: effectiveSub, now: new Date() });
 
     // 4. Fetch Authoritative SaaS Plan for this tenant's tier
-    const planTierKey = (resto.plan_tier || 'pro').toLowerCase().trim();
+    const rawPlanTier = (resto.plan_tier || 'pro').toLowerCase().trim();
+    const sModel = (resto.service_model || '').toLowerCase();
+    const bType = (resto.business_type || '').toLowerCase();
+    const isHotel = sModel === 'hotel' || bType.includes('hotel');
+    const isCinema = sModel === 'cinema' || sModel === 'seat_service' || bType.includes('cinema') || bType.includes('theatre');
+
+    let planTierKey = rawPlanTier;
+    if (isHotel && !planTierKey.startsWith('hotel_')) {
+      if (planTierKey === 'basic') planTierKey = 'hotel_basic';
+      else if (planTierKey === 'pro') planTierKey = 'hotel_pro';
+      else if (planTierKey === 'enterprise' || planTierKey.includes('vip')) planTierKey = 'hotel_enterprise';
+    } else if (isCinema && !planTierKey.startsWith('cinema_')) {
+      if (planTierKey === 'basic') planTierKey = 'cinema_basic';
+      else if (planTierKey === 'pro') planTierKey = 'cinema_pro';
+      else if (planTierKey === 'enterprise' || planTierKey.includes('vip')) planTierKey = 'cinema_enterprise';
+    }
+
     const planRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [planTierKey]);
-    const saasPlan = planRows[0] || {
+    const saasPlan = planRows[0] || (planTierKey !== rawPlanTier ? (await query('SELECT * FROM saas_plans WHERE LOWER(key) = $1', [rawPlanTier]))[0] : null) || {
       key: planTierKey,
       name: `${planTierKey.toUpperCase()} Plan`,
       price: resto.plan_price || 999,
@@ -1475,12 +1541,10 @@ router.delete('/announcements', authenticateToken, requireSuperAdmin, async (req
 // GET All SaaS Plans (with restaurant count per plan)
 router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const [plans, counts] = await Promise.all([
+    const [plans, restaurants] = await Promise.all([
       query('SELECT * FROM saas_plans ORDER BY price ASC'),
-      query('SELECT plan_tier, COUNT(*) as count FROM restaurants GROUP BY plan_tier')
+      query('SELECT id, business_type, service_model, business_category, plan_tier FROM restaurants')
     ]);
-    const countMap = {};
-    (counts || []).forEach(c => { countMap[c.plan_tier] = parseInt(c.count, 10); });
 
     const isTrue = (val, def = true) => val !== undefined && val !== null ? (val === 1 || val === true || val === '1' || val === 'true') : def;
 
@@ -1508,7 +1572,7 @@ router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
       allowed_verification_modes: p.allowed_verification_modes || 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY',
       theme_color: p.theme_color || 'gold',
       allowed_themes: p.allowed_themes || 'ALL',
-      enrolled_count: countMap[p.key] || 0
+      enrolled_count: (restaurants || []).filter(r => matchesPlanSubscriber(r, p)).length
     }));
     res.json(result);
   } catch (err) {
