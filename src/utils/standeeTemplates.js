@@ -289,25 +289,26 @@ export function buildStandeeCardHtml({
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 4px;
-        padding: 4px 10px;
+        gap: 3px;
+        padding: 3px 8px;
         border-radius: 20px;
-        font-size: 10px;
+        font-size: 9.5px;
         font-weight: 700;
+        max-width: 96%;
         box-sizing: border-box;
       ">
-        <span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;min-width:13px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:9px;font-weight:900;line-height:13px;text-align:center;">1</span>
+        <span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;min-width:12px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:8.5px;font-weight:900;line-height:12px;text-align:center;">1</span>
           <span>Open Camera</span>
         </span>
-        <span style="opacity:0.5;font-size:9px;">➔</span>
-        <span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;min-width:13px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:9px;font-weight:900;line-height:13px;text-align:center;">2</span>
+        <span style="opacity:0.5;font-size:8.5px;">➔</span>
+        <span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;min-width:12px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:8.5px;font-weight:900;line-height:12px;text-align:center;">2</span>
           <span>${isCinema ? 'Scan Armrest QR' : isHotel ? 'Scan Bedside QR' : 'Scan QR'}</span>
         </span>
-        <span style="opacity:0.5;font-size:9px;">➔</span>
-        <span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;min-width:13px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:9px;font-weight:900;line-height:13px;text-align:center;">3</span>
+        <span style="opacity:0.5;font-size:8.5px;">➔</span>
+        <span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;min-width:12px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:8.5px;font-weight:900;line-height:12px;text-align:center;">3</span>
           <span>${isCinema ? 'Delivered to Seat' : isHotel ? 'Delivered to Room' : 'Order Food'}</span>
         </span>
       </div>
@@ -996,14 +997,21 @@ export async function renderStandeeToCanvas(canvas, {
   );
   curY += instructionHiHeight + (16 * scale);
 
-  // 11. 3-Step Bar (Dynamic per vertical)
+  // 11. 3-Step Bar (Dynamic per vertical with auto text-scaling)
   const stepText = isCinema
-    ? '1. Open Camera   ➔   2. Scan Armrest QR   ➔   3. Delivered to Seat'
+    ? '1. Open Camera   ➔   2. Scan QR   ➔   3. Seat Delivery'
     : isHotel
-    ? '1. Open Camera   ➔   2. Scan Bedside QR   ➔   3. Delivered to Room'
-    : '1. Open Camera   ➔   2. Scan Table QR   ➔   3. Order Food';
-  ctx.font = `bold ${16 * scale}px "Plus Jakarta Sans", sans-serif`;
-  const stepW = ctx.measureText(stepText).width + (38 * scale);
+    ? '1. Open Camera   ➔   2. Scan QR   ➔   3. Room Delivery'
+    : '1. Open Camera   ➔   2. Scan QR   ➔   3. Order Food';
+  let stepFontSize = 15 * scale;
+  ctx.font = `bold ${stepFontSize}px "Plus Jakarta Sans", sans-serif`;
+  let measuredStepWidth = ctx.measureText(stepText).width + (36 * scale);
+  while (measuredStepWidth > maxSafeTextWidth && stepFontSize > 10 * scale) {
+    stepFontSize -= 0.5 * scale;
+    ctx.font = `bold ${stepFontSize}px "Plus Jakarta Sans", sans-serif`;
+    measuredStepWidth = ctx.measureText(stepText).width + (36 * scale);
+  }
+  const stepW = Math.min(measuredStepWidth, maxSafeTextWidth);
   const stepX = (targetWidth - stepW) / 2;
 
   ctx.fillStyle = theme.stepBg;

@@ -79,10 +79,10 @@ const VERTICAL_DATA = {
       badgeColor: '#60A5FA',
       brand: 'Grand Palace Hotel & Resort',
       spaceLabel: 'ROOM 302 • DELUXE SUITE',
-      actionText: '24x7 ROOM SERVICE',
+      actionText: 'IN-ROOM DINING',
       actionBg: '#1E3A8A',
       actionColor: '#93C5FD',
-      note: 'In-Room Dining • Housekeeping • Butler Call'
+      note: 'In-Room Dining • Housekeeping • Butler'
     },
     receipt: {
       typeBadge: 'PANTRY DISPATCH TICKET',
@@ -94,8 +94,8 @@ const VERTICAL_DATA = {
         { name: '2x Valencia Fresh Orange Juice', tag: 'CHILLED' },
         { name: '1x Warm Chocolate Brownie Sundae', tag: 'HOT' }
       ],
-      specialNote: '🛎️ Guest Request: Deliver with 2 extra bath towels & ice bucket',
-      footer: '⚡ Dispatched to Floor 3 Butler • Charge to Room 302'
+      specialNote: '🛎️ Guest Request: 2 extra towels & ice bucket',
+      footer: '⚡ Dispatched to Floor 3 Butler • Room 302 Folio'
     }
   },
   cinema: {
@@ -123,11 +123,11 @@ const VERTICAL_DATA = {
     standee: {
       themeClass: 'km-theme-cinema',
       headerIcon: Film,
-      badge: 'AUDI 2 • SEAT E-14 STICKER',
+      badge: 'AUDI 2 • SEAT E-14',
       badgeColor: '#F59E0B',
       brand: 'Starview Multiplex Concessions',
       spaceLabel: 'AUDI 2 • ROW E • SEAT 14',
-      actionText: 'SCAN TO DELIVER',
+      actionText: 'DELIVER TO SEAT',
       actionBg: '#78350F',
       actionColor: '#FCD34D',
       note: 'Direct Seat Delivery • Skip Intermission Queue'
@@ -142,7 +142,7 @@ const VERTICAL_DATA = {
         { name: '2x Chilled Cold Coffee Bottle', tag: 'COLD' },
         { name: '1x Crispy Nachos with Salsa Dip', tag: 'CRISP' }
       ],
-      specialNote: '🍿 Seat Rush Pass: Intermission starts in 6 minutes',
+      specialNote: '🍿 Seat Rush: Intermission starts in 6 mins',
       footer: '⚡ Audi 2 Concession Runner #04 • Seat Delivery'
     }
   }
@@ -237,7 +237,7 @@ export default function StandeePreview({ selectedIndustry = 'restaurant', onSele
               <div className="km-standee-qr-box">
                 <div className="km-standee-qr-frame">
                   {/* High Precision SVG QR Graphic */}
-                  <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="#0A2315" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#0A2315" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="7" height="7"></rect>
                     <rect x="14" y="3" width="7" height="7"></rect>
                     <rect x="3" y="14" width="7" height="7"></rect>

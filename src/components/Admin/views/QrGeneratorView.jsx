@@ -1874,14 +1874,19 @@ export default function QrGeneratorView({
                 display: 'inline-block',
                 background: theme.badgeBg,
                 color: theme.badgeText,
-                padding: '4px 14px',
+                padding: '3px 12px',
                 borderRadius: '18px',
-                fontSize: '0.72rem',
+                fontSize: '0.68rem',
                 fontWeight: 900,
-                letterSpacing: '0.5px',
+                letterSpacing: '0.4px',
                 border: `1.5px solid ${theme.badgeBorder}`,
                 boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-                marginBottom: '8px'
+                marginBottom: '8px',
+                maxWidth: '92%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                boxSizing: 'border-box'
               }}>
                 ✦ {activeSpace?.badge || 'NO SPACE SELECTED'} ✦
               </div>
@@ -1889,11 +1894,13 @@ export default function QrGeneratorView({
               {/* Restaurant Name */}
               <h3 style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: '1.1rem',
+                fontSize: '1.05rem',
                 fontWeight: 900,
                 color: theme.titleColor,
                 lineHeight: 1.25,
-                margin: '0 0 2px 0'
+                margin: '0 0 2px 0',
+                padding: '0 4px',
+                wordBreak: 'break-word'
               }}>
                 {currentName}
               </h3>
@@ -1905,12 +1912,15 @@ export default function QrGeneratorView({
 
               {/* Tagline */}
               <div style={{
-                fontSize: '0.65rem',
+                fontSize: '0.62rem',
                 fontWeight: 700,
                 textTransform: 'uppercase',
-                letterSpacing: '0.5px',
+                letterSpacing: '0.4px',
                 color: theme.subtitleColor,
-                marginBottom: '10px'
+                marginBottom: '10px',
+                padding: '0 6px',
+                wordBreak: 'break-word',
+                lineHeight: 1.3
               }}>
                 {settingsForm?.tagline || (
                   isCinema ? 'IN-SEAT FOOD ORDERING' :
@@ -1939,11 +1949,14 @@ export default function QrGeneratorView({
                   background: theme.pillBg,
                   color: theme.pillText,
                   border: `1px solid ${theme.pillBorder}`,
-                  fontSize: '0.56rem',
+                  fontSize: '0.54rem',
                   fontWeight: 900,
                   padding: '2px 8px',
                   borderRadius: '8px',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  maxWidth: '90%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
                 }}>
                   {isCinema ? 'DELIVER TO SEAT' : isHotel ? 'IN-ROOM DINING' : 'SCAN TO ORDER'}
                 </div>
@@ -2010,75 +2023,75 @@ export default function QrGeneratorView({
                 border: `1px solid ${theme.stepBorder}`,
                 color: theme.stepText,
                 borderRadius: '20px',
-                padding: '4px 10px',
-                fontSize: '0.58rem',
+                padding: '3px 8px',
+                fontSize: '0.52rem',
                 fontWeight: 700,
                 marginBottom: '8px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '4px',
-                maxWidth: '100%',
+                gap: '3px',
+                maxWidth: '96%',
                 boxSizing: 'border-box'
               }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
                   <span style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '13px',
-                    height: '13px',
-                    minWidth: '13px',
+                    width: '12px',
+                    height: '12px',
+                    minWidth: '12px',
                     borderRadius: '50%',
                     background: theme.isDark ? '#38BDF8' : '#0A2315',
                     color: theme.isDark ? '#0F172A' : '#DFBA67',
-                    fontSize: '0.50rem',
+                    fontSize: '0.48rem',
                     fontWeight: 900,
-                    lineHeight: '13px',
+                    lineHeight: '12px',
                     textAlign: 'center',
                     flexShrink: 0
                   }}>1</span>
                   <span>Open Camera</span>
                 </span>
-                <span style={{ opacity: 0.5, fontSize: '0.54rem', display: 'inline-flex', alignItems: 'center' }}>➔</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                <span style={{ opacity: 0.5, fontSize: '0.50rem', display: 'inline-flex', alignItems: 'center' }}>➔</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
                   <span style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '13px',
-                    height: '13px',
-                    minWidth: '13px',
+                    width: '12px',
+                    height: '12px',
+                    minWidth: '12px',
                     borderRadius: '50%',
                     background: theme.isDark ? '#38BDF8' : '#0A2315',
                     color: theme.isDark ? '#0F172A' : '#DFBA67',
-                    fontSize: '0.50rem',
+                    fontSize: '0.48rem',
                     fontWeight: 900,
-                    lineHeight: '13px',
+                    lineHeight: '12px',
                     textAlign: 'center',
                     flexShrink: 0
                   }}>2</span>
-                  <span>{isCinema ? 'Scan Armrest QR' : isHotel ? 'Scan Bedside QR' : 'Scan QR'}</span>
+                  <span>Scan QR</span>
                 </span>
-                <span style={{ opacity: 0.5, fontSize: '0.54rem', display: 'inline-flex', alignItems: 'center' }}>➔</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                <span style={{ opacity: 0.5, fontSize: '0.50rem', display: 'inline-flex', alignItems: 'center' }}>➔</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
                   <span style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '13px',
-                    height: '13px',
-                    minWidth: '13px',
+                    width: '12px',
+                    height: '12px',
+                    minWidth: '12px',
                     borderRadius: '50%',
                     background: theme.isDark ? '#38BDF8' : '#0A2315',
                     color: theme.isDark ? '#0F172A' : '#DFBA67',
-                    fontSize: '0.50rem',
+                    fontSize: '0.48rem',
                     fontWeight: 900,
-                    lineHeight: '13px',
+                    lineHeight: '12px',
                     textAlign: 'center',
                     flexShrink: 0
                   }}>3</span>
-                  <span>{isCinema ? 'Delivered to Seat' : isHotel ? 'Delivered to Room' : 'Order Food'}</span>
+                  <span>{isCinema ? 'Seat Delivery' : isHotel ? 'Room Delivery' : 'Order Food'}</span>
                 </span>
               </div>
 
