@@ -3468,6 +3468,31 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Vertical-specific Reassurance Callout */}
+                    {(() => {
+                      const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                      const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
+                      const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
+
+                      if (isCin) {
+                        return (
+                          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '8px 12px', fontSize: '0.76rem', color: '#B45309', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>🍿</span>
+                            <span><strong>Cinema Seat Express:</strong> Hot popcorn & drinks will be delivered right to your seat.</span>
+                          </div>
+                        );
+                      }
+                      if (isRoom) {
+                        return (
+                          <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '8px 12px', fontSize: '0.76rem', color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>🛎️</span>
+                            <span><strong>In-Room Dining:</strong> Freshly prepared and delivered straight to your room door.</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     {isDirectOrderingActive && (
                       <button
                         onClick={handleSendDirectOrder}
@@ -3498,7 +3523,14 @@ export default function App() {
                             ? 'Placing Order...'
                             : isAddon
                               ? `⚡ Confirm & Place Round ${nextRound} Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
-                              : `⚡ Confirm & Place Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`}
+                              : (() => {
+                                  const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                                  const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
+                                  const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
+                                  if (isCin) return `🍿 Deliver to Seat Now (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                  if (isRoom) return `🛎️ Place In-Room Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                  return `⚡ Confirm & Place Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                })()}
                         </span>
                       </button>
                     )}

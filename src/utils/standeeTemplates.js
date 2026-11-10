@@ -104,6 +104,56 @@ export const STANDEE_THEMES = {
     stepBorder: '#E4E4E7',
     stepText: '#27272A',
     isDark: false
+  },
+  hotel_sapphire: {
+    id: 'hotel_sapphire',
+    name: 'Hotel Sapphire (Luxury Blue)',
+    badgeBg: '#1E3A8A',
+    badgeText: '#BFDBFE',
+    badgeBorder: '#60A5FA',
+    cardBg: '#0F172A',
+    cardBorder: '#2563EB',
+    innerBorder: '#3B82F6',
+    titleColor: '#FFFFFF',
+    dividerColor: '#60A5FA',
+    subtitleColor: '#93C5FD',
+    accentColor: '#60A5FA',
+    qrBoxBorder: '#1E3A8A',
+    qrBoxBg: '#FFFFFF',
+    pillBg: '#1E3A8A',
+    pillText: '#BFDBFE',
+    pillBorder: '#60A5FA',
+    instructionEn: '#BFDBFE',
+    instructionHi: '#93C5FD',
+    stepBg: '#172554',
+    stepBorder: '#1E40AF',
+    stepText: '#DBEAFE',
+    isDark: true
+  },
+  cinema_amber: {
+    id: 'cinema_amber',
+    name: 'Cinema Amber (Multiplex Gold)',
+    badgeBg: '#18181B',
+    badgeText: '#F59E0B',
+    badgeBorder: '#F59E0B',
+    cardBg: '#0F172A',
+    cardBorder: '#D97706',
+    innerBorder: '#B45309',
+    titleColor: '#FFFFFF',
+    dividerColor: '#F59E0B',
+    subtitleColor: '#FCD34D',
+    accentColor: '#F59E0B',
+    qrBoxBorder: '#78350F',
+    qrBoxBg: '#FFFFFF',
+    pillBg: '#78350F',
+    pillText: '#FDE68A',
+    pillBorder: '#F59E0B',
+    instructionEn: '#FDE68A',
+    instructionHi: '#FCD34D',
+    stepBg: '#1C1917',
+    stepBorder: '#44403C',
+    stepText: '#E7E5E4',
+    isDark: true
   }
 };
 
@@ -129,6 +179,22 @@ export const STANDEE_FRAMES = {
     name: 'Minimal Border',
     borderWidth: '1.5px',
     borderRadius: '16px',
+    hasInnerFrame: false,
+    hasGlare: false
+  },
+  tent_card: {
+    id: 'tent_card',
+    name: 'Hotel Tent Card',
+    borderWidth: '3px',
+    borderRadius: '16px',
+    hasInnerFrame: true,
+    hasGlare: false
+  },
+  sticker: {
+    id: 'sticker',
+    name: 'Cinema Armrest Sticker',
+    borderWidth: '2px',
+    borderRadius: '10px',
     hasInnerFrame: false,
     hasGlare: false
   }
@@ -206,7 +272,7 @@ export function buildStandeeCardHtml({
           color: ${theme.pillText};
           border: 1px solid ${theme.pillBorder};
         ">
-          SCAN TO ORDER
+          ${isCinema ? 'DELIVER TO SEAT' : isHotel ? 'IN-ROOM DINING' : 'SCAN TO ORDER'}
         </div>
         <img src="${qrDataUrl}" alt="${escapeHtml(badgeLabel)} QR Code" />
       </div>
@@ -237,12 +303,12 @@ export function buildStandeeCardHtml({
         <span style="opacity:0.5;font-size:9px;">➔</span>
         <span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;min-width:13px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:9px;font-weight:900;line-height:13px;text-align:center;">2</span>
-          <span>Scan QR</span>
+          <span>${isCinema ? 'Scan Armrest QR' : isHotel ? 'Scan Bedside QR' : 'Scan QR'}</span>
         </span>
         <span style="opacity:0.5;font-size:9px;">➔</span>
         <span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;min-width:13px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:9px;font-weight:900;line-height:13px;text-align:center;">3</span>
-          <span>Order Food</span>
+          <span>${isCinema ? 'Delivered to Seat' : isHotel ? 'Delivered to Room' : 'Order Food'}</span>
         </span>
       </div>
       ${reassuranceHtml}
@@ -654,6 +720,10 @@ export async function renderStandeeToCanvas(canvas, {
     outerBorderWidth = 14 * scale;
   } else if (frameStyle === 'minimal') {
     outerBorderWidth = 4 * scale;
+  } else if (frameStyle === 'sticker') {
+    outerBorderWidth = 5 * scale;
+  } else if (frameStyle === 'tent_card') {
+    outerBorderWidth = 7 * scale;
   }
   ctx.strokeStyle = theme.cardBorder;
   ctx.lineWidth = outerBorderWidth;
@@ -882,8 +952,8 @@ export async function renderStandeeToCanvas(canvas, {
     });
   }
 
-  // Pill "SCAN TO ORDER"
-  const pillText = 'SCAN TO ORDER';
+  // Pill (Dynamic per vertical)
+  const pillText = isCinema ? 'DELIVER TO SEAT' : isHotel ? 'IN-ROOM DINING' : 'SCAN TO ORDER';
   ctx.font = `bold ${16 * scale}px "Plus Jakarta Sans", sans-serif`;
   const pillW = ctx.measureText(pillText).width + (36 * scale);
   const pillX = (targetWidth - pillW) / 2;
@@ -926,8 +996,12 @@ export async function renderStandeeToCanvas(canvas, {
   );
   curY += instructionHiHeight + (16 * scale);
 
-  // 11. 3-Step Bar
-  const stepText = '1. Open Camera   ➔   2. Scan QR   ➔   3. Order Food';
+  // 11. 3-Step Bar (Dynamic per vertical)
+  const stepText = isCinema
+    ? '1. Open Camera   ➔   2. Scan Armrest QR   ➔   3. Delivered to Seat'
+    : isHotel
+    ? '1. Open Camera   ➔   2. Scan Bedside QR   ➔   3. Delivered to Room'
+    : '1. Open Camera   ➔   2. Scan Table QR   ➔   3. Order Food';
   ctx.font = `bold ${16 * scale}px "Plus Jakarta Sans", sans-serif`;
   const stepW = ctx.measureText(stepText).width + (38 * scale);
   const stepX = (targetWidth - stepW) / 2;

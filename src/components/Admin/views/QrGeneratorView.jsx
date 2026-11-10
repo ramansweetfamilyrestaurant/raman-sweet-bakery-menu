@@ -61,11 +61,24 @@ export default function QrGeneratorView({
   const isCinema = effectiveBiz === 'cinema_theatre' || effectiveService === 'cinema';
   const isHotel = effectiveBiz === 'hotel_resort' || effectiveService === 'hotel';
 
-  // Appearance & Customization State
-  const [selectedTheme, setSelectedTheme] = useState('emerald');
-  const [selectedFrame, setSelectedFrame] = useState('acrylic');
+  // Appearance & Customization State (Smart defaults per business vertical)
+  const defaultTheme = isCinema ? 'cinema_amber' : isHotel ? 'hotel_sapphire' : 'emerald';
+  const defaultFrame = isCinema ? 'sticker' : isHotel ? 'tent_card' : 'acrylic';
+  const [selectedTheme, setSelectedTheme] = useState(defaultTheme);
+  const [selectedFrame, setSelectedFrame] = useState(defaultFrame);
   const [qrColor, setQrColor] = useState('#000000');
   const [showReassurance, setShowReassurance] = useState(true);
+
+  // Sync default theme and frame if vertical changes or resolves asynchronously
+  useEffect(() => {
+    if (isCinema) {
+      setSelectedTheme('cinema_amber');
+      setSelectedFrame('sticker');
+    } else if (isHotel) {
+      setSelectedTheme('hotel_sapphire');
+      setSelectedFrame('tent_card');
+    }
+  }, [isCinema, isHotel]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -1932,7 +1945,7 @@ export default function QrGeneratorView({
                   borderRadius: '8px',
                   whiteSpace: 'nowrap'
                 }}>
-                  SCAN TO ORDER
+                  {isCinema ? 'DELIVER TO SEAT' : isHotel ? 'IN-ROOM DINING' : 'SCAN TO ORDER'}
                 </div>
 
                 {activeQrDataUrl ? (
@@ -2045,7 +2058,7 @@ export default function QrGeneratorView({
                     textAlign: 'center',
                     flexShrink: 0
                   }}>2</span>
-                  <span>Scan QR</span>
+                  <span>{isCinema ? 'Scan Armrest QR' : isHotel ? 'Scan Bedside QR' : 'Scan QR'}</span>
                 </span>
                 <span style={{ opacity: 0.5, fontSize: '0.54rem', display: 'inline-flex', alignItems: 'center' }}>➔</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
@@ -2065,7 +2078,7 @@ export default function QrGeneratorView({
                     textAlign: 'center',
                     flexShrink: 0
                   }}>3</span>
-                  <span>Order Food</span>
+                  <span>{isCinema ? 'Delivered to Seat' : isHotel ? 'Delivered to Room' : 'Order Food'}</span>
                 </span>
               </div>
 
