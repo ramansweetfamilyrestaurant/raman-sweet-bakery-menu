@@ -114,6 +114,18 @@ export default function AnalyticsView({
   const terminology = getBusinessTerminology(restaurantInfo || {});
   const itemPlural = terminology.itemPlural || 'Items';
   const itemSingular = terminology.itemSingular || 'Item';
+  const isHotel = terminology.serviceModel === 'hotel';
+  const isCinema = terminology.serviceModel === 'cinema';
+  const spaceSingular = isHotel ? 'Room' : isCinema ? 'Seat' : (terminology.spaceSingular || 'Table');
+  const spacePlural = isHotel ? 'Rooms' : isCinema ? 'Seats' : (terminology.spacePlural || 'Tables');
+
+  const todayScans = Number(analyticsData?.today_scans ?? 0);
+  const yesterdayScans = Number(analyticsData?.yesterday_scans ?? 0);
+  const weeklyScans = Number(analyticsData?.weekly_scans ?? 0);
+  const totalScans = Number(analyticsData?.total_scans ?? restaurantInfo?.scan_count ?? 0);
+  const peakScanHour = analyticsData?.peak_scan_hour || null;
+  const hourlyScansToday = Array.isArray(analyticsData?.hourly_scans_today) ? analyticsData.hourly_scans_today : [];
+  const topTablesScannedToday = Array.isArray(analyticsData?.top_tables_scanned_today) ? analyticsData.top_tables_scanned_today : [];
 
   const [activeTab, setActiveTab] = useState('overview');
   const [chartHoverIndex, setChartHoverIndex] = useState(null);
@@ -1765,6 +1777,228 @@ export default function AnalyticsView({
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* ========================================================
+              ROW 2.5: QR SCAN TELEMETRY & TRAFFIC PATTERNS
+             ======================================================== */}
+          <div className="analytics-card" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: '#FAF5FF',
+                  color: '#7E22CE',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1rem'
+                }}>
+                  📲
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                    QR Scan Telemetry &amp; Traffic Patterns
+                  </h3>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                    Real-time QR menu scans, hourly visitor flow &amp; top active {spacePlural.toLowerCase()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status pills */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ background: '#F0FDF4', border: '1px solid #DCFCE7', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: '#16A34A', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
+                  <span>{todayScans} Scanned Today</span>
+                </div>
+                {yesterdayScans > 0 && (
+                  <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
+                    {yesterdayScans} Yesterday
+                  </div>
+                )}
+                {peakScanHour && (
+                  <div style={{ background: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: '#C2410C', fontWeight: 700 }}>
+                    🔥 Peak: {peakScanHour}
+                  </div>
+                )}
+                <div style={{ background: '#FAF5FF', border: '1px solid #F3E8FF', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: '#7E22CE', fontWeight: 700 }}>
+                  🎯 {analyticsData?.scan_conversion_rate_today ?? 0}% Scan-to-Order
+                </div>
+                {analyticsData?.standee_health && (
+                  <div style={{ background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: '#1D4ED8', fontWeight: 700 }}>
+                    🛡️ {analyticsData.standee_health.health_score ?? 0}% Standee Health
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Sub-grid: 24h Hourly Curve + Top Locations */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+              {/* Hourly Activity Bar Chart */}
+              <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155' }}>
+                    Today's Hourly Scan Curve (IST)
+                  </span>
+                  <span style={{ fontSize: '0.68rem', color: '#94A3B8' }}>
+                    00:00 - 23:59
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '100px', paddingTop: '10px' }}>
+                  {hourlyScansToday.map((slot) => {
+                    const maxVal = Math.max(...hourlyScansToday.map(s => s.count), 1);
+                    const barHeight = slot.count > 0 ? Math.max(12, Math.round((slot.count / maxVal) * 80)) : 4;
+                    const isPeak = slot.count === maxVal && maxVal > 0;
+                    return (
+                      <div
+                        key={slot.hour}
+                        title={`${slot.label}: ${slot.count} scans`}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '100%',
+                            height: `${barHeight}px`,
+                            background: isPeak ? '#7E22CE' : slot.count > 0 ? '#A855F7' : '#E2E8F0',
+                            borderRadius: '3px 3px 0 0',
+                            transition: 'all 0.2s'
+                          }}
+                        />
+                        {slot.hour % 6 === 0 && (
+                          <span style={{ fontSize: '0.58rem', color: '#94A3B8', fontWeight: 600 }}>
+                            {slot.hour === 0 ? '12A' : slot.hour === 6 ? '6A' : slot.hour === 12 ? '12P' : '6P'}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Top Scanned Locations Breakdown */}
+              <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155' }}>
+                    Top Scanned {spacePlural} Today
+                  </span>
+                  <span style={{ fontSize: '0.68rem', color: '#94A3B8', fontWeight: 600 }}>
+                    {topTablesScannedToday.length} Active Today
+                  </span>
+                </div>
+
+                {topTablesScannedToday.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {topTablesScannedToday.slice(0, 5).map((entry, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: '#FFFFFF',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid #F1F5F9'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.85rem' }}>
+                            {entry.space_type === 'room' ? '🏨' : entry.space_type === 'cinema_seat' ? '🎬' : entry.space_type === 'counter' ? '⚡' : entry.space_type === 'cabin' ? '🛋️' : entry.space_type === 'vip' ? '👑' : '🍽️'}
+                          </span>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1E293B' }}>
+                            {entry.label || (entry.table ? `${entry.table}` : 'Direct Link')}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#7E22CE' }}>
+                            {entry.count} scans
+                          </span>
+                          <span style={{ fontSize: '0.68rem', color: '#CBD5E1' }}>•</span>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669' }}>
+                            {entry.orders_today ?? 0} orders ({entry.conversion_rate ?? 0}%)
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding: '24px 0', textAlign: 'center', color: '#94A3B8', fontSize: '0.74rem', margin: 'auto' }}>
+                    No physical {spacePlural.toLowerCase()} scanned yet today.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Visual Space Heatmap Grid (Suggestion 2) */}
+            {Array.isArray(analyticsData?.space_heatmap) && analyticsData.space_heatmap.length > 0 && (
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1E293B' }}>
+                      Physical {spacePlural} Scan Heatmap &amp; Standee Health
+                    </span>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                      ({analyticsData.standee_health?.active_spaces ?? 0} active, {analyticsData.standee_health?.dormant_spaces ?? 0} dormant)
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.68rem', color: '#64748B' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#7E22CE' }} /> Hot (5+)
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16A34A' }} /> Active (1-4)
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#CBD5E1' }} /> 0 Scans
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))',
+                  gap: '8px'
+                }}>
+                  {analyticsData.space_heatmap.map((space) => {
+                    const isHot = space.status === 'hot';
+                    const isActive = space.status === 'active';
+                    return (
+                      <div
+                        key={space.space_number}
+                        title={`${space.label}: ${space.scans_today} scans, ${space.orders_today} orders (${space.conversion_rate}% conv)`}
+                        style={{
+                          background: isHot ? '#FAF5FF' : isActive ? '#F0FDF4' : '#F8FAFC',
+                          border: isHot ? '1.5px solid #D8B4FE' : isActive ? '1.5px solid #86EFAC' : '1px dashed #CBD5E1',
+                          borderRadius: '8px',
+                          padding: '6px 8px',
+                          textAlign: 'center',
+                          transition: 'all 0.2s',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: isHot ? '#6B21A8' : isActive ? '#15803D' : '#64748B' }}>
+                          {space.space_number}
+                        </div>
+                        <div style={{ fontSize: '0.62rem', fontWeight: 700, color: isHot ? '#7E22CE' : isActive ? '#16A34A' : '#94A3B8' }}>
+                          {space.scans_today > 0 ? `${space.scans_today} scans` : '0 scans'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ========================================================

@@ -1421,9 +1421,27 @@ export default function HomeView({
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
             boxSizing: 'border-box'
           }}>
-            <h4 style={{ fontSize: '0.90rem', fontWeight: 800, color: '#0F172A', margin: '0 0 16px 0' }}>
-              Plan Usage
-            </h4>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <h4 style={{ fontSize: '0.90rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Plan Usage & Quotas
+              </h4>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                color: '#7E22CE',
+                background: '#FAF5FF',
+                padding: '3px 10px',
+                borderRadius: '8px',
+                border: '1px solid #F3E8FF'
+              }}>
+                <span>📲</span>
+                <span>{analyticsData?.today_scans ?? 0} {isHotel ? 'Room Scans Today' : isCinema ? 'Seat Scans Today' : 'Scans Today'}</span>
+                <span style={{ color: '#94A3B8', fontWeight: 500 }}>({analyticsData?.total_scans ?? restaurantInfo?.scan_count ?? 0} lifetime)</span>
+              </div>
+            </div>
 
             <div style={{
               display: 'grid',

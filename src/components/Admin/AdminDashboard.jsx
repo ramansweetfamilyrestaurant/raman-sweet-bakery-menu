@@ -3684,6 +3684,7 @@ export default function AdminDashboard({
                   onRefreshData={loadData}
                   onReturnToMenu={onReturnToMenu}
                   restaurantInfo={restaurantInfo}
+                  analyticsData={analyticsData}
                   currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                   maxDishes={tenantCaps.max_dishes}
                   maxCategories={tenantCaps.max_categories}

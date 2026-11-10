@@ -37,6 +37,9 @@ export async function fetchRestaurantInfo(slugOrToken = '') {
   } else if (typeof slugOrToken === 'object') {
     if (slugOrToken.token) headers.Authorization = `Bearer ${slugOrToken.token}`;
     if (slugOrToken.slug) url += `?slug=${encodeURIComponent(slugOrToken.slug)}`;
+    if (slugOrToken.scan !== undefined) url += `${url.includes('?') ? '&' : '?'}scan=${encodeURIComponent(slugOrToken.scan)}`;
+    if (slugOrToken.space_type) url += `&space_type=${encodeURIComponent(slugOrToken.space_type)}`;
+    if (slugOrToken.table_num) url += `&table_num=${encodeURIComponent(slugOrToken.table_num)}`;
   }
 
   const res = await fetch(url, { headers, cache: 'no-store' });

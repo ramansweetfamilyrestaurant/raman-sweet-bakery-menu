@@ -529,6 +529,60 @@ export async function enrichItemsWithActiveOffers(restaurantId, dishes = [], com
   };
 }
 
+// Canonical Space Extractor supporting all verticals (Dine-in, Hotel Rooms, Cinema Seats, Cabins, VIP, Counter)
+function extractScanSpace(req) {
+  let spaceType = 'table';
+  let tableNumber = null;
+
+  if (req.query.space_type) {
+    spaceType = String(req.query.space_type).toLowerCase().trim();
+  } else if (req.query.cinema || req.query.seat || (req.query.screen && req.query.row)) {
+    spaceType = 'cinema_seat';
+  } else if (req.query.room) {
+    spaceType = 'room';
+  } else if (req.query.counter) {
+    spaceType = 'counter';
+  } else if (req.query.cabin) {
+    spaceType = 'cabin';
+  } else if (req.query.vip) {
+    spaceType = 'vip';
+  } else if (req.query.table || req.query.t || req.query.tableno || req.query.tbl) {
+    spaceType = 'table';
+  }
+
+  if (req.query.table_num) {
+    tableNumber = String(req.query.table_num).trim();
+  } else if (req.query.screen && req.query.row) {
+    const sc = String(req.query.screen).trim();
+    const rw = String(req.query.row).trim().toUpperCase();
+    const st = String(req.query.seatno || req.query.seat_num || req.query.seat || '1').trim();
+    tableNumber = `S${sc}-${rw}-${st}`;
+  } else if (req.query.cinema) {
+    tableNumber = String(req.query.cinema).trim();
+  } else if (req.query.seat) {
+    tableNumber = String(req.query.seat).trim();
+  } else if (req.query.room) {
+    tableNumber = String(req.query.room).trim();
+  } else if (req.query.cabin) {
+    tableNumber = String(req.query.cabin).trim();
+  } else if (req.query.vip) {
+    tableNumber = String(req.query.vip).trim();
+  } else if (req.query.table || req.query.t || req.query.tableno || req.query.tbl) {
+    tableNumber = String(req.query.table || req.query.t || req.query.tableno || req.query.tbl).trim();
+  } else if (req.query.counter) {
+    tableNumber = 'COUNTER';
+  }
+
+  return { spaceType, tableNumber };
+}
+
+// Bot & Social Media Link Preview Filter (Suggestion 4)
+function isCrawlerOrBot(userAgent) {
+  if (!userAgent || typeof userAgent !== 'string') return false;
+  const ua = userAgent.toLowerCase();
+  return /whatsapp|facebookexternalhit|facebot|twitterbot|telegrambot|linkedinbot|slackbot|discordbot|applebot|bingbot|googlebot|yandex|duckduckbot|baiduspider|crawler|spider/i.test(ua);
+}
+
 // GET Combined Menu Bundle (Blazing-Fast Edge-Cached Payload)
 router.get('/menu-bundle', async (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
@@ -538,9 +592,23 @@ router.get('/menu-bundle', async (req, res) => {
     const { slug } = req.query;
     const cleanSlug = String(slug || '').trim().toLowerCase();
 
+    // Check if this request qualifies for scan count increment (Filters bots & reloads)
+    const isExplicitNewScan = req.query.scan === '1' || req.query.is_new_scan === '1' || req.query.is_new_scan === 'true';
+    const isExplicitNoScan = req.query.scan === '0' || req.query.is_new_scan === '0' || req.query.is_new_scan === 'false';
+    const isAdminReq = Boolean(req.headers && req.headers.authorization);
+    const isBot = isCrawlerOrBot(req.headers ? req.headers['user-agent'] : null);
+    const shouldIncrementScan = !isAdminReq && !isBot && (isExplicitNewScan || (!isExplicitNoScan && req.query.scan === undefined && req.query.is_new_scan === undefined));
+    const { spaceType, tableNumber } = extractScanSpace(req);
+
     if (cleanSlug) {
       const cached = menuBundleCache.get(cleanSlug);
       if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+        // Reliably increment scan and log event even when served from fast edge cache
+        if (shouldIncrementScan && cached.payload && cached.payload.info && cached.payload.info.id) {
+          const cId = cached.payload.info.id;
+          query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [cId]).catch(() => {});
+          query('INSERT INTO qr_scan_events (restaurant_id, space_type, table_number) VALUES ($1, $2, $3)', [cId, spaceType, tableNumber]).catch(() => {});
+        }
         return res.json(cached.payload);
       }
     }
@@ -587,8 +655,11 @@ router.get('/menu-bundle', async (req, res) => {
     // Enrich dishes and combos with active promotions
     const { enrichedDishes, enrichedCombos, validOffers } = await enrichItemsWithActiveOffers(targetId, rawDishes, rawCombos, sym);
 
-    // Increment scan count asynchronously after main data fetch
-    query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [targetId]).catch(() => {});
+    // Increment scan count asynchronously after main data fetch and log event
+    if (shouldIncrementScan) {
+      query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [targetId]).catch(() => {});
+      query('INSERT INTO qr_scan_events (restaurant_id, space_type, table_number) VALUES ($1, $2, $3)', [targetId, spaceType, tableNumber]).catch(() => {});
+    }
 
     let filtersVis = resto.filters_visibility;
     if (typeof filtersVis === 'string') {
@@ -704,6 +775,11 @@ router.get('/menu-bundle', async (req, res) => {
       menuBundleCache.set(cleanSlug, { payload, timestamp: Date.now() });
     }
 
+    if (shouldIncrementScan && resto.id) {
+      query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [resto.id]).catch(() => {});
+      query('INSERT INTO qr_scan_events (restaurant_id, space_type, table_number) VALUES ($1, $2, $3)', [resto.id, spaceType, tableNumber]).catch(() => {});
+    }
+
     res.json(payload);
   } catch (err) {
     console.error('Error fetching menu bundle:', err);
@@ -771,9 +847,16 @@ router.get('/info', async (req, res) => {
       filtersVis = { must_try: true, combo: true, special: true, under100: true };
     }
 
-    // Increment QR scan count silently if public customer request (no JWT token)
-    if (!req.headers || !req.headers.authorization) {
+    // Increment QR scan count silently if public customer request and qualifies for scan (Filters bots)
+    const isExplicitInfoNewScan = req.query.scan === '1' || req.query.is_new_scan === '1' || req.query.is_new_scan === 'true';
+    const isExplicitInfoNoScan = req.query.scan === '0' || req.query.is_new_scan === '0' || req.query.is_new_scan === 'false';
+    const isInfoBot = isCrawlerOrBot(req.headers ? req.headers['user-agent'] : null);
+    const shouldIncrementInfoScan = !isAuthorizedAdminForResto && !isInfoBot && (!req.headers || !req.headers.authorization) && (isExplicitInfoNewScan || (!isExplicitInfoNoScan && req.query.scan === undefined && req.query.is_new_scan === undefined));
+    const { spaceType: infoSpaceType, tableNumber: infoTableNumber } = extractScanSpace(req);
+
+    if (shouldIncrementInfoScan) {
       query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [resto.id]).catch(() => {});
+      query('INSERT INTO qr_scan_events (restaurant_id, space_type, table_number) VALUES ($1, $2, $3)', [resto.id, infoSpaceType, infoTableNumber]).catch(() => {});
     }
 
     const isComplimentary = isAuthoritativeComplimentaryTenant(resto);

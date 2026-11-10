@@ -30,7 +30,7 @@ function getAppBaseUrl(req) {
   return 'https://touchqr.in';
 }
 
-function projectTenantSummary(r, sub, countMap, adminMap, planMap, paidSub = null) {
+function projectTenantSummary(r, sub, countMap, adminMap, planMap, paidSub = null, todayScansMap = {}) {
   const isSuspended = r.active === false || r.active === 0 || r.active === '0' || r.active === 'false';
   const effectiveSub = (sub && (sub.subscription_type === 'ADMIN_GRANTED' || sub.gateway === 'admin_granted') && sub.status !== 'active' && paidSub && paidSub.status === 'active')
     ? paidSub
@@ -91,6 +91,7 @@ function projectTenantSummary(r, sub, countMap, adminMap, planMap, paidSub = nul
     is_pure_veg: profile.is_pure_veg,
     active: !isSuspended,
     dish_count: countMap[r.id] || 0,
+    today_scans: todayScansMap[r.id] || 0,
     owner_username: adminMap[r.id] || 'N/A',
     plan_name: effectivePlanName,
     is_complimentary: isVip,
@@ -208,16 +209,20 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
       restoSql += ` LIMIT $${sqlParams.length + 1} OFFSET $${sqlParams.length + 2}`;
       sqlParams.push(limit, offset);
 
-      const [restaurants, dishesCount, adminsList, subsList, saasPlans] = await Promise.all([
+      const todayISTMidnight = `${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())} 00:00:00`;
+      const [restaurants, dishesCount, adminsList, subsList, saasPlans, todayScansRows] = await Promise.all([
         query(restoSql, sqlParams),
         query('SELECT restaurant_id, COUNT(*) as count FROM dishes GROUP BY restaurant_id'),
         query("SELECT id, restaurant_id, username FROM admins WHERE role = 'restaurant_admin'"),
         query('SELECT * FROM subscriptions ORDER BY id DESC').catch(() => []),
-        query('SELECT * FROM saas_plans ORDER BY price ASC').catch(() => [])
+        query('SELECT * FROM saas_plans ORDER BY price ASC').catch(() => []),
+        query('SELECT restaurant_id, COUNT(*) as count FROM qr_scan_events WHERE created_at >= $1 GROUP BY restaurant_id', [todayISTMidnight]).catch(() => [])
       ]);
 
       const countMap = {};
       dishesCount.forEach(row => { countMap[row.restaurant_id] = parseInt(row.count || 0, 10); });
+      const todayScansMap = {};
+      (todayScansRows || []).forEach(row => { todayScansMap[row.restaurant_id] = parseInt(row.count || 0, 10); });
       const adminMap = {};
       adminsList.forEach(a => { adminMap[a.restaurant_id] = a.username; });
       const subsByResto = {};
@@ -230,7 +235,7 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
 
       const result = restaurants.map(r => {
         const { effectiveSub, paidSub } = resolveTenantSubscriptions(subsByResto[r.id] || [], r);
-        return projectTenantSummary(r, effectiveSub, countMap, adminMap, planMap, paidSub);
+        return projectTenantSummary(r, effectiveSub, countMap, adminMap, planMap, paidSub, todayScansMap);
       });
 
       return res.json({
@@ -245,16 +250,20 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
     }
 
     // Default backward-compatible unpaginated list
-    const [restaurants, dishesCount, adminsList, subsList, saasPlans] = await Promise.all([
+    const todayISTMidnight = `${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())} 00:00:00`;
+    const [restaurants, dishesCount, adminsList, subsList, saasPlans, todayScansRows] = await Promise.all([
       query('SELECT * FROM restaurants ORDER BY id DESC'),
       query('SELECT restaurant_id, COUNT(*) as count FROM dishes GROUP BY restaurant_id'),
       query("SELECT id, restaurant_id, username FROM admins WHERE role = 'restaurant_admin'"),
       query('SELECT * FROM subscriptions ORDER BY id DESC').catch(() => []),
-      query('SELECT * FROM saas_plans ORDER BY price ASC').catch(() => [])
+      query('SELECT * FROM saas_plans ORDER BY price ASC').catch(() => []),
+      query('SELECT restaurant_id, COUNT(*) as count FROM qr_scan_events WHERE created_at >= $1 GROUP BY restaurant_id', [todayISTMidnight]).catch(() => [])
     ]);
 
     const countMap = {};
     dishesCount.forEach(row => { countMap[row.restaurant_id] = parseInt(row.count || 0, 10); });
+    const todayScansMap = {};
+    (todayScansRows || []).forEach(row => { todayScansMap[row.restaurant_id] = parseInt(row.count || 0, 10); });
     const adminMap = {};
     adminsList.forEach(a => { adminMap[a.restaurant_id] = a.username; });
     const subsByResto = {};
@@ -267,7 +276,7 @@ router.get('/restaurants', authenticateToken, requireSuperAdmin, async (req, res
 
     const result = restaurants.map(r => {
       const { effectiveSub, paidSub } = resolveTenantSubscriptions(subsByResto[r.id] || [], r);
-      return projectTenantSummary(r, effectiveSub, countMap, adminMap, planMap, paidSub);
+      return projectTenantSummary(r, effectiveSub, countMap, adminMap, planMap, paidSub, todayScansMap);
     });
 
     res.json(result);
@@ -1934,8 +1943,9 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
       console.warn('Dishes hosted query notice:', e.message);
     }
 
-    // 2e. QR Scans Telemetry (Platform all-time scans vs daily tracking status)
+    // 2e. QR Scans Telemetry (Platform all-time scans vs daily live tracking)
     let totalLifetimeScans = 0;
+    let todayPlatformScans = 0;
     try {
       const scanSql = isPg
         ? `SELECT COALESCE(SUM(scan_count), 0)::bigint AS total_scans FROM restaurants`
@@ -1943,6 +1953,15 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
       const scanRes = await query(scanSql);
       if (scanRes && scanRes[0]) {
         totalLifetimeScans = parseInt(scanRes[0].total_scans, 10) || 0;
+      }
+
+      const todayISTMidnight = `${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())} 00:00:00`;
+      const todayScanRes = await query(
+        `SELECT COUNT(*) as today_scans FROM qr_scan_events WHERE created_at >= $1`,
+        [todayISTMidnight]
+      ).catch(() => []);
+      if (todayScanRes && todayScanRes[0]) {
+        todayPlatformScans = parseInt(todayScanRes[0].today_scans, 10) || 0;
       }
     } catch (e) {
       console.warn('Scan count query notice:', e.message);
@@ -2053,9 +2072,9 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
           status: 'live'
         },
         qr_scans_today: {
-          value: null,
+          value: todayPlatformScans,
           total_all_time: totalLifetimeScans,
-          status: 'not_tracked'
+          status: 'live'
         }
       },
       system: {

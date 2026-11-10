@@ -3614,10 +3614,12 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       [targetId]
     );
 
-    // Load tenant categories and dishes for complete 100% category resolution
-    const [tenantCategories, tenantDishes] = await Promise.all([
+    // Load tenant categories, dishes and scan events
+    const [tenantCategories, tenantDishes, tenantScanEvents, restoRow] = await Promise.all([
       query('SELECT id, name FROM categories WHERE restaurant_id = $1 ORDER BY sort_order ASC, id ASC', [targetId]),
-      query('SELECT id, name, category_id FROM dishes WHERE restaurant_id = $1', [targetId])
+      query('SELECT id, name, category_id FROM dishes WHERE restaurant_id = $1', [targetId]),
+      query('SELECT id, space_type, table_number, created_at FROM qr_scan_events WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 5000', [targetId]).catch(() => []),
+      query('SELECT scan_count, total_tables, total_rooms, total_screens, total_seats, service_model, business_type FROM restaurants WHERE id = $1', [targetId]).catch(() => [])
     ]);
 
     const dishIdToCategory = {};
@@ -3640,6 +3642,95 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       }
     });
 
+    // Compute authorative live scan telemetry (Today, Yesterday, Hourly curve, Top tables)
+    const totalLifetimeScans = Number(restoRow?.[0]?.scan_count || 0);
+    const yesterdayStr = getISTDateOffset(1);
+    let todayScans = 0;
+    let yesterdayScans = 0;
+    let weeklyScans = 0;
+
+    const hourlyScansToday = Array.from({ length: 24 }, (_, h) => {
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const displayH = h % 12 === 0 ? 12 : h % 12;
+      return { hour: h, label: `${displayH} ${ampm}`, count: 0 };
+    });
+
+    const tableScansMap = {};
+
+    (tenantScanEvents || []).forEach(ev => {
+      const evDate = parseSafeDate(ev.created_at);
+      if (!evDate) return;
+      const dStr = getFormattedLocalDate(evDate);
+
+      if (dStr >= sevenDaysAgoStr && dStr <= todayStr) {
+        weeklyScans++;
+      }
+
+      if (dStr === todayStr) {
+        todayScans++;
+        try {
+          const hourStr = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', hourCycle: 'h23' }).format(evDate);
+          const hNum = parseInt(hourStr, 10);
+          if (hNum >= 0 && hNum < 24) {
+            hourlyScansToday[hNum].count++;
+          }
+        } catch (e) {
+          const hNum = evDate.getHours();
+          if (hNum >= 0 && hNum < 24) hourlyScansToday[hNum].count++;
+        }
+
+        const tblKey = ev.table_number ? `${ev.space_type || 'table'}:${ev.table_number}` : (ev.space_type || 'general');
+        if (!tableScansMap[tblKey]) {
+          tableScansMap[tblKey] = {
+            table: ev.table_number || 'Direct/Counter',
+            space_type: ev.space_type || 'table',
+            count: 0
+          };
+        }
+        tableScansMap[tblKey].count++;
+      } else if (dStr === yesterdayStr) {
+        yesterdayScans++;
+      }
+    });
+
+    const formatSpaceLabel = (spaceType, num) => {
+      if (!num || num === 'Direct/Counter') {
+        return spaceType === 'counter' ? '⚡ Billing Counter' : '🔗 Direct / Menu Link';
+      }
+      if (spaceType === 'room') return `🏨 Room ${num}`;
+      if (spaceType === 'cinema_seat') {
+        const cMatch = String(num).match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
+        if (cMatch) {
+          const sc = cMatch[1] || cMatch[4];
+          const rw = (cMatch[2] || cMatch[5]).toUpperCase();
+          const st = cMatch[3] || cMatch[6];
+          return `🎬 Screen ${sc} • Row ${rw} • Seat ${st}`;
+        }
+        return `🎬 Seat ${num}`;
+      }
+      if (spaceType === 'cabin') return `🛋️ Cabin ${num}`;
+      if (spaceType === 'vip') return `👑 VIP ${num}`;
+      if (spaceType === 'counter') return `⚡ Counter ${num}`;
+      return `🍽️ Table ${num}`;
+    };
+
+    const topTablesScannedToday = Object.values(tableScansMap)
+      .map(item => ({
+        ...item,
+        label: formatSpaceLabel(item.space_type, item.table)
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+
+    let peakScanHour = null;
+    let maxHourScans = 0;
+    hourlyScansToday.forEach(slot => {
+      if (slot.count > maxHourScans) {
+        maxHourScans = slot.count;
+        peakScanHour = `${slot.label} (${slot.count} scans)`;
+      }
+    });
+
     let todaySales = 0;
     let todayOrders = 0;
     let weeklySales = 0;
@@ -3659,6 +3750,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     const allTimePaymentMethods = { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 }, other: { count: 0, amount: 0 } };
     const periodPaymentMethods = { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 }, other: { count: 0, amount: 0 } };
+    const tableOrdersTodayMap = {};
 
     const isDateInPeriod = (dStr) => {
       if (!dStr) return false;
@@ -3708,6 +3800,10 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       if (dateStr === todayStr) {
         todaySales += amt;
         todayOrders += 1;
+        if (o.table_number) {
+          const tblClean = String(o.table_number).trim();
+          tableOrdersTodayMap[tblClean] = (tableOrdersTodayMap[tblClean] || 0) + 1;
+        }
       }
       if (dateStr >= sevenDaysAgoStr) {
         weeklySales += amt;
@@ -3988,6 +4084,62 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     const availableMonths = Object.values(availableMonthsMap).sort((a, b) => b.key.localeCompare(a.key));
 
+    // 💡 Suggestion 3: Real-Time Scan-to-Order Conversion Rate
+    const scanConversionRateToday = todayScans > 0 ? Math.min(100, Math.round((todayOrders / todayScans) * 100)) : 0;
+
+    const enrichedTopTablesScannedToday = topTablesScannedToday.map(item => {
+      const ordersCount = tableOrdersTodayMap[String(item.table)] || 0;
+      const convRate = item.count > 0 ? Math.min(100, Math.round((ordersCount / item.count) * 100)) : 0;
+      return {
+        ...item,
+        orders_today: ordersCount,
+        conversion_rate: convRate
+      };
+    });
+
+    // 💡 Suggestion 2: Space Heatmap & Standee Health Tracker (Dine-In Tables, Hotel Rooms, Cinema Seats)
+    const restoData = restoRow?.[0] || {};
+    const sModel = (restoData.service_model || '').toLowerCase();
+    const bType = (restoData.business_type || '').toLowerCase();
+    const isHotelModel = sModel === 'hotel' || bType === 'hotel_resort';
+    const isCinemaModel = sModel === 'cinema' || bType === 'cinema_theatre';
+
+    const maxSpacesToMap = isHotelModel
+      ? Math.min(Number(restoData.total_rooms) || 12, 50)
+      : isCinemaModel
+        ? Math.min(Number(restoData.total_seats) || 24, 60)
+        : Math.min(Number(restoData.total_tables) || 12, 50);
+
+    const spaceHeatmap = [];
+    let activeSpacesCount = 0;
+    let dormantSpacesCount = 0;
+
+    for (let i = 1; i <= maxSpacesToMap; i++) {
+      const sNum = String(i);
+      const sKey = isHotelModel ? `room:${sNum}` : isCinemaModel ? `cinema_seat:${sNum}` : `table:${sNum}`;
+      const scanEntry = tableScansMap[sKey] || tableScansMap[`table:${sNum}`] || tableScansMap[sNum] || null;
+      const sCount = scanEntry ? scanEntry.count : 0;
+      const oCount = tableOrdersTodayMap[sNum] || 0;
+      const cRate = sCount > 0 ? Math.min(100, Math.round((oCount / sCount) * 100)) : 0;
+      const sLabel = isHotelModel ? `Room ${sNum}` : isCinemaModel ? `Seat ${sNum}` : `Table ${sNum}`;
+      const status = sCount >= 5 ? 'hot' : sCount >= 1 ? 'active' : 'dormant';
+
+      if (sCount > 0) activeSpacesCount++;
+      else dormantSpacesCount++;
+
+      spaceHeatmap.push({
+        space_number: sNum,
+        label: sLabel,
+        space_type: isHotelModel ? 'room' : isCinemaModel ? 'cinema_seat' : 'table',
+        scans_today: sCount,
+        orders_today: oCount,
+        conversion_rate: cRate,
+        status
+      });
+    }
+
+    const standeeHealthScore = maxSpacesToMap > 0 ? Math.round((activeSpacesCount / maxSpacesToMap) * 100) : 0;
+
     res.json({
       period_sales: periodSales,
       period_orders: periodOrdersCount,
@@ -3999,6 +4151,21 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       today_sales: todaySales,
       today_revenue: todaySales,
       today_orders: todayOrders,
+      today_scans: todayScans,
+      yesterday_scans: yesterdayScans,
+      weekly_scans: weeklyScans,
+      total_scans: totalLifetimeScans,
+      scan_conversion_rate_today: scanConversionRateToday,
+      hourly_scans_today: hourlyScansToday,
+      top_tables_scanned_today: enrichedTopTablesScannedToday,
+      space_heatmap: spaceHeatmap,
+      standee_health: {
+        total_spaces: maxSpacesToMap,
+        active_spaces: activeSpacesCount,
+        dormant_spaces: dormantSpacesCount,
+        health_score: standeeHealthScore
+      },
+      peak_scan_hour: peakScanHour,
       weekly_sales: weeklySales,
       days_7_revenue: weeklySales,
       monthly_sales: monthlySales,

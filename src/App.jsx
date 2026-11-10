@@ -1125,10 +1125,34 @@ export default function App() {
       let dishData = [];
       let comboData = [];
 
+      // Check session scan deduplication for customer view (avoids inflating scans on reload/search)
+      let isNewScanSession = false;
+      let spaceTypeParam = '';
+      let tableNumParam = '';
+      if (!isAdminMode && !searchQuery) {
+        const spaceInfo = getSpaceInfoFromUrl();
+        if (spaceInfo?.type) spaceTypeParam = spaceInfo.type;
+        if (spaceInfo?.num) tableNumParam = spaceInfo.num;
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          try {
+            const spaceKey = spaceInfo?.type && spaceInfo?.num ? `${spaceInfo.type}_${spaceInfo.num}` : 'main';
+            const sessionKey = `touchqr_scan_${slug}_${spaceKey}`;
+            if (!sessionStorage.getItem(sessionKey)) {
+              isNewScanSession = true;
+              sessionStorage.setItem(sessionKey, String(Date.now()));
+            }
+          } catch (e) {
+            isNewScanSession = true;
+          }
+        }
+      }
+
       // Fast single-bundle fetch for public customer view
       if (!isAdminMode && !searchQuery) {
         try {
-          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(slug)}`);
+          const scanParam = isNewScanSession ? '1' : '0';
+          const spaceQuery = spaceTypeParam ? `&space_type=${encodeURIComponent(spaceTypeParam)}&table_num=${encodeURIComponent(tableNumParam)}` : '';
+          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(slug)}&scan=${scanParam}${spaceQuery}`);
           if (bundleRes.ok) {
             const bundle = await bundleRes.json();
             if (bundle && bundle.info) {
@@ -1151,7 +1175,13 @@ export default function App() {
       if (!infoData) {
         const publicToken = isAdminMode ? adminToken : undefined;
         const [resInfo, resCat, resDish, resCombo] = await Promise.all([
-          fetchRestaurantInfo({ token: publicToken, slug }),
+          fetchRestaurantInfo({ 
+            token: publicToken, 
+            slug, 
+            scan: isNewScanSession ? '1' : '0',
+            space_type: spaceTypeParam,
+            table_num: tableNumParam
+          }),
           fetchCategories({ slug, adminView: isAdminMode, token: publicToken }),
           fetchDishes({ query: searchQuery, slug, adminView: isAdminMode, token: publicToken }),
           fetchCombos(slug).catch((err) => { console.warn('[MENU] fetchCombos notice:', err); return []; })

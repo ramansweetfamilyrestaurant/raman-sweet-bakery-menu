@@ -671,7 +671,17 @@ async function createTables(options = {}) {
       `CREATE INDEX IF NOT EXISTS idx_audit_log_archive_batches_arch_status ON audit_log_archive_batches (archive_id, status);`,
       `CREATE INDEX IF NOT EXISTS idx_audit_log_archive_tombstones_created ON audit_log_archive_tombstones (created_at DESC);`,
       `CREATE INDEX IF NOT EXISTS idx_audit_logs_archive_staging_restored_from ON audit_logs_archive_staging (restored_from_archive_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_audit_logs_archive_staging_resto_created ON audit_logs_archive_staging (restaurant_id, created_at DESC);`
+      `CREATE INDEX IF NOT EXISTS idx_audit_logs_archive_staging_resto_created ON audit_logs_archive_staging (restaurant_id, created_at DESC);`,
+
+      `CREATE TABLE IF NOT EXISTS qr_scan_events (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+        space_type VARCHAR(30) DEFAULT 'table',
+        table_number VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_qr_scan_events_resto_created ON qr_scan_events (restaurant_id, created_at DESC);`,
+      `CREATE INDEX IF NOT EXISTS idx_qr_scan_events_created ON qr_scan_events (created_at DESC);`
     ];
 
     for (const q of pgTables) {
@@ -1304,6 +1314,19 @@ async function createTables(options = {}) {
     try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN payment_methods_summary TEXT"); } catch (e) {}
     try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_created_status ON orders(restaurant_id, created_at, status)"); } catch (e) {}
     try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_daily_sales_summaries_resto_date ON daily_sales_summaries(restaurant_id, summary_date)"); } catch (e) {}
+
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS qr_scan_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER NOT NULL,
+        space_type TEXT DEFAULT 'table',
+        table_number TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
+      );
+    `);
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_qr_scan_events_resto_created ON qr_scan_events(restaurant_id, created_at DESC)"); } catch (e) {}
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_qr_scan_events_created ON qr_scan_events(created_at DESC)"); } catch (e) {}
 
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS subscriptions (

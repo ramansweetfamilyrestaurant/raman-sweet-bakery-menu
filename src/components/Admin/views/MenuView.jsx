@@ -77,7 +77,8 @@ export default function MenuView({
   maxCombos = 9999,
   onUpgrade = null,
   onReturnToMenu = null,
-  restaurantInfo = {}
+  restaurantInfo = {},
+  analyticsData = {}
 }) {
   const [deleteConfirmDish, setDeleteConfirmDish] = useState(null);
   const [deleteConfirmCategory, setDeleteConfirmCategory] = useState(null);
@@ -1019,19 +1020,21 @@ export default function MenuView({
             </div>
             <div>
               <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
-                {Number(restaurantInfo?.scan_count || 0)}
+                {Number(analyticsData?.total_scans ?? restaurantInfo?.scan_count ?? 0)}
               </div>
               <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, marginTop: '2px' }}>
-                Menu Views
+                Total QR Scans
               </div>
             </div>
           </div>
 
           <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '0.70rem', color: '#D97706', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-              • Realtime
+            <span style={{ fontSize: '0.70rem', color: Number(analyticsData?.today_scans || 0) > 0 ? '#16A34A' : '#D97706', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+              • {analyticsData?.today_scans !== undefined ? `${analyticsData.today_scans} Today` : 'Realtime'}
             </span>
-            <span style={{ fontSize: '0.62rem', color: '#94A3B8', display: 'block' }}>QR Scans</span>
+            <span style={{ fontSize: '0.62rem', color: '#94A3B8', display: 'block' }}>
+              {analyticsData?.peak_scan_hour ? `Peak: ${analyticsData.peak_scan_hour.split(' ')[0]} ${analyticsData.peak_scan_hour.split(' ')[1]}` : 'Live Activity'}
+            </span>
           </div>
         </div>
       </div>

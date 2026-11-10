@@ -790,7 +790,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         const bExp = b.plan_expires_at ? new Date(b.plan_expires_at).getTime() : 0;
         return aExp - bExp;
       }
-      if (sortBy === 'scans') return (b.total_scans || 0) - (a.total_scans || 0);
+      if (sortBy === 'scans') return (b.scan_count || 0) - (a.scan_count || 0);
       return (b.id || 0) - (a.id || 0);
     });
 
@@ -1208,7 +1208,21 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             : 'Active'}
                     </td>
                     <td style={{ fontSize: '0.78rem', fontWeight: 800, color: '#7E22CE' }}>
-                      📲 {r.scan_count || 0}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>📲 {r.scan_count || 0}</span>
+                        {Number(r.today_scans || 0) > 0 && (
+                          <span style={{
+                            background: '#ECFDF5',
+                            color: '#065F46',
+                            padding: '1px 5px',
+                            borderRadius: '4px',
+                            fontSize: '0.64rem',
+                            fontWeight: 800
+                          }}>
+                            +{r.today_scans} today
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', alignItems: 'center' }}>
@@ -1351,6 +1365,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                     <span style={{ background: '#F3E8FF', color: '#7E22CE', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
                       📲 {r.scan_count || 0} scans
+                      {Number(r.today_scans || 0) > 0 && ` (+${r.today_scans} today)`}
                     </span>
 
                     <span style={{ background: '#F1F5F9', color: '#334155', padding: '2px 7px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
@@ -1862,18 +1877,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <div className="sa-telemetry-grid">
                       <div
                         className="sa-telemetry-card"
-                        title={`Lifetime Cumulative Scans: ${(dbStats?.telemetry?.qr_scans_today?.total_all_time ?? totalScans).toLocaleString()} (Daily scan timestamps not metered)`}
+                        title={`Lifetime Cumulative Scans: ${(dbStats?.telemetry?.qr_scans_today?.total_all_time ?? totalScans).toLocaleString()} • Today: ${(dbStats?.telemetry?.qr_scans_today?.value ?? 0).toLocaleString()}`}
                       >
                         <div className="sa-telemetry-top">
-                          <span className="sa-telemetry-label">Lifetime QR Scans</span>
+                          <span className="sa-telemetry-label">QR Scans Activity</span>
                           <QrCode size={13} color="#7E22CE" />
                         </div>
                         <div className="sa-telemetry-val-box">
                           <span className="sa-telemetry-val" style={{ fontSize: '1.05rem', color: '#7E22CE' }}>
                             {(dbStats?.telemetry?.qr_scans_today?.total_all_time ?? totalScans).toLocaleString('en-IN')}
                           </span>
-                          <span className="sa-telemetry-sub">
-                            Platform all-time scans
+                          <span className="sa-telemetry-sub" style={{ color: Number(dbStats?.telemetry?.qr_scans_today?.value) > 0 ? '#16A34A' : '#94A3B8', fontWeight: 700 }}>
+                            {dbStats?.telemetry?.qr_scans_today?.value !== null && dbStats?.telemetry?.qr_scans_today?.value !== undefined
+                              ? `+${Number(dbStats.telemetry.qr_scans_today.value).toLocaleString('en-IN')} today`
+                              : 'Platform all-time scans'}
                           </span>
                         </div>
                       </div>
