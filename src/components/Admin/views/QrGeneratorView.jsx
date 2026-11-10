@@ -1838,7 +1838,8 @@ export default function QrGeneratorView({
                 textAlign: 'center',
                 boxShadow: '0 12px 30px rgba(0,0,0,0.1)',
                 position: 'relative',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                overflow: 'hidden'
               }}
             >
               {/* Acrylic Top-Right Glare */}
