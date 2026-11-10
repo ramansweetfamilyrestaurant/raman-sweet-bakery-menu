@@ -11,6 +11,29 @@ const toBoolInt = (val) => {
   return (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
 };
 
+// Clean plan header label generator: prevents duplicated words like "BASIC BASIC STARTER PLAN"
+const getPlanDisplayLabel = (plan) => {
+  if (!plan) return '';
+  const rawBadge = String(plan.badge || '').trim();
+  const rawName = String(plan.name || '').trim();
+
+  // Extract leading emoji/symbol from badge if present (e.g. '⚡' from '⚡ BASIC', '👑' from '👑 PRO')
+  const emojiMatch = rawBadge.match(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|[⚡👑🚀🏨🎬✨💎🔥])/u);
+  const emoji = emojiMatch ? emojiMatch[0] : '';
+
+  if (emoji) {
+    return `${emoji} ${rawName}`.trim();
+  }
+
+  // If badge doesn't have an emoji, check if badge text is already inside name
+  const badgeText = rawBadge.toLowerCase();
+  if (badgeText && rawName.toLowerCase().startsWith(badgeText)) {
+    return `👑 ${rawName}`;
+  }
+
+  return rawBadge ? `${rawBadge} ${rawName}` : `👑 ${rawName}`;
+};
+
 const THEME_ACCESS_OPTIONS = [
   { value: 'gold', label: '👑 Standard Gold Theme Only (Default)' },
   { value: 'gold,emerald,crimson,navy', label: '💎 4 Popular Themes (Gold, Emerald, Crimson, Navy)' },
@@ -1144,7 +1167,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                         <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: ind === 'hotel' ? '#EFF6FF' : ind === 'cinema' ? '#F5F3FF' : '#ECFDF5', color: ind === 'hotel' ? '#1E40AF' : ind === 'cinema' ? '#7E22CE' : '#047857' }}>
                           {ind.toUpperCase()}
                         </span>
-                        <span>{p.badge || '👑'} {p.name}</span>
+                        <span>{getPlanDisplayLabel(p)}</span>
                         <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>₹{p.price}/mo</span>
                       </div>
                     </th>
