@@ -1527,7 +1527,7 @@ export default function AdminDashboard({
   // Settings State
   const [settingsForm, setSettingsForm] = useState(() => {
     const infoData = getInitialAdminState('info', null);
-    const defaultVis = { must_try: true, combo: true, special: true, under100: true };
+    const defaultVis = { must_try: true, combo: true, special: true, under100: true, veg: true, nonveg: true, egg: true };
     if (infoData) {
       return {
         id: infoData.id,
@@ -1925,7 +1925,7 @@ export default function AdminDashboard({
       setSubscriptionStatus(subStatusData || null);
       setAnalyticsData(analyticsResp || null);
       if (infoData) {
-        const defaultVis = { must_try: true, combo: true, special: true, under100: true };
+        const defaultVis = { must_try: true, combo: true, special: true, under100: true, veg: true, nonveg: true, egg: true };
         setSettingsForm({
           id: infoData.id,
           name: infoData.name || '',

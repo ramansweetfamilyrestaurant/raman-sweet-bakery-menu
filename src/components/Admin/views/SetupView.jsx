@@ -11831,8 +11831,8 @@ export default function SetupView({
               {/* Filter 3 */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
                 <div>
-                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🍱 "Combos" Navigation Tab</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Displays dedicated combos category tab</span>
+                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🍱 "Combos & Thalis" Navigation Pill</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Displays dedicated combos and thalis category pill</span>
                 </div>
                 <input
                   type="checkbox"
@@ -11840,6 +11840,74 @@ export default function SetupView({
                   onChange={(e) => setSettingsForm({
                     ...settingsForm,
                     filters_visibility: { ...settingsForm.filters_visibility, combo: e.target.checked }
+                  })}
+                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* Filter 4: Under 100 Budget Pill */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                <div>
+                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>⚡ "Under ₹100" Budget Filter Pill</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Allows customers to filter affordable pocket-friendly items</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settingsForm.filters_visibility?.under100 !== false}
+                  onChange={(e) => setSettingsForm({
+                    ...settingsForm,
+                    filters_visibility: { ...settingsForm.filters_visibility, under100: e.target.checked }
+                  })}
+                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* Filter 5: Pure Veg Pill */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                <div>
+                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🟢 "Pure Veg" Dietary Filter Pill</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Quick toggle for 100% vegetarian dishes</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settingsForm.filters_visibility?.veg !== false}
+                  onChange={(e) => setSettingsForm({
+                    ...settingsForm,
+                    filters_visibility: { ...settingsForm.filters_visibility, veg: e.target.checked }
+                  })}
+                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* Filter 6: Non-Veg Pill */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                <div>
+                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🔴 "Non-Veg" Dietary Filter Pill</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Quick toggle for non-vegetarian dishes</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settingsForm.filters_visibility?.nonveg !== false}
+                  onChange={(e) => setSettingsForm({
+                    ...settingsForm,
+                    filters_visibility: { ...settingsForm.filters_visibility, nonveg: e.target.checked }
+                  })}
+                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* Filter 7: Egg Pill */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                <div>
+                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🟡 "Egg" Dietary Filter Pill</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Quick toggle for egg-containing items</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settingsForm.filters_visibility?.egg !== false}
+                  onChange={(e) => setSettingsForm({
+                    ...settingsForm,
+                    filters_visibility: { ...settingsForm.filters_visibility, egg: e.target.checked }
                   })}
                   style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
                 />

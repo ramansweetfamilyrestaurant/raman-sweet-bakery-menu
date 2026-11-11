@@ -156,6 +156,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               let icon = '🏷️';
               
               if (lower.includes('must') || lower.includes('try')) {
+                if (filtersVisibility?.must_try === false) return null;
                 bg = 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)';
                 color = '#991B1B';
                 border = '1px solid #DC2626';
@@ -166,10 +167,23 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 border = '1px solid #D97706';
                 icon = '⭐';
               } else if (lower.includes('chef') || lower.includes('special')) {
+                if (filtersVisibility?.special === false) return null;
                 bg = 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)';
                 color = '#14532D';
                 border = '1px solid #16A34A';
                 icon = '👨‍🍳';
+              } else if (lower.includes('combo')) {
+                if (filtersVisibility?.combo === false) return null;
+                bg = 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)';
+                color = '#6B21A8';
+                border = '1px solid #A855F7';
+                icon = '🍕';
+              } else if (lower.includes('100') || lower.includes('under')) {
+                if (filtersVisibility?.under100 === false) return null;
+                bg = 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)';
+                color = '#15803D';
+                border = '1px solid #22C55E';
+                icon = '⚡';
               } else if (lower.includes('sweet') || lower.includes('sugar') || lower.includes('mithai')) {
                 bg = 'linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)';
                 color = '#831843';

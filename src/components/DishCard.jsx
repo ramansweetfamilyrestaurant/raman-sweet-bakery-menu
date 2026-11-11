@@ -198,6 +198,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               border = '1px solid #A855F7';
               icon = '🍕';
             } else if (lower.includes('100') || lower.includes('under')) {
+              if (filtersVisibility?.under100 === false) return null;
               bg = 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)';
               color = '#15803D';
               border = '1px solid #22C55E';
