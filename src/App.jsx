@@ -3215,6 +3215,7 @@ export default function App() {
                   const isNonVeg = comboText.includes('chicken') || comboText.includes('mutton') || comboText.includes('fish') || comboText.includes('egg');
                   const isVeg = isPureVegResto || !isNonVeg;
 
+                  {/* Combo Card Container */}
                   return (
                     <div 
                       key={combo.id}
