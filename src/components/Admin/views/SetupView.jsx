@@ -417,6 +417,20 @@ export default function SetupView({
   const [prefWaiterCall, setPrefWaiterCall] = useState(settingsForm.show_waiter_call ?? true);
   const [prefSeoRichSnippets, setPrefSeoRichSnippets] = useState(settingsForm.seo_rich_snippets ?? true);
   const [prefSocialCards, setPrefSocialCards] = useState(settingsForm.social_share_cards ?? true);
+  const defaultFiltersVis = {
+    must_try: true,
+    combo: true,
+    special: true,
+    under100: true,
+    veg: true,
+    nonveg: true,
+    egg: true,
+    customizable: true
+  };
+  const [prefFiltersVisibility, setPrefFiltersVisibility] = useState({
+    ...defaultFiltersVis,
+    ...(settingsForm.filters_visibility || {})
+  });
   const [activeBpModal, setActiveBpModal] = useState(null); // 'business_type' | 'hours' | 'google_review' | 'maps_location' | 'theme'
   const [bpSaveSuccess, setBpSaveSuccess] = useState(false);
   const [isGstRegistered, setIsGstRegistered] = useState(Boolean(settingsForm.is_gst_registered || settingsForm.gst_number || settingsForm.gstin));
@@ -463,7 +477,8 @@ export default function SetupView({
         show_dietary_filters: prefDietaryFilters,
         show_waiter_call: prefWaiterCall,
         seo_rich_snippets: prefSeoRichSnippets,
-        social_share_cards: prefSocialCards
+        social_share_cards: prefSocialCards,
+        filters_visibility: prefFiltersVisibility
       };
       if (setSettingsForm) setSettingsForm(updated);
       if (handleSaveSettings) {
@@ -3110,7 +3125,8 @@ export default function SetupView({
       prefDietaryFilters !== (settingsForm.show_dietary_filters ?? true) ||
       prefWaiterCall !== (settingsForm.show_waiter_call ?? true) ||
       prefSeoRichSnippets !== (settingsForm.seo_rich_snippets ?? true) ||
-      prefSocialCards !== (settingsForm.social_share_cards ?? true);
+      prefSocialCards !== (settingsForm.social_share_cards ?? true) ||
+      JSON.stringify(prefFiltersVisibility) !== JSON.stringify({ ...defaultFiltersVis, ...(settingsForm.filters_visibility || {}) });
 
     const handleDiscardMenuPreferences = () => {
       setPrefCurrency(settingsForm.currency || '₹ INR');
@@ -3135,6 +3151,7 @@ export default function SetupView({
       setPrefWaiterCall(settingsForm.show_waiter_call ?? true);
       setPrefSeoRichSnippets(settingsForm.seo_rich_snippets ?? true);
       setPrefSocialCards(settingsForm.social_share_cards ?? true);
+      setPrefFiltersVisibility({ ...defaultFiltersVis, ...(settingsForm.filters_visibility || {}) });
     };
 
     const toggleAccordion = (section) => {
@@ -3678,6 +3695,118 @@ export default function SetupView({
                 <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Highlight chef specials & popular items</span>
               </div>
               <ToggleSwitch checked={prefShowBestsellerBadge} onChange={setPrefShowBestsellerBadge} />
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 4.5 — CUSTOMER MENU BADGES & FILTERS */}
+        <div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
+            Customer Menu Badges & Filter Pills
+          </div>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))'
+          }}>
+            {/* Pill 1: Must Try */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>⭐ "Must Try" Badge & Filter</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Highlights chef recommended items on dish cards and search rail</span>
+              </div>
+              <ToggleSwitch
+                checked={prefFiltersVisibility?.must_try !== false}
+                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, must_try: val }))}
+              />
+            </div>
+
+            {/* Pill 2: Special */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>✨ "Special" Dishes Badge & Filter</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Special items pill and dish highlight tag</span>
+              </div>
+              <ToggleSwitch
+                checked={prefFiltersVisibility?.special !== false}
+                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, special: val }))}
+              />
+            </div>
+
+            {/* Pill 3: Combos */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🍱 "Combos & Thalis" Navigation Pill</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Dedicated category jump rail pill for combo deals</span>
+              </div>
+              <ToggleSwitch
+                checked={prefFiltersVisibility?.combo !== false}
+                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, combo: val }))}
+              />
+            </div>
+
+            {/* Pill 4: Under 100 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>⚡ "Under ₹100" Budget Filter Pill</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Allows diners to quickly filter pocket-friendly items</span>
+              </div>
+              <ToggleSwitch
+                checked={prefFiltersVisibility?.under100 !== false}
+                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, under100: val }))}
+              />
+            </div>
+
+            {/* Pill 5: Pure Veg */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🟢 "Pure Veg" Dietary Filter Pill</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Quick dietary filter pill for 100% vegetarian dishes</span>
+              </div>
+              <ToggleSwitch
+                checked={prefFiltersVisibility?.veg !== false}
+                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, veg: val }))}
+              />
+            </div>
+
+            {/* Pill 6: Non-Veg */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🔴 "Non-Veg" Dietary Filter Pill</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Quick dietary filter pill for non-vegetarian dishes</span>
+              </div>
+              <ToggleSwitch
+                checked={prefFiltersVisibility?.nonveg !== false}
+                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, nonveg: val }))}
+              />
+            </div>
+
+            {/* Pill 7: Egg */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🟡 "Egg" Dietary Filter Pill</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Quick dietary filter pill for egg-containing items</span>
+              </div>
+              <ToggleSwitch
+                checked={prefFiltersVisibility?.egg !== false}
+                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, egg: val }))}
+              />
+            </div>
+
+            {/* Pill 8: Customizable */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', minHeight: '52px' }}>
+              <div>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>✨ "Customizable" Dish Badge</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Shows frosted pill on dishes with half/full portions or modifiers</span>
+              </div>
+              <ToggleSwitch
+                checked={prefFiltersVisibility?.customizable !== false}
+                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, customizable: val }))}
+              />
             </div>
           </div>
         </div>
@@ -10129,6 +10258,25 @@ export default function SetupView({
                       Active Plan
                     </span>
                     <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Manage Billing →</span>
+                  </div>
+                </div>
+
+                {/* Card 4: Customer Menu Badges & Filters */}
+                <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Sparkles size={22} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Menu Badges & Filter Pills</strong>
+                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                      Toggle Must Try, Combos, Under ₹100, Dietary, and Customizable pills on customer menu.
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#EDE9FE', color: '#7C3AED', border: '1px solid #DDD6FE' }}>
+                      Pills Active
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: '#7C3AED', fontWeight: 700 }}>Manage Badges →</span>
                   </div>
                 </div>
               </div>
