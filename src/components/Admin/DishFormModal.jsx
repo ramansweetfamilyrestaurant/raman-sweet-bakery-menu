@@ -33,8 +33,8 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
   const [price, setPrice] = useState(dish?.price !== undefined && dish?.price !== null ? dish.price : '');
   const [priceHalf, setPriceHalf] = useState(dish?.price_half !== undefined && dish?.price_half !== null ? dish.price_half : '');
   const [hasHalf, setHasHalf] = useState(Boolean(dish?.price_half !== undefined && dish?.price_half !== null && dish?.price_half !== '' && modifiersEnabled !== false));
-  const [portionHalfLabel, setPortionHalfLabel] = useState(dish?.portion_half_label || 'Half Portion');
-  const [portionFullLabel, setPortionFullLabel] = useState(dish?.portion_full_label || 'Full Portion');
+  const [portionHalfLabel, setPortionHalfLabel] = useState(dish?.portion_half_label || 'Half');
+  const [portionFullLabel, setPortionFullLabel] = useState(dish?.portion_full_label || 'Full');
   
   const parseInitialModifiers = () => {
     if (!dish?.modifiers) return [];
@@ -177,8 +177,8 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
         price: Number(price),
         price_half: (modifiersEnabled !== false && hasHalf && priceHalf !== '' && priceHalf !== null) ? Number(priceHalf) : null,
         portion,
-        portion_half_label: (modifiersEnabled !== false && hasHalf) ? (portionHalfLabel || 'Half Portion') : '',
-        portion_full_label: (modifiersEnabled !== false && hasHalf) ? (portionFullLabel || 'Full Portion') : '',
+        portion_half_label: (modifiersEnabled !== false && hasHalf) ? (portionHalfLabel || 'Half') : '',
+        portion_full_label: (modifiersEnabled !== false && hasHalf) ? (portionFullLabel || 'Full') : '',
         modifiers: cleanModifiers,
         badge,
         ingredients,
@@ -765,7 +765,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                         type="text"
                         value={portionFullLabel}
                         onChange={(e) => setPortionFullLabel(e.target.value)}
-                        placeholder="Full Portion"
+                        placeholder="Full"
                         style={{ width: '100%', padding: '6px 8px', borderRadius: '5px', border: '1px solid #CBD5E1', fontSize: '0.74rem', boxSizing: 'border-box', outline: 'none' }}
                       />
                     </div>
@@ -777,7 +777,7 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                         type="text"
                         value={portionHalfLabel}
                         onChange={(e) => setPortionHalfLabel(e.target.value)}
-                        placeholder="Half Portion"
+                        placeholder="Half"
                         style={{ width: '100%', padding: '6px 8px', borderRadius: '5px', border: '1px solid #CBD5E1', fontSize: '0.74rem', boxSizing: 'border-box', outline: 'none' }}
                       />
                     </div>

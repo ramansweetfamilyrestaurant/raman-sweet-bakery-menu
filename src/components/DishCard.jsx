@@ -356,7 +356,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             fontWeight: 700,
             color: 'var(--primary-emerald)'
           }}>
-            {hasHalfPrice ? `Half ${symbol}${formatPriceNumber(dish.price_half)} | Full ${symbol}${formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}` : (dish.portion || 'Special Portion')}
+            {hasHalfPrice ? `${lang === 'hi' ? 'हाफ' : 'Half'} ${symbol}${formatPriceNumber(dish.price_half)} | ${lang === 'hi' ? 'फुल' : 'Full'} ${symbol}${formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}` : (dish.portion && !dish.portion.toLowerCase().includes('portion') ? dish.portion : '')}
           </span>
 
           <span style={{

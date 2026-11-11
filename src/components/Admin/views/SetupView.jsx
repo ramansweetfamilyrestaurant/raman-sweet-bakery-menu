@@ -3699,7 +3699,7 @@ export default function SetupView({
           </div>
         </div>
 
-        {/* SECTION 4.5 — CUSTOMER MENU BADGES & FILTERS */}
+        {/* SECTION 4.5 — CUSTOMER MENU BADGES & FILTER PILLS */}
         <div>
           <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '8px', paddingLeft: '4px' }}>
             Customer Menu Badges & Filter Pills
@@ -3713,99 +3713,99 @@ export default function SetupView({
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))'
           }}>
-            {/* Pill 1: Must Try */}
+            {/* Must Try */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
               <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>⭐ "Must Try" Badge & Filter</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Highlights chef recommended items on dish cards and search rail</span>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🔥 Must Try Badge</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show "Must Try" pill on popular signature dishes</span>
               </div>
               <ToggleSwitch
-                checked={prefFiltersVisibility?.must_try !== false}
+                checked={prefFiltersVisibility?.must_try ?? true}
                 onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, must_try: val }))}
               />
             </div>
 
-            {/* Pill 2: Special */}
+            {/* Special */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
               <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>✨ "Special" Dishes Badge & Filter</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Special items pill and dish highlight tag</span>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>⭐ Special Badge</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show "Special" badge on chef special items</span>
               </div>
               <ToggleSwitch
-                checked={prefFiltersVisibility?.special !== false}
+                checked={prefFiltersVisibility?.special ?? true}
                 onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, special: val }))}
               />
             </div>
 
-            {/* Pill 3: Combos */}
+            {/* Combo */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
               <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🍱 "Combos & Thalis" Navigation Pill</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Dedicated category jump rail pill for combo deals</span>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🍱 Combo Badge</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show "Combo" badge on meal combo items</span>
               </div>
               <ToggleSwitch
-                checked={prefFiltersVisibility?.combo !== false}
+                checked={prefFiltersVisibility?.combo ?? true}
                 onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, combo: val }))}
               />
             </div>
 
-            {/* Pill 4: Under 100 */}
+            {/* Customizable */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
               <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>⚡ "Under ₹100" Budget Filter Pill</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Allows diners to quickly filter pocket-friendly items</span>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>✨ Customizable Badge</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show "Customizable" pill when dish has add-ons</span>
               </div>
               <ToggleSwitch
-                checked={prefFiltersVisibility?.under100 !== false}
-                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, under100: val }))}
+                checked={prefFiltersVisibility?.customizable ?? true}
+                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, customizable: val }))}
               />
             </div>
 
-            {/* Pill 5: Pure Veg */}
+            {/* Veg Filter */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
               <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🟢 "Pure Veg" Dietary Filter Pill</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Quick dietary filter pill for 100% vegetarian dishes</span>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🥬 Pure Veg Filter</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show Veg filter pill in customer menu top bar</span>
               </div>
               <ToggleSwitch
-                checked={prefFiltersVisibility?.veg !== false}
+                checked={prefFiltersVisibility?.veg ?? true}
                 onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, veg: val }))}
               />
             </div>
 
-            {/* Pill 6: Non-Veg */}
+            {/* Non-Veg Filter */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
               <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🔴 "Non-Veg" Dietary Filter Pill</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Quick dietary filter pill for non-vegetarian dishes</span>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🍗 Non-Veg Filter</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show Non-Veg filter pill in customer menu top bar</span>
               </div>
               <ToggleSwitch
-                checked={prefFiltersVisibility?.nonveg !== false}
+                checked={prefFiltersVisibility?.nonveg ?? true}
                 onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, nonveg: val }))}
               />
             </div>
 
-            {/* Pill 7: Egg */}
+            {/* Egg Filter */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
               <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🟡 "Egg" Dietary Filter Pill</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Quick dietary filter pill for egg-containing items</span>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🥚 Egg Filter</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show Egg / Contains Egg filter pill in menu</span>
               </div>
               <ToggleSwitch
-                checked={prefFiltersVisibility?.egg !== false}
+                checked={prefFiltersVisibility?.egg ?? true}
                 onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, egg: val }))}
               />
             </div>
 
-            {/* Pill 8: Customizable */}
+            {/* Under 100 Filter */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', minHeight: '52px' }}>
               <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>✨ "Customizable" Dish Badge</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Shows frosted pill on dishes with half/full portions or modifiers</span>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>💰 Under ₹100 Budget Filter</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show budget-friendly dishes filter pill</span>
               </div>
               <ToggleSwitch
-                checked={prefFiltersVisibility?.customizable !== false}
-                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, customizable: val }))}
+                checked={prefFiltersVisibility?.under100 ?? true}
+                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, under100: val }))}
               />
             </div>
           </div>
@@ -10263,20 +10263,20 @@ export default function SetupView({
 
                 {/* Card 4: Customer Menu Badges & Filters */}
                 <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Sparkles size={22} />
                   </div>
                   <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Menu Badges & Filter Pills</strong>
+                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Customer Menu Badges & Filters</strong>
                     <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Toggle Must Try, Combos, Under ₹100, Dietary, and Customizable pills on customer menu.
+                      Toggle Must Try, Special, Combo, Customizable, Veg, Non-Veg, Egg, and Under ₹100 pills.
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#EDE9FE', color: '#7C3AED', border: '1px solid #DDD6FE' }}>
-                      Pills Active
+                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                      8 Badges & Filters
                     </span>
-                    <span style={{ fontSize: '0.78rem', color: '#7C3AED', fontWeight: 700 }}>Manage Badges →</span>
+                    <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Customize Badges →</span>
                   </div>
                 </div>
               </div>

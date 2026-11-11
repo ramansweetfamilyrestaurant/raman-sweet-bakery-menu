@@ -19,6 +19,20 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
 
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
   
+  const formatHalfLabel = (lbl) => {
+    if (!lbl || lbl === 'Half Portion' || lbl === 'Half') {
+      return lang === 'hi' ? 'हाफ' : 'Half';
+    }
+    return lbl.replace(/\s*portion$/i, '').trim() || (lang === 'hi' ? 'हाफ' : 'Half');
+  };
+
+  const formatFullLabel = (lbl) => {
+    if (!lbl || lbl === 'Full Portion' || lbl === 'Full') {
+      return lang === 'hi' ? 'फुल' : 'Full';
+    }
+    return lbl.replace(/\s*portion$/i, '').trim() || (lang === 'hi' ? 'फुल' : 'Full');
+  };
+
   const fullPriceNum = Math.round(Number(dish.price));
   const halfPriceNum = hasHalfPrice ? Math.round(Number(dish.price_half)) : null;
 
@@ -275,7 +289,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 cursor: 'pointer'
               }}
             >
-              {dish.portion_half_label || 'Half'}
+              {formatHalfLabel(dish.portion_half_label)}
             </button>
             <button
               type="button"
@@ -295,7 +309,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 cursor: 'pointer'
               }}
             >
-              {dish.portion_full_label || 'Full'}
+              {formatFullLabel(dish.portion_full_label)}
             </button>
           </div>
         )}

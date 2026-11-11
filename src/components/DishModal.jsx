@@ -42,9 +42,23 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
   const activePrice = basePrice + extraModifiersPrice;
   const regularActivePrice = regularBasePrice + extraModifiersPrice;
 
+  const formatHalfLabel = (lbl) => {
+    if (!lbl || lbl === 'Half Portion' || lbl === 'Half') {
+      return lang === 'hi' ? 'हाफ' : 'Half';
+    }
+    return lbl.replace(/\s*portion$/i, '').trim() || (lang === 'hi' ? 'हाफ' : 'Half');
+  };
+
+  const formatFullLabel = (lbl) => {
+    if (!lbl || lbl === 'Full Portion' || lbl === 'Full') {
+      return lang === 'hi' ? 'फुल' : 'Full';
+    }
+    return lbl.replace(/\s*portion$/i, '').trim() || (lang === 'hi' ? 'फुल' : 'Full');
+  };
+
   const activePortionLabel = selectedPortion === 'half'
-    ? (dish.portion_half_label || (lang === 'hi' ? 'हाफ हाफ पोर्शन' : 'Half Portion'))
-    : (dish.portion_full_label || dish.portion || (lang === 'hi' ? 'फुल पोर्शन' : 'Full Portion'));
+    ? formatHalfLabel(dish.portion_half_label)
+    : (hasHalfPrice ? formatFullLabel(dish.portion_full_label) : (dish.portion || ''));
 
   const ingredientsList = dish.ingredients ? dish.ingredients.split(',').map(i => i.trim()) : [];
   const imageSrc = getDishImageUrl(dish.image);
@@ -298,7 +312,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  {dish.portion_half_label || (lang === 'hi' ? 'हाफ' : 'Half')} • {symbol}{formatPriceNumber(dish.price_half)}
+                  {formatHalfLabel(dish.portion_half_label)} • {symbol}{formatPriceNumber(dish.price_half)}
                 </button>
 
                 <button
@@ -317,13 +331,13 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  {dish.portion_full_label || (lang === 'hi' ? 'फुल' : 'Full')} • {symbol}{formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}
+                  {formatFullLabel(dish.portion_full_label)} • {symbol}{formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}
                 </button>
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              {activePortionLabel && (
+            dish.portion && dish.portion.trim() && !dish.portion.toLowerCase().includes('portion') ? (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
                 <span style={{
                   fontSize: '0.78rem',
                   fontWeight: 700,
@@ -333,10 +347,10 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   padding: '3px 10px',
                   borderRadius: 'var(--radius-pill)'
                 }}>
-                  📦 {activePortionLabel}
+                  📦 {dish.portion}
                 </span>
-              )}
-            </div>
+              </div>
+            ) : null
           )}
 
           {/* Interactive Custom Add-on Modifiers & Toppings */}
