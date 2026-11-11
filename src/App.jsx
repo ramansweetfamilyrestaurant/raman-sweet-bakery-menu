@@ -2714,10 +2714,10 @@ export default function App() {
           <div style={{
             textAlign: 'center',
             padding: '44px 20px',
-            background: '#FFFFFF',
+            background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
             borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-light)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+            border: '1.5px solid var(--theme-card-border, var(--border-light))',
+            boxShadow: 'var(--theme-shadow, var(--shadow-sm))'
           }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🍽️</div>
             <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark)', margin: '0 0 6px 0' }}>
@@ -2776,10 +2776,10 @@ export default function App() {
                         }}
                         style={{
                           minWidth: '145px', maxWidth: '165px', flex: '0 0 auto',
-                          background: '#FFFFFF', borderRadius: '12px',
-                          border: '1px solid #E2E8F0', padding: '10px',
+                          background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', borderRadius: '12px',
+                          border: '1.5px solid var(--theme-card-border, var(--border-light))', padding: '10px',
                           cursor: 'pointer', position: 'relative',
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                          boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
                           display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
                         }}
                       >
@@ -3106,25 +3106,23 @@ export default function App() {
                 onClick={() => setShowCartDrawer(true)}
                 style={{
                   width: '100%',
-                  background: isAddon
-                    ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                    : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                   color: '#FFFFFF',
                   padding: '12px 20px',
                   borderRadius: 'var(--radius-pill)',
                   fontWeight: 900,
                   fontSize: '0.9rem',
-                  border: '2px solid #FFFFFF',
+                  border: '2px solid rgba(255, 255, 255, 0.8)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  boxShadow: '0 10px 30px rgba(16, 185, 129, 0.45)',
+                  boxShadow: 'var(--theme-shadow, 0 10px 30px rgba(0, 0, 0, 0.35))',
                   animation: 'fadeIn 0.25s ease-out'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ background: '#FFFFFF', color: '#059669', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900 }}>
+                  <span style={{ background: '#FFFFFF', color: 'var(--theme-price-color, var(--primary-emerald, #059669))', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900 }}>
                     {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
                   </span>
                   <span>{isAddon ? `+ Add to ${getDynamicSpaceLabel() || 'Order'} (Round ${nextRound})` : (lang === 'hi' ? 'कार्ट देखें' : 'View Cart')}</span>
@@ -3501,9 +3499,7 @@ export default function App() {
                         disabled={placingOrder}
                         style={{
                           width: '100%',
-                          background: isAddon
-                            ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                            : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                          background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                           color: '#FFFFFF',
                           padding: '14px 18px',
                           borderRadius: 'var(--radius-pill)',
@@ -3515,7 +3511,7 @@ export default function App() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '8px',
-                          boxShadow: '0 6px 20px rgba(5, 150, 105, 0.45)',
+                          boxShadow: 'var(--theme-shadow, 0 6px 20px rgba(0, 0, 0, 0.3))',
                           opacity: placingOrder ? 0.7 : 1
                         }}
                       >

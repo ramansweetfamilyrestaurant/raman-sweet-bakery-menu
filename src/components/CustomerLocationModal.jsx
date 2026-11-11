@@ -289,13 +289,14 @@ export default function CustomerLocationModal({
       animation: 'fadeIn 0.2s ease-out'
     }}>
       <div style={{
-        background: '#FFFFFF',
+        background: 'var(--theme-modal-bg, #FFFFFF)',
         width: '100%',
         maxWidth: '430px',
         borderRadius: '24px',
         padding: '26px 22px',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.28)',
-        border: '1px solid #E2E8F0',
+        border: '1.5px solid var(--theme-modal-border, var(--border-light, #E2E8F0))',
+        color: 'var(--text-dark, #0F172A)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

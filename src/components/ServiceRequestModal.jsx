@@ -61,30 +61,31 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
       padding: '16px'
     }}>
       <div style={{
-        background: '#FFFFFF',
+        background: 'var(--theme-modal-bg, #FFFFFF)',
         borderRadius: '24px',
         maxWidth: '420px',
         width: '100%',
         padding: '24px',
         boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+        border: '1.5px solid var(--theme-modal-border, rgba(0,0,0,0.1))',
         animation: 'fadeIn 0.25s ease-out'
       }}>
         {/* Modal Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1.5px solid #F1F5F9', paddingBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1.5px solid var(--theme-divider, #F1F5F9)', paddingBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ background: '#ECFDF5', color: '#059669', padding: '8px', borderRadius: '50%', display: 'flex' }}>
+            <div style={{ background: 'var(--theme-badge-bg, #ECFDF5)', color: 'var(--theme-price-color, var(--primary-emerald, #059669))', padding: '8px', borderRadius: '50%', display: 'flex' }}>
               <Bell size={20} />
             </div>
             <div>
-              <strong style={{ fontSize: '1.05rem', color: '#0A2315', display: 'block' }}>
+              <strong style={{ fontSize: '1.05rem', color: 'var(--text-dark, #0A2315)', display: 'block' }}>
                 {isHotel ? 'Room Service & Assistance' : 'Call Staff / Attendant'}
               </strong>
-              <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800 }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--theme-price-color, var(--primary-emerald, #059669))', fontWeight: 800 }}>
                 {tableNum || 'Space 1'}
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: '#F1F5F9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'var(--bg-secondary, #F1F5F9)', color: 'var(--text-dark, #374151)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
         </div>
 
         {/* Options List */}
@@ -96,8 +97,8 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
               style={{
                 padding: '12px 14px',
                 borderRadius: '14px',
-                border: selectedType === opt.id ? '2px solid #10B981' : '1.5px solid #E2E8F0',
-                background: selectedType === opt.id ? '#ECFDF5' : '#FFFFFF',
+                border: selectedType === opt.id ? '2px solid var(--gold-bright, #10B981)' : '1.5px solid var(--theme-card-border, #E2E8F0)',
+                background: selectedType === opt.id ? 'var(--theme-badge-bg, #ECFDF5)' : 'var(--theme-card-bg, #FFFFFF)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -108,16 +109,16 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {opt.icon}
                 <div>
-                  <strong style={{ fontSize: '0.88rem', color: '#1F2937', display: 'block' }}>{opt.label}</strong>
-                  <span style={{ fontSize: '0.74rem', color: '#6B7280' }}>{opt.desc}</span>
+                  <strong style={{ fontSize: '0.88rem', color: 'var(--text-dark, #1F2937)', display: 'block' }}>{opt.label}</strong>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted, #6B7280)' }}>{opt.desc}</span>
                 </div>
               </div>
               <div style={{
                 width: '18px',
                 height: '18px',
                 borderRadius: '50%',
-                border: selectedType === opt.id ? '6px solid #10B981' : '2px solid #CBD5E1',
-                background: '#FFFFFF'
+                border: selectedType === opt.id ? '6px solid var(--gold-bright, #10B981)' : '2px solid var(--border-light, #CBD5E1)',
+                background: 'var(--theme-card-bg, #FFFFFF)'
               }} />
             </div>
           ))}
@@ -125,7 +126,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
 
         {/* Optional Custom Note Input */}
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark, #374151)', marginBottom: '4px' }}>
             Extra Instruction / Custom Request (Optional):
           </label>
           <input
@@ -137,7 +138,9 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
               width: '100%',
               padding: '10px 14px',
               borderRadius: '10px',
-              border: '1.5px solid #CBD5E1',
+              border: '1.5px solid var(--theme-card-border, #CBD5E1)',
+              background: 'var(--theme-card-bg, #FFFFFF)',
+              color: 'var(--text-dark, #0F172A)',
               fontSize: '0.85rem',
               outline: 'none'
             }}
@@ -150,7 +153,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
           disabled={submitting}
           style={{
             width: '100%',
-            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+            background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
             color: '#FFFFFF',
             padding: '13px',
             borderRadius: 'var(--radius-pill)',
@@ -158,7 +161,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
             fontSize: '0.94rem',
             border: 'none',
             cursor: submitting ? 'not-allowed' : 'pointer',
-            boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+            boxShadow: 'var(--theme-shadow, 0 6px 20px rgba(0, 0, 0, 0.25))',
             opacity: submitting ? 0.7 : 1
           }}
         >

@@ -435,12 +435,14 @@ export default function PresenceVerificationModal({
       padding: '16px'
     }}>
       <div style={{
-        background: '#FFFFFF',
+        background: 'var(--theme-modal-bg, #FFFFFF)',
         borderRadius: '26px',
         maxWidth: '430px',
         width: '100%',
         padding: '24px',
         boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
+        border: '1.5px solid var(--theme-modal-border, rgba(0,0,0,0.1))',
+        color: 'var(--text-dark, #0F172A)',
         animation: 'fadeIn 0.22s ease-out',
         position: 'relative',
         overflow: 'hidden'

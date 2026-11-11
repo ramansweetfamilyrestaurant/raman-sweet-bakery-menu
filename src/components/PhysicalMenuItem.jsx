@@ -41,7 +41,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
             justifyContent: 'center',
             borderRadius: '2px',
             flexShrink: 0,
-            background: '#FFFFFF'
+            background: 'var(--theme-card-bg, #FFFFFF)'
           }} title="100% Pure Vegetarian">
             <span style={{
               width: '6px',
@@ -134,7 +134,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 fontFamily: 'var(--font-heading)',
                 fontSize: '1.25rem',
                 fontWeight: 800,
-                color: '#064E3B',
+                color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
                 cursor: 'pointer'
               }}>
                 {formatPriceNumber(dish.offer_price)}
