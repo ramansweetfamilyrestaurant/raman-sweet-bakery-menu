@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Allow: /touchqr-demo
+Allow: /pricing
+Allow: /terms
+Allow: /privacy
+Allow: /refund-policy
+Allow: /security
+Allow: /contact
+
+# Disallow private admin and API endpoints from indexing
+Disallow: /api/
+Disallow: /superadmin
+Disallow: /admin
+Disallow: /*/kitchen
+Disallow: /kitchen
+
+Sitemap: https://touchqr.in/sitemap.xml
