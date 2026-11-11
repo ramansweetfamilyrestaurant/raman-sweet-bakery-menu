@@ -1468,51 +1468,51 @@ export default function SetupView({
         </div>
       );
     } else if (activeBpModal === 'theme') {
-      modalTitle = 'Select Menu Theme';
-      const themes = [
-        { id: 'gold_forest', name: 'Gold & Forest Green', subtitle: 'Oberoi Luxury & Heritage', primary: '#064E3B', accent: '#F59E0B' },
-        { id: 'classic_maroon', name: 'Royal Crimson & Gold', subtitle: 'Fine Dine & Banquets', primary: '#7C1D1D', accent: '#F59E0B' },
-        { id: 'slate_minimal', name: 'Slate Charcoal & Amber', subtitle: 'Modern Cafe & Bistro', primary: '#0F172A', accent: '#F97316' },
-        { id: 'emerald_clean', name: 'Fresh Mint & Emerald', subtitle: 'Pure Veg & Healthy Eats', primary: '#047857', accent: '#10B981' }
-      ];
+      modalTitle = 'Select Luxury Brand Theme';
+      const currentThemeKey = resolveTheme(settingsForm.theme_color || settingsForm.theme).key;
       content = (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {themes.map(t => (
-            <div
-              key={t.id}
-              onClick={() => {
-                setSettingsForm({ ...settingsForm, theme: t.id });
-                closeModal();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 14px',
-                borderRadius: '12px',
-                border: (settingsForm.theme || 'gold_forest') === t.id ? '1.5px solid #064E3B' : '1px solid #E2E8F0',
-                background: (settingsForm.theme || 'gold_forest') === t.id ? '#ECFDF5' : '#FFFFFF',
-                cursor: 'pointer'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  background: t.primary,
-                  border: `2.5px solid ${t.accent}`,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-                  flexShrink: 0
-                }} />
-                <div>
-                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>{t.name}</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{t.subtitle}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '60vh', overflowY: 'auto', paddingRight: '4px' }}>
+          {THEME_LIST.map(t => {
+            const isSelected = currentThemeKey === t.key;
+            return (
+              <div
+                key={t.key}
+                onClick={() => {
+                  setSettingsForm({ ...settingsForm, theme_color: t.key, theme: t.key });
+                  document.documentElement.setAttribute('data-theme', t.key);
+                  closeModal();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: isSelected ? `2px solid ${t.color}` : '1px solid #E2E8F0',
+                  background: isSelected ? (t.bgApp || '#F8FAFC') : '#FFFFFF',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: t.color,
+                    border: `2.5px solid ${t.accent}`,
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.18)',
+                    flexShrink: 0
+                  }} />
+                  <div>
+                    <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>{t.name}</strong>
+                    <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{t.desc}</span>
+                  </div>
                 </div>
+                {isSelected && <Check size={18} color={t.color} style={{ flexShrink: 0 }} />}
               </div>
-              {(settingsForm.theme || 'gold_forest') === t.id && <Check size={16} color="#064E3B" />}
-            </div>
-          ))}
+            );
+          })}
         </div>
       );
     }
@@ -2533,62 +2533,66 @@ export default function SetupView({
             boxSizing: 'border-box'
           }}>
             {/* Theme Row */}
-            <div
-              onClick={() => setActiveBpModal('theme')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 14px',
-                background: '#F8FAFC',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                cursor: 'pointer',
-                boxSizing: 'border-box'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '50%',
-                  background: '#064E3B',
-                  border: '2.5px solid #F59E0B',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-                  flexShrink: 0
-                }} />
-                <div>
-                  <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>
-                    Gold & Forest Green
-                  </strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Oberoi Luxury Theme</span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '3px 8px', borderRadius: '6px' }}>
-                  Active
-                </span>
-                <ChevronRight size={16} color="#94A3B8" />
-              </div>
-            </div>
+            {(() => {
+              const activeThemeObj = resolveTheme(settingsForm.theme_color || settingsForm.theme);
+              return (
+                <>
+                  <div
+                    onClick={() => setActiveBpModal('theme')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 14px',
+                      background: '#F8FAFC',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      cursor: 'pointer',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: activeThemeObj.color,
+                        border: `2.5px solid ${activeThemeObj.accent}`,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                        flexShrink: 0
+                      }} />
+                      <div>
+                        <strong style={{ fontSize: '0.86rem', color: '#0F172A', display: 'block' }}>
+                          {activeThemeObj.name}
+                        </strong>
+                        <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{activeThemeObj.desc}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#DCFCE7', padding: '3px 8px', borderRadius: '6px' }}>
+                        Active
+                      </span>
+                      <ChevronRight size={16} color="#94A3B8" />
+                    </div>
+                  </div>
 
-            {/* Compact Live Header Preview */}
-            <div>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px' }}>
-                Customer Menu Header Preview
-              </span>
-              <div style={{
-                borderRadius: '14px',
-                background: 'linear-gradient(180deg, #064E3B 0%, #022c22 100%)',
-                padding: '14px 16px',
-                color: '#FFFFFF',
-                border: '1px solid #D97706',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                boxSizing: 'border-box',
-                boxShadow: '0 4px 14px rgba(6, 78, 59, 0.25)'
-              }}>
+                  {/* Compact Live Header Preview */}
+                  <div>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px' }}>
+                      Customer Menu Header Preview
+                    </span>
+                    <div style={{
+                      borderRadius: '14px',
+                      background: activeThemeObj.headerGradient,
+                      padding: '14px 16px',
+                      color: '#FFFFFF',
+                      border: `1.5px solid ${activeThemeObj.accent}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      boxSizing: 'border-box',
+                      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)'
+                    }}>
                 {settingsForm.logo || restaurantInfo?.logo ? (
                   <img
                     src={settingsForm.logo || restaurantInfo?.logo}
@@ -2636,6 +2640,9 @@ export default function SetupView({
                 </div>
               </div>
             </div>
+            </>
+          );
+        })()}
           </div>
         </div>
 
@@ -10478,102 +10485,112 @@ export default function SetupView({
               <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>2. Menu Branding</strong>
             </div>
 
-            <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
-                Current Menu Theme
-              </label>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 14px',
-                background: '#FFFFFF',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                cursor: 'pointer'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#064E3B', border: '2px solid #D97706', flexShrink: 0 }} />
+            {(() => {
+              const activeThemeObj = resolveTheme(settingsForm.theme_color || settingsForm.theme);
+              return (
+                <>
                   <div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Gold & Forest Green</div>
-                    <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Oberoi Luxury</div>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
+                      Current Menu Theme
+                    </label>
+                    <div
+                      onClick={() => setActiveBpModal('theme')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        background: '#FFFFFF',
+                        borderRadius: '12px',
+                        border: '1px solid #E2E8F0',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: activeThemeObj.color, border: `2px solid ${activeThemeObj.accent}`, flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>{activeThemeObj.name}</div>
+                          <div style={{ fontSize: '0.68rem', color: '#64748B' }}>{activeThemeObj.desc}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#065F46', background: '#DCFCE7', padding: '3px 8px', borderRadius: '8px' }}>
+                          Active
+                        </span>
+                        <ChevronDown size={14} color="#64748B" />
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#065F46', background: '#DCFCE7', padding: '3px 8px', borderRadius: '8px' }}>
-                    Active
-                  </span>
-                  <ChevronDown size={14} color="#64748B" />
-                </div>
-              </div>
-            </div>
 
-            <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
-                Theme Preview
-              </label>
-              <div style={{
-                borderRadius: '12px',
-                background: 'linear-gradient(180deg, #064E3B 0%, #022c22 100%)',
-                padding: '14px 16px',
-                color: '#FFFFFF',
-                border: '1px solid #D97706',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                {settingsForm.logo || restaurantInfo?.logo ? (
-                  <img
-                    src={settingsForm.logo || restaurantInfo?.logo}
-                    alt="Logo"
+                  <div>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
+                      Theme Preview
+                    </label>
+                    <div style={{
+                      borderRadius: '12px',
+                      background: activeThemeObj.headerGradient,
+                      padding: '14px 16px',
+                      color: '#FFFFFF',
+                      border: `1.5px solid ${activeThemeObj.accent}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      {settingsForm.logo || restaurantInfo?.logo ? (
+                        <img
+                          src={settingsForm.logo || restaurantInfo?.logo}
+                          alt="Logo"
+                          style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '8px',
+                            objectFit: 'cover',
+                            border: `1.5px solid ${activeThemeObj.accent}`,
+                            flexShrink: 0,
+                            background: '#FFFFFF'
+                          }}
+                        />
+                      ) : (
+                        <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(255,255,255,0.15)', color: activeThemeObj.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', border: `1.5px solid ${activeThemeObj.accent}`, flexShrink: 0 }}>
+                          {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {settingsForm.name || restaurantInfo?.name || 'Restaurant Name'}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: activeThemeObj.accent }}>
+                          Scan QR Code • Digital Menu
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveBpModal('theme')}
                     style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '8px',
-                      objectFit: 'cover',
-                      border: '1.5px solid #F59E0B',
-                      flexShrink: 0,
-                      background: '#FFFFFF'
+                      width: '100%',
+                      padding: '9px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #E2E8F0',
+                      background: '#FAF8F5',
+                      color: '#0F172A',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
                     }}
-                  />
-                ) : (
-                  <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', border: '1.5px solid #F59E0B', flexShrink: 0 }}>
-                    {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {settingsForm.name || restaurantInfo?.name || 'Restaurant Name'}
-                  </div>
-                  <div style={{ fontSize: '0.68rem', color: '#FDE68A' }}>
-                    Scan QR Code • Digital Menu
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onOpenBillingModal && onOpenBillingModal()}
-              style={{
-                width: '100%',
-                padding: '9px 14px',
-                borderRadius: '10px',
-                border: '1px solid #E2E8F0',
-                background: '#FAF8F5',
-                color: '#0F172A',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
-            >
-              <Sliders size={14} />
-              <span>Customize Theme</span>
-            </button>
+                  >
+                    <Sliders size={14} />
+                    <span>Customize Theme</span>
+                  </button>
+                </>
+              );
+            })()}
           </div>
 
           {/* 3. OWNER & CONTACT */}

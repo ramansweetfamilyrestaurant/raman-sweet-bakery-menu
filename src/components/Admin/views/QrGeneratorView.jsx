@@ -21,7 +21,7 @@ import {
   X
 } from 'lucide-react';
 import { normalizeSpaceType, normalizeSpaceNumber, isValidHmacTokenFormat } from '../../../utils/qrSecurity';
-import { fetchCinemaScreens, fetchCinemaSeats, generateQrTokensApi } from '../../../api/client';
+import { fetchCinemaScreens, fetchCinemaSeats, generateQrTokensApi, updateTenantSettings } from '../../../api/client';
 import { 
   STANDEE_THEMES, 
   STANDEE_FRAMES, 
@@ -61,24 +61,63 @@ export default function QrGeneratorView({
   const isCinema = effectiveBiz === 'cinema_theatre' || effectiveService === 'cinema';
   const isHotel = effectiveBiz === 'hotel_resort' || effectiveService === 'hotel';
 
-  // Appearance & Customization State (Smart defaults per business vertical)
-  const defaultTheme = isCinema ? 'cinema_amber' : isHotel ? 'hotel_sapphire' : 'emerald';
-  const defaultFrame = isCinema ? 'sticker' : isHotel ? 'tent_card' : 'acrylic';
+  // Appearance & Customization State (Smart defaults per business vertical + Local & Server Persistence)
+  const storageKeyTheme = `touchqr_standee_theme_${activeSlug || restaurantId}`;
+  const storageKeyFrame = `touchqr_standee_frame_${activeSlug || restaurantId}`;
+  const storageKeyQrColor = `touchqr_standee_qr_color_${activeSlug || restaurantId}`;
+
+  const savedTheme = settingsForm?.standee_theme || restaurantInfo?.standee_theme || (typeof window !== 'undefined' ? localStorage.getItem(storageKeyTheme) : null);
+  const savedFrame = settingsForm?.standee_frame || restaurantInfo?.standee_frame || (typeof window !== 'undefined' ? localStorage.getItem(storageKeyFrame) : null);
+  const savedQrColor = settingsForm?.standee_qr_color || restaurantInfo?.standee_qr_color || (typeof window !== 'undefined' ? localStorage.getItem(storageKeyQrColor) : null);
+
+  const defaultTheme = savedTheme || (isCinema ? 'cinema_amber' : isHotel ? 'hotel_sapphire' : 'emerald');
+  const defaultFrame = savedFrame || (isCinema ? 'sticker' : isHotel ? 'tent_card' : 'acrylic');
   const [selectedTheme, setSelectedTheme] = useState(defaultTheme);
   const [selectedFrame, setSelectedFrame] = useState(defaultFrame);
-  const [qrColor, setQrColor] = useState('#000000');
+  const [qrColor, setQrColor] = useState(savedQrColor || '#000000');
   const [showReassurance, setShowReassurance] = useState(true);
 
-  // Sync default theme and frame if vertical changes or resolves asynchronously
+  const handleSelectTheme = (newTheme) => {
+    setSelectedTheme(newTheme);
+    try {
+      localStorage.setItem(storageKeyTheme, newTheme);
+      if (token) {
+        updateTenantSettings(token, { standee_theme: newTheme }).catch(() => {});
+      }
+    } catch (_) {}
+  };
+
+  const handleSelectFrame = (newFrame) => {
+    setSelectedFrame(newFrame);
+    try {
+      localStorage.setItem(storageKeyFrame, newFrame);
+      if (token) {
+        updateTenantSettings(token, { standee_frame: newFrame }).catch(() => {});
+      }
+    } catch (_) {}
+  };
+
+  const handleSelectQrColor = (newColor) => {
+    setQrColor(newColor);
+    try {
+      localStorage.setItem(storageKeyQrColor, newColor);
+      if (token) {
+        updateTenantSettings(token, { standee_qr_color: newColor }).catch(() => {});
+      }
+    } catch (_) {}
+  };
+
+  // Sync default theme and frame if vertical changes or resolves asynchronously (only if not already chosen by user)
   useEffect(() => {
-    if (isCinema) {
-      setSelectedTheme('cinema_amber');
-      setSelectedFrame('sticker');
-    } else if (isHotel) {
-      setSelectedTheme('hotel_sapphire');
-      setSelectedFrame('tent_card');
+    if (!savedTheme) {
+      if (isCinema) setSelectedTheme('cinema_amber');
+      else if (isHotel) setSelectedTheme('hotel_sapphire');
     }
-  }, [isCinema, isHotel]);
+    if (!savedFrame) {
+      if (isCinema) setSelectedFrame('sticker');
+      else if (isHotel) setSelectedFrame('tent_card');
+    }
+  }, [isCinema, isHotel, savedTheme, savedFrame]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -2137,7 +2176,7 @@ export default function QrGeneratorView({
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => setSelectedTheme(t.id)}
+                    onClick={() => handleSelectTheme(t.id)}
                     style={{
                       padding: '4px 8px',
                       borderRadius: '6px',
@@ -2166,7 +2205,7 @@ export default function QrGeneratorView({
                   <button
                     key={f.id}
                     type="button"
-                    onClick={() => setSelectedFrame(f.id)}
+                    onClick={() => handleSelectFrame(f.id)}
                     style={{
                       padding: '4px 8px',
                       borderRadius: '6px',
@@ -2200,7 +2239,7 @@ export default function QrGeneratorView({
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => setQrColor(c.id)}
+                    onClick={() => handleSelectQrColor(c.id)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',

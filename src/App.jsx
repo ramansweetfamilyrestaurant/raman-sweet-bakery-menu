@@ -3236,19 +3236,21 @@ export default function App() {
 
             return (
               <div style={{
-                background: '#FFFFFF',
+                background: 'var(--theme-modal-bg, #FFFFFF)',
                 borderRadius: '28px 28px 0 0',
                 maxWidth: '520px',
                 width: '100%',
                 padding: '24px 20px 36px 20px',
                 boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
+                border: '1.5px solid var(--theme-modal-border, transparent)',
                 maxHeight: '85vh',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                color: 'var(--text-dark)'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
                   <div>
-                    <strong style={{ fontSize: '1.1rem', color: 'var(--primary-emerald)', display: 'block' }}>
+                    <strong style={{ fontSize: '1.1rem', color: 'var(--theme-price-color, var(--primary-emerald))', display: 'block' }}>
                       {isAddon ? `🛒 Round ${nextRound} (Add-on Items)` : `🛒 My Order Items (${cartItems.reduce((acc, i) => acc + i.quantity, 0)})`}
                     </strong>
                     {isAddon && (
@@ -3257,7 +3259,7 @@ export default function App() {
                       </span>
                     )}
                   </div>
-                  <button onClick={() => setShowCartDrawer(false)} style={{ background: '#F3F4F6', color: '#374151', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
+                  <button onClick={() => setShowCartDrawer(false)} style={{ background: 'var(--bg-secondary, #F3F4F6)', color: 'var(--text-dark, #374151)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
                 </div>
 
                 {isAddon && (
@@ -3287,7 +3289,7 @@ export default function App() {
                 ) : (
                   <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
                     {cartItems.map((item) => (
-                      <div key={item.key || item.dish.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-app)', padding: '12px 14px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
+                      <div key={item.key || item.dish.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', padding: '12px 14px', borderRadius: '16px', border: '1.5px solid var(--theme-card-border, var(--border-light))' }}>
                         <div>
                           <strong style={{ fontSize: '0.92rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {item.dish.name}
@@ -3309,7 +3311,7 @@ export default function App() {
                           {item.modifiers && item.modifiers.length > 0 && (
                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '3px', marginBottom: '2px' }}>
                               {item.modifiers.map((m, mIdx) => (
-                                <span key={mIdx} style={{ fontSize: '0.68rem', background: '#F1F5F9', color: '#334155', padding: '1px 6px', borderRadius: '4px', border: '1px solid #CBD5E1', fontWeight: 700 }}>
+                                <span key={mIdx} style={{ fontSize: '0.68rem', background: 'var(--bg-secondary, #F1F5F9)', color: 'var(--text-dark, #334155)', padding: '1px 6px', borderRadius: '4px', border: '1px solid var(--border-light, #CBD5E1)', fontWeight: 700 }}>
                                   + {m.name} (+{sym}{formatPriceNumber(m.price)})
                                 </span>
                               ))}
@@ -3320,15 +3322,15 @@ export default function App() {
                               {sym}{formatPriceNumber(item.price)} x {item.quantity} = {sym}{formatPriceNumber(item.price * item.quantity)}
                             </span>
                             {item.regular_price && item.regular_price > item.price && (
-                              <span style={{ fontSize: '0.72rem', color: '#94A3B8', textDecoration: 'line-through' }}>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94A3B8)', textDecoration: 'line-through' }}>
                                 {sym}{formatPriceNumber(item.regular_price * item.quantity)}
                               </span>
                             )}
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <button onClick={() => handleAddToCart(item.dish, (item.portion === 'Half' || item.portion === item.dish?.portion_half_label) ? 'half' : 'full', item.modifiers)} style={{ background: 'var(--primary-emerald)', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>{item.quantity}</span>
+                          <button onClick={() => handleAddToCart(item.dish, (item.portion === 'Half' || item.portion === item.dish?.portion_half_label) ? 'half' : 'full', item.modifiers)} style={{ background: 'var(--theme-nav-active, var(--primary-emerald))', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-dark)' }}>{item.quantity}</span>
                           <button onClick={() => handleRemoveFromCart(item.key || item.dish.id)} style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
                         </div>
                       </div>
@@ -3385,8 +3387,8 @@ export default function App() {
                                 border: '1.5px solid #CBD5E1',
                                 fontSize: '0.82rem',
                                 fontWeight: 800,
-                                background: effectiveTableNum ? '#F1F5F9' : '#FFFFFF',
-                                color: effectiveTableNum ? '#0F172A' : '#000000',
+                                background: effectiveTableNum ? 'var(--bg-secondary, #F1F5F9)' : 'var(--theme-input-bg, #FFFFFF)',
+                                color: 'var(--text-dark, #0F172A)',
                                 cursor: effectiveTableNum ? 'not-allowed' : 'text'
                               }}
                             />
@@ -3398,7 +3400,7 @@ export default function App() {
                               value={customerNameInput}
                               onChange={(e) => setCustomerNameInput(e.target.value)}
                               placeholder="e.g. Rahul"
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem' }}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '0.86rem', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
                             />
                           </div>
                         </div>
@@ -3414,7 +3416,7 @@ export default function App() {
                             value={customerPhoneInput}
                             onChange={(e) => setCustomerPhoneInput(e.target.value.replace(/\D/g, ''))}
                             placeholder="e.g. 9876543210"
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem' }}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '0.86rem', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
                           />
                         </div>
                       </div>
@@ -3423,16 +3425,16 @@ export default function App() {
                     {/* 🏷️ Authoritative Bill & GST Summary */}
                     {isGst && (
                       <div style={{
-                        background: '#F8FAFC',
+                        background: 'var(--bg-card-soft, #F8FAFC)',
                         borderRadius: '12px',
                         padding: '10px 14px',
-                        border: '1px solid #E2E8F0',
+                        border: '1.5px solid var(--border-light, #E2E8F0)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '4px',
                         fontSize: '0.8rem'
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted, #64748B)' }}>
                           <span>Items Subtotal</span>
                           <span>{sym}{formatPriceNumber(subtotal)}</span>
                         </div>
@@ -3445,11 +3447,11 @@ export default function App() {
                             </div>
                           ) : null;
                         })()}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted, #64748B)' }}>
                           <span>CGST (2.5%)</span>
                           <span>{sym}{formatPriceNumber(cgst)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted, #64748B)' }}>
                           <span>SGST (2.5%)</span>
                           <span>{sym}{formatPriceNumber(sgst)}</span>
                         </div>
@@ -3457,8 +3459,8 @@ export default function App() {
                           display: 'flex',
                           justifyContent: 'space-between',
                           fontWeight: 800,
-                          color: '#0F172A',
-                          borderTop: '1px dashed #CBD5E1',
+                          color: 'var(--text-dark, #0F172A)',
+                          borderTop: '1px dashed var(--border-light, #CBD5E1)',
                           paddingTop: '4px',
                           marginTop: '2px'
                         }}>

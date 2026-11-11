@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Sparkles, Search, ExternalLink, Compass, Map, Lock, ShieldCheck } from 'lucide-react';
 import { uploadImage, updateTenantSettings, completeOnboarding } from '../../api/client';
 import LocationPickerModal from '../Common/LocationPickerModal';
+import { THEME_LIST } from '../../constants/themes';
 import {
   BUSINESS_TYPES,
   FOOD_TYPES,
@@ -615,6 +616,52 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     placeholder="Pincode"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
                   />
+                </div>
+              </div>
+
+              {/* Brand Luxury Theme Palette */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#DFBA67', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  🎨 Choose Menu Luxury Theme
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+                  {THEME_LIST.map(t => {
+                    const isSelected = (formData.theme_color || 'gold') === t.key;
+                    return (
+                      <div
+                        key={t.key}
+                        onClick={() => setFormData(prev => ({ ...prev, theme_color: t.key }))}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 10px',
+                          borderRadius: '10px',
+                          border: isSelected ? `2px solid ${t.accent}` : '1px solid rgba(255,255,255,0.12)',
+                          background: isSelected ? 'rgba(223, 186, 103, 0.15)' : 'rgba(255,255,255,0.03)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <span style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          background: t.color,
+                          border: `2.5px solid ${t.accent}`,
+                          flexShrink: 0
+                        }} />
+                        <div style={{ minWidth: 0 }}>
+                          <strong style={{ fontSize: '0.74rem', color: isSelected ? '#DFBA67' : '#FFFFFF', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {t.name.split(' ')[0]}
+                          </strong>
+                          <span style={{ fontSize: '0.64rem', color: '#94A3B8', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {t.desc.split('/')[0]}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

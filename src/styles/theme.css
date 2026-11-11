@@ -41,6 +41,18 @@
 
   --transition-fast: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Canonical Fallbacks for Dynamic Components */
+  --text-primary: #1C1917;
+  --theme-text-primary: #1C1917;
+  --bg-champagne: #FAF8F5;
+  --veg-green-border: rgba(21, 128, 61, 0.35);
+  --accent-coral: #F43F5E;
+  --gold-border-light: rgba(197, 160, 89, 0.25);
+  --shadow-menu: 0 4px 16px rgba(10, 35, 21, 0.08);
+  --theme-modal-bg: #FFFFFF;
+  --theme-modal-border: rgba(197, 160, 89, 0.35);
+  --theme-modal-header: #FAF8F5;
 }
 
 /* ========== MULTI-TENANT BRAND THEME PRESETS ========== */
@@ -347,6 +359,17 @@
   --theme-btn-gradient: linear-gradient(135deg, #0891B2 0%, #06B6D4 100%);
   --theme-btn-secondary-bg: linear-gradient(135deg, #1E293B 0%, #334155 100%);
   --theme-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --text-primary: #F8FAFC;
+  --theme-text-primary: #F8FAFC;
+  --gold-soft: #1E293B;
+  --bg-champagne: #1E293B;
+  --veg-green-border: rgba(34, 211, 238, 0.4);
+  --accent-coral: #FB7185;
+  --gold-border-light: rgba(34, 211, 238, 0.3);
+  --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --theme-modal-bg: #131B2E;
+  --theme-modal-border: rgba(34, 211, 238, 0.4);
+  --theme-modal-header: #0B0F19;
 }
 
 * {
@@ -432,10 +455,10 @@ img {
 
 /* Glassmorphism & Micro-Interactions Utility Classes */
 .glass-header {
-  background: rgba(10, 35, 21, 0.92) !important;
+  background: var(--header-gradient, rgba(10, 35, 21, 0.92)) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.25) !important;
+  border-bottom: 1px solid var(--border-light, rgba(212, 175, 55, 0.25)) !important;
 }
 
 .glass-card {

@@ -64,18 +64,19 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
       <div 
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#FFFFFF',
+          background: 'var(--theme-modal-bg, #FFFFFF)',
           borderRadius: 'var(--radius-lg)',
           overflow: 'hidden',
           width: '100%',
           maxWidth: '520px',
           maxHeight: '88vh',
           boxShadow: 'var(--shadow-lg)',
-          border: '2px solid var(--gold-bright)',
+          border: '2px solid var(--theme-modal-border, var(--gold-bright))',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          animation: 'fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+          animation: 'fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          color: 'var(--text-dark)'
         }}
       >
         {/* Close Button */}
@@ -255,10 +256,10 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 fontWeight: 900,
                 padding: '3px 12px',
                 borderRadius: 'var(--radius-pill)',
-                background: '#FFFFFF',
+                background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
                 color: 'var(--text-dark)',
-                border: '1.5px solid var(--border-light)',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                border: '1.5px solid var(--theme-card-border, var(--border-light))',
+                boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
                 whiteSpace: 'nowrap',
                 lineHeight: 1.2,
                 flexShrink: 0
@@ -271,7 +272,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
           {/* Interactive Half / Full Portion Selector */}
           {hasHalfPrice ? (
             <div style={{
-              background: 'var(--bg-champagne)',
+              background: 'var(--bg-champagne, var(--bg-card-soft))',
               border: '1.5px solid var(--gold-border)',
               borderRadius: 'var(--radius-md)',
               padding: '8px 12px',
@@ -291,9 +292,9 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                     borderRadius: 'var(--radius-pill)',
                     fontSize: '0.8rem',
                     fontWeight: 800,
-                    border: selectedPortion === 'half' ? '1.5px solid var(--gold-bright)' : '1px solid var(--gold-border)',
-                    background: selectedPortion === 'half' ? 'var(--primary-emerald)' : '#FFFFFF',
-                    color: selectedPortion === 'half' ? '#FFFFFF' : 'var(--text-primary)',
+                    border: selectedPortion === 'half' ? '1.5px solid var(--gold-bright)' : '1px solid var(--border-light, var(--gold-border))',
+                    background: selectedPortion === 'half' ? 'var(--primary-emerald)' : 'var(--theme-card-bg, #FFFFFF)',
+                    color: selectedPortion === 'half' ? '#FFFFFF' : 'var(--text-dark)',
                     transition: 'var(--transition-fast)'
                   }}
                 >
@@ -310,9 +311,9 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                     borderRadius: 'var(--radius-pill)',
                     fontSize: '0.8rem',
                     fontWeight: 800,
-                    border: selectedPortion === 'full' ? '1.5px solid var(--gold-bright)' : '1px solid var(--gold-border)',
-                    background: selectedPortion === 'full' ? 'var(--primary-emerald)' : '#FFFFFF',
-                    color: selectedPortion === 'full' ? '#FFFFFF' : 'var(--text-primary)',
+                    border: selectedPortion === 'full' ? '1.5px solid var(--gold-bright)' : '1px solid var(--border-light, var(--gold-border))',
+                    background: selectedPortion === 'full' ? 'var(--primary-emerald)' : 'var(--theme-card-bg, #FFFFFF)',
+                    color: selectedPortion === 'full' ? '#FFFFFF' : 'var(--text-dark)',
                     transition: 'var(--transition-fast)'
                   }}
                 >
@@ -376,7 +377,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                           onChange={() => {}}
                           style={{ width: '16px', height: '16px', accentColor: 'var(--primary-emerald)', cursor: 'pointer' }}
                         />
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-dark)' }}>
                           {mod.name}
                         </span>
                       </div>
@@ -393,7 +394,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
           {/* Description */}
           <p style={{
             fontSize: '0.92rem',
-            color: 'var(--text-primary)',
+            color: 'var(--text-dark)',
             lineHeight: 1.6,
             marginBottom: '20px'
           }}>
@@ -403,7 +404,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
           {/* Ingredients List */}
           {ingredientsList.length > 0 && (
             <div style={{
-              background: 'var(--bg-champagne)',
+              background: 'var(--bg-champagne, var(--bg-card-soft))',
               border: '1px solid var(--gold-border)',
               borderRadius: 'var(--radius-md)',
               padding: '14px 16px',
@@ -424,8 +425,8 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   <span key={i} style={{
                     fontSize: '0.78rem',
                     fontWeight: 600,
-                    color: 'var(--text-primary)',
-                    background: '#FFFFFF',
+                    color: 'var(--text-dark)',
+                    background: 'var(--theme-card-bg, #FFFFFF)',
                     border: '1px solid var(--gold-border)',
                     padding: '4px 10px',
                     borderRadius: 'var(--radius-pill)'
