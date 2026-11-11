@@ -3634,22 +3634,51 @@ export default function App() {
               })()}
             </p>
 
+            {Boolean(info?.google_reviews_enabled) && (
+              <button
+                onClick={() => {
+                  setOrderSuccessModal(null);
+                  handleRateUsClick();
+                }}
+                style={{
+                  width: '100%',
+                  marginBottom: '10px',
+                  background: 'var(--gold-gradient, linear-gradient(135deg, #FFD700 0%, #DFBA67 100%))',
+                  color: 'var(--dock-btn-text, #0A2315)',
+                  padding: '11px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontWeight: 800,
+                  fontSize: '0.86rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: 'var(--theme-shadow, 0 4px 12px rgba(0, 0, 0, 0.2))'
+                }}
+              >
+                <span>⭐</span>
+                <span>{lang === 'hi' ? 'हमें गूगल पर रेट करें' : 'Rate & Review Us on Google'}</span>
+              </button>
+            )}
+
             <button
               onClick={() => setOrderSuccessModal(null)}
               style={{
                 width: '100%',
-                background: 'linear-gradient(135deg, #EAB308 0%, #CA8A04 100%)',
-                color: '#0A2315',
-                padding: '14px',
+                background: 'var(--theme-btn-gradient, linear-gradient(135deg, #EAB308 0%, #CA8A04 100%))',
+                color: '#FFFFFF',
+                padding: '13px',
                 borderRadius: 'var(--radius-pill)',
                 fontWeight: 900,
-                fontSize: '1rem',
+                fontSize: '0.96rem',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: 'var(--shadow-gold)'
+                boxShadow: 'var(--theme-shadow, var(--shadow-gold))'
               }}
             >
-              Great, Thanks!
+              {lang === 'hi' ? 'ठीक है, धन्यवाद!' : 'Great, Thanks!'}
             </button>
           </div>
         </div>

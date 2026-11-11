@@ -80,7 +80,7 @@ export default function Footer({ info, onOpenAdmin, onOpenReviewModal }) {
             onClick={onOpenReviewModal}
             style={{
               background: 'var(--gold-gradient, linear-gradient(135deg, #FFD700 0%, #FFA500 100%))',
-              color: 'var(--primary-emerald, #0A2315)',
+              color: 'var(--dock-btn-text, #0A2315)',
               border: 'none',
               padding: '8px 18px',
               borderRadius: 'var(--radius-pill)',

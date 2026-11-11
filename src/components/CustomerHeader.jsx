@@ -92,20 +92,20 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
               style={{
                 fontSize: '0.68rem',
                 fontWeight: 800,
-                color: 'var(--primary-emerald, #0A2315)',
-                background: 'linear-gradient(135deg, var(--gold-bright, #FFD700) 0%, var(--gold-primary, #DFBA67) 100%)',
-                border: '1px solid #FFF',
+                color: 'var(--dock-btn-text, #0A2315)',
+                background: 'var(--gold-gradient, linear-gradient(135deg, var(--gold-bright, #FFD700) 0%, var(--gold-primary, #DFBA67) 100%))',
+                border: '1px solid var(--border-light, rgba(255, 255, 255, 0.5))',
                 padding: '3px 8px',
                 borderRadius: 'var(--radius-pill)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '3px',
-                boxShadow: '0 2px 6px rgba(223, 186, 103, 0.4)',
+                boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
                 cursor: 'pointer'
               }}
               title="Rate & Review on Google"
             >
-              <Star size={11} fill="var(--primary-emerald, #0A2315)" color="var(--primary-emerald, #0A2315)" /> Rate Us
+              <Star size={11} fill="currentColor" color="currentColor" /> Rate Us
             </button>
           )}
 

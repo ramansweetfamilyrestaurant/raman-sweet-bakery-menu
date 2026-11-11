@@ -197,15 +197,15 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px',
-                      background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
-                      color: '#0A2315',
-                      border: '1px solid #FFFFFF',
+                      background: 'var(--gold-gradient, linear-gradient(135deg, #FFD700 0%, #FFA500 100%))',
+                      color: 'var(--dock-btn-text, #0A2315)',
+                      border: '1px solid var(--border-light, rgba(255, 255, 255, 0.4))',
                       padding: '6px 14px',
                       borderRadius: 'var(--radius-pill)',
                       fontSize: '0.78rem',
                       fontWeight: 800,
                       cursor: 'pointer',
-                      boxShadow: '0 2px 6px rgba(255, 215, 0, 0.3)'
+                      boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))'
                     }}
                   >
                     ⭐ Rate Us on Google Reviews <ExternalLink size={12} />

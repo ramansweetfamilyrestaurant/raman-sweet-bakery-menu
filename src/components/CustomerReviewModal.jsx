@@ -65,7 +65,7 @@ export default function CustomerReviewModal({ info, onClose }) {
       padding: '16px'
     }}>
       <div style={{
-        background: '#FFFFFF',
+        background: 'var(--theme-modal-bg, #FFFFFF)',
         borderRadius: '24px',
         maxWidth: '440px',
         width: '100%',
@@ -77,12 +77,12 @@ export default function CustomerReviewModal({ info, onClose }) {
       }}>
         {/* Header */}
         <div style={{
-          background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
+          background: 'var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #164E2A 100%))',
           color: '#FFFFFF',
           padding: '20px',
           borderTopLeftRadius: '24px',
           borderTopRightRadius: '24px',
-          borderBottom: '3px solid #DFBA67',
+          borderBottom: '3px solid var(--gold-bright, #DFBA67)',
           textAlign: 'center',
           position: 'relative'
         }}>
@@ -100,13 +100,13 @@ export default function CustomerReviewModal({ info, onClose }) {
 
           <div style={{
             width: '50px', height: '50px', borderRadius: '50%',
-            background: '#FFFFFF', border: '2px solid #DFBA67',
+            background: 'var(--theme-card-bg, #FFFFFF)', border: '2px solid var(--gold-bright, #DFBA67)',
             margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '1.5rem', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
           }}>
             {info?.logo ? <img src={info.logo} alt={restoName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '⭐'}
           </div>
-          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#DFBA67' }}>
+          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: 'var(--gold-bright, #DFBA67)' }}>
             {restoName}
           </h3>
           <span style={{ fontSize: '0.78rem', color: '#E2E8F0' }}>
@@ -141,14 +141,14 @@ export default function CustomerReviewModal({ info, onClose }) {
 
           {/* Star Rating Card */}
           <div style={{
-            background: '#F8FAFC',
+            background: 'var(--bg-secondary, #F8FAFC)',
             borderRadius: '16px',
             padding: '16px',
             textAlign: 'center',
-            border: '1px solid #E2E8F0',
+            border: '1px solid var(--theme-card-border, #E2E8F0)',
             marginBottom: '16px'
           }}>
-            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>
+            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-dark, #0F172A)', marginBottom: '10px' }}>
               {profile.question}
             </div>
 
@@ -167,14 +167,14 @@ export default function CustomerReviewModal({ info, onClose }) {
                 >
                   <Star
                     size={32}
-                    fill={star <= rating ? '#FFD700' : '#E2E8F0'}
-                    color={star <= rating ? '#F59E0B' : '#CBD5E1'}
+                    fill={star <= rating ? '#FFD700' : 'rgba(156, 163, 175, 0.3)'}
+                    color={star <= rating ? '#F59E0B' : 'rgba(156, 163, 175, 0.5)'}
                   />
                 </button>
               ))}
             </div>
 
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#059669' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--theme-price-color, #059669)' }}>
               {rating === 5 && '⭐⭐⭐⭐⭐ Excellent Experience!'}
               {rating === 4 && '⭐⭐⭐⭐ Great Experience!'}
               {rating === 3 && '⭐⭐⭐ Good Experience'}
@@ -185,7 +185,7 @@ export default function CustomerReviewModal({ info, onClose }) {
 
           {/* Highlight Chips */}
           <div style={{ marginBottom: '14px' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748B', display: 'block', marginBottom: '6px' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted, #64748B)', display: 'block', marginBottom: '6px' }}>
               ✨ Tap highlights to customize review (Optional):
             </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -196,9 +196,9 @@ export default function CustomerReviewModal({ info, onClose }) {
                     key={chip.id}
                     onClick={() => toggleChip(chip.label)}
                     style={{
-                      background: isSelected ? '#ECFDF5' : '#F1F5F9',
-                      color: isSelected ? '#047857' : '#334155',
-                      border: isSelected ? '1px solid #10B981' : '1px solid #CBD5E1',
+                      background: isSelected ? 'var(--theme-badge-bg, #ECFDF5)' : 'var(--bg-secondary, #F1F5F9)',
+                      color: isSelected ? 'var(--theme-price-color, #047857)' : 'var(--text-dark, #334155)',
+                      border: isSelected ? '1px solid var(--theme-card-border, #10B981)' : '1px solid var(--border-light, #CBD5E1)',
                       padding: '5px 10px',
                       borderRadius: '20px',
                       fontSize: '0.72rem',
@@ -225,7 +225,9 @@ export default function CustomerReviewModal({ info, onClose }) {
                 width: '100%',
                 padding: '9px 12px',
                 borderRadius: '10px',
-                border: '1px solid #CBD5E1',
+                border: '1px solid var(--theme-card-border, #CBD5E1)',
+                background: 'var(--theme-card-bg, #FFFFFF)',
+                color: 'var(--text-dark, #0F172A)',
                 fontSize: '0.78rem',
                 outline: 'none'
               }}
@@ -234,16 +236,16 @@ export default function CustomerReviewModal({ info, onClose }) {
 
           {/* AI Review Text Box */}
           <div style={{
-            background: 'linear-gradient(135deg, #FEFCE8 0%, #FFFBEB 100%)',
-            border: '1.5px solid #DFBA67',
+            background: 'var(--bg-card-soft, linear-gradient(135deg, #FEFCE8 0%, #FFFBEB 100%))',
+            border: '1.5px solid var(--theme-card-border, #DFBA67)',
             borderRadius: '14px',
             padding: '12px 14px',
             marginBottom: '16px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
               <span style={{
-                background: 'linear-gradient(135deg, #DFBA67, #B45309)',
-                color: '#FFFFFF',
+                background: 'var(--gold-gradient, linear-gradient(135deg, #DFBA67, #B45309))',
+                color: 'var(--dock-btn-text, #FFFFFF)',
                 fontSize: '0.62rem',
                 fontWeight: 900,
                 padding: '2px 7px',
@@ -267,7 +269,7 @@ export default function CustomerReviewModal({ info, onClose }) {
                 resize: 'vertical',
                 fontSize: '0.84rem',
                 lineHeight: 1.4,
-                color: '#1E293B',
+                color: 'var(--text-dark, #1E293B)',
                 fontWeight: 600,
                 outline: 'none'
               }}
@@ -279,7 +281,7 @@ export default function CustomerReviewModal({ info, onClose }) {
             onClick={handleCopyAndPost}
             style={{
               width: '100%',
-              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
               color: '#FFFFFF',
               border: 'none',
               padding: '12px 18px',
@@ -291,7 +293,7 @@ export default function CustomerReviewModal({ info, onClose }) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35)'
+              boxShadow: 'var(--theme-shadow, 0 8px 20px rgba(0, 0, 0, 0.25))'
             }}
           >
             <Copy size={16} />
