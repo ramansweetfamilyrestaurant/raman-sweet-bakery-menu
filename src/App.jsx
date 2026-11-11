@@ -3024,48 +3024,126 @@ export default function App() {
                             )}
                           </div>
 
-                          {isDirectOrderingActive && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (item._type === 'combo') {
-                                  handleAddComboToCart(item);
-                                } else {
-                                  const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
-                                  const hasModifiers = Boolean(
-                                    item.modifiers && (
-                                      (Array.isArray(item.modifiers) && item.modifiers.length > 0) ||
-                                      (typeof item.modifiers === 'string' && item.modifiers.length > 4 && item.modifiers !== '[]')
-                                    )
-                                  );
-                                  if (hasHalf || hasModifiers) {
-                                    setSelectedDishModal(item);
+                          {isDirectOrderingActive && (() => {
+                            if (item._type === 'combo') {
+                              const inCartCombo = cartItems.find(i => (i.key || i.dish?.id) === `combo_${item.id}`);
+                              const comboQty = inCartCombo ? inCartCombo.quantity : 0;
+                              if (comboQty > 0) {
+                                return (
+                                  <div
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '3px',
+                                      background: 'var(--theme-card-bg, #FFFFFF)',
+                                      border: '1.5px solid var(--theme-nav-active, var(--primary-emerald, #10B981))',
+                                      borderRadius: 'var(--radius-pill)',
+                                      padding: '2px 4px',
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateCartQuantity(inCartCombo.key || inCartCombo.dish?.id, -1)}
+                                      aria-label="Decrease quantity"
+                                      style={{
+                                        background: 'var(--bg-secondary, #F1F5F9)',
+                                        color: 'var(--text-dark, #0F172A)',
+                                        border: 'none',
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '50%',
+                                        fontWeight: 900,
+                                        cursor: 'pointer',
+                                        fontSize: '0.8rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: 1
+                                      }}
+                                    >
+                                      −
+                                    </button>
+                                    <span style={{
+                                      minWidth: '14px',
+                                      textAlign: 'center',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 900,
+                                      color: 'var(--theme-price-color, var(--primary-emerald, #10B981))'
+                                    }}>
+                                      {comboQty}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateCartQuantity(inCartCombo.key || inCartCombo.dish?.id, 1)}
+                                      aria-label="Increase quantity"
+                                      style={{
+                                        background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                                        color: '#FFFFFF',
+                                        border: 'none',
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '50%',
+                                        fontWeight: 900,
+                                        cursor: 'pointer',
+                                        fontSize: '0.8rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: 1
+                                      }}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                );
+                              }
+                            }
+
+                            return (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (item._type === 'combo') {
+                                    handleAddComboToCart(item);
                                   } else {
-                                    handleAddToCart(item, 'full');
+                                    const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
+                                    const hasModifiers = Boolean(
+                                      item.modifiers && (
+                                        (Array.isArray(item.modifiers) && item.modifiers.length > 0) ||
+                                        (typeof item.modifiers === 'string' && item.modifiers.length > 4 && item.modifiers !== '[]')
+                                      )
+                                    );
+                                    if (hasHalf || hasModifiers) {
+                                      setSelectedDishModal(item);
+                                    } else {
+                                      handleAddToCart(item, 'full');
+                                    }
                                   }
-                                }
-                              }}
-                              style={{
-                                background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                padding: '4px 9px',
-                                borderRadius: 'var(--radius-pill)',
-                                fontSize: '0.70rem',
-                                fontWeight: 900,
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '2px',
-                                boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
-                                flexShrink: 0
-                              }}
-                            >
-                              <span>+</span>
-                              <span>{lang === 'hi' ? 'जोड़ें' : 'ADD'}</span>
-                            </button>
-                          )}
+                                }}
+                                style={{
+                                  background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  padding: '4px 9px',
+                                  borderRadius: 'var(--radius-pill)',
+                                  fontSize: '0.70rem',
+                                  fontWeight: 900,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '2px',
+                                  boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
+                                  flexShrink: 0
+                                }}
+                              >
+                                <span>+</span>
+                                <span>{lang === 'hi' ? 'जोड़ें' : 'ADD'}</span>
+                              </button>
+                            );
+                          })()}
                         </div>
                       </div>
                     );
@@ -3201,34 +3279,112 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Right: + ADD button when ordering active */}
-                      {isDirectOrderingActive && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddComboToCart(combo);
-                          }}
-                          style={{
-                            background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            padding: '5px 8px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontSize: '0.68rem',
-                            fontWeight: 900,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '2px',
-                            boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
-                            flexShrink: 0
-                          }}
-                        >
-                          <span>+</span>
-                          <span>{lang === 'hi' ? 'जोड़ें' : 'ADD'}</span>
-                        </button>
-                      )}
+                      {/* Right: + ADD button or Stepper when ordering active */}
+                      {isDirectOrderingActive && (() => {
+                        const inCartItem = cartItems.find(i => (i.key || i.dish?.id) === `combo_${combo.id}`);
+                        const inCartQty = inCartItem ? inCartItem.quantity : 0;
+
+                        if (inCartQty > 0) {
+                          return (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: 'var(--theme-card-bg, #FFFFFF)',
+                                border: '1.5px solid var(--theme-nav-active, var(--primary-emerald, #10B981))',
+                                borderRadius: 'var(--radius-pill)',
+                                padding: '2px 4px',
+                                flexShrink: 0,
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateCartQuantity(inCartItem.key || inCartItem.dish?.id, -1)}
+                                aria-label="Decrease combo quantity"
+                                style={{
+                                  background: 'var(--bg-secondary, #F1F5F9)',
+                                  color: 'var(--text-dark, #0F172A)',
+                                  border: 'none',
+                                  width: '22px',
+                                  height: '22px',
+                                  borderRadius: '50%',
+                                  fontWeight: 900,
+                                  cursor: 'pointer',
+                                  fontSize: '0.85rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  lineHeight: 1
+                                }}
+                              >
+                                −
+                              </button>
+                              <span style={{
+                                minWidth: '16px',
+                                textAlign: 'center',
+                                fontSize: '0.74rem',
+                                fontWeight: 900,
+                                color: 'var(--theme-price-color, var(--primary-emerald, #10B981))'
+                              }}>
+                                {inCartQty}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateCartQuantity(inCartItem.key || inCartItem.dish?.id, 1)}
+                                aria-label="Increase combo quantity"
+                                style={{
+                                  background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  width: '22px',
+                                  height: '22px',
+                                  borderRadius: '50%',
+                                  fontWeight: 900,
+                                  cursor: 'pointer',
+                                  fontSize: '0.85rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  lineHeight: 1
+                                }}
+                              >
+                                +
+                              </button>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddComboToCart(combo);
+                            }}
+                            style={{
+                              background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              padding: '5px 8px',
+                              borderRadius: 'var(--radius-pill)',
+                              fontSize: '0.68rem',
+                              fontWeight: 900,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                              boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
+                              flexShrink: 0
+                            }}
+                          >
+                            <span>+</span>
+                            <span>{lang === 'hi' ? 'जोड़ें' : 'ADD'}</span>
+                          </button>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -4131,6 +4287,17 @@ export default function App() {
           combo={selectedComboModal}
           onClose={() => setSelectedComboModal(null)}
           onAddToCart={isDirectOrderingActive ? handleAddComboToCart : undefined}
+          onUpdateQuantity={isDirectOrderingActive ? handleUpdateCartQuantity : undefined}
+          onOpenCart={() => {
+            setSelectedComboModal(null);
+            setShowCartDrawer(true);
+          }}
+          cartQuantity={(() => {
+            const inCart = cartItems.find(i => (i.key || i.dish?.id) === `combo_${selectedComboModal.id}`);
+            return inCart ? inCart.quantity : 0;
+          })()}
+          cartKey={`combo_${selectedComboModal.id}`}
+          dishes={dishes}
           canOrder={isDirectOrderingActive}
           currencySymbol={getCurrencySymbol(info?.currency_symbol)}
           lang={lang}

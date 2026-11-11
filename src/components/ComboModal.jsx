@@ -1,12 +1,17 @@
 import React from 'react';
-import { X, Plus, Sparkles, CheckCircle2, Utensils, Tag, ShieldCheck } from 'lucide-react';
-import { getComboImageUrl } from '../utils/imageHelper';
+import { X, Plus, Minus, Sparkles, CheckCircle2, Utensils, Tag, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { getComboImageUrl, getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 
 export default function ComboModal({ 
   combo, 
   onClose, 
   onAddToCart, 
+  onUpdateQuantity,
+  onOpenCart,
+  cartQuantity = 0,
+  cartKey,
+  dishes = [],
   canOrder = false, 
   currencySymbol = '₹',
   lang = 'en',
@@ -26,15 +31,15 @@ export default function ComboModal({
   }
 
   // Calculate prices and offers
-  const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null) 
-    ? Number(combo.regular_price) 
+  const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null)
+    ? Number(combo.regular_price)
     : Number(combo.price || 0);
-  const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null) 
-    ? Number(combo.offer_price) 
+  const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null)
+    ? Number(combo.offer_price)
     : regularPrice;
   const originalTotal = comboItems.reduce((s, i) => s + ((Number(i.original_price) || 0) * (i.qty || 1)), 0);
-  const savings = originalTotal > effectivePrice 
-    ? originalTotal - effectivePrice 
+  const savings = originalTotal > effectivePrice
+    ? originalTotal - effectivePrice
     : (regularPrice > effectivePrice ? regularPrice - effectivePrice : 0);
 
   const imageSrc = getComboImageUrl(combo.image);
@@ -61,7 +66,7 @@ export default function ComboModal({
       justifyContent: 'center',
       padding: '12px'
     }} onClick={onClose}>
-      <div 
+      <div
         onClick={(e) => e.stopPropagation()}
         className="combo-view-modal"
         style={{
@@ -79,7 +84,8 @@ export default function ComboModal({
           animation: 'fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
-        <style dangerouslySetInnerHTML={{__html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           @media (max-width: 600px) {
             .combo-view-modal {
               max-width: 100% !important;
@@ -204,7 +210,7 @@ export default function ComboModal({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {/* Veg / Non-Veg Indicator Icon */}
-                <span 
+                <span
                   title={isVeg ? 'Pure Veg' : 'Non-Veg'}
                   style={{
                     display: 'inline-flex',
@@ -290,47 +296,120 @@ export default function ComboModal({
               alignItems: 'center',
               gap: '5px'
             }}>
-              <Utensils size={13} color="var(--gold-bright, #D4AF37)" /> 
+              <Utensils size={13} color="var(--gold-bright, #D4AF37)" />
               {lang === 'hi' ? `थाली में क्या-क्या शामिल है (${comboItems.length} व्यंजन)` : `What's Included (${comboItems.length} Items)`}
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {comboItems.map((item, idx) => (
-                <div key={idx} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: 'var(--theme-card-bg, #FFFFFF)',
-                  border: '1px solid var(--theme-card-border, #E2E8F0)',
-                  padding: '7px 10px',
-                  borderRadius: '8px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle2 size={14} style={{ color: 'var(--theme-price-color, #16A34A)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-dark, #0F172A)' }}>
-                      {item.qty > 1 ? `${item.qty}x ` : ''}{item.dish_name}
-                    </span>
-                    {item.portion && (
-                      <span style={{
-                        fontSize: '0.66rem',
-                        fontWeight: 700,
-                        padding: '1px 5px',
-                        borderRadius: '4px',
-                        background: 'var(--theme-badge-bg, #EEF2FF)',
-                        color: 'var(--theme-text-primary, #4338CA)'
+              {comboItems.map((item, idx) => {
+                const matchedDish = dishes.find(d => String(d.id) === String(item.dish_id));
+                const itemImg = matchedDish?.image ? getDishImageUrl(matchedDish.image) : null;
+                const itemText = `${item.dish_name || ''} ${matchedDish?.name || ''} ${matchedDish?.category || ''}`.toLowerCase();
+                const itemIsNonVeg = itemText.includes('chicken') || itemText.includes('mutton') || itemText.includes('fish') || itemText.includes('egg') || matchedDish?.food_type === 'non_veg' || matchedDish?.is_non_veg;
+                const isItemVeg = isPureVegResto || !itemIsNonVeg;
+
+                return (
+                  <div key={idx} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'var(--theme-card-bg, #FFFFFF)',
+                    border: '1px solid var(--theme-card-border, #E2E8F0)',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    gap: '10px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                      {/* Dish Thumbnail or Icon */}
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        background: 'var(--bg-secondary, #F1F5F9)',
+                        flexShrink: 0,
+                        border: '1px solid var(--theme-card-border, #E2E8F0)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                       }}>
-                        {item.portion === 'half' ? (lang === 'hi' ? 'हाफ' : 'Half') : item.portion}
+                        {itemImg ? (
+                          <img 
+                            src={itemImg} 
+                            alt={item.dish_name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <Utensils size={15} color="var(--text-muted, #94A3B8)" />
+                        )}
+                      </div>
+
+                      {/* Dish Name & Indicators */}
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <span 
+                            title={isItemVeg ? 'Veg' : 'Non-Veg'}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '12px',
+                              height: '12px',
+                              border: isItemVeg ? '1.5px solid #16A34A' : '1.5px solid #DC2626',
+                              borderRadius: '3px',
+                              padding: '1px',
+                              flexShrink: 0
+                            }}
+                          >
+                            <span style={{
+                              width: '4px',
+                              height: '4px',
+                              borderRadius: '50%',
+                              background: isItemVeg ? '#16A34A' : '#DC2626'
+                            }} />
+                          </span>
+
+                          <span style={{ 
+                            fontSize: '0.82rem', 
+                            fontWeight: 700, 
+                            color: 'var(--text-dark, #0F172A)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {item.qty > 1 ? `${item.qty}x ` : ''}{item.dish_name}
+                          </span>
+                        </div>
+
+                        {item.portion && (
+                          <span style={{
+                            display: 'inline-block',
+                            marginTop: '2px',
+                            fontSize: '0.64rem',
+                            fontWeight: 700,
+                            padding: '1px 5px',
+                            borderRadius: '4px',
+                            background: 'var(--theme-badge-bg, #EEF2FF)',
+                            color: 'var(--theme-text-primary, #4338CA)'
+                          }}>
+                            {item.portion === 'half' ? (lang === 'hi' ? 'हाफ' : 'Half') : item.portion}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {item.original_price && (
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted, #64748B)', flexShrink: 0 }}>
+                        {symbol}{item.original_price * (item.qty || 1)}
                       </span>
                     )}
                   </div>
-
-                  {item.original_price && (
-                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted, #64748B)' }}>
-                      {symbol}{item.original_price * (item.qty || 1)}
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -359,33 +438,140 @@ export default function ComboModal({
           background: 'var(--theme-modal-bg, #FFFFFF)'
         }}>
           {canOrder ? (
-            <button
-              onClick={() => {
-                onAddToCart(combo);
-                onClose();
-              }}
-              style={{
-                width: '100%',
-                padding: '11px',
-                borderRadius: '8px',
-                border: 'none',
-                background: 'var(--theme-btn-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
-                color: '#FFFFFF',
-                fontSize: '0.86rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                boxShadow: 'var(--theme-shadow, 0 4px 14px rgba(0, 0, 0, 0.25))',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <Plus size={16} /> {lang === 'hi' 
-                ? `थाली कार्ट में जोड़ें (${symbol}${formatPriceNumber(effectivePrice)})` 
-                : `ADD THALI TO CART (${symbol}${formatPriceNumber(effectivePrice)})`}
-            </button>
+            cartQuantity > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'var(--bg-secondary, #F8FAFC)',
+                  border: '1px solid var(--theme-card-border, #E2E8F0)',
+                  borderRadius: '10px',
+                  padding: '8px 12px'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--theme-price-color, #16A34A)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle2 size={13} /> {lang === 'hi' ? 'कार्ट में जोड़ा गया' : 'Added in Cart'}
+                    </span>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)' }}>
+                      {symbol}{formatPriceNumber(effectivePrice * cartQuantity)}
+                    </span>
+                  </div>
+
+                  {/* Quantity Stepper */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'var(--theme-card-bg, #FFFFFF)',
+                    border: '1.5px solid var(--theme-nav-active, var(--primary-emerald, #10B981))',
+                    borderRadius: 'var(--radius-pill)',
+                    padding: '2px 6px'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateQuantity && onUpdateQuantity(cartKey || `combo_${combo.id}`, -1)}
+                      aria-label="Decrease quantity"
+                      style={{
+                        background: 'var(--bg-secondary, #F1F5F9)',
+                        color: 'var(--text-dark, #0F172A)',
+                        border: 'none',
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1
+                      }}
+                    >
+                      −
+                    </button>
+                    <span style={{ minWidth: '20px', textAlign: 'center', fontSize: '0.86rem', fontWeight: 900, color: 'var(--theme-price-color, var(--primary-emerald, #10B981))' }}>
+                      {cartQuantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateQuantity && onUpdateQuantity(cartKey || `combo_${combo.id}`, 1)}
+                      aria-label="Increase quantity"
+                      style={{
+                        background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {onOpenCart && (
+                  <button
+                    type="button"
+                    onClick={onOpenCart}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'var(--theme-btn-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
+                      color: '#FFFFFF',
+                      fontSize: '0.84rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: 'var(--theme-shadow, 0 4px 14px rgba(0, 0, 0, 0.25))'
+                    }}
+                  >
+                    <ShoppingBag size={15} /> {lang === 'hi' ? 'कार्ट देखें और ऑर्डर करें' : 'View Cart & Checkout'}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  onAddToCart(combo);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '11px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'var(--theme-btn-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
+                  color: '#FFFFFF',
+                  fontSize: '0.86rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: 'var(--theme-shadow, 0 4px 14px rgba(0, 0, 0, 0.25))',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Plus size={16} /> {lang === 'hi' 
+                  ? `थाली कार्ट में जोड़ें (${symbol}${formatPriceNumber(effectivePrice)})` 
+                  : `ADD THALI TO CART (${symbol}${formatPriceNumber(effectivePrice)})`}
+              </button>
+            )
           ) : (
             <button
               onClick={onClose}
