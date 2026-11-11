@@ -11912,6 +11912,23 @@ export default function SetupView({
                   style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
                 />
               </div>
+
+              {/* Filter 8: Customizable Badge */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                <div>
+                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>✨ "Customizable" Dish Badge</strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Shows pill on dishes with half/full portions or add-on modifiers</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settingsForm.filters_visibility?.customizable !== false}
+                  onChange={(e) => setSettingsForm({
+                    ...settingsForm,
+                    filters_visibility: { ...settingsForm.filters_visibility, customizable: e.target.checked }
+                  })}
+                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+                />
+              </div>
             </div>
           </div>
         </form>

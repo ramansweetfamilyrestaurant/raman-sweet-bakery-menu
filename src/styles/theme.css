@@ -53,6 +53,8 @@
   --theme-modal-bg: #FFFFFF;
   --theme-modal-border: rgba(197, 160, 89, 0.35);
   --theme-modal-header: #FAF8F5;
+  --theme-badge-bg: #FAF8F5;
+  --theme-badge-text: #1C1917;
   --dock-btn-text: #0A2315;
 }
 

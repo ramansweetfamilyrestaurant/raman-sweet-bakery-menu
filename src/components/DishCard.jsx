@@ -150,19 +150,25 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
           )}
 
           {/* Customizable / Add-ons Badge */}
-          {(hasModifiers || hasHalfPrice) && !(dish.offer_badge || dish.offer?.offer_badge) && (
+          {(hasModifiers || hasHalfPrice) && !(dish.offer_badge || dish.offer?.offer_badge) && filtersVisibility?.customizable !== false && (
             <div style={{
-              background: 'var(--primary-emerald, #0A2315)',
-              color: 'var(--gold-bright, #DFBA67)',
-              border: '1px solid var(--gold-bright, #DFBA67)',
+              background: 'var(--theme-badge-bg, rgba(255, 255, 255, 0.95))',
+              color: 'var(--theme-badge-text, var(--primary-emerald, #0A2315))',
+              border: '1px solid var(--theme-card-border, var(--border-light, rgba(0, 0, 0, 0.15)))',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
               borderRadius: 'var(--radius-pill)',
               padding: '2px 7px',
               fontSize: '0.62rem',
-              fontWeight: 900,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-              letterSpacing: '0.2px'
+              fontWeight: 800,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+              letterSpacing: '0.2px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px',
+              whiteSpace: 'nowrap'
             }}>
-              ✨ Customizable
+              ✨ {lang === 'hi' ? 'कस्टमाइज़ेबल' : 'Customizable'}
             </div>
           )}
 

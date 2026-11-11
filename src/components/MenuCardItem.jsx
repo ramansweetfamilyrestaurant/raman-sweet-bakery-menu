@@ -7,6 +7,12 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
   const symbol = getCurrencySymbol(currencySymbol);
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
+  const hasModifiers = Boolean(
+    dish.modifiers && (
+      (Array.isArray(dish.modifiers) && dish.modifiers.length > 0) ||
+      (typeof dish.modifiers === 'string' && dish.modifiers.trim().length > 2 && dish.modifiers !== '[]')
+    )
+  );
   const imageSrc = getDishImageUrl(dish.image);
 
   const [portionMode, setPortionMode] = useState(hasHalfPrice ? 'half' : 'full');
@@ -127,7 +133,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
         </div>
 
         {/* Badge Pill & Sold Out Indicator Row */}
-        {(dish.badge || (dish.offer_badge || dish.offer?.offer_badge) || !isAvailable) && (
+        {(dish.badge || (dish.offer_badge || dish.offer?.offer_badge) || ((hasModifiers || hasHalfPrice) && filtersVisibility?.customizable !== false) || !isAvailable) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
             {/* Special Offer Badge */}
             {(dish.offer_badge || dish.offer?.offer_badge) && (
@@ -145,6 +151,26 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 gap: '2px'
               }}>
                 🔥 {dish.offer_badge || dish.offer?.offer_badge}
+              </span>
+            )}
+
+            {/* Customizable / Add-ons Badge */}
+            {(hasModifiers || hasHalfPrice) && !(dish.offer_badge || dish.offer?.offer_badge) && filtersVisibility?.customizable !== false && (
+              <span style={{
+                background: 'var(--theme-badge-bg, rgba(255, 255, 255, 0.95))',
+                color: 'var(--theme-badge-text, var(--primary-emerald, #0A2315))',
+                border: '1px solid var(--theme-card-border, var(--border-light, rgba(0, 0, 0, 0.15)))',
+                borderRadius: 'var(--radius-pill)',
+                padding: '2px 7px',
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px',
+                whiteSpace: 'nowrap'
+              }}>
+                ✨ {lang === 'hi' ? 'कस्टमाइज़ेबल' : 'Customizable'}
               </span>
             )}
 
