@@ -3044,12 +3044,23 @@ export default function App() {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', gap: '4px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                            <span style={{ fontSize: '0.84rem', fontWeight: 900, color: 'var(--theme-price-color, var(--primary-emerald))', lineHeight: 1.1 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: '0.92rem',
+                              fontWeight: 900,
+                              color: 'var(--theme-price-color, var(--primary-emerald))',
+                              lineHeight: 1.1
+                            }}>
                               {sym}{formatPriceNumber(offerPrice)}
                             </span>
                             {Number(regularPrice) > Number(offerPrice) && (
-                              <span style={{ fontSize: '0.66rem', color: '#94A3B8', textDecoration: 'line-through', lineHeight: 1 }}>
+                              <span style={{
+                                fontSize: '0.72rem',
+                                color: '#94A3B8',
+                                textDecoration: 'line-through',
+                                fontWeight: 600,
+                                lineHeight: 1
+                              }}>
                                 {sym}{formatPriceNumber(regularPrice)}
                               </span>
                             )}
@@ -3315,13 +3326,39 @@ export default function App() {
                           }}>
                             {itemsSummaryText || combo.description || (lang === 'hi' ? 'विशेष कॉम्बो थाली' : 'Special combo deal')}
                           </p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '0.84rem', fontWeight: 900, color: 'var(--theme-price-color, var(--primary-emerald))' }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <span style={{
+                              fontSize: '0.90rem',
+                              fontWeight: 900,
+                              color: 'var(--theme-price-color, var(--primary-emerald))',
+                              lineHeight: 1.1
+                            }}>
                               {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(effectivePrice)}
                             </span>
                             {hasDiscount && (
-                              <span style={{ fontSize: '0.68rem', color: '#94A3B8', textDecoration: 'line-through' }}>
+                              <span style={{
+                                fontSize: '0.72rem',
+                                color: '#94A3B8',
+                                textDecoration: 'line-through',
+                                fontWeight: 600,
+                                lineHeight: 1
+                              }}>
                                 {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(comparePrice)}
+                              </span>
+                            )}
+                            {hasDiscount && comparePrice > effectivePrice && (
+                              <span style={{
+                                fontSize: '0.62rem',
+                                fontWeight: 800,
+                                color: '#15803D',
+                                background: '#DCFCE7',
+                                border: '1px solid #BBF7D0',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                lineHeight: 1.1,
+                                letterSpacing: '0.02em'
+                              }}>
+                                {Math.round(((comparePrice - effectivePrice) / comparePrice) * 100)}% OFF
                               </span>
                             )}
                           </div>

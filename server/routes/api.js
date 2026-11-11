@@ -464,7 +464,15 @@ export async function enrichItemsWithActiveOffers(restaurantId, dishes = [], com
     let discounted = numBase;
     let badge = '';
 
-    const cleanSym = (sym !== undefined && sym !== null && String(sym).trim().toLowerCase() !== 'none') ? String(sym).trim() : '';
+    let cleanSym = '₹';
+    if (sym !== undefined && sym !== null) {
+      const s = String(sym).trim();
+      if (s.toLowerCase() === 'none' || s.toLowerCase() === 'hidden') {
+        cleanSym = '';
+      } else if (s) {
+        cleanSym = s;
+      }
+    }
 
     if (offer.type === 'percentage') {
       const pct = Math.min(100, Math.max(0, Number(offer.value)));

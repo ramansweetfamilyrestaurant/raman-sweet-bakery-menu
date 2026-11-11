@@ -6,7 +6,13 @@
 export function getCurrencySymbol(symbol) {
   if (symbol === undefined || symbol === null) return '₹';
   const str = String(symbol).trim();
-  if (str === '' || str.toLowerCase() === 'none') return '';
+  if (str.toLowerCase() === 'none' || str.toLowerCase() === 'hidden') return '';
+  if (!str) return '₹';
+  if (str === '₹ INR' || str === 'INR' || str === '₹') return '₹';
+  if (str === '$ USD' || str === 'USD' || str === '$') return '$';
+  if (str === '€ EUR' || str === 'EUR' || str === '€') return '€';
+  if (str === '£ GBP' || str === 'GBP' || str === '£') return '£';
+  if (str === 'AED') return 'AED ';
   return str;
 }
 
