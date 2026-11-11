@@ -526,6 +526,7 @@ export default function App() {
   
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeQuickFilter, setActiveQuickFilter] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Modals
@@ -1129,7 +1130,7 @@ export default function App() {
       let isNewScanSession = false;
       let spaceTypeParam = '';
       let tableNumParam = '';
-      if (!isAdminMode && !searchQuery) {
+      if (!isAdminMode) {
         const spaceInfo = getSpaceInfoFromUrl();
         if (spaceInfo?.type) spaceTypeParam = spaceInfo.type;
         if (spaceInfo?.num) tableNumParam = spaceInfo.num;
@@ -1148,7 +1149,7 @@ export default function App() {
       }
 
       // Fast single-bundle fetch for public customer view
-      if (!isAdminMode && !searchQuery) {
+      if (!isAdminMode) {
         try {
           const scanParam = isNewScanSession ? '1' : '0';
           const spaceQuery = spaceTypeParam ? `&space_type=${encodeURIComponent(spaceTypeParam)}&table_num=${encodeURIComponent(tableNumParam)}` : '';
@@ -1248,7 +1249,7 @@ export default function App() {
     } else {
       loadMenuData();
     }
-  }, [searchQuery, adminToken, view]);
+  }, [adminToken, view]);
 
   // Dynamic Theme Color Engine Applicator
   useEffect(() => {
@@ -1627,17 +1628,84 @@ export default function App() {
     }
   };
 
-  // Group dishes by category
-  const groupedDishes = useMemo(() => {
-    const map = {};
-    categories.forEach(c => {
-      map[c.id] = { category: c, items: [] };
+  // Group dishes by category with in-memory multi-field tokenized search & quick filters
+  const { groupedDishes, totalMatchingDishesCount } = useMemo(() => {
+    let list = Array.isArray(dishes) ? dishes : [];
+
+    // 1. Quick Filter (Dietary / Badge / Price)
+    if (activeQuickFilter) {
+      list = list.filter(d => {
+        if (!d) return false;
+        if (activeQuickFilter === 'veg') {
+          return d.type === 'veg' || !d.type || d.type === '';
+        }
+        if (activeQuickFilter === 'nonveg') {
+          return d.type === 'nonveg';
+        }
+        if (activeQuickFilter === 'egg') {
+          return d.type === 'egg';
+        }
+        if (activeQuickFilter === 'must_try') {
+          const badge = String(d.badge || '').toLowerCase();
+          return Boolean(d.must_try || d.is_must_try || badge.includes('must'));
+        }
+        if (activeQuickFilter === 'special') {
+          const badge = String(d.badge || '').toLowerCase();
+          const hasOffer = Boolean(d.offer_badge || (d.offer && d.offer.offer_badge) || (Number(d.offer_price) > 0 && Number(d.offer_price) < Number(d.price || d.portion_full_price)));
+          return Boolean(d.special || d.is_special || badge.includes('special') || hasOffer);
+        }
+        if (activeQuickFilter === 'under100') {
+          const effectivePrice = Number(d.offer_price) > 0 
+            ? Number(d.offer_price) 
+            : (Number(d.price) > 0 ? Number(d.price) : Number(d.portion_full_price) || 0);
+          return effectivePrice > 0 && effectivePrice <= 100;
+        }
+        return true;
+      });
+    }
+
+    // Category dictionary for lookup
+    const catMap = {};
+    (categories || []).forEach(c => {
+      if (c && c.id) catMap[c.id] = c;
     });
 
-    dishes.forEach(d => {
-      if (map[d.category_id]) {
+    // 2. Tokenized Multi-Field Search Matching
+    const q = (searchQuery || '').trim().toLowerCase();
+    if (q) {
+      const tokens = q.split(/\s+/).filter(Boolean);
+      list = list.filter(d => {
+        if (!d) return false;
+        const cat = catMap[d.category_id];
+        const catName = String(cat?.name || '').toLowerCase();
+        const catNameHi = String(cat?.name_hi || '').toLowerCase();
+        const name = String(d.name || '').toLowerCase();
+        const nameHi = String(d.name_hi || '').toLowerCase();
+        const desc = String(d.description || '').toLowerCase();
+        const badge = String(d.badge || '').toLowerCase();
+
+        // Combined searchable text for this dish
+        const haystack = `${name} ${nameHi} ${desc} ${badge} ${catName} ${catNameHi}`;
+
+        // Every typed word/token must match somewhere in the dish or its category
+        return tokens.every(token => haystack.includes(token));
+      });
+    }
+
+    const totalMatchingCount = list.length;
+
+    // 3. Group by category
+    const map = {};
+    (categories || []).forEach(c => {
+      if (c && c.id) {
+        map[c.id] = { category: c, items: [] };
+      }
+    });
+
+    list.forEach(d => {
+      if (d && map[d.category_id]) {
         map[d.category_id].items.push(d);
-      } else {
+      } else if (d) {
         if (!map['uncategorized']) {
           map['uncategorized'] = { category: { name: 'Special Treats' }, items: [] };
         }
@@ -1645,13 +1713,35 @@ export default function App() {
       }
     });
 
-    const results = Object.values(map).filter(group => group.items.length > 0);
-    
-    if (selectedCategory !== 'all') {
-      return results.filter(g => String(g.category.id) === String(selectedCategory));
+    let results = Object.values(map).filter(group => group.items.length > 0);
+
+    // 4. Apply selectedCategory filter only when NOT in active search/filter
+    if (selectedCategory !== 'all' && !q && !activeQuickFilter) {
+      results = results.filter(g => String(g.category?.id) === String(selectedCategory));
     }
-    return results;
-  }, [dishes, categories, selectedCategory]);
+
+    return { groupedDishes: results, totalMatchingDishesCount: totalMatchingCount };
+  }, [dishes, categories, searchQuery, activeQuickFilter, selectedCategory]);
+
+  const handleSearchChange = (val) => {
+    setSearchQuery(val);
+    if (val && String(val).trim() && selectedCategory !== 'all') {
+      setSelectedCategory('all');
+    }
+  };
+
+  const handleQuickFilterChange = (filterId) => {
+    setActiveQuickFilter(filterId);
+    if (filterId && selectedCategory !== 'all') {
+      setSelectedCategory('all');
+    }
+  };
+
+  const handleClearAllSearchAndFilters = () => {
+    setSearchQuery('');
+    setActiveQuickFilter('');
+    setSelectedCategory('all');
+  };
 
   const scrollToCategory = (catId) => {
     setSelectedCategory(catId);
@@ -2525,13 +2615,16 @@ export default function App() {
       {/* Live Search Bar & Quick Micro-Filter Pills */}
       <SearchBar
         value={searchQuery}
-        onChange={setSearchQuery}
+        onChange={handleSearchChange}
         onClear={() => setSearchQuery('')}
-        onQuickFilter={(filterVal) => setSearchQuery(filterVal)}
+        activeQuickFilter={activeQuickFilter}
+        onQuickFilter={handleQuickFilterChange}
+        totalResultsCount={totalMatchingDishesCount}
         filtersVisibility={info?.filters_visibility}
         restoType={info?.resto_type}
         foodType={info?.food_type}
         isPureVeg={info?.is_pure_veg}
+        lang={lang}
       />
 
       {/* Sticky Category Quick Jump Rail */}
@@ -2721,16 +2814,34 @@ export default function App() {
           }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🍽️</div>
             <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark)', margin: '0 0 6px 0' }}>
-              {searchQuery ? (lang === 'hi' ? 'कोई आइटम नहीं मिला' : 'No items found') : (lang === 'hi' ? '✨ मेनू जल्द ही आ रहा है' : '✨ Digital Menu Coming Soon')}
+              {(searchQuery || activeQuickFilter) ? (lang === 'hi' ? 'कोई व्यंजन नहीं मिला' : 'No dishes found') : (lang === 'hi' ? '✨ मेनू जल्द ही आ रहा है' : '✨ Digital Menu Coming Soon')}
             </p>
-            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-              {searchQuery ? (lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें' : 'Try searching for something else') : (lang === 'hi' ? 'आउटलेट अपने मेनू आइटम्स जोड़ रहा है।' : 'The outlet is preparing exciting items for you!')}
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+              {(searchQuery || activeQuickFilter) ? (lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें या फ़िल्टर हटाएं' : 'Try searching for something else or clear filters') : (lang === 'hi' ? 'आउटलेट अपने मेनू आइटम्स जोड़ रहा है।' : 'The outlet is preparing exciting items for you!')}
             </p>
+            {(searchQuery || activeQuickFilter) && (
+              <button
+                onClick={handleClearAllSearchAndFilters}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 'var(--radius-pill)',
+                  background: 'var(--theme-btn-gradient, var(--gold-gradient))',
+                  color: 'var(--dock-btn-text, #0A2315)',
+                  border: 'none',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  boxShadow: 'var(--theme-shadow, var(--shadow-sm))'
+                }}
+              >
+                {lang === 'hi' ? 'सभी फ़िल्टर और खोज हटाएं ✕' : 'Clear search & filters ✕'}
+              </button>
+            )}
           </div>
         ) : (
           <>
           {/* 🔥 SPECIAL OFFERS BANNER */}
-          {!searchQuery && (() => {
+          {!searchQuery && !activeQuickFilter && (() => {
             const offerDishes = dishes.filter(d => d.offer_price !== undefined && d.offer_price !== null);
             const offerCombos = (combos || []).filter(c => c.offer_price !== undefined && c.offer_price !== null);
             const allOfferItems = [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
@@ -2882,7 +2993,7 @@ export default function App() {
             );
           })()}
           {/* 🛒 COMBO DEALS SECTION - ULTRA SLIM & MOBILE-NATIVE */}
-          {combos.length > 0 && !searchQuery && info?.filters_visibility?.combo !== false && (
+          {combos.length > 0 && !searchQuery && !activeQuickFilter && info?.filters_visibility?.combo !== false && (
             <section id="combos-section" style={{ marginBottom: '12px', scrollMarginTop: '110px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',

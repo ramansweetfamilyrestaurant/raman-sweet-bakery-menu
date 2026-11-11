@@ -1173,10 +1173,14 @@ router.get('/dishes', async (req, res) => {
         params.push(`%${trimmedQ}%`);
         params.push(`%${trimmedQ}%`);
         params.push(`%${trimmedQ}%`);
-        const p3 = params.length;
-        const p2 = p3 - 1;
-        const p1 = p3 - 2;
-        sql += ` AND (LOWER(d.name) LIKE $${p1} OR LOWER(d.description) LIKE $${p2} OR LOWER(d.badge) LIKE $${p3})`;
+        params.push(`%${trimmedQ}%`);
+        params.push(`%${trimmedQ}%`);
+        const p5 = params.length;
+        const p4 = p5 - 1;
+        const p3 = p5 - 2;
+        const p2 = p5 - 3;
+        const p1 = p5 - 4;
+        sql += ` AND (LOWER(d.name) LIKE $${p1} OR LOWER(COALESCE(d.name_hi, '')) LIKE $${p2} OR LOWER(COALESCE(d.description, '')) LIKE $${p3} OR LOWER(COALESCE(d.badge, '')) LIKE $${p4} OR LOWER(COALESCE(c.name, '')) LIKE $${p5})`;
       }
     }
 
