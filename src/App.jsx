@@ -2637,7 +2637,7 @@ export default function App() {
         maxWidth: '800px',
         margin: '0 auto',
         width: '100%',
-        padding: '12px 12px 80px'
+        padding: '12px 12px 105px'
       }}>
         {loading ? (
           <div style={{
@@ -2803,7 +2803,7 @@ export default function App() {
                           ) : (
                             <div style={{
                               width: '100%', height: '74px', borderRadius: '8px',
-                              marginBottom: '6px', background: '#F1F5F9',
+                              marginBottom: '6px', background: 'var(--bg-secondary)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: '1.5rem'
                             }}>
@@ -2821,7 +2821,7 @@ export default function App() {
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', gap: '4px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                            <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#059669', lineHeight: 1.1 }}>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 900, color: 'var(--theme-price-color, var(--primary-emerald))', lineHeight: 1.1 }}>
                               {sym}{formatPriceNumber(offerPrice)}
                             </span>
                             {Number(regularPrice) > Number(offerPrice) && (
@@ -2854,7 +2854,7 @@ export default function App() {
                                 }
                               }}
                               style={{
-                                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                 color: '#FFFFFF',
                                 border: 'none',
                                 padding: '4px 9px',
@@ -2865,7 +2865,7 @@ export default function App() {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '2px',
-                                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.35)',
+                                boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
                                 flexShrink: 0
                               }}
                             >
@@ -2922,8 +2922,8 @@ export default function App() {
                       onClick={() => setSelectedComboModal(combo)}
                       style={{
                         minWidth: '220px', maxWidth: '240px', flexShrink: 0, scrollSnapAlign: 'start',
-                        background: '#FFFFFF', borderRadius: '12px', padding: '8px 10px',
-                        border: '1px solid var(--gold-border)', boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                        background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', borderRadius: '12px', padding: '8px 10px',
+                        border: '1.5px solid var(--theme-card-border, var(--border-light))', boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
                         display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
                         justifyContent: 'space-between'
                       }}
@@ -2932,7 +2932,7 @@ export default function App() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                         <div style={{
                           width: '50px', height: '50px', borderRadius: '8px', overflow: 'hidden',
-                          background: '#F9FAFB', border: '1px solid var(--gold-border)', flexShrink: 0,
+                          background: 'var(--bg-secondary)', border: '1px solid var(--theme-card-border, var(--border-light))', flexShrink: 0,
                           position: 'relative'
                         }}>
                           <img 
@@ -2960,7 +2960,7 @@ export default function App() {
                             {itemsSummaryText || combo.description || 'Special combo deal'}
                           </p>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#059669' }}>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 900, color: 'var(--theme-price-color, var(--primary-emerald))' }}>
                               {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(combo.price)}
                             </span>
                             {originalTotal > combo.price && (
@@ -2981,7 +2981,7 @@ export default function App() {
                             handleAddComboToCart(combo);
                           }}
                           style={{
-                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                            background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                             color: '#FFFFFF',
                             border: 'none',
                             padding: '5px 8px',
@@ -2992,7 +2992,7 @@ export default function App() {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '2px',
-                            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.35)',
+                            boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
                             flexShrink: 0
                           }}
                         >

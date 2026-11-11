@@ -53,6 +53,7 @@
   --theme-modal-bg: #FFFFFF;
   --theme-modal-border: rgba(197, 160, 89, 0.35);
   --theme-modal-header: #FAF8F5;
+  --dock-btn-text: #0A2315;
 }
 
 /* ========== MULTI-TENANT BRAND THEME PRESETS ========== */
@@ -104,6 +105,7 @@
   --veg-green-border: rgba(21, 128, 61, 0.35);
   --accent-coral: #F43F5E;
   --shadow-menu: 0 4px 16px rgba(10, 35, 21, 0.08);
+  --dock-btn-text: #0A2315;
 }
 
 /* Theme 2: Emerald Mint & Teal */
@@ -153,6 +155,7 @@
   --veg-green-border: rgba(16, 185, 129, 0.4);
   --accent-coral: #F43F5E;
   --shadow-menu: 0 4px 16px rgba(6, 78, 59, 0.08);
+  --dock-btn-text: #FFFFFF;
 }
 
 /* Theme 3: Crimson Ruby & Gold */
@@ -202,6 +205,7 @@
   --veg-green-border: rgba(225, 29, 72, 0.4);
   --accent-coral: #E11D48;
   --shadow-menu: 0 4px 16px rgba(136, 19, 55, 0.08);
+  --dock-btn-text: #FFFFFF;
 }
 
 /* Theme 4: Midnight Navy & Royal Blue */
@@ -251,6 +255,7 @@
   --veg-green-border: rgba(37, 99, 235, 0.4);
   --accent-coral: #F43F5E;
   --shadow-menu: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --dock-btn-text: #FFFFFF;
 }
 
 /* Theme 5: Royal Amber & Artisan Dark */
@@ -300,6 +305,7 @@
   --veg-green-border: rgba(217, 119, 6, 0.4);
   --accent-coral: #F43F5E;
   --shadow-menu: 0 4px 16px rgba(69, 26, 3, 0.08);
+  --dock-btn-text: #451A03;
 }
 
 /* Theme 6: Imperial Velvet & Amethyst */
@@ -349,6 +355,7 @@
   --veg-green-border: rgba(147, 51, 234, 0.4);
   --accent-coral: #F43F5E;
   --shadow-menu: 0 4px 16px rgba(59, 7, 100, 0.08);
+  --dock-btn-text: #FFFFFF;
 }
 
 /* Theme 7: Champagne & Rose Gold */
@@ -398,6 +405,7 @@
   --veg-green-border: rgba(219, 39, 119, 0.4);
   --accent-coral: #F43F5E;
   --shadow-menu: 0 4px 16px rgba(76, 5, 25, 0.08);
+  --dock-btn-text: #FFFFFF;
 }
 
 /* Theme 8: Obsidian Cyber & Neon Cyan (Sleek Dark Theme) */
@@ -447,6 +455,7 @@
   --theme-modal-bg: #131B2E;
   --theme-modal-border: rgba(34, 211, 238, 0.4);
   --theme-modal-header: #0B0F19;
+  --dock-btn-text: #020617;
 }
 
 * {

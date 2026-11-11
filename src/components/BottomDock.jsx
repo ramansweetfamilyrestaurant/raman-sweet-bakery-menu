@@ -51,7 +51,7 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
             alignItems: 'center',
             gap: '6px',
             background: 'var(--gold-gradient, linear-gradient(135deg, #DFBA67 0%, #C5A059 50%, #9B7733 100%))',
-            color: 'var(--primary-emerald, #0A2315)',
+            color: 'var(--dock-btn-text, var(--primary-emerald, #0A2315))',
             fontSize: '0.82rem',
             fontWeight: 900,
             padding: '9px 22px',
@@ -60,7 +60,7 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
             letterSpacing: '0.5px'
           }}
         >
-          <BookOpen size={17} color="var(--primary-emerald, #0A2315)" />
+          <BookOpen size={17} color="currentColor" />
           {lang === 'hi' ? '📖 मेनु' : '📖 MENU'}
         </button>
 

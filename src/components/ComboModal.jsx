@@ -36,14 +36,14 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
         onClick={(e) => e.stopPropagation()}
         className="combo-view-modal"
         style={{
-          background: '#FFFFFF',
+          background: 'var(--theme-modal-bg, #FFFFFF)',
           borderRadius: '20px',
           overflow: 'hidden',
           width: '100%',
           maxWidth: '480px',
           maxHeight: '92vh',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
-          border: '1.5px solid #DFBA67',
+          border: '1.5px solid var(--theme-modal-border, var(--gold-bright, #DFBA67))',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
@@ -95,7 +95,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
         <div className="combo-header-img" style={{
           width: '100%',
           height: '200px',
-          background: 'linear-gradient(135deg, #05140B 0%, #0A2315 100%)',
+          background: 'var(--theme-modal-header, linear-gradient(135deg, #05140B 0%, #0A2315 100%))',
           position: 'relative',
           overflow: 'hidden',
           display: 'flex',
@@ -145,8 +145,8 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
               position: 'absolute',
               bottom: '10px',
               left: '12px',
-              background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
-              color: '#0A2315',
+              background: 'var(--gold-gradient, linear-gradient(135deg, #FFD700 0%, #D4AF37 100%))',
+              color: 'var(--dock-btn-text, #0A2315)',
               padding: '3px 10px',
               borderRadius: '100px',
               fontSize: '0.68rem',
@@ -174,13 +174,13 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
               <h2 style={{
                 fontSize: '1.1rem',
                 fontWeight: 900,
-                color: '#0F172A',
+                color: 'var(--text-dark, #0F172A)',
                 margin: 0,
                 lineHeight: 1.25
               }}>
                 {combo.name}
               </h2>
-              <span style={{ fontSize: '0.72rem', color: '#16A34A', fontWeight: 800 }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--theme-price-color, var(--primary-emerald, #16A34A))', fontWeight: 800 }}>
                 🍱 Special Thali / Curated Combo
               </span>
             </div>
@@ -191,9 +191,9 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                 fontWeight: 900,
                 padding: '3px 10px',
                 borderRadius: '8px',
-                background: '#F0FDF4',
-                color: '#16A34A',
-                border: '1px solid #BBF7D0',
+                background: 'var(--theme-badge-bg, #F0FDF4)',
+                color: 'var(--theme-price-color, #16A34A)',
+                border: '1px solid var(--theme-card-border, #BBF7D0)',
                 whiteSpace: 'nowrap',
                 lineHeight: 1.2
               }}>
@@ -210,13 +210,13 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
           {combo.description && (
             <p style={{
               fontSize: '0.80rem',
-              color: '#475569',
+              color: 'var(--text-muted, #475569)',
               lineHeight: 1.45,
               margin: '0 0 12px 0',
-              background: '#F8FAFC',
+              background: 'var(--bg-secondary, #F8FAFC)',
               padding: '8px 12px',
               borderRadius: '8px',
-              border: '1px solid #E2E8F0'
+              border: '1px solid var(--theme-card-border, #E2E8F0)'
             }}>
               {combo.description}
             </p>
@@ -227,13 +227,13 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
             <h3 style={{
               fontSize: '0.82rem',
               fontWeight: 800,
-              color: '#0A2315',
+              color: 'var(--text-dark, #0A2315)',
               margin: '0 0 8px 0',
               display: 'flex',
               alignItems: 'center',
               gap: '5px'
             }}>
-              <Utensils size={13} color="#D4AF37" /> What's Included ({comboItems.length} Items)
+              <Utensils size={13} color="var(--gold-bright, #D4AF37)" /> What's Included ({comboItems.length} Items)
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -242,14 +242,14 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  background: '#FFFFFF',
-                  border: '1px solid #E2E8F0',
+                  background: 'var(--theme-card-bg, #FFFFFF)',
+                  border: '1px solid var(--theme-card-border, #E2E8F0)',
                   padding: '7px 10px',
                   borderRadius: '8px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle2 size={14} style={{ color: '#16A34A', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>
+                    <CheckCircle2 size={14} style={{ color: 'var(--theme-price-color, #16A34A)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-dark, #0F172A)' }}>
                       {item.qty > 1 ? `${item.qty}x ` : ''}{item.dish_name}
                     </span>
                     {item.portion && (
@@ -258,8 +258,8 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                         fontWeight: 700,
                         padding: '1px 5px',
                         borderRadius: '4px',
-                        background: '#EEF2FF',
-                        color: '#4338CA'
+                        background: 'var(--theme-badge-bg, #EEF2FF)',
+                        color: 'var(--theme-text-primary, #4338CA)'
                       }}>
                         {item.portion === 'half' ? 'Half' : item.portion}
                       </span>
@@ -267,7 +267,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                   </div>
 
                   {item.original_price && (
-                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748B' }}>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted, #64748B)' }}>
                       {symbol}{item.original_price * (item.qty || 1)}
                     </span>
                   )}
@@ -281,15 +281,15 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            background: '#F0FDF4',
-            border: '1px solid #BBF7D0',
+            background: 'var(--theme-badge-bg, #F0FDF4)',
+            border: '1px solid var(--theme-card-border, #BBF7D0)',
             padding: '8px 10px',
             borderRadius: '8px',
             fontSize: '0.72rem',
-            color: '#166534',
+            color: 'var(--theme-price-color, #166534)',
             fontWeight: 700
           }}>
-            <ShieldCheck size={15} style={{ color: '#16A34A', flexShrink: 0 }} />
+            <ShieldCheck size={15} style={{ color: 'var(--theme-price-color, #16A34A)', flexShrink: 0 }} />
             <span>100% Freshly prepared meal thali.</span>
           </div>
         </div>
@@ -297,8 +297,8 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
         {/* Footer Action Bar */}
         <div style={{
           padding: '12px 18px',
-          borderTop: '1px solid #E2E8F0',
-          background: '#FFFFFF'
+          borderTop: '1px solid var(--theme-divider, #E2E8F0)',
+          background: 'var(--theme-modal-bg, #FFFFFF)'
         }}>
           {canOrder ? (
             <button
@@ -311,7 +311,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                 padding: '11px',
                 borderRadius: '8px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+                background: 'var(--theme-btn-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
                 color: '#FFFFFF',
                 fontSize: '0.86rem',
                 fontWeight: 800,
@@ -320,7 +320,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                boxShadow: '0 4px 14px rgba(10, 35, 21, 0.25)',
+                boxShadow: 'var(--theme-shadow, 0 4px 14px rgba(0, 0, 0, 0.25))',
                 transition: 'all 0.2s ease'
               }}
             >
@@ -333,9 +333,9 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                 width: '100%',
                 padding: '10px',
                 borderRadius: '8px',
-                border: '1px solid #CBD5E1',
-                background: '#FFFFFF',
-                color: '#475569',
+                border: '1px solid var(--theme-card-border, #CBD5E1)',
+                background: 'var(--theme-modal-bg, #FFFFFF)',
+                color: 'var(--text-muted, #475569)',
                 fontSize: '0.82rem',
                 fontWeight: 700,
                 cursor: 'pointer'

@@ -64,7 +64,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               justifyContent: 'center',
               borderRadius: '2px',
               flexShrink: 0,
-              background: '#FFFFFF'
+              background: 'var(--theme-card-bg, #FFFFFF)'
             }} title="Non-Vegetarian">
               <span style={{
                 width: '4px',
@@ -83,7 +83,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               justifyContent: 'center',
               borderRadius: '2px',
               flexShrink: 0,
-              background: '#FFFFFF'
+              background: 'var(--theme-card-bg, #FFFFFF)'
             }} title="Contains Egg">
               <span style={{
                 width: '4px',
@@ -102,7 +102,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               justifyContent: 'center',
               borderRadius: '2px',
               flexShrink: 0,
-              background: '#FFFFFF'
+              background: 'var(--theme-card-bg, #FFFFFF)'
             }} title="100% Pure Vegetarian">
               <span style={{
                 width: '4px',
@@ -303,7 +303,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               <div style={{
                 fontSize: '0.88rem',
                 fontWeight: 900,
-                color: '#059669',
+                color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
                 lineHeight: 1.1
               }}>
                 {symbol}{formatPriceNumber(dish.offer_price)}

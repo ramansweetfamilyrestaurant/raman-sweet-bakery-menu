@@ -217,7 +217,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
               </h2>
 
               {(dish.offer?.ends_at || dish.offer_ends_at) && (
-                <span style={{ fontSize: '0.65rem', color: '#059669', fontWeight: 700, marginTop: '2px', display: 'block' }}>
+                <span style={{ fontSize: '0.65rem', color: 'var(--theme-price-color, var(--primary-emerald, #059669))', fontWeight: 700, marginTop: '2px', display: 'block' }}>
                   ⏳ {lang === 'hi' ? 'ऑफर समाप्ति:' : 'Offer valid till:'} {new Date(dish.offer?.ends_at || dish.offer_ends_at).toLocaleDateString()}
                 </span>
               )}
@@ -231,10 +231,10 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   fontWeight: 900,
                   padding: '2px 10px',
                   borderRadius: 'var(--radius-pill)',
-                  background: '#ECFDF5',
-                  color: '#064E3B',
-                  border: '1.5px solid #A7F3D0',
-                  boxShadow: '0 1px 4px rgba(6, 78, 59, 0.12)',
+                  background: 'var(--theme-badge-bg, var(--bg-card-soft, #ECFDF5))',
+                  color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
+                  border: '1.5px solid var(--theme-card-border, #A7F3D0)',
+                  boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0, 0, 0, 0.08))',
                   whiteSpace: 'nowrap',
                   lineHeight: 1.2
                 }}>
@@ -490,13 +490,13 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   flex: 1,
                   padding: '12px 18px',
                   borderRadius: 'var(--radius-pill)',
-                  background: 'linear-gradient(135deg, var(--primary-emerald) 0%, #059669 100%)',
+                  background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
                   color: '#FFFFFF',
                   fontWeight: 900,
                   fontSize: '0.92rem',
                   border: 'none',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(5, 150, 105, 0.4)',
+                  boxShadow: 'var(--theme-shadow, 0 4px 14px rgba(0, 0, 0, 0.25))',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

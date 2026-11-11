@@ -152,9 +152,9 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
           {/* Customizable / Add-ons Badge */}
           {(hasModifiers || hasHalfPrice) && !(dish.offer_badge || dish.offer?.offer_badge) && (
             <div style={{
-              background: '#0A2315',
-              color: '#DFBA67',
-              border: '1px solid #DFBA67',
+              background: 'var(--primary-emerald, #0A2315)',
+              color: 'var(--gold-bright, #DFBA67)',
+              border: '1px solid var(--gold-bright, #DFBA67)',
               borderRadius: 'var(--radius-pill)',
               padding: '2px 7px',
               fontSize: '0.62rem',
@@ -284,13 +284,13 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                 <span style={{
                   fontSize: '0.88rem',
                   fontWeight: 900,
-                  color: '#064E3B',
-                  background: '#ECFDF5',
-                  border: '1.5px solid #A7F3D0',
+                  color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
+                  background: 'var(--theme-badge-bg, var(--bg-card-soft, #ECFDF5))',
+                  border: '1.5px solid var(--theme-card-border, #A7F3D0)',
                   padding: '2px 8px',
                   borderRadius: 'var(--radius-pill)',
                   whiteSpace: 'nowrap',
-                  boxShadow: '0 1px 4px rgba(6, 78, 59, 0.12)'
+                  boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0, 0, 0, 0.08))'
                 }}>
                   {symbol}{formatPriceNumber(dish.offer_price)}
                 </span>
