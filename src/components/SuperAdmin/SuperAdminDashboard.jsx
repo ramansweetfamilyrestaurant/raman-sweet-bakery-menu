@@ -758,29 +758,87 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
     );
   };
 
+  // Smart multi-field, multi-term, fuzzy-tolerant search matcher
+  const matchesSearchQuery = (r, query) => {
+    if (!query || !query.trim()) return true;
+    const cleanQ = query.toLowerCase().trim();
+    const tokens = cleanQ.split(/\s+/).filter(Boolean);
+    const qDigits = cleanQ.replace(/\D/g, '');
+    const cleanIdFromHash = cleanQ.startsWith('#') ? cleanQ.slice(1).trim() : (cleanQ.startsWith('id:') ? cleanQ.replace('id:', '').trim() : null);
+
+    // Exact or partial ID matching
+    if (cleanIdFromHash && String(r.id) === cleanIdFromHash) return true;
+    if (String(r.id) === cleanQ) return true;
+
+    // Digits-only phone matching (matches even if formatted with spaces, dashes, or +91)
+    if (qDigits && qDigits.length >= 4) {
+      const rPhoneDigits = (r.phone || '').replace(/\D/g, '');
+      const rWaDigits = (r.whatsapp_number || '').replace(/\D/g, '');
+      if (rPhoneDigits.includes(qDigits) || rWaDigits.includes(qDigits)) {
+        return true;
+      }
+    }
+
+    // Build comprehensive search corpus covering all relevant fields
+    const planDisplay = formatTenantPlanDisplay(r);
+    const tenantStatus = getTenantStatus(r);
+    const corpus = [
+      r.id,
+      r.name,
+      r.slug,
+      r.owner_name,
+      r.owner_username,
+      r.phone,
+      r.whatsapp_number,
+      r.owner_email,
+      r.email,
+      r.business_type,
+      r.service_model,
+      r.business_category,
+      r.food_type,
+      r.plan_tier,
+      r.effective_plan_tier,
+      r.plan_name,
+      planDisplay?.name,
+      r.tagline,
+      r.address,
+      r.city,
+      r.state,
+      r.pincode,
+      r.subscription_status,
+      tenantStatus,
+      r.subscription_type,
+      r.mandate_status
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    // Multi-term token matching: EVERY word typed by the user must match somewhere in the shop profile
+    return tokens.every(token => {
+      if (String(r.id) === token) return true;
+      return corpus.includes(token);
+    });
+  };
+
+  // How many shops match the search across the entire fleet (regardless of active category/status filters)
+  const totalSearchMatchesAll = searchQuery.trim()
+    ? restaurants.filter(r => matchesSearchQuery(r, searchQuery)).length
+    : 0;
+
   // Filtered and Sorted restaurants list
   const filteredAndSortedRestaurants = restaurants
     .filter(r => {
+      // 1. Match search query first
+      if (!matchesSearchQuery(r, searchQuery)) {
+        return false;
+      }
+      // 2. Match active status filter
       if (!matchesStatusFilter(r, statusFilter)) {
         return false;
       }
+      // 3. Match active industry taxonomy filter
       if (!matchesIndustryFilter(r, industryFilter)) {
         return false;
       }
-
-      // Extended Search (name, slug, owner_name, owner_username, phone, owner_email, id, business_type)
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase().trim();
-      const nameMatch = (r.name || '').toLowerCase().includes(q);
-      const slugMatch = (r.slug || '').toLowerCase().includes(q);
-      const ownerNameMatch = (r.owner_name || '').toLowerCase().includes(q);
-      const usernameMatch = (r.owner_username || '').toLowerCase().includes(q);
-      const phoneMatch = (r.phone || '').includes(q) || (r.whatsapp_number || '').includes(q);
-      const emailMatch = (r.owner_email || '').toLowerCase().includes(q);
-      const idMatch = String(r.id || '').includes(q);
-      const typeMatch = (r.business_type || '').toLowerCase().includes(q);
-
-      return nameMatch || slugMatch || ownerNameMatch || usernameMatch || phoneMatch || emailMatch || idMatch || typeMatch;
+      return true;
     })
     .sort((a, b) => {
       if (sortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
@@ -964,31 +1022,86 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         flexWrap: 'wrap',
         gap: '12px'
       }}>
-        {/* Search Bar */}
-        <div style={{ position: 'relative', width: '280px', maxWidth: '100%' }}>
-          <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
-          <input
-            type="text"
-            placeholder="Search name, slug, owner, phone, email, ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="sa-input sa-search-input-field"
-            style={{
-              paddingLeft: '34px',
-              paddingRight: searchQuery ? '32px' : '12px',
-              height: '38px',
-              fontSize: '0.80rem',
+        {/* Search Bar with live counter and clear */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: '280px', maxWidth: '100%' }}>
+          <div style={{ position: 'relative', width: '320px', maxWidth: '100%' }}>
+            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
+            <input
+              type="text"
+              placeholder="Search name, slug, owner, phone, email, plan, ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Escape') setSearchQuery(''); }}
+              className="sa-input sa-search-input-field"
+              style={{
+                paddingLeft: '34px',
+                paddingRight: searchQuery ? '32px' : '12px',
+                height: '38px',
+                fontSize: '0.80rem',
+                borderRadius: 'var(--sa-radius-full)',
+                background: 'var(--sa-surface-subtle)',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                title="Clear search (Esc)"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Active Search Result Summary Pill */}
+          {searchQuery.trim() && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
               borderRadius: 'var(--sa-radius-full)',
-              background: 'var(--sa-surface-subtle)'
-            }}
-          />
-          {searchQuery && (
+              background: 'rgba(212, 175, 55, 0.12)',
+              border: '1px solid rgba(212, 175, 55, 0.35)',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              color: '#854D0E',
+              animation: 'fadeIn 0.2s ease'
+            }}>
+              <span>🔍 "{searchQuery.trim()}": <strong>{filteredAndSortedRestaurants.length}</strong> shop{filteredAndSortedRestaurants.length === 1 ? '' : 's'}</span>
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#854D0E', display: 'flex', alignItems: 'center', padding: '0 2px' }}
+                title="Clear search"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
+
+          {/* One-click Expand Button if matches exist in other categories/statuses */}
+          {searchQuery.trim() && totalSearchMatchesAll > filteredAndSortedRestaurants.length && (
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
-              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)' }}
+              onClick={() => { setStatusFilter('all'); setIndustryFilter('all'); }}
+              style={{
+                background: 'rgba(59, 130, 246, 0.10)',
+                border: '1px solid rgba(59, 130, 246, 0.30)',
+                color: '#1D4ED8',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                padding: '4px 12px',
+                borderRadius: 'var(--sa-radius-full)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Expand search across all categories and statuses"
             >
-              <X size={14} />
+              Show all {totalSearchMatchesAll} matches across categories ➔
             </button>
           )}
         </div>
@@ -1089,16 +1202,39 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       ) : filteredAndSortedRestaurants.length === 0 ? (
         <EmptyState
           icon={Store}
-          title="No shops match your criteria"
-          description="Try clearing your search query or switching status filters."
+          title={
+            searchQuery.trim()
+              ? (totalSearchMatchesAll > 0
+                  ? `No shops match "${searchQuery.trim()}" in this filter`
+                  : `No shops found for "${searchQuery.trim()}"`)
+              : "No shops match your criteria"
+          }
+          description={
+            searchQuery.trim()
+              ? (totalSearchMatchesAll > 0
+                  ? `Found ${totalSearchMatchesAll} shop${totalSearchMatchesAll === 1 ? '' : 's'} matching "${searchQuery.trim()}" in other statuses or industries.`
+                  : "Check spelling or search by Phone number, City, ID (#...), or Owner username.")
+              : "Try clearing your filters or switching category tabs."
+          }
           action={
-            <button
-              type="button"
-              onClick={() => { setSearchQuery(''); setStatusFilter('all'); setIndustryFilter('all'); }}
-              className="sa-btn sa-btn-secondary sa-btn-sm"
-            >
-              Clear Search & Filters
-            </button>
+            searchQuery.trim() && totalSearchMatchesAll > 0 ? (
+              <button
+                type="button"
+                onClick={() => { setStatusFilter('all'); setIndustryFilter('all'); }}
+                className="sa-btn sa-btn-accent sa-btn-sm"
+                style={{ fontWeight: 800 }}
+              >
+                Show All {totalSearchMatchesAll} Matching Shops
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setStatusFilter('all'); setIndustryFilter('all'); }}
+                className="sa-btn sa-btn-secondary sa-btn-sm"
+              >
+                Clear Search & Filters
+              </button>
+            )
           }
         />
       ) : viewMode === 'table' ? (
