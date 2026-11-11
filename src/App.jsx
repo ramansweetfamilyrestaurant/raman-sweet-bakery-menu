@@ -3044,18 +3044,25 @@ export default function App() {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', gap: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span style={{
-                              fontSize: '0.92rem',
+                              fontSize: '0.86rem',
                               fontWeight: 900,
-                              color: 'var(--theme-price-color, var(--primary-emerald))',
-                              lineHeight: 1.1
+                              color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
+                              background: 'var(--theme-badge-bg, var(--bg-card-soft, #ECFDF5))',
+                              border: '1.5px solid var(--theme-card-border, #A7F3D0)',
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-pill)',
+                              whiteSpace: 'nowrap',
+                              boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0, 0, 0, 0.08))',
+                              display: 'inline-flex',
+                              alignItems: 'center'
                             }}>
                               {sym}{formatPriceNumber(offerPrice)}
                             </span>
                             {Number(regularPrice) > Number(offerPrice) && (
                               <span style={{
-                                fontSize: '0.72rem',
+                                fontSize: '0.70rem',
                                 color: '#94A3B8',
                                 textDecoration: 'line-through',
                                 fontWeight: 600,
@@ -3326,18 +3333,25 @@ export default function App() {
                           }}>
                             {itemsSummaryText || combo.description || (lang === 'hi' ? 'विशेष कॉम्बो थाली' : 'Special combo deal')}
                           </p>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
                             <span style={{
-                              fontSize: '0.90rem',
+                              fontSize: '0.86rem',
                               fontWeight: 900,
-                              color: 'var(--theme-price-color, var(--primary-emerald))',
-                              lineHeight: 1.1
+                              color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
+                              background: hasDiscount ? 'var(--theme-badge-bg, var(--bg-card-soft, #ECFDF5))' : 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
+                              border: hasDiscount ? '1.5px solid var(--theme-card-border, #A7F3D0)' : '1.5px solid var(--theme-card-border, var(--border-light))',
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-pill)',
+                              whiteSpace: 'nowrap',
+                              boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0, 0, 0, 0.08))',
+                              display: 'inline-flex',
+                              alignItems: 'center'
                             }}>
                               {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(effectivePrice)}
                             </span>
                             {hasDiscount && (
                               <span style={{
-                                fontSize: '0.72rem',
+                                fontSize: '0.70rem',
                                 color: '#94A3B8',
                                 textDecoration: 'line-through',
                                 fontWeight: 600,
