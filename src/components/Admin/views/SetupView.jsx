@@ -1478,8 +1478,12 @@ export default function SetupView({
               <div
                 key={t.key}
                 onClick={() => {
-                  setSettingsForm({ ...settingsForm, theme_color: t.key, theme: t.key });
+                  const updated = { ...settingsForm, theme_color: t.key, theme: t.key };
+                  setSettingsForm(updated);
                   document.documentElement.setAttribute('data-theme', t.key);
+                  if (typeof handleSaveSettings === 'function') {
+                    handleSaveSettings(updated).catch(() => {});
+                  }
                   closeModal();
                 }}
                 style={{

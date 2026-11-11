@@ -72,13 +72,18 @@
   --theme-input-bg: #FFFFFF;
   --text-dark: #1C1917;
   --text-muted: #666157;
+  --text-primary: #1C1917;
+  --theme-text-primary: #1C1917;
   --primary-emerald: #0A2315;
   --theme-primary: #0A2315;
   --theme-primary-dark: #05140B;
   --gold-primary: #C5A059;
   --gold-bright: #D4AF37;
   --accent-gold: #D4AF37;
+  --gold-soft: #F9F5EB;
+  --bg-champagne: #FAF8F5;
   --gold-border: rgba(197, 160, 89, 0.4);
+  --gold-border-light: rgba(197, 160, 89, 0.25);
   --gold-gradient: linear-gradient(135deg, #DFBA67 0%, #C5A059 50%, #9B7733 100%);
   --header-gradient: linear-gradient(180deg, #0A2315 0%, #123722 100%);
   --footer-gradient: linear-gradient(180deg, #05140B 0%, #0A2315 100%);
@@ -93,6 +98,12 @@
   --theme-btn-gradient: linear-gradient(135deg, #0A2315 0%, #1B4D2E 100%);
   --theme-btn-secondary-bg: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
   --theme-shadow: 0 6px 18px rgba(10, 35, 21, 0.08);
+  --theme-modal-bg: #FFFFFF;
+  --theme-modal-border: rgba(197, 160, 89, 0.35);
+  --theme-modal-header: #FAF8F5;
+  --veg-green-border: rgba(21, 128, 61, 0.35);
+  --accent-coral: #F43F5E;
+  --shadow-menu: 0 4px 16px rgba(10, 35, 21, 0.08);
 }
 
 /* Theme 2: Emerald Mint & Teal */
@@ -110,13 +121,18 @@
   --theme-input-bg: #FFFFFF;
   --text-dark: #064E3B;
   --text-muted: #047857;
+  --text-primary: #064E3B;
+  --theme-text-primary: #064E3B;
   --primary-emerald: #064E3B;
   --theme-primary: #064E3B;
   --theme-primary-dark: #022C22;
   --gold-primary: #059669;
   --gold-bright: #34D399;
   --accent-gold: #34D399;
+  --gold-soft: #F0FDF4;
+  --bg-champagne: #F0FDF4;
   --gold-border: rgba(16, 185, 129, 0.4);
+  --gold-border-light: rgba(16, 185, 129, 0.25);
   --gold-gradient: linear-gradient(135deg, #34D399 0%, #059669 50%, #047857 100%);
   --header-gradient: linear-gradient(180deg, #064E3B 0%, #047857 100%);
   --footer-gradient: linear-gradient(180deg, #022C22 0%, #064E3B 100%);
@@ -131,6 +147,12 @@
   --theme-btn-gradient: linear-gradient(135deg, #064E3B 0%, #059669 100%);
   --theme-btn-secondary-bg: linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%);
   --theme-shadow: 0 6px 18px rgba(6, 78, 59, 0.1);
+  --theme-modal-bg: #FFFFFF;
+  --theme-modal-border: rgba(16, 185, 129, 0.35);
+  --theme-modal-header: #F0FDF4;
+  --veg-green-border: rgba(16, 185, 129, 0.4);
+  --accent-coral: #F43F5E;
+  --shadow-menu: 0 4px 16px rgba(6, 78, 59, 0.08);
 }
 
 /* Theme 3: Crimson Ruby & Gold */
@@ -148,13 +170,18 @@
   --theme-input-bg: #FFFFFF;
   --text-dark: #4C0519;
   --text-muted: #9F1239;
+  --text-primary: #4C0519;
+  --theme-text-primary: #4C0519;
   --primary-emerald: #881337;
   --theme-primary: #881337;
   --theme-primary-dark: #4C0519;
   --gold-primary: #E11D48;
   --gold-bright: #FB7185;
   --accent-gold: #FB7185;
+  --gold-soft: #FFF1F2;
+  --bg-champagne: #FFF1F2;
   --gold-border: rgba(225, 29, 72, 0.4);
+  --gold-border-light: rgba(225, 29, 72, 0.25);
   --gold-gradient: linear-gradient(135deg, #FB7185 0%, #E11D48 50%, #BE123C 100%);
   --header-gradient: linear-gradient(180deg, #881337 0%, #9F1239 100%);
   --footer-gradient: linear-gradient(180deg, #4C0519 0%, #881337 100%);
@@ -169,6 +196,12 @@
   --theme-btn-gradient: linear-gradient(135deg, #881337 0%, #BE123C 100%);
   --theme-btn-secondary-bg: linear-gradient(135deg, #FFE4E6 0%, #FECDD3 100%);
   --theme-shadow: 0 6px 18px rgba(136, 19, 55, 0.12);
+  --theme-modal-bg: #FFFFFF;
+  --theme-modal-border: rgba(225, 29, 72, 0.35);
+  --theme-modal-header: #FFF1F2;
+  --veg-green-border: rgba(225, 29, 72, 0.4);
+  --accent-coral: #E11D48;
+  --shadow-menu: 0 4px 16px rgba(136, 19, 55, 0.08);
 }
 
 /* Theme 4: Midnight Navy & Royal Blue */
@@ -186,13 +219,18 @@
   --theme-input-bg: #FFFFFF;
   --text-dark: #0F172A;
   --text-muted: #475569;
+  --text-primary: #0F172A;
+  --theme-text-primary: #0F172A;
   --primary-emerald: #0F172A;
   --theme-primary: #0F172A;
   --theme-primary-dark: #020617;
   --gold-primary: #2563EB;
   --gold-bright: #60A5FA;
   --accent-gold: #60A5FA;
+  --gold-soft: #F8FAFC;
+  --bg-champagne: #F8FAFC;
   --gold-border: rgba(37, 99, 235, 0.4);
+  --gold-border-light: rgba(37, 99, 235, 0.25);
   --gold-gradient: linear-gradient(135deg, #60A5FA 0%, #2563EB 50%, #1D4ED8 100%);
   --header-gradient: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
   --footer-gradient: linear-gradient(180deg, #020617 0%, #0F172A 100%);
@@ -207,6 +245,12 @@
   --theme-btn-gradient: linear-gradient(135deg, #0F172A 0%, #1E40AF 100%);
   --theme-btn-secondary-bg: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
   --theme-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+  --theme-modal-bg: #FFFFFF;
+  --theme-modal-border: rgba(37, 99, 235, 0.35);
+  --theme-modal-header: #F8FAFC;
+  --veg-green-border: rgba(37, 99, 235, 0.4);
+  --accent-coral: #F43F5E;
+  --shadow-menu: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
 
 /* Theme 5: Royal Amber & Artisan Dark */
@@ -224,13 +268,18 @@
   --theme-input-bg: #FFFFFF;
   --text-dark: #451A03;
   --text-muted: #78350F;
+  --text-primary: #451A03;
+  --theme-text-primary: #451A03;
   --primary-emerald: #451A03;
   --theme-primary: #451A03;
   --theme-primary-dark: #270E02;
   --gold-primary: #D97706;
   --gold-bright: #FBBF24;
   --accent-gold: #FBBF24;
+  --gold-soft: #FFFBEB;
+  --bg-champagne: #FFFBEB;
   --gold-border: rgba(217, 119, 6, 0.4);
+  --gold-border-light: rgba(217, 119, 6, 0.25);
   --gold-gradient: linear-gradient(135deg, #FBBF24 0%, #D97706 50%, #B45309 100%);
   --header-gradient: linear-gradient(180deg, #451A03 0%, #78350F 100%);
   --footer-gradient: linear-gradient(180deg, #270E02 0%, #451A03 100%);
@@ -245,6 +294,12 @@
   --theme-btn-gradient: linear-gradient(135deg, #451A03 0%, #92400E 100%);
   --theme-btn-secondary-bg: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
   --theme-shadow: 0 6px 18px rgba(69, 26, 3, 0.12);
+  --theme-modal-bg: #FFFFFF;
+  --theme-modal-border: rgba(217, 119, 6, 0.35);
+  --theme-modal-header: #FFFBEB;
+  --veg-green-border: rgba(217, 119, 6, 0.4);
+  --accent-coral: #F43F5E;
+  --shadow-menu: 0 4px 16px rgba(69, 26, 3, 0.08);
 }
 
 /* Theme 6: Imperial Velvet & Amethyst */
@@ -262,13 +317,18 @@
   --theme-input-bg: #FFFFFF;
   --text-dark: #3B0764;
   --text-muted: #6B21A8;
+  --text-primary: #3B0764;
+  --theme-text-primary: #3B0764;
   --primary-emerald: #3B0764;
   --theme-primary: #3B0764;
   --theme-primary-dark: #1E0338;
   --gold-primary: #9333EA;
   --gold-bright: #C084FC;
   --accent-gold: #C084FC;
+  --gold-soft: #FAF5FF;
+  --bg-champagne: #FAF5FF;
   --gold-border: rgba(147, 51, 234, 0.4);
+  --gold-border-light: rgba(147, 51, 234, 0.25);
   --gold-gradient: linear-gradient(135deg, #C084FC 0%, #9333EA 50%, #7E22CE 100%);
   --header-gradient: linear-gradient(180deg, #3B0764 0%, #581C87 100%);
   --footer-gradient: linear-gradient(180deg, #1E0338 0%, #3B0764 100%);
@@ -283,6 +343,12 @@
   --theme-btn-gradient: linear-gradient(135deg, #3B0764 0%, #7E22CE 100%);
   --theme-btn-secondary-bg: linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%);
   --theme-shadow: 0 6px 18px rgba(59, 7, 100, 0.12);
+  --theme-modal-bg: #FFFFFF;
+  --theme-modal-border: rgba(147, 51, 234, 0.35);
+  --theme-modal-header: #FAF5FF;
+  --veg-green-border: rgba(147, 51, 234, 0.4);
+  --accent-coral: #F43F5E;
+  --shadow-menu: 0 4px 16px rgba(59, 7, 100, 0.08);
 }
 
 /* Theme 7: Champagne & Rose Gold */
@@ -300,13 +366,18 @@
   --theme-input-bg: #FFFFFF;
   --text-dark: #4C0519;
   --text-muted: #831843;
+  --text-primary: #4C0519;
+  --theme-text-primary: #4C0519;
   --primary-emerald: #4C0519;
   --theme-primary: #4C0519;
   --theme-primary-dark: #28020C;
   --gold-primary: #DB2777;
   --gold-bright: #F472B6;
   --accent-gold: #F472B6;
+  --gold-soft: #FDF2F8;
+  --bg-champagne: #FDF2F8;
   --gold-border: rgba(219, 39, 119, 0.4);
+  --gold-border-light: rgba(219, 39, 119, 0.25);
   --gold-gradient: linear-gradient(135deg, #F472B6 0%, #DB2777 50%, #BE185D 100%);
   --header-gradient: linear-gradient(180deg, #4C0519 0%, #831843 100%);
   --footer-gradient: linear-gradient(180deg, #28020C 0%, #4C0519 100%);
@@ -321,6 +392,12 @@
   --theme-btn-gradient: linear-gradient(135deg, #4C0519 0%, #BE185D 100%);
   --theme-btn-secondary-bg: linear-gradient(135deg, #FCE7F3 0%, #FBCFE8 100%);
   --theme-shadow: 0 6px 18px rgba(76, 5, 25, 0.12);
+  --theme-modal-bg: #FFFFFF;
+  --theme-modal-border: rgba(219, 39, 119, 0.35);
+  --theme-modal-header: #FDF2F8;
+  --veg-green-border: rgba(219, 39, 119, 0.4);
+  --accent-coral: #F43F5E;
+  --shadow-menu: 0 4px 16px rgba(76, 5, 25, 0.08);
 }
 
 /* Theme 8: Obsidian Cyber & Neon Cyan (Sleek Dark Theme) */
@@ -338,9 +415,9 @@
   --theme-input-bg: #131B2E;
   --text-dark: #F8FAFC;
   --text-muted: #94A3B8;
-  --primary-emerald: #020617;
-  --theme-primary: #020617;
-  --theme-primary-dark: #000000;
+  --primary-emerald: #22D3EE;
+  --theme-primary: #22D3EE;
+  --theme-primary-dark: #0891B2;
   --gold-primary: #0891B2;
   --gold-bright: #22D3EE;
   --accent-gold: #22D3EE;
@@ -456,23 +533,23 @@ img {
 /* Glassmorphism & Micro-Interactions Utility Classes */
 .glass-header {
   background: var(--header-gradient, rgba(10, 35, 21, 0.92)) !important;
-  backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
   border-bottom: 1px solid var(--border-light, rgba(212, 175, 55, 0.25)) !important;
 }
 
 .glass-card {
   background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
+  backdrop-filter: blur(8px) !important;
   border: 1px solid rgba(255, 255, 255, 0.6) !important;
   box-shadow: 0 8px 32px rgba(10, 35, 21, 0.06) !important;
 }
 
 .glass-card-dark {
   background: rgba(15, 23, 42, 0.85) !important;
-  backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
 }
@@ -490,6 +567,7 @@ img {
 }
 
 .gold-shimmer {
+  display: inline-block;
   background: linear-gradient(90deg, #DFBA67 0%, #FFF5D0 50%, #C5A059 100%);
   background-size: 200% 100%;
   animation: shimmer 3s infinite linear;
@@ -600,7 +678,7 @@ img {
 }
 
 /* Modern Landing Page Keyframes & Utilities */
-@keyframes pulseGlow {
+@keyframes glowPulseAnim {
   0%, 100% { transform: scale(1); opacity: 0.9; box-shadow: 0 0 15px rgba(223, 186, 103, 0.4); }
   50% { transform: scale(1.03); opacity: 1; box-shadow: 0 0 25px rgba(223, 186, 103, 0.8); }
 }
@@ -611,7 +689,7 @@ img {
 }
 
 .glow-pulse {
-  animation: pulseGlow 3s infinite ease-in-out;
+  animation: glowPulseAnim 3s infinite ease-in-out;
 }
 
 .float-slow {
