@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 
 export default function SearchBar({
@@ -14,6 +14,9 @@ export default function SearchBar({
   isPureVeg: isPureVegProp,
   lang = 'en'
 }) {
+  const [isFocused, setIsFocused] = useState(false);
+  const containerRef = useRef(null);
+
   const isPureVeg = typeof isPureVegProp === 'boolean'
     ? isPureVegProp
     : (foodType ? (foodType === 'pure_veg' || foodType === 'vegan') : (restoType === 'pure_veg'));
@@ -46,6 +49,26 @@ export default function SearchBar({
   const activeFilterLabel = activeFilterObj ? activeFilterObj.label.replace(/^[^\w\u0900-\u097F]+/, '').trim() : '';
   const hasActiveSearchOrFilter = Boolean((value && String(value).trim()) || activeQuickFilter);
 
+  // Filters show ONLY when user taps/focuses into search, or when a filter/query is actively applied
+  const showFilters = isFocused || hasActiveSearchOrFilter;
+
+  // Handle click/tap outside to collapse filters when idle and empty
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        if (!value?.trim() && !activeQuickFilter) {
+          setIsFocused(false);
+        }
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [value, activeQuickFilter]);
+
   const handleFilterClick = (filterId) => {
     if (!onQuickFilter) return;
     if (filterId === '') {
@@ -59,37 +82,49 @@ export default function SearchBar({
   const handleClearAll = () => {
     if (onClear) onClear();
     if (onQuickFilter) onQuickFilter('');
+    setIsFocused(false);
   };
 
   return (
-    <div style={{
-      maxWidth: '800px',
-      margin: '0 auto',
-      width: '100%',
-      padding: '10px 12px 4px',
-    }}>
+    <div 
+      ref={containerRef}
+      style={{
+        maxWidth: '800px',
+        margin: '0 auto',
+        width: '100%',
+        padding: '10px 12px 4px',
+        transition: 'all 0.2s ease-in-out'
+      }}
+    >
       {/* Search Input Box */}
       <div style={{
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
         width: '100%',
-        marginBottom: '8px'
+        marginBottom: showFilters ? '8px' : '4px',
+        transition: 'margin-bottom 0.2s ease'
       }}>
         <Search 
           size={16} 
-          color="var(--text-muted)" 
+          color={isFocused ? 'var(--primary-emerald)' : 'var(--text-muted)'} 
           style={{
             position: 'absolute',
             left: '14px',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            transition: 'color 0.2s ease'
           }}
         />
 
         <input
           type="text"
           value={value}
-          onChange={(e) => onChange && onChange(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onClick={() => setIsFocused(true)}
+          onChange={(e) => {
+            setIsFocused(true);
+            if (onChange) onChange(e.target.value);
+          }}
           placeholder={lang === 'hi' ? 'मिठाई, थाली, डोसा, पिज़्ज़ा, चाय खोजें...' : 'Search sweets, thali, dosa, cakes, chai...'}
           style={{
             width: '100%',
@@ -98,18 +133,24 @@ export default function SearchBar({
             fontWeight: 500,
             background: 'var(--theme-input-bg, var(--bg-card, #FFFFFF))',
             color: 'var(--text-dark)',
-            border: '1.5px solid var(--theme-card-border, var(--border-light))',
+            border: isFocused 
+              ? '1.5px solid var(--primary-emerald, #059669)' 
+              : '1.5px solid var(--theme-card-border, var(--border-light))',
             borderRadius: 'var(--radius-pill)',
-            boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
+            boxShadow: isFocused 
+              ? '0 0 0 3px rgba(16, 185, 129, 0.15)' 
+              : 'var(--theme-shadow, var(--shadow-sm))',
             outline: 'none',
-            transition: 'var(--transition-fast)'
+            transition: 'all 0.2s ease'
           }}
         />
 
         {value && (
           <button
-            onClick={onClear}
-            aria-label="Clear search"
+            onClick={() => {
+              if (onClear) onClear();
+            }}
+            aria-label="Clear search text"
             style={{
               position: 'absolute',
               right: '10px',
@@ -129,21 +170,26 @@ export default function SearchBar({
         )}
       </div>
 
-      {/* Quick Micro-Filter Pills */}
-      {filters.length > 1 && (
+      {/* Quick Micro-Filter Pills: Only rendered when user taps on search or when search/filter is active */}
+      {showFilters && filters.length > 1 && (
         <div style={{
           display: 'flex',
           gap: '6px',
           overflowX: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-          paddingBottom: '2px'
+          paddingBottom: '2px',
+          animation: 'fadeIn 0.2s ease-in-out'
         }}>
           {filters.map((f, i) => {
             const isSelected = activeQuickFilter === f.id || (f.id === '' && !activeQuickFilter);
             return (
               <button
                 key={f.id || i}
+                onMouseDown={(e) => {
+                  // Prevent input blur so filters stay open smoothly
+                  e.preventDefault();
+                }}
                 onClick={() => handleFilterClick(f.id)}
                 style={{
                   fontSize: '0.72rem',
@@ -167,7 +213,7 @@ export default function SearchBar({
       )}
 
       {/* Active Filter & Match Counter Feedback Pill Bar */}
-      {hasActiveSearchOrFilter && (
+      {showFilters && hasActiveSearchOrFilter && (
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -180,7 +226,8 @@ export default function SearchBar({
           background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
           border: '1px solid var(--theme-card-border, var(--border-light))',
           borderRadius: '8px',
-          boxShadow: 'var(--shadow-sm)'
+          boxShadow: 'var(--shadow-sm)',
+          animation: 'fadeIn 0.2s ease-in-out'
         }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span>
@@ -207,6 +254,7 @@ export default function SearchBar({
             )}
           </span>
           <button
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleClearAll}
             style={{
               background: 'transparent',
