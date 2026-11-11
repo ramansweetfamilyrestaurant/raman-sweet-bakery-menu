@@ -34,8 +34,8 @@ describe('Standee & Sticker Designer Multi-Vertical Capabilities', () => {
 
     assert.ok(html.includes('IN-ROOM DINING'), 'Must render IN-ROOM DINING pill');
     assert.ok(html.includes('कमरे में खाना मंगाएं'), 'Must render Hindi room service instruction');
-    assert.ok(html.includes('Scan Bedside QR'), 'Must render Scan Bedside QR step');
-    assert.ok(html.includes('Delivered to Room'), 'Must render Delivered to Room step');
+    assert.ok(html.includes('Scan QR'), 'Must render Scan QR step');
+    assert.ok(html.includes('Room Delivery'), 'Must render Room Delivery step');
   });
 
   it('buildStandeeCardHtml dynamically renders DELIVER TO SEAT and cinema instructions for cinema seats', () => {
@@ -49,8 +49,8 @@ describe('Standee & Sticker Designer Multi-Vertical Capabilities', () => {
 
     assert.ok(html.includes('DELIVER TO SEAT'), 'Must render DELIVER TO SEAT pill');
     assert.ok(html.includes('सीट पर मंगाएं'), 'Must render Hindi cinema seat instruction');
-    assert.ok(html.includes('Scan Armrest QR'), 'Must render Scan Armrest QR step');
-    assert.ok(html.includes('Delivered to Seat'), 'Must render Delivered to Seat step');
+    assert.ok(html.includes('Scan QR'), 'Must render Scan QR step');
+    assert.ok(html.includes('Seat Delivery'), 'Must render Seat Delivery step');
   });
 
   it('buildStandeeCardHtml dynamically renders SCAN TO ORDER and table instructions for restaurants', () => {
