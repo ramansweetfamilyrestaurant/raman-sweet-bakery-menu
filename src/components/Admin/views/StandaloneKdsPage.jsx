@@ -1881,6 +1881,22 @@ export default function StandaloneKdsPage({ slug = '' }) {
                                 {item.name || item.dish_name}
                               </strong>
 
+                              {(item.includes || item.comboIncludes) && (
+                                <div style={{
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  color: '#34D399',
+                                  background: 'rgba(5, 150, 105, 0.18)',
+                                  border: '1px solid rgba(52, 211, 153, 0.35)',
+                                  borderRadius: '6px',
+                                  padding: '2px 6px',
+                                  marginTop: '3px',
+                                  lineHeight: 1.3
+                                }}>
+                                  🍱 <strong>Included:</strong> {item.includes || item.comboIncludes}
+                                </div>
+                              )}
+
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
                                 {item.portion && (
                                   <span style={{ fontSize: '0.68rem', color: '#93C5FD', fontWeight: 700, background: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>

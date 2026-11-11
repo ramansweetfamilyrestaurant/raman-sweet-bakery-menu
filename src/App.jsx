@@ -655,6 +655,21 @@ export default function App() {
     setCartItems(cartItems.filter(i => (i.key || i.dish.id) !== cartKey));
   };
 
+  const handleUpdateCartQuantity = (cartKey, delta) => {
+    triggerHaptic('light');
+    const existingIndex = cartItems.findIndex(i => (i.key || i.dish.id) === cartKey);
+    if (existingIndex === -1) return;
+
+    const currentQty = cartItems[existingIndex].quantity;
+    if (delta < 0 && currentQty <= 1) {
+      setCartItems(cartItems.filter(i => (i.key || i.dish.id) !== cartKey));
+    } else {
+      const updated = [...cartItems];
+      updated[existingIndex].quantity = Math.max(1, currentQty + delta);
+      setCartItems(updated);
+    }
+  };
+
   const handleSendWhatsAppOrder = () => {
     if (!info || cartItems.length === 0) return;
     const rawPhone = info.whatsapp_number || info.phone || '';
@@ -673,7 +688,10 @@ export default function App() {
       const modText = (item.modifiers && Array.isArray(item.modifiers) && item.modifiers.length > 0)
         ? `\n   ↳ Add-ons: ${item.modifiers.map(m => `+${m.name} (+${sym}${m.price})`).join(', ')}`
         : '';
-      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${itemPrice}${modText}\n`;
+      const comboText = (item.isCombo && item.comboIncludes)
+        ? `\n   ↳ Included: ${item.comboIncludes}`
+        : '';
+      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${itemPrice}${comboText}${modText}\n`;
     });
     msg += `\n*Total Amount:* ${sym}${grandTotal}`;
     if (customerNameInput) {
@@ -1628,40 +1646,104 @@ export default function App() {
     }
   };
 
+  // Filter combos matching search query or active filter
+  const filteredCombos = useMemo(() => {
+    let list = Array.isArray(combos) ? combos : [];
+    if (list.length === 0) return [];
+
+    const isPureVegResto = typeof info?.is_pure_veg === 'boolean'
+      ? info.is_pure_veg
+      : (info?.food_type ? (info.food_type === 'pure_veg' || info.food_type === 'vegan') : (info?.resto_type === 'pure_veg'));
+
+    // Filter by quick filter
+    if (activeQuickFilter) {
+      if (activeQuickFilter === 'combo') {
+        // Show all available combos
+      } else if (activeQuickFilter === 'under100') {
+        list = list.filter(c => {
+          const p = Number(c.offer_price) > 0 ? Number(c.offer_price) : Number(c.price || 0);
+          return p > 0 && p <= 100;
+        });
+      } else if (activeQuickFilter === 'must_try') {
+        list = list.filter(c => String(c.badge || '').toLowerCase().includes('must'));
+      } else if (activeQuickFilter === 'special') {
+        list = list.filter(c => String(c.badge || '').toLowerCase().includes('special') || Boolean(c.offer_price));
+      } else if (activeQuickFilter === 'veg') {
+        list = list.filter(c => {
+          if (isPureVegResto) return true;
+          const text = `${c.name || ''} ${c.description || ''}`.toLowerCase();
+          return !text.includes('chicken') && !text.includes('mutton') && !text.includes('fish') && !text.includes('egg');
+        });
+      } else if (activeQuickFilter === 'nonveg') {
+        list = list.filter(c => {
+          if (isPureVegResto) return false;
+          const text = `${c.name || ''} ${c.description || ''}`.toLowerCase();
+          return text.includes('chicken') || text.includes('mutton') || text.includes('fish') || text.includes('egg');
+        });
+      } else if (activeQuickFilter === 'egg') {
+        list = list.filter(c => {
+          const text = `${c.name || ''} ${c.description || ''}`.toLowerCase();
+          return text.includes('egg') || text.includes('अंडा');
+        });
+      }
+    }
+
+    // Filter by search query
+    const q = (searchQuery || '').trim().toLowerCase();
+    if (q) {
+      const tokens = q.split(/\s+/).filter(Boolean);
+      list = list.filter(c => {
+        let itemsStr = '';
+        try {
+          const parsed = typeof c.items === 'string' ? JSON.parse(c.items) : (c.items || []);
+          itemsStr = parsed.map(i => i.dish_name || '').join(' ');
+        } catch {}
+        const haystack = `${c.name || ''} ${c.description || ''} ${c.badge || ''} ${itemsStr} thali combo thalis combos कॉम्बो थाली स्पेशल`.toLowerCase();
+        return tokens.every(token => haystack.includes(token));
+      });
+    }
+
+    return list;
+  }, [combos, activeQuickFilter, searchQuery, info]);
+
   // Group dishes by category with in-memory multi-field tokenized search & quick filters
   const { groupedDishes, totalMatchingDishesCount } = useMemo(() => {
     let list = Array.isArray(dishes) ? dishes : [];
 
     // 1. Quick Filter (Dietary / Badge / Price)
     if (activeQuickFilter) {
-      list = list.filter(d => {
-        if (!d) return false;
-        if (activeQuickFilter === 'veg') {
-          return d.type === 'veg' || !d.type || d.type === '';
-        }
-        if (activeQuickFilter === 'nonveg') {
-          return d.type === 'nonveg';
-        }
-        if (activeQuickFilter === 'egg') {
-          return d.type === 'egg';
-        }
-        if (activeQuickFilter === 'must_try') {
-          const badge = String(d.badge || '').toLowerCase();
-          return Boolean(d.must_try || d.is_must_try || badge.includes('must'));
-        }
-        if (activeQuickFilter === 'special') {
-          const badge = String(d.badge || '').toLowerCase();
-          const hasOffer = Boolean(d.offer_badge || (d.offer && d.offer.offer_badge) || (Number(d.offer_price) > 0 && Number(d.offer_price) < Number(d.price || d.portion_full_price)));
-          return Boolean(d.special || d.is_special || badge.includes('special') || hasOffer);
-        }
-        if (activeQuickFilter === 'under100') {
-          const effectivePrice = Number(d.offer_price) > 0 
-            ? Number(d.offer_price) 
-            : (Number(d.price) > 0 ? Number(d.price) : Number(d.portion_full_price) || 0);
-          return effectivePrice > 0 && effectivePrice <= 100;
-        }
-        return true;
-      });
+      if (activeQuickFilter === 'combo') {
+        list = [];
+      } else {
+        list = list.filter(d => {
+          if (!d) return false;
+          if (activeQuickFilter === 'veg') {
+            return d.type === 'veg' || !d.type || d.type === '';
+          }
+          if (activeQuickFilter === 'nonveg') {
+            return d.type === 'nonveg';
+          }
+          if (activeQuickFilter === 'egg') {
+            return d.type === 'egg';
+          }
+          if (activeQuickFilter === 'must_try') {
+            const badge = String(d.badge || '').toLowerCase();
+            return Boolean(d.must_try || d.is_must_try || badge.includes('must'));
+          }
+          if (activeQuickFilter === 'special') {
+            const badge = String(d.badge || '').toLowerCase();
+            const hasOffer = Boolean(d.offer_badge || (d.offer && d.offer.offer_badge) || (Number(d.offer_price) > 0 && Number(d.offer_price) < Number(d.price || d.portion_full_price)));
+            return Boolean(d.special || d.is_special || badge.includes('special') || hasOffer);
+          }
+          if (activeQuickFilter === 'under100') {
+            const effectivePrice = Number(d.offer_price) > 0 
+              ? Number(d.offer_price) 
+              : (Number(d.price) > 0 ? Number(d.price) : Number(d.portion_full_price) || 0);
+            return effectivePrice > 0 && effectivePrice <= 100;
+          }
+          return true;
+        });
+      }
     }
 
     // Category dictionary for lookup
@@ -1692,7 +1774,7 @@ export default function App() {
       });
     }
 
-    const totalMatchingCount = list.length;
+    const totalMatchingCount = list.length + ((q || activeQuickFilter) ? filteredCombos.length : 0);
 
     // 3. Group by category
     const map = {};
@@ -1716,12 +1798,12 @@ export default function App() {
     let results = Object.values(map).filter(group => group.items.length > 0);
 
     // 4. Apply selectedCategory filter only when NOT in active search/filter
-    if (selectedCategory !== 'all' && !q && !activeQuickFilter) {
+    if (selectedCategory !== 'all' && selectedCategory !== 'combos-section' && !q && !activeQuickFilter) {
       results = results.filter(g => String(g.category?.id) === String(selectedCategory));
     }
 
     return { groupedDishes: results, totalMatchingDishesCount: totalMatchingCount };
-  }, [dishes, categories, searchQuery, activeQuickFilter, selectedCategory]);
+  }, [dishes, categories, searchQuery, activeQuickFilter, selectedCategory, filteredCombos]);
 
   const handleSearchChange = (val) => {
     setSearchQuery(val);
@@ -2803,7 +2885,7 @@ export default function App() {
               <strong>{info?.name || 'Yeh outlet'}</strong> ki digital menu service filhal suspended hai. Kripya business owner se sampark karein.
             </p>
           </div>
-        ) : groupedDishes.length === 0 ? (
+        ) : (groupedDishes.length === 0 && filteredCombos.length === 0) ? (
           <div style={{
             textAlign: 'center',
             padding: '44px 20px',
@@ -2993,7 +3075,7 @@ export default function App() {
             );
           })()}
           {/* 🛒 COMBO DEALS SECTION - ULTRA SLIM & MOBILE-NATIVE */}
-          {combos.length > 0 && !searchQuery && !activeQuickFilter && info?.filters_visibility?.combo !== false && (
+          {filteredCombos.length > 0 && info?.filters_visibility?.combo !== false && (
             <section id="combos-section" style={{ marginBottom: '12px', scrollMarginTop: '110px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -3008,7 +3090,7 @@ export default function App() {
                     fontSize: '0.62rem', fontWeight: 800, color: '#B45309',
                     background: '#FEF3C7', padding: '1px 6px', borderRadius: '10px',
                     border: '1px solid #FCD34D'
-                  }}>{combos.length}</span>
+                  }}>{filteredCombos.length}</span>
                 </div>
                 <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#059669' }}>
                   Swipe 👉
@@ -3021,11 +3103,23 @@ export default function App() {
                 scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch',
                 scrollbarWidth: 'none', msOverflowStyle: 'none'
               }}>
-                {combos.map(combo => {
+                {filteredCombos.map(combo => {
                   let comboItems = [];
                   try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
                   const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
                   const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
+
+                  const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null) ? Number(combo.regular_price) : Number(combo.price || 0);
+                  const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null) ? Number(combo.offer_price) : regularPrice;
+                  const hasDiscount = (originalTotal > effectivePrice) || (regularPrice > effectivePrice);
+                  const comparePrice = originalTotal > effectivePrice ? originalTotal : regularPrice;
+
+                  const isPureVegResto = typeof info?.is_pure_veg === 'boolean'
+                    ? info.is_pure_veg
+                    : (info?.food_type ? (info.food_type === 'pure_veg' || info.food_type === 'vegan') : (info?.resto_type === 'pure_veg'));
+                  const comboText = `${combo.name || ''} ${combo.description || ''} ${itemsSummaryText}`.toLowerCase();
+                  const isNonVeg = comboText.includes('chicken') || comboText.includes('mutton') || comboText.includes('fish') || comboText.includes('egg');
+                  const isVeg = isPureVegResto || !isNonVeg;
 
                   return (
                     <div 
@@ -3058,25 +3152,49 @@ export default function App() {
                         </div>
 
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <h4 style={{ 
-                            margin: 0, fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dark)',
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' 
-                          }}>
-                            {combo.name}
-                          </h4>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span 
+                              title={isVeg ? 'Veg' : 'Non-Veg'}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '11px',
+                                height: '11px',
+                                border: isVeg ? '1.5px solid #16A34A' : '1.5px solid #DC2626',
+                                borderRadius: '2.5px',
+                                padding: '1px',
+                                flexShrink: 0
+                              }}
+                            >
+                              <span style={{
+                                width: '4px',
+                                height: '4px',
+                                borderRadius: '50%',
+                                background: isVeg ? '#16A34A' : '#DC2626'
+                              }} />
+                            </span>
+                            <h4 style={{ 
+                              margin: 0, fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dark)',
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' 
+                            }}>
+                              {combo.name}
+                            </h4>
+                          </div>
+
                           <p style={{
                             margin: '2px 0 4px', fontSize: '0.66rem', color: 'var(--text-muted)',
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                           }}>
-                            {itemsSummaryText || combo.description || 'Special combo deal'}
+                            {itemsSummaryText || combo.description || (lang === 'hi' ? 'विशेष कॉम्बो थाली' : 'Special combo deal')}
                           </p>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ fontSize: '0.84rem', fontWeight: 900, color: 'var(--theme-price-color, var(--primary-emerald))' }}>
-                              {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(combo.price)}
+                              {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(effectivePrice)}
                             </span>
-                            {originalTotal > combo.price && (
+                            {hasDiscount && (
                               <span style={{ fontSize: '0.68rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                                {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(originalTotal)}
+                                {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(comparePrice)}
                               </span>
                             )}
                           </div>
@@ -3437,10 +3555,74 @@ export default function App() {
                             )}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <button onClick={() => handleAddToCart(item.dish, (item.portion === 'Half' || item.portion === item.dish?.portion_half_label) ? 'half' : 'full', item.modifiers)} style={{ background: 'var(--theme-nav-active, var(--primary-emerald))', color: '#FFF', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '1rem' }}>+</button>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-dark)' }}>{item.quantity}</span>
-                          <button onClick={() => handleRemoveFromCart(item.key || item.dish.id)} style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button 
+                            type="button"
+                            onClick={() => handleUpdateCartQuantity(item.key || item.dish.id, -1)} 
+                            aria-label="Decrease quantity"
+                            style={{ 
+                              background: 'var(--bg-secondary, #F1F5F9)', 
+                              color: 'var(--text-dark, #0F172A)', 
+                              border: '1px solid var(--theme-card-border, #CBD5E1)', 
+                              width: '26px', 
+                              height: '26px', 
+                              borderRadius: '50%', 
+                              fontWeight: 900, 
+                              cursor: 'pointer', 
+                              fontSize: '0.9rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            −
+                          </button>
+                          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-dark)', minWidth: '18px', textAlign: 'center' }}>
+                            {item.quantity}
+                          </span>
+                          <button 
+                            type="button"
+                            onClick={() => handleUpdateCartQuantity(item.key || item.dish.id, 1)} 
+                            aria-label="Increase quantity"
+                            style={{ 
+                              background: 'var(--theme-nav-active, var(--primary-emerald))', 
+                              color: '#FFFFFF', 
+                              border: 'none', 
+                              width: '26px', 
+                              height: '26px', 
+                              borderRadius: '50%', 
+                              fontWeight: 900, 
+                              cursor: 'pointer', 
+                              fontSize: '0.9rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            +
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => handleRemoveFromCart(item.key || item.dish.id)} 
+                            aria-label="Remove item"
+                            style={{ 
+                              background: '#FEE2E2', 
+                              color: '#DC2626', 
+                              border: 'none', 
+                              width: '26px', 
+                              height: '26px', 
+                              borderRadius: '50%', 
+                              fontWeight: 900, 
+                              cursor: 'pointer', 
+                              fontSize: '0.82rem',
+                              marginLeft: '2px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            ✕
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -3951,6 +4133,10 @@ export default function App() {
           onAddToCart={isDirectOrderingActive ? handleAddComboToCart : undefined}
           canOrder={isDirectOrderingActive}
           currencySymbol={getCurrencySymbol(info?.currency_symbol)}
+          lang={lang}
+          restoType={info?.resto_type}
+          foodType={info?.food_type}
+          isPureVeg={info?.is_pure_veg}
         />
       )}
 

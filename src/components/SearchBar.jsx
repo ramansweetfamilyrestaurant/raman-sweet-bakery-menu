@@ -34,6 +34,7 @@ export default function SearchBar({
 
   const allFilters = [
     { id: '', label: lang === 'hi' ? '✨ सभी' : '✨ All', show: true },
+    { id: 'combo', label: lang === 'hi' ? '🍱 थाली & कॉम्बो' : '🍱 Combos & Thalis', show: vis.combo !== false },
     { id: 'veg', label: lang === 'hi' ? '🟢 केवल शाकाहारी' : '🟢 Pure Veg', show: !isPureVeg && vis.veg !== false },
     { id: 'nonveg', label: lang === 'hi' ? '🔴 नॉन-वेज' : '🔴 Non-Veg', show: !isPureVeg && vis.nonveg !== false },
     { id: 'egg', label: lang === 'hi' ? '🟡 अंडा' : '🟡 Egg', show: !isPureVeg && vis.egg !== false },

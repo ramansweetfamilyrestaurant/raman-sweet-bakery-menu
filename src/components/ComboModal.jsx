@@ -1,9 +1,19 @@
 import React from 'react';
 import { X, Plus, Sparkles, CheckCircle2, Utensils, Tag, ShieldCheck } from 'lucide-react';
-import { resolveImageUrl, getComboImageUrl } from '../utils/imageHelper';
+import { getComboImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 
-export default function ComboModal({ combo, onClose, onAddToCart, canOrder = false, currencySymbol = '₹' }) {
+export default function ComboModal({ 
+  combo, 
+  onClose, 
+  onAddToCart, 
+  canOrder = false, 
+  currencySymbol = '₹',
+  lang = 'en',
+  restoType,
+  foodType,
+  isPureVeg: isPureVegProp
+}) {
   if (!combo) return null;
 
   const symbol = getCurrencySymbol(currencySymbol);
@@ -15,9 +25,28 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
     comboItems = [];
   }
 
+  // Calculate prices and offers
+  const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null) 
+    ? Number(combo.regular_price) 
+    : Number(combo.price || 0);
+  const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null) 
+    ? Number(combo.offer_price) 
+    : regularPrice;
   const originalTotal = comboItems.reduce((s, i) => s + ((Number(i.original_price) || 0) * (i.qty || 1)), 0);
-  const savings = originalTotal - Number(combo.price || 0);
+  const savings = originalTotal > effectivePrice 
+    ? originalTotal - effectivePrice 
+    : (regularPrice > effectivePrice ? regularPrice - effectivePrice : 0);
+
   const imageSrc = getComboImageUrl(combo.image);
+
+  // Dietary check
+  const isPureVegResto = typeof isPureVegProp === 'boolean'
+    ? isPureVegProp
+    : (foodType ? (foodType === 'pure_veg' || foodType === 'vegan') : (restoType === 'pure_veg'));
+
+  const textToCheck = `${combo.name || ''} ${combo.description || ''} ${comboItems.map(i => i.dish_name || '').join(' ')}`.toLowerCase();
+  const isNonVeg = textToCheck.includes('chicken') || textToCheck.includes('mutton') || textToCheck.includes('fish') || textToCheck.includes('egg');
+  const isVeg = isPureVegResto || !isNonVeg;
 
   return (
     <div style={{
@@ -70,6 +99,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
         <button
           onClick={onClose}
           type="button"
+          aria-label="Close modal"
           style={{
             position: 'absolute',
             top: '12px',
@@ -136,11 +166,12 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
               gap: '4px',
               zIndex: 2
             }}>
-              <Tag size={11} /> SAVE {symbol}{savings}
+              <Tag size={11} /> {lang === 'hi' ? `बचत ${symbol}${formatPriceNumber(savings)}` : `SAVE ${symbol}${formatPriceNumber(savings)}`}
             </div>
           )}
 
-          {combo.badge && (
+          {/* Active Offer / Special Badge */}
+          {(combo.offer_badge || combo.badge) && (
             <div style={{
               position: 'absolute',
               bottom: '10px',
@@ -157,7 +188,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
               gap: '4px',
               zIndex: 2
             }}>
-              <Sparkles size={11} /> {combo.badge}
+              <Sparkles size={11} /> {combo.offer_badge || combo.badge}
             </div>
           )}
         </div>
@@ -171,17 +202,43 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
           {/* Title & Price Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
             <div>
-              <h2 style={{
-                fontSize: '1.1rem',
-                fontWeight: 900,
-                color: 'var(--text-dark, #0F172A)',
-                margin: 0,
-                lineHeight: 1.25
-              }}>
-                {combo.name}
-              </h2>
-              <span style={{ fontSize: '0.72rem', color: 'var(--theme-price-color, var(--primary-emerald, #16A34A))', fontWeight: 800 }}>
-                🍱 Special Thali / Curated Combo
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* Veg / Non-Veg Indicator Icon */}
+                <span 
+                  title={isVeg ? 'Pure Veg' : 'Non-Veg'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '16px',
+                    height: '16px',
+                    border: isVeg ? '1.5px solid #16A34A' : '1.5px solid #DC2626',
+                    borderRadius: '4px',
+                    padding: '2px',
+                    flexShrink: 0
+                  }}
+                >
+                  <span style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    background: isVeg ? '#16A34A' : '#DC2626'
+                  }} />
+                </span>
+
+                <h2 style={{
+                  fontSize: '1.1rem',
+                  fontWeight: 900,
+                  color: 'var(--text-dark, #0F172A)',
+                  margin: 0,
+                  lineHeight: 1.25
+                }}>
+                  {combo.name}
+                </h2>
+              </div>
+
+              <span style={{ fontSize: '0.72rem', color: 'var(--theme-price-color, var(--primary-emerald, #16A34A))', fontWeight: 800, display: 'block', marginTop: '3px' }}>
+                🍱 {lang === 'hi' ? 'विशेष थाली / क्यूरेटेड कॉम्बो' : 'Special Thali / Curated Combo'}
               </span>
             </div>
 
@@ -197,11 +254,11 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                 whiteSpace: 'nowrap',
                 lineHeight: 1.2
               }}>
-                {symbol}{formatPriceNumber(combo.price)}
+                {symbol}{formatPriceNumber(effectivePrice)}
               </div>
-              {originalTotal > Number(combo.price || 0) && (
+              {(originalTotal > effectivePrice || regularPrice > effectivePrice) && (
                 <div style={{ fontSize: '0.74rem', color: '#94A3B8', textDecoration: 'line-through', marginTop: '2px', textAlign: 'center' }}>
-                  {symbol}{formatPriceNumber(originalTotal)}
+                  {symbol}{formatPriceNumber(originalTotal > effectivePrice ? originalTotal : regularPrice)}
                 </div>
               )}
             </div>
@@ -233,7 +290,8 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
               alignItems: 'center',
               gap: '5px'
             }}>
-              <Utensils size={13} color="var(--gold-bright, #D4AF37)" /> What's Included ({comboItems.length} Items)
+              <Utensils size={13} color="var(--gold-bright, #D4AF37)" /> 
+              {lang === 'hi' ? `थाली में क्या-क्या शामिल है (${comboItems.length} व्यंजन)` : `What's Included (${comboItems.length} Items)`}
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -261,7 +319,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                         background: 'var(--theme-badge-bg, #EEF2FF)',
                         color: 'var(--theme-text-primary, #4338CA)'
                       }}>
-                        {item.portion === 'half' ? 'Half' : item.portion}
+                        {item.portion === 'half' ? (lang === 'hi' ? 'हाफ' : 'Half') : item.portion}
                       </span>
                     )}
                   </div>
@@ -290,7 +348,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
             fontWeight: 700
           }}>
             <ShieldCheck size={15} style={{ color: 'var(--theme-price-color, #16A34A)', flexShrink: 0 }} />
-            <span>100% Freshly prepared meal thali.</span>
+            <span>{lang === 'hi' ? '100% ताज़ा और शुद्ध भोजन थाली।' : '100% Freshly prepared meal thali.'}</span>
           </div>
         </div>
 
@@ -324,7 +382,9 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                 transition: 'all 0.2s ease'
               }}
             >
-              <Plus size={16} /> ADD THALI TO CART ({symbol}{formatPriceNumber(combo.price)})
+              <Plus size={16} /> {lang === 'hi' 
+                ? `थाली कार्ट में जोड़ें (${symbol}${formatPriceNumber(effectivePrice)})` 
+                : `ADD THALI TO CART (${symbol}${formatPriceNumber(effectivePrice)})`}
             </button>
           ) : (
             <button
@@ -341,7 +401,7 @@ export default function ComboModal({ combo, onClose, onAddToCart, canOrder = fal
                 cursor: 'pointer'
               }}
             >
-              Close Details
+              {lang === 'hi' ? 'विवरण बंद करें' : 'Close Details'}
             </button>
           )}
         </div>
