@@ -1809,6 +1809,17 @@ export default function App() {
     return { groupedDishes: results, totalMatchingDishesCount: totalMatchingCount };
   }, [dishes, categories, searchQuery, activeQuickFilter, selectedCategory, filteredCombos]);
 
+  // Categories that contain at least one dish (auto-hides blank categories for customers)
+  const populatedCategories = useMemo(() => {
+    if (!Array.isArray(categories)) return [];
+    const dishCatIds = new Set(
+      (dishes || [])
+        .map(d => d && d.category_id !== null && d.category_id !== undefined ? String(d.category_id) : null)
+        .filter(Boolean)
+    );
+    return categories.filter(c => c && c.id && dishCatIds.has(String(c.id)));
+  }, [categories, dishes]);
+
   const handleSearchChange = (val) => {
     setSearchQuery(val);
     if (val && String(val).trim() && selectedCategory !== 'all') {
@@ -2713,9 +2724,9 @@ export default function App() {
         lang={lang}
       />
 
-      {/* Sticky Category Quick Jump Rail */}
+      {/* Sticky Category Quick Jump Rail (only shows populated categories to customers) */}
       <CategoryJumpRail
-        categories={categories}
+        categories={populatedCategories}
         lang={lang}
         selectedCategory={selectedCategory}
         onSelectCategory={(catId) => {
@@ -2904,16 +2915,24 @@ export default function App() {
           }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🍽️</div>
             <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark)', margin: '0 0 6px 0' }}>
-              {(searchQuery || activeQuickFilter) ? (lang === 'hi' ? 'कोई व्यंजन नहीं मिला' : 'No dishes found') : (lang === 'hi' ? '✨ मेनू जल्द ही आ रहा है' : '✨ Digital Menu Coming Soon')}
+              {(searchQuery || activeQuickFilter) 
+                ? (lang === 'hi' ? 'कोई व्यंजन नहीं मिला' : 'No dishes found') 
+                : selectedCategory !== 'all'
+                  ? (lang === 'hi' ? 'इस श्रेणी में अभी कोई व्यंजन नहीं है' : 'No items in this category yet')
+                  : (lang === 'hi' ? '✨ मेनू जल्द ही आ रहा है' : '✨ Digital Menu Coming Soon')}
             </p>
             <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: '0 0 16px 0', lineHeight: 1.5 }}>
-              {(searchQuery || activeQuickFilter) ? (lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें या फ़िल्टर हटाएं' : 'Try searching for something else or clear filters') : (lang === 'hi' ? 'आउटलेट अपने मेनू आइटम्स जोड़ रहा है।' : 'The outlet is preparing exciting items for you!')}
+              {(searchQuery || activeQuickFilter) 
+                ? (lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें या फ़िल्टर हटाएं' : 'Try searching for something else or clear filters') 
+                : selectedCategory !== 'all'
+                  ? (lang === 'hi' ? 'अन्य श्रेणियां या सभी व्यंजन देखने के लिए नीचे क्लिक करें।' : 'Check out our other delicious categories or all items.')
+                  : (lang === 'hi' ? 'आउटलेट अपने मेनू आइटम्स जोड़ रहा है।' : 'The outlet is preparing exciting items for you!')}
             </p>
-            {(searchQuery || activeQuickFilter) && (
+            {(searchQuery || activeQuickFilter || selectedCategory !== 'all') && (
               <button
                 onClick={handleClearAllSearchAndFilters}
                 style={{
-                  padding: '8px 18px',
+                  padding: '9px 20px',
                   borderRadius: 'var(--radius-pill)',
                   background: 'var(--theme-btn-gradient, var(--gold-gradient))',
                   color: 'var(--dock-btn-text, #0A2315)',
@@ -2921,10 +2940,14 @@ export default function App() {
                   fontWeight: 800,
                   fontSize: '0.82rem',
                   cursor: 'pointer',
-                  boxShadow: 'var(--theme-shadow, var(--shadow-sm))'
+                  boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
-                {lang === 'hi' ? 'सभी फ़िल्टर और खोज हटाएं ✕' : 'Clear search & filters ✕'}
+                <span>❖</span>
+                <span>{lang === 'hi' ? 'सभी व्यंजन देखें (View All Items)' : 'View All Items'}</span>
               </button>
             )}
           </div>
@@ -4253,7 +4276,7 @@ export default function App() {
                 <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>({dishes.length})</span>
               </button>
 
-              {categories.map((cat) => {
+              {populatedCategories.map((cat) => {
                 const catDisplayName = (lang === 'hi' && cat.name_hi) ? cat.name_hi : cat.name;
                 const itemCount = dishes.filter(d => String(d.category_id) === String(cat.id)).length;
 
