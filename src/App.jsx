@@ -1798,8 +1798,12 @@ export default function App() {
     let results = Object.values(map).filter(group => group.items.length > 0);
 
     // 4. Apply selectedCategory filter only when NOT in active search/filter
-    if (selectedCategory !== 'all' && selectedCategory !== 'combos-section' && !q && !activeQuickFilter) {
-      results = results.filter(g => String(g.category?.id) === String(selectedCategory));
+    if (selectedCategory !== 'all' && !q && !activeQuickFilter) {
+      if (selectedCategory === 'combos-section') {
+        results = [];
+      } else {
+        results = results.filter(g => String(g.category?.id) === String(selectedCategory));
+      }
     }
 
     return { groupedDishes: results, totalMatchingDishesCount: totalMatchingCount };
@@ -2714,7 +2718,11 @@ export default function App() {
         categories={categories}
         lang={lang}
         selectedCategory={selectedCategory}
-        onSelectCategory={(catId) => setSelectedCategory(catId)}
+        onSelectCategory={(catId) => {
+          if (searchQuery) setSearchQuery('');
+          if (activeQuickFilter) setActiveQuickFilter('');
+          setSelectedCategory(catId);
+        }}
         hasCombos={combos.length > 0 && info?.filters_visibility?.combo !== false}
       />
 
@@ -2923,7 +2931,7 @@ export default function App() {
         ) : (
           <>
           {/* 🔥 SPECIAL OFFERS BANNER */}
-          {!searchQuery && !activeQuickFilter && (() => {
+          {!searchQuery && !activeQuickFilter && selectedCategory === 'all' && (() => {
             const offerDishes = dishes.filter(d => d.offer_price !== undefined && d.offer_price !== null);
             const offerCombos = (combos || []).filter(c => c.offer_price !== undefined && c.offer_price !== null);
             const allOfferItems = [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
@@ -3153,7 +3161,7 @@ export default function App() {
             );
           })()}
           {/* 🛒 COMBO DEALS SECTION - ULTRA SLIM & MOBILE-NATIVE */}
-          {filteredCombos.length > 0 && info?.filters_visibility?.combo !== false && (
+          {filteredCombos.length > 0 && info?.filters_visibility?.combo !== false && (selectedCategory === 'all' || selectedCategory === 'combos-section' || searchQuery || activeQuickFilter === 'combo') && (
             <section id="combos-section" style={{ marginBottom: '12px', scrollMarginTop: '110px' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -3170,16 +3178,24 @@ export default function App() {
                     border: '1px solid #FCD34D'
                   }}>{filteredCombos.length}</span>
                 </div>
-                <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#059669' }}>
-                  Swipe 👉
-                </span>
+                {selectedCategory !== 'combos-section' && (
+                  <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#059669' }}>
+                    Swipe 👉
+                  </span>
+                )}
               </div>
 
-              {/* Slim Horizontal Scroll List */}
+              {/* Slim Horizontal Scroll List (or Multi-column Wrap when dedicated combos view) */}
               <div style={{
-                display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px',
-                scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch',
-                scrollbarWidth: 'none', msOverflowStyle: 'none'
+                display: 'flex',
+                gap: '8px',
+                overflowX: selectedCategory === 'combos-section' ? 'visible' : 'auto',
+                flexWrap: selectedCategory === 'combos-section' ? 'wrap' : 'nowrap',
+                paddingBottom: '4px',
+                scrollSnapType: selectedCategory === 'combos-section' ? 'none' : 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
               }}>
                 {filteredCombos.map(combo => {
                   let comboItems = [];
@@ -3204,10 +3220,19 @@ export default function App() {
                       key={combo.id}
                       onClick={() => setSelectedComboModal(combo)}
                       style={{
-                        minWidth: '220px', maxWidth: '240px', flexShrink: 0, scrollSnapAlign: 'start',
-                        background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', borderRadius: '12px', padding: '8px 10px',
-                        border: '1.5px solid var(--theme-card-border, var(--border-light))', boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
-                        display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                        minWidth: selectedCategory === 'combos-section' ? '280px' : '220px',
+                        maxWidth: selectedCategory === 'combos-section' ? '100%' : '240px',
+                        flex: selectedCategory === 'combos-section' ? '1 1 280px' : '0 0 auto',
+                        scrollSnapAlign: 'start',
+                        background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
+                        borderRadius: '12px',
+                        padding: '8px 10px',
+                        border: '1.5px solid var(--theme-card-border, var(--border-light))',
+                        boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
                         justifyContent: 'space-between'
                       }}
                     >

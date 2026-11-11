@@ -7,34 +7,18 @@ export default function CategoryJumpRail({ categories, lang, selectedCategory, o
 
   const scrollToCategory = (catId) => {
     onSelectCategory(catId);
-    const elem = document.getElementById(`cat-sec-${catId}`);
-    if (elem) {
-      const offset = 120; // Accounts for sticky header height
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = elem.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   };
 
   const scrollToCombos = () => {
     onSelectCategory('combos-section');
-    const elem = document.getElementById('combos-section');
-    if (elem) {
-      const offset = 120;
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = elem.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      window.scrollTo({
-        top: elementPosition - offset,
-        behavior: 'smooth'
-      });
-    }
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   };
 
   return (
