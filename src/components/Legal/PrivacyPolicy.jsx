@@ -19,10 +19,11 @@ export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
     { id: 'data-sharing', title: 'Data Sharing & Third Parties' },
     { id: 'security', title: 'Data Security' },
     { id: 'retention', title: 'Data Retention' },
+    { id: 'dpdp-compliance', title: 'DPDP Act, 2023 Compliance (India)' },
     { id: 'rights', title: 'User Rights & Account Deletion' },
     { id: 'children', title: "Children's Privacy" },
     { id: 'changes', title: 'Changes to This Policy' },
-    { id: 'contact', title: 'Contact Us' }
+    { id: 'contact', title: 'Contact Us & Grievance Redressal' }
   ];
 
   return (
@@ -136,31 +137,60 @@ export default function PrivacyPolicy({ onOpenLogin, onStartTrial }) {
         </p>
       </section>
 
+      <section id="dpdp-compliance" className="km-legal-section">
+        <h2 className="km-legal-h2">12. Compliance with Digital Personal Data Protection Act, 2023 (DPDP Act, India)</h2>
+        <p className="km-legal-p">
+          TouchQR strictly complies with India's <strong>Digital Personal Data Protection Act, 2023 (DPDPA 2023)</strong> and statutory rules promulgated by the Ministry of Electronics and Information Technology (MeitY). Under the provisions of the Act:
+        </p>
+        <ul className="km-legal-list">
+          <li>
+            <strong>Data Fiduciary vs. Data Processor Roles:</strong> The onboarded business entity (restaurant, hotel, cinema, or cafe) acts as the primary <em>Data Fiduciary</em> determining the purpose of collecting customer orders. TouchQR operates strictly as a compliant <em>Data Processor</em> providing cloud hosting, QR table/room routing, and Kitchen Display Systems (KDS) on behalf of the business.
+          </li>
+          <li>
+            <strong>Principle of Data Minimization:</strong> We only collect the minimal personal information essential for lawful order fulfillment (such as physical space identifier, item selection, and optional customer contact for order receipt status).
+          </li>
+          <li>
+            <strong>Purpose Limitation & Zero Data Selling:</strong> Customer data is processed solely to fulfill orders and is NEVER sold, rented, leased, or monetized for third-party targeted advertisements, cross-site tracking, or behavioral profiling.
+          </li>
+          <li>
+            <strong>Statutory Data Principal Rights:</strong> Customers and business owners have statutory rights under the DPDP Act, including the right to access summary data, request correction of inaccurate records, and seek erasure/deletion of their personal identifiers upon completion of commercial fulfillment, subject to statutory tax and financial compliance requirements.
+          </li>
+          <li>
+            <strong>Automated Data Storage Limitation:</strong> TouchQR enforces configurable data retention lifecycles (such as 30, 90, or 365 days) with automated background compaction and purging of obsolete raw transactional records.
+          </li>
+        </ul>
+      </section>
+
       <section id="rights" className="km-legal-section">
-        <h2 className="km-legal-h2">12. User Rights & Account Deletion</h2>
+        <h2 className="km-legal-h2">13. User Rights & Account Deletion</h2>
         <p className="km-legal-p">
           Restaurant owners may access, update, or export their menu data directly from the owner admin panel. To request complete account or data deletion, owners can contact our support team.
         </p>
       </section>
 
       <section id="children" className="km-legal-section">
-        <h2 className="km-legal-h2">13. Children's Privacy</h2>
+        <h2 className="km-legal-h2">14. Children's Privacy</h2>
         <p className="km-legal-p">
           TouchQR is a commercial B2B SaaS software platform intended for commercial use by business entities and adult individuals. We do not knowingly collect personal data from minors under the age of 18.
         </p>
       </section>
 
       <section id="changes" className="km-legal-section">
-        <h2 className="km-legal-h2">14. Changes to This Policy</h2>
+        <h2 className="km-legal-h2">15. Changes to This Policy</h2>
         <p className="km-legal-p">
           We may update this Privacy Policy periodically. Significant updates will be communicated via notice on our website or within the owner dashboard prior to taking effect.
         </p>
       </section>
 
       <section id="contact" className="km-legal-section">
-        <h2 className="km-legal-h2">15. Contact Us</h2>
+        <h2 className="km-legal-h2">16. Contact Us & Grievance Redressal</h2>
         <p className="km-legal-p">
-          If you have questions or concerns regarding this Privacy Policy or data handling, please submit a request via our <a href="/contact" style={{ color: 'var(--km-green)', fontWeight: 700 }}>Support Contact Page</a>.
+          In accordance with the Digital Personal Data Protection Act, 2023 (DPDPA), TouchQR has established a dedicated Grievance Redressal mechanism for all data privacy inquiries, complaints, and statutory data principal requests.
+        </p>
+        <p className="km-legal-p">
+          <strong>Grievance Redressal Officer / Data Protection Inquiries:</strong><br />
+          Email: <a href="mailto:grievance@touchqr.in" style={{ color: 'var(--km-green)', fontWeight: 700 }}>grievance@touchqr.in</a> or <a href="mailto:support@touchqr.in" style={{ color: 'var(--km-green)', fontWeight: 700 }}>support@touchqr.in</a><br />
+          Direct Helpdesk: <a href="/contact" style={{ color: 'var(--km-green)', fontWeight: 700 }}>Support Contact Page</a>
         </p>
       </section>
     </LegalPageLayout>
