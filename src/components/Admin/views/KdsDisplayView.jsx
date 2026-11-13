@@ -245,13 +245,13 @@ export default function KdsDisplayView({
       display: 'flex',
       flexDirection: 'column',
       gap: '14px',
-      background: '#070B14',
+      background: 'radial-gradient(circle at 50% 0%, #162444 0%, #0F172A 40%, #080D1A 100%)',
       padding: '16px',
       borderRadius: '20px',
       color: '#F8FAFC',
       minHeight: '85vh',
       boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif'
     }}>
       <style>{`
         .kds-card-rush-glow {
@@ -278,53 +278,62 @@ export default function KdsDisplayView({
           1. KDS TOP CHEF COMMAND BAR
          ========================================================================= */}
       <div style={{
-        background: 'linear-gradient(180deg, #0F172A 0%, #0B1120 100%)',
-        border: '1px solid #1E293B',
+        background: 'rgba(19, 27, 46, 0.95)',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
         borderRadius: '16px',
-        padding: '14px 18px',
+        padding: '12px 18px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '12px'
+        gap: '12px',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)'
       }}>
         {/* Left: Chef Badge + Live Status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '44px',
-            height: '44px',
+            width: '42px',
+            height: '42px',
             borderRadius: '12px',
             background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1.5rem',
-            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+            fontSize: '1.4rem',
+            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
           }}>
             {terminology.spaceIcon || '🍳'}
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h2 style={{ fontSize: '1.24rem', fontWeight: 900, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>
-                {restaurantInfo?.name ? `${restaurantInfo.name} — ` : ''}Kitchen Display (रसोई KOT)
+              <h2 style={{
+                fontSize: '1.18rem',
+                fontWeight: 800,
+                color: '#FFFFFF',
+                margin: 0,
+                letterSpacing: '-0.02em',
+                textTransform: 'capitalize'
+              }}>
+                {restaurantInfo?.name ? `${restaurantInfo.name}` : 'Kitchen Display'}
               </h2>
               <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 900,
-                background: '#10B981',
-                color: '#022C22',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                background: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: '#34D399',
                 padding: '2px 8px',
                 borderRadius: '6px',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase'
+                letterSpacing: '0.04em'
               }}>
-                LIVE KITCHEN
+                Kitchen KOT
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '0.74rem', color: '#94A3B8' }}>
-              <span>Active Orders: <strong style={{ color: '#38BDF8' }}>{activeKitchenOrders.length}</strong></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', fontSize: '0.74rem', color: '#94A3B8' }}>
+              <span>Queue: <strong style={{ color: activeKitchenOrders.length > 0 ? '#38BDF8' : '#34D399' }}>{activeKitchenOrders.length} Active Orders</strong></span>
               <span>•</span>
-              <span>Total Items: <strong style={{ color: '#FCD34D' }}>{totalDishesCount}</strong></span>
+              <span>Dishes to Cook: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
               {rushCount > 0 && (
                 <>
                   <span>•</span>
@@ -347,13 +356,13 @@ export default function KdsDisplayView({
               }}
               style={{
                 height: '36px',
-                padding: '0 10px',
-                borderRadius: '10px',
+                padding: '0 12px',
+                borderRadius: '8px',
                 border: '1px solid #334155',
                 background: '#1E293B',
                 color: '#F8FAFC',
                 fontSize: '0.74rem',
-                fontWeight: 700,
+                fontWeight: 800,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -372,10 +381,10 @@ export default function KdsDisplayView({
             onClick={() => setSoundEnabled(!soundEnabled)}
             style={{
               height: '36px',
-              padding: '0 10px',
-              borderRadius: '10px',
-              border: '1px solid #334155',
-              background: soundEnabled ? 'rgba(16, 185, 129, 0.15)' : '#1E293B',
+              padding: '0 12px',
+              borderRadius: '8px',
+              border: soundEnabled ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #334155',
+              background: soundEnabled ? 'rgba(16, 185, 129, 0.12)' : '#1E293B',
               color: soundEnabled ? '#34D399' : '#94A3B8',
               fontSize: '0.74rem',
               fontWeight: 800,
@@ -396,10 +405,10 @@ export default function KdsDisplayView({
             onClick={() => setShowPrepSummary(!showPrepSummary)}
             style={{
               height: '36px',
-              padding: '0 10px',
-              borderRadius: '10px',
+              padding: '0 12px',
+              borderRadius: '8px',
               border: '1px solid #334155',
-              background: showPrepSummary ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
+              background: showPrepSummary ? 'rgba(56, 189, 248, 0.12)' : '#1E293B',
               color: showPrepSummary ? '#38BDF8' : '#94A3B8',
               fontSize: '0.74rem',
               fontWeight: 800,
@@ -410,7 +419,7 @@ export default function KdsDisplayView({
             }}
           >
             <Layers size={14} />
-            <span>{showPrepSummary ? 'Hide Dish Totals' : 'Dish Totals'}</span>
+            <span>{showPrepSummary ? 'Hide Totals' : 'Dish Totals'}</span>
           </button>
 
           {/* Recall / History Drawer Toggle */}
@@ -420,8 +429,8 @@ export default function KdsDisplayView({
               onClick={() => setShowCompletedDrawer(!showCompletedDrawer)}
               style={{
                 height: '36px',
-                padding: '0 10px',
-                borderRadius: '10px',
+                padding: '0 12px',
+                borderRadius: '8px',
                 border: '1px solid #334155',
                 background: '#1E293B',
                 color: '#F1F5F9',
@@ -440,16 +449,18 @@ export default function KdsDisplayView({
 
           {/* Live Kitchen Clock */}
           <div style={{
-            background: '#0F172A',
-            padding: '6px 12px',
-            borderRadius: '10px',
+            height: '36px',
+            background: '#131D31',
+            padding: '0 12px',
+            borderRadius: '8px',
             border: '1px solid #334155',
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            fontSize: '0.84rem',
-            fontWeight: 900,
-            color: '#F8FAFC'
+            fontSize: '0.80rem',
+            fontWeight: 800,
+            color: '#F8FAFC',
+            fontVariantNumeric: 'tabular-nums'
           }}>
             <Clock size={14} color="#38BDF8" />
             <span>{currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
@@ -615,33 +626,77 @@ export default function KdsDisplayView({
          ========================================================================= */}
       {displayedOrders.length === 0 ? (
         <div style={{
-          padding: '70px 20px',
+          maxWidth: '560px',
+          margin: '40px auto 30px auto',
+          background: 'linear-gradient(180deg, #131E35 0%, #0F172A 100%)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '24px',
+          padding: '48px 28px',
           textAlign: 'center',
-          background: '#0B1120',
-          borderRadius: '18px',
-          border: '1.5px dashed #334155',
-          margin: '10px 0'
+          boxShadow: '0 20px 45px rgba(0, 0, 0, 0.4)'
         }}>
           <div style={{
-            width: '60px',
-            height: '60px',
+            width: '76px',
+            height: '76px',
             borderRadius: '50%',
-            background: 'rgba(16, 185, 129, 0.15)',
+            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(16, 185, 129, 0.06) 70%)',
+            border: '2px solid rgba(16, 185, 129, 0.4)',
             color: '#10B981',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 14px auto',
-            border: '2px solid rgba(16, 185, 129, 0.3)'
+            margin: '0 auto 20px auto',
+            boxShadow: '0 0 24px rgba(16, 185, 129, 0.25)'
           }}>
-            <CheckCircle2 size={30} />
+            <UtensilsCrossed size={36} color="#10B981" />
           </div>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#F1F5F9', margin: '0 0 6px 0' }}>
-            All Orders Prepared! (रसोई खाली है)
+
+          <h3 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#F8FAFC', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
+            All Orders Prepared!
           </h3>
-          <p style={{ fontSize: '0.84rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '0.90rem', fontWeight: 800, color: '#34D399', marginBottom: '14px' }}>
+            रसोई खाली है • Kitchen Queue Clear
+          </div>
+          <p style={{ fontSize: '0.86rem', color: '#94A3B8', maxWidth: '420px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
             Koi pending food preparation ticket nahi hai. Customer ke naye QR order aate hi yahan live tickets show honge aur bell alert bajega.
           </p>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '22px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34D399', padding: '6px 12px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 800 }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
+              Live Sync Active
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38BDF8', padding: '6px 12px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 800 }}>
+              <Volume2 size={13} />
+              {soundEnabled ? 'Chime Alert Ready' : 'Muted'}
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(148, 163, 184, 0.1)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#CBD5E1', padding: '6px 12px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 800 }}>
+              ⚡ Station Online
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              try { playKdsChime(); } catch (e) {}
+            }}
+            style={{
+              padding: '9px 16px',
+              borderRadius: '10px',
+              border: '1px solid #334155',
+              background: '#1E293B',
+              color: '#F8FAFC',
+              fontSize: '0.80rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <BellRing size={14} color="#F59E0B" />
+            <span>Test Kitchen Chime</span>
+          </button>
         </div>
       ) : (
         <div style={{

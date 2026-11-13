@@ -22,7 +22,9 @@ import {
   ExternalLink,
   Store,
   Volume2,
-  VolumeX
+  VolumeX,
+  UtensilsCrossed,
+  CheckCircle2
 } from 'lucide-react';
 import {
   playKitchenSiren,
@@ -1225,10 +1227,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
       className="touchqr-kds-root"
       style={{
         minHeight: '100vh',
-        background: '#070B14',
+        background: 'radial-gradient(circle at 50% 0%, #162444 0%, #0F172A 40%, #080D1A 100%)',
         color: '#F8FAFC',
-        padding: 'clamp(8px, 2vw, 16px)',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        padding: 'clamp(10px, 2vw, 18px)',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif',
         boxSizing: 'border-box',
         overflowX: 'hidden',
         width: '100%',
@@ -1293,25 +1295,51 @@ export default function StandaloneKdsPage({ slug = '' }) {
           id="kds-audio-unlock-banner"
           onClick={unlockAudio}
           style={{
-            background: 'linear-gradient(90deg, #EA580C 0%, #DC2626 100%)',
-            color: '#FFFFFF',
-            padding: '14px 20px',
+            background: 'linear-gradient(90deg, #1E293B 0%, #0F172A 100%)',
+            border: '1.5px solid #10B981',
+            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)',
+            color: '#F8FAFC',
+            padding: '12px 20px',
             borderRadius: '14px',
             marginBottom: '14px',
-            textAlign: 'center',
-            fontWeight: 900,
-            fontSize: '0.95rem',
-            cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(234, 88, 12, 0.4)',
-            border: '2px solid #FDE047',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
+            justifyContent: 'space-between',
+            gap: '12px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
           }}
         >
-          <Volume2 size={20} />
-          <span>🔔 Tap anywhere to enable sound alerts for new orders (साउंड अलर्ट चालू करने के लिए टैप करें)</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Volume2 size={18} color="#10B981" />
+            </div>
+            <div>
+              <span style={{ fontWeight: 800, fontSize: '0.90rem', color: '#F8FAFC', display: 'block' }}>
+                Tap to enable Kitchen Sound Alerts (साउंड अलर्ट चालू करें)
+              </span>
+              <span style={{ fontSize: '0.74rem', color: '#94A3B8' }}>
+                Browser requires one tap to allow audio chimes when new tickets arrive
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Enable Sound
+          </button>
         </div>
       )}
 
@@ -1355,18 +1383,34 @@ export default function StandaloneKdsPage({ slug = '' }) {
       <div
         className="kds-header-bar"
         style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexWrap: 'wrap', gap: '12px', background: 'linear-gradient(180deg, #0F172A 0%, #0B1120 100%)',
-          padding: '14px 20px', borderRadius: '16px', border: '1px solid #1E293B', marginBottom: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          background: 'rgba(19, 27, 46, 0.95)',
+          backdropFilter: 'blur(12px)',
+          padding: '12px 18px',
+          borderRadius: '16px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          marginBottom: '14px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
           boxSizing: 'border-box'
         }}
       >
+        {/* Left: Brand Icon + Title + Status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
           <div style={{
-            width: '44px', height: '44px', borderRadius: '12px',
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
             background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.5rem', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)', flexShrink: 0
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.4rem',
+            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+            flexShrink: 0
           }}>
             {terminology.spaceIcon || '🍳'}
           </div>
@@ -1375,32 +1419,49 @@ export default function StandaloneKdsPage({ slug = '' }) {
               <h1
                 className="kds-header-title"
                 style={{
-                  fontSize: '1.25rem', fontWeight: 900, color: '#F8FAFC', margin: 0,
-                  letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                  fontSize: '1.18rem',
+                  fontWeight: 800,
+                  color: '#F8FAFC',
+                  margin: 0,
+                  letterSpacing: '-0.02em',
+                  textTransform: 'capitalize',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                {restaurantName} — Kitchen Display (रसोई KOT)
+                {restaurantName}
               </h1>
-              <span style={{ fontSize: '0.66rem', fontWeight: 900, background: '#10B981', color: '#022C22', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
-                LIVE KITCHEN
+              <span style={{
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                background: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: '#34D399',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                letterSpacing: '0.04em'
+              }}>
+                Kitchen KOT
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '0.74rem', color: '#94A3B8', flexWrap: 'wrap' }}>
-              <span>Active Tickets: <strong style={{ color: '#38BDF8' }}>{orders.length}</strong></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', fontSize: '0.74rem', color: '#94A3B8', flexWrap: 'wrap' }}>
+              <span>Queue: <strong style={{ color: orders.length > 0 ? '#38BDF8' : '#34D399' }}>{orders.length} Active Tickets</strong></span>
               <span>•</span>
-              <span>Total {terminology.itemPlural || 'Dishes'}: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
+              <span>Dishes to Cook: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
               {rushCount > 0 && (
                 <>
                   <span>•</span>
-                  <span style={{ color: '#F87171', fontWeight: 800 }}>⚠️ {rushCount} RUSH (&gt;15m)</span>
+                  <span style={{ color: '#F87171', fontWeight: 800 }}>⚠️ {rushCount} Rush (&gt;15m)</span>
                 </>
               )}
             </div>
           </div>
         </div>
 
+        {/* Right Controls: Unified pill row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* OFFLINE / RECONNECTION STATUS INDICATOR */}
+          {/* Live connection indicator */}
           <div
             id="kds-connection-indicator"
             title={
@@ -1414,24 +1475,24 @@ export default function StandaloneKdsPage({ slug = '' }) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 10px',
+              padding: '0 10px',
+              height: '36px',
               borderRadius: '8px',
-              fontSize: '0.70rem',
-              fontWeight: 900,
+              fontSize: '0.72rem',
+              fontWeight: 800,
               letterSpacing: '0.04em',
-              textTransform: 'uppercase',
               background:
                 connectionStatus === 'online'
-                  ? 'rgba(16, 185, 129, 0.15)'
+                  ? 'rgba(16, 185, 129, 0.12)'
                   : connectionStatus === 'reconnecting'
-                  ? 'rgba(245, 158, 11, 0.15)'
-                  : 'rgba(239, 68, 68, 0.18)',
+                  ? 'rgba(245, 158, 11, 0.12)'
+                  : 'rgba(239, 68, 68, 0.15)',
               border:
                 connectionStatus === 'online'
-                  ? '1px solid #10B981'
+                  ? '1px solid rgba(16, 185, 129, 0.3)'
                   : connectionStatus === 'reconnecting'
-                  ? '1px solid #F59E0B'
-                  : '1.5px solid #EF4444',
+                  ? '1px solid rgba(245, 158, 11, 0.3)'
+                  : '1px solid #EF4444',
               color:
                 connectionStatus === 'online'
                   ? '#34D399'
@@ -1451,55 +1512,48 @@ export default function StandaloneKdsPage({ slug = '' }) {
                     : connectionStatus === 'reconnecting'
                     ? '#F59E0B'
                     : '#EF4444',
-                display: 'inline-block',
-                boxShadow:
-                  connectionStatus === 'online'
-                    ? '0 0 6px #10B981'
-                    : connectionStatus === 'reconnecting'
-                    ? '0 0 6px #F59E0B'
-                    : '0 0 8px #EF4444'
+                boxShadow: connectionStatus === 'online' ? '0 0 8px #10B981' : 'none'
               }}
             />
-            <span>
-              {connectionStatus === 'online'
-                ? 'ONLINE'
-                : connectionStatus === 'reconnecting'
-                ? 'RECONNECTING'
-                : 'OFFLINE'}
-            </span>
+            <span>{connectionStatus === 'online' ? 'ONLINE' : 'RECONNECTING'}</span>
           </div>
 
-          {/* SOUND ENABLE / TOGGLE CONTROL */}
+          {/* Sound toggle */}
           <button
             id="kds-sound-toggle-btn"
             type="button"
             onClick={handleToggleSound}
-            title={
-              soundPreference === 'muted'
-                ? 'Sound is muted for this kitchen. Tap to enable siren alerts.'
-                : isAudioReady
-                ? 'Kitchen siren sound active. Tap to mute or test.'
-                : 'Audio requires gesture in new browser session. Tap to enable sound.'
-            }
             style={{
               height: '36px',
-              padding: '0 10px',
-              borderRadius: '10px',
-              border: soundPreference === 'muted'
-                ? '1px solid #475569'
-                : isAudioReady
-                ? '1px solid #10B981'
-                : '1px solid #F59E0B',
-              background: soundPreference === 'muted'
-                ? 'rgba(71, 85, 105, 0.2)'
-                : isAudioReady
-                ? 'rgba(16, 185, 129, 0.15)'
-                : 'rgba(245, 158, 11, 0.15)',
-              color: soundPreference === 'muted'
-                ? '#94A3B8'
-                : isAudioReady
-                ? '#34D399'
-                : '#FCD34D',
+              padding: '0 12px',
+              borderRadius: '8px',
+              border: soundPreference === 'muted' ? '1px solid #334155' : '1px solid rgba(16, 185, 129, 0.3)',
+              background: soundPreference === 'muted' ? '#1E293B' : 'rgba(16, 185, 129, 0.12)',
+              color: soundPreference === 'muted' ? '#94A3B8' : '#34D399',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            title={soundPreference === 'muted' ? 'Sound is muted. Tap to enable alerts.' : 'Sound alert is active. Tap to mute or test.'}
+          >
+            {soundPreference === 'muted' ? <VolumeX size={14} /> : <Volume2 size={14} />}
+            <span>{soundPreference === 'muted' ? 'Sound Muted' : 'Sound ON'}</span>
+          </button>
+
+          {/* Prep Totals */}
+          <button
+            type="button"
+            onClick={() => setShowPrepSummary(!showPrepSummary)}
+            style={{
+              height: '36px',
+              padding: '0 12px',
+              borderRadius: '8px',
+              border: '1px solid #334155',
+              background: showPrepSummary ? 'rgba(56, 189, 248, 0.12)' : '#1E293B',
+              color: showPrepSummary ? '#38BDF8' : '#94A3B8',
               fontSize: '0.74rem',
               fontWeight: 800,
               cursor: 'pointer',
@@ -1508,46 +1562,28 @@ export default function StandaloneKdsPage({ slug = '' }) {
               gap: '6px'
             }}
           >
-            {soundPreference === 'muted' ? (
-              <>
-                <VolumeX size={14} />
-                <span>Muted</span>
-              </>
-            ) : isAudioReady ? (
-              <>
-                <Volume2 size={14} />
-                <span>Sound ON</span>
-              </>
-            ) : (
-              <>
-                <Volume2 size={14} />
-                <span>Enable Sound</span>
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowPrepSummary(!showPrepSummary)}
-            style={{
-              height: '36px', padding: '0 10px', borderRadius: '10px', border: '1px solid #334155',
-              background: showPrepSummary ? 'rgba(56, 189, 248, 0.15)' : '#1E293B',
-              color: showPrepSummary ? '#38BDF8' : '#94A3B8', fontSize: '0.74rem', fontWeight: 800,
-              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
-            }}
-          >
             <Layers size={14} />
             <span>{showPrepSummary ? 'Hide Totals' : 'Dish Totals'}</span>
           </button>
 
+          {/* Recall Drawer Button */}
           {recentlyCompleted.length > 0 && (
             <button
               type="button"
               onClick={() => setShowCompletedDrawer(!showCompletedDrawer)}
               style={{
-                height: '36px', padding: '0 10px', borderRadius: '10px', border: '1px solid #334155',
-                background: '#1E293B', color: '#F1F5F9', fontSize: '0.74rem', fontWeight: 800,
-                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
+                height: '36px',
+                padding: '0 12px',
+                borderRadius: '8px',
+                border: '1px solid #334155',
+                background: '#1E293B',
+                color: '#F1F5F9',
+                fontSize: '0.74rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
               <RotateCcw size={13} color="#F59E0B" />
@@ -1555,28 +1591,65 @@ export default function StandaloneKdsPage({ slug = '' }) {
             </button>
           )}
 
-          <div style={{ background: '#0F172A', color: '#38BDF8', padding: '6px 12px', borderRadius: '10px', fontWeight: 900, fontSize: '0.84rem', border: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Clock size={14} />
+          {/* Live Clock */}
+          <div style={{
+            height: '36px',
+            background: '#131D31',
+            color: '#F1F5F9',
+            padding: '0 12px',
+            borderRadius: '8px',
+            fontWeight: 800,
+            fontSize: '0.80rem',
+            border: '1px solid #334155',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontVariantNumeric: 'tabular-nums'
+          }}>
+            <Clock size={14} color="#38BDF8" />
             <span>{currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
           </div>
 
+          {/* Fullscreen Button */}
           <button
             onClick={toggleFullscreen}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
             style={{
-              height: '36px', background: '#2563EB', border: 'none', color: '#F8FAFC', padding: '0 12px', borderRadius: '10px',
-              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem'
+              height: '36px',
+              background: '#1E293B',
+              border: '1px solid #334155',
+              color: '#E2E8F0',
+              padding: '0 12px',
+              borderRadius: '8px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.74rem'
             }}
           >
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             <span>{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
           </button>
 
+          {/* Lock Button */}
           <button
             onClick={handleLockScreen}
-            title="Lock Kitchen Display Screen"
+            title="Lock Kitchen Display Screen with PIN"
             style={{
-              height: '36px', background: '#450A0A', border: '1px solid #991B1B', color: '#FCA5A5', padding: '0 12px', borderRadius: '10px',
-              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem'
+              height: '36px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#FCA5A5',
+              padding: '0 12px',
+              borderRadius: '8px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.74rem'
             }}
           >
             <Lock size={14} />
@@ -1680,14 +1753,166 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
       {/* TICKETS GRID */}
       {orders.length === 0 ? (
-        <div style={{ padding: '80px 20px', textAlign: 'center', background: '#0B1120', borderRadius: '20px', border: '2px dashed #1E293B', maxWidth: '600px', margin: '40px auto' }}>
-          <Flame size={56} color="#475569" style={{ marginBottom: '16px' }} />
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#94A3B8', margin: '0 0 8px 0' }}>
-            Kitchen is Clear! Zero Active Orders (रसोई खाली है)
+        <div style={{
+          maxWidth: '580px',
+          margin: '60px auto 40px auto',
+          background: 'linear-gradient(180deg, #131E35 0%, #0F172A 100%)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '24px',
+          padding: '52px 32px',
+          textAlign: 'center',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1) inset'
+        }}>
+          {/* Glowing Kitchen Cloche Icon */}
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(16, 185, 129, 0.06) 70%)',
+            border: '2px solid rgba(16, 185, 129, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 22px auto',
+            boxShadow: '0 0 28px rgba(16, 185, 129, 0.25)'
+          }}>
+            <UtensilsCrossed size={38} color="#10B981" />
+          </div>
+
+          <h2 style={{
+            fontSize: '1.5rem',
+            fontWeight: 900,
+            color: '#F8FAFC',
+            margin: '0 0 6px 0',
+            letterSpacing: '-0.02em'
+          }}>
+            All Orders Prepared!
           </h2>
-          <p style={{ fontSize: '0.88rem', color: '#64748B', margin: 0 }}>
-            Naye table ya counter orders aate hi yahan live tickets show honge aur bell alert bajega.
+
+          <div style={{
+            fontSize: '0.92rem',
+            fontWeight: 800,
+            color: '#34D399',
+            marginBottom: '14px'
+          }}>
+            रसोई खाली है • Kitchen Queue Clear
+          </div>
+
+          <p style={{
+            fontSize: '0.88rem',
+            color: '#94A3B8',
+            lineHeight: 1.6,
+            maxWidth: '440px',
+            margin: '0 auto 24px auto'
+          }}>
+            Waiting for new dining or counter orders. Incoming tickets from QR codes will automatically appear here with a kitchen bell alert.
           </p>
+
+          {/* System status pills */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            flexWrap: 'wrap',
+            marginBottom: '26px'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: '#34D399',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontSize: '0.72rem',
+              fontWeight: 800
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
+              Live Sync (2s)
+            </div>
+
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(56, 189, 248, 0.1)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              color: '#38BDF8',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontSize: '0.72rem',
+              fontWeight: 800
+            }}>
+              <Volume2 size={13} />
+              {soundPreference === 'muted' ? 'Audio Muted' : 'Sound Alert Active'}
+            </div>
+
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(148, 163, 184, 0.1)',
+              border: '1px solid rgba(148, 163, 184, 0.25)',
+              color: '#CBD5E1',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontSize: '0.72rem',
+              fontWeight: 800
+            }}>
+              ⚡ Station Online
+            </div>
+          </div>
+
+          {/* Quick interactive test buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => {
+                try { playKdsChime(); } catch(e) {}
+              }}
+              style={{
+                padding: '9px 16px',
+                borderRadius: '10px',
+                border: '1px solid #334155',
+                background: '#1E293B',
+                color: '#F8FAFC',
+                fontSize: '0.80rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <BellRing size={14} color="#F59E0B" />
+              <span>Test Bell Sound</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => fetchOrders()}
+              style={{
+                padding: '9px 16px',
+                borderRadius: '10px',
+                border: '1px solid #334155',
+                background: '#1E293B',
+                color: '#F8FAFC',
+                fontSize: '0.80rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <RefreshCw size={13} color="#38BDF8" />
+              <span>Refresh Queue</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="touchqr-kds-grid">
@@ -1708,10 +1933,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
                 key={order.id}
                 className={`kds-card ${isRush ? 'kds-card-rush-glow' : ''}`}
                 style={{
-                  background: '#0E1626',
+                  background: '#131E35',
                   borderRadius: '16px',
-                  border: isCritical ? '2px solid #EF4444' : isRush ? '2px solid #F59E0B' : '1.5px solid #1E293B',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                  border: isCritical ? '2px solid #EF4444' : isRush ? '2px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.08)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
