@@ -2897,7 +2897,7 @@ router.get('/orders', authenticateToken, requireActiveSubscription, async (req, 
       const now = new Date();
       const istDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
       const midnightISO = new Date(`${istDateStr}T00:00:00+05:30`).toISOString();
-      sql += " AND (status != 'completed' OR created_at >= $2)";
+      sql += " AND ((status != 'completed' AND (is_settled = 0 OR is_settled IS NULL)) OR created_at >= $2)";
       params.push(midnightISO);
       sql += " ORDER BY id DESC LIMIT 500";
     } else {

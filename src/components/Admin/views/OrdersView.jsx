@@ -62,6 +62,8 @@ export default function OrdersView({
   token = null,
   onNavigateToSetup = null
 }) {
+  currencySymbol = (currencySymbol && String(currencySymbol).trim().toLowerCase() !== 'none') ? currencySymbol : '₹';
+
   // Authoritative KDS entitlement (strictly respects plan capability logic, prevents stale local override from bypassing plan lock)
   const isKdsEntitled = capabilities && capabilities.kds_enabled !== undefined
     ? Boolean(capabilities.kds_enabled)
