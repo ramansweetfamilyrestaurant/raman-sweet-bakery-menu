@@ -1439,7 +1439,9 @@ export default function HomeView({
               }}>
                 <span>📲</span>
                 <span>{analyticsData?.today_scans ?? 0} {isHotel ? 'Room Scans Today' : isCinema ? 'Seat Scans Today' : 'Scans Today'}</span>
-                <span style={{ color: '#94A3B8', fontWeight: 500 }}>({analyticsData?.total_scans ?? restaurantInfo?.scan_count ?? 0} lifetime)</span>
+                {Number(analyticsData?.weekly_scans || 0) > 0 && (
+                  <span style={{ color: '#9333EA', fontWeight: 600 }}>• {analyticsData.weekly_scans} this week</span>
+                )}
               </div>
             </div>
 

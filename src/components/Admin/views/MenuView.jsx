@@ -1020,17 +1020,17 @@ export default function MenuView({
             </div>
             <div>
               <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
-                {Number(analyticsData?.total_scans ?? restaurantInfo?.scan_count ?? 0)}
+                {Number(analyticsData?.today_scans ?? 0)}
               </div>
               <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, marginTop: '2px' }}>
-                Total QR Scans
+                Scans Today
               </div>
             </div>
           </div>
 
           <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '0.70rem', color: Number(analyticsData?.today_scans || 0) > 0 ? '#16A34A' : '#D97706', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-              • {analyticsData?.today_scans !== undefined ? `${analyticsData.today_scans} Today` : 'Realtime'}
+            <span style={{ fontSize: '0.70rem', color: Number(analyticsData?.weekly_scans || 0) > 0 ? '#16A34A' : '#64748B', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+              • {analyticsData?.weekly_scans !== undefined ? `${analyticsData.weekly_scans} This Week` : 'Realtime'}
             </span>
             <span style={{ fontSize: '0.62rem', color: '#94A3B8', display: 'block' }}>
               {analyticsData?.peak_scan_hour ? `Peak: ${analyticsData.peak_scan_hour.split(' ')[0]} ${analyticsData.peak_scan_hour.split(' ')[1]}` : 'Live Activity'}

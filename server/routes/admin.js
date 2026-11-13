@@ -3512,6 +3512,9 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       if (str.includes(' ') && !str.includes('T')) {
         str = str.replace(' ', 'T');
       }
+      if (!str.endsWith('Z') && !str.includes('+') && !str.slice(10).includes('-')) {
+        str = str + 'Z';
+      }
       const d = new Date(str);
       return isNaN(d.getTime()) ? null : d;
     };
@@ -4239,6 +4242,9 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
       if (str.includes(' ') && !str.includes('T')) {
         str = str.replace(' ', 'T');
       }
+      if (!str.endsWith('Z') && !str.includes('+') && !str.slice(10).includes('-')) {
+        str = str + 'Z';
+      }
       const d = new Date(str);
       return isNaN(d.getTime()) ? null : d;
     };
@@ -4570,6 +4576,9 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       let str = String(dateVal).trim();
       if (str.includes(' ') && !str.includes('T')) {
         str = str.replace(' ', 'T');
+      }
+      if (!str.endsWith('Z') && !str.includes('+') && !str.slice(10).includes('-')) {
+        str = str + 'Z';
       }
       const d = new Date(str);
       return isNaN(d.getTime()) ? null : d;

@@ -783,11 +783,6 @@ router.get('/menu-bundle', async (req, res) => {
       menuBundleCache.set(cleanSlug, { payload, timestamp: Date.now() });
     }
 
-    if (shouldIncrementScan && resto.id) {
-      query('UPDATE restaurants SET scan_count = COALESCE(scan_count, 0) + 1 WHERE id = $1', [resto.id]).catch(() => {});
-      query('INSERT INTO qr_scan_events (restaurant_id, space_type, table_number) VALUES ($1, $2, $3)', [resto.id, spaceType, tableNumber]).catch(() => {});
-    }
-
     res.json(payload);
   } catch (err) {
     console.error('Error fetching menu bundle:', err);
