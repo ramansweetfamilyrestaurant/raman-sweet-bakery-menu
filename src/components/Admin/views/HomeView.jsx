@@ -557,7 +557,7 @@ export default function HomeView({
               Today's Sales
             </div>
             <div style={{ fontSize: '1.42rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', marginTop: '1px' }}>
-              {currencySymbol}{Math.round(todayRevenue).toLocaleString('en-IN')}
+              {(currencySymbol && String(currencySymbol).trim().toLowerCase() !== 'none') ? currencySymbol : '₹'}{Math.round(todayRevenue).toLocaleString('en-IN')}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
               {salesGrowthVsYesterday !== null ? (
@@ -690,7 +690,7 @@ export default function HomeView({
           </div>
         </div>
 
-        {/* KPI 4: Average Order Value */}
+        {/* KPI 4: Today's QR Scans */}
         <div style={{
           background: '#FFFFFF',
           borderRadius: '16px',
@@ -713,22 +713,22 @@ export default function HomeView({
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <TrendingUp size={18} />
+            <QrCode size={20} strokeWidth={2.4} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
-              Average Order Value
+              Today's QR Scans
             </div>
             <div style={{ fontSize: '1.42rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', marginTop: '1px' }}>
-              {currencySymbol}{Math.round(aov).toLocaleString('en-IN')}
+              {Number(analyticsData?.today_scans ?? 0)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
               <span style={{ fontSize: '0.70rem', fontWeight: 700, color: '#0284C7' }}>
-                {totalOrdersCount} total orders
+                {Number(analyticsData?.weekly_scans || 0) > 0 ? `${analyticsData.weekly_scans} this week` : 'Live Menu Traffic'}
               </span>
             </div>
             <span style={{ fontSize: '0.66rem', color: '#94A3B8', display: 'block', marginTop: '1px' }}>
-              Lifetime AOV
+              {analyticsData?.peak_scan_hour ? `Peak: ${analyticsData.peak_scan_hour.split(' ')[0]} ${analyticsData.peak_scan_hour.split(' ')[1]}` : 'Table & Counter Scans'}
             </span>
           </div>
         </div>
