@@ -903,10 +903,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
       }}>
         <Flame size={48} color="#38BDF8" style={{ marginBottom: '16px' }} />
         <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#F8FAFC', margin: '0 0 8px 0' }}>
-          🍳 Connecting to Kitchen Display System...
+          🍳 Loading Kitchen Orders...
         </h2>
         <span style={{ fontSize: '0.84rem', color: '#64748B' }}>
-          Verifying restaurant authorization & security permissions
+          Connecting to live restaurant queue
         </span>
       </div>
     );
@@ -1311,7 +1311,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
           }}
         >
           <Volume2 size={20} />
-          <span>TAP HERE TO UNLOCK KITCHEN EMERGENCY ALARM SOUND & FULL LOUD SIREN</span>
+          <span>🔔 Tap anywhere to enable sound alerts for new orders (साउंड अलर्ट चालू करने के लिए टैप करें)</span>
         </div>
       )}
 
@@ -1379,10 +1379,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                 }}
               >
-                {restaurantName} — {terminology.kdsTitle || 'KDS'}
+                {restaurantName} — Kitchen Display (रसोई KOT)
               </h1>
               <span style={{ fontSize: '0.66rem', fontWeight: 900, background: '#10B981', color: '#022C22', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
-                {terminology.serviceStation?.toUpperCase() || 'LIVE CHEF SCREEN'}
+                LIVE KITCHEN
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '0.74rem', color: '#94A3B8', flexWrap: 'wrap' }}>
@@ -1594,7 +1594,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', color: '#94A3B8', fontSize: '0.70rem', fontWeight: 800, textTransform: 'uppercase' }}>
             <Flame size={14} color="#F59E0B" />
-            <span>Active Drop Totals:</span>
+            <span>Items to Cook (पकाने के लिए कुल):</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
@@ -1683,10 +1683,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
         <div style={{ padding: '80px 20px', textAlign: 'center', background: '#0B1120', borderRadius: '20px', border: '2px dashed #1E293B', maxWidth: '600px', margin: '40px auto' }}>
           <Flame size={56} color="#475569" style={{ marginBottom: '16px' }} />
           <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#94A3B8', margin: '0 0 8px 0' }}>
-            Kitchen is Clear! Zero Active Orders
+            Kitchen is Clear! Zero Active Orders (रसोई खाली है)
           </h2>
           <p style={{ fontSize: '0.88rem', color: '#64748B', margin: 0 }}>
-            New QR table orders will sound a loud siren alarm and display big tickets here automatically.
+            Naye table ya counter orders aate hi yahan live tickets show honge aur bell alert bajega.
           </p>
         </div>
       ) : (
@@ -1958,18 +1958,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <BellRing size={17} />
-                    <span>🔔 READY • {
-                      order.order_type === 'counter' || order.table_number === 'Counter'
-                        ? 'CALL TO COUNTER'
-                        : terminology.isHotel
-                        ? 'NOTIFY ROOM SERVICE'
-                        : terminology.isCinema
-                        ? 'NOTIFY USHER'
-                        : terminology.isQsr || terminology.isBakery
-                        ? 'CALL TO COUNTER'
-                        : 'NOTIFY STAFF'
-                    }</span>
+                    <CheckCircle size={18} />
+                    <span>✓ Ready to Serve (तैयार है)</span>
                   </button>
                 </div>
               </div>

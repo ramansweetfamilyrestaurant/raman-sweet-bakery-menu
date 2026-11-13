@@ -306,7 +306,7 @@ export default function KdsDisplayView({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h2 style={{ fontSize: '1.24rem', fontWeight: 900, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>
-                {terminology.kdsTitle || 'Kitchen Display System (KDS)'}
+                {restaurantInfo?.name ? `${restaurantInfo.name} — ` : ''}Kitchen Display (रसोई KOT)
               </h2>
               <span style={{
                 fontSize: '0.66rem',
@@ -318,17 +318,17 @@ export default function KdsDisplayView({
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase'
               }}>
-                {terminology.serviceStation?.toUpperCase() || 'LIVE PREP SCREEN'}
+                LIVE KITCHEN
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '0.74rem', color: '#94A3B8' }}>
-              <span>Active Tickets: <strong style={{ color: '#38BDF8' }}>{activeKitchenOrders.length}</strong></span>
+              <span>Active Orders: <strong style={{ color: '#38BDF8' }}>{activeKitchenOrders.length}</strong></span>
               <span>•</span>
-              <span>Total {terminology.itemPlural || 'Dishes'}: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
+              <span>Total Items: <strong style={{ color: '#FCD34D' }}>{totalDishesCount}</strong></span>
               {rushCount > 0 && (
                 <>
                   <span>•</span>
-                  <span style={{ color: '#F87171', fontWeight: 800 }}>⚠️ {rushCount} RUSH (&gt;15m)</span>
+                  <span style={{ color: '#F87171', fontWeight: 800 }}>⚠️ {rushCount} Delayed (&gt;15m)</span>
                 </>
               )}
             </div>
@@ -337,6 +337,35 @@ export default function KdsDisplayView({
 
         {/* Right: Quick Controls (Sound, Filters, Clock, Fullscreen) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Pop-out Standalone Tablet Display */}
+          {(restaurantInfo?.slug || (typeof window !== 'undefined' && localStorage.getItem('touchqr_admin_slug'))) && (
+            <button
+              type="button"
+              onClick={() => {
+                const s = restaurantInfo?.slug || localStorage.getItem('touchqr_admin_slug') || '';
+                window.open(s ? `/${s}/kitchen` : '/kitchen', '_blank');
+              }}
+              style={{
+                height: '36px',
+                padding: '0 10px',
+                borderRadius: '10px',
+                border: '1px solid #334155',
+                background: '#1E293B',
+                color: '#F8FAFC',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title="Open full screen kitchen display on a separate tablet or Android TV"
+            >
+              <ExternalLink size={13} color="#38BDF8" />
+              <span>Tablet Screen</span>
+            </button>
+          )}
+
           {/* Sound Toggle */}
           <button
             type="button"
@@ -469,7 +498,7 @@ export default function KdsDisplayView({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', color: '#94A3B8', fontSize: '0.70rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             <Flame size={14} color="#F59E0B" />
-            <span>Active Drop Totals:</span>
+            <span>Items to Cook (पकाने के लिए कुल):</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
@@ -586,31 +615,32 @@ export default function KdsDisplayView({
          ========================================================================= */}
       {displayedOrders.length === 0 ? (
         <div style={{
-          padding: '80px 20px',
+          padding: '70px 20px',
           textAlign: 'center',
           background: '#0B1120',
           borderRadius: '18px',
-          border: '2px dashed #1E293B',
-          margin: '20px 0'
+          border: '1.5px dashed #334155',
+          margin: '10px 0'
         }}>
           <div style={{
-            width: '56px',
-            height: '56px',
+            width: '60px',
+            height: '60px',
             borderRadius: '50%',
-            background: 'rgba(16, 185, 129, 0.12)',
+            background: 'rgba(16, 185, 129, 0.15)',
             color: '#10B981',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 12px auto'
+            margin: '0 auto 14px auto',
+            border: '2px solid rgba(16, 185, 129, 0.3)'
           }}>
-            <CheckCircle2 size={28} />
+            <CheckCircle2 size={30} />
           </div>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#F1F5F9', margin: '0 0 6px 0' }}>
-            Kitchen Queue is Clear!
+            All Orders Prepared! (रसोई खाली है)
           </h3>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', maxWidth: '420px', margin: '0 auto' }}>
-            Zero pending food preparation tickets. Incoming QR orders will automatically alert and drop tickets here.
+          <p style={{ fontSize: '0.84rem', color: '#94A3B8', maxWidth: '440px', margin: '0 auto', lineHeight: 1.5 }}>
+            Koi pending food preparation ticket nahi hai. Customer ke naye QR order aate hi yahan live tickets show honge aur bell alert bajega.
           </p>
         </div>
       ) : (
@@ -894,18 +924,8 @@ export default function KdsDisplayView({
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <BellRing size={17} />
-                    <span>🔔 READY • {
-                      order.order_type === 'counter' || order.table_number === 'Counter'
-                        ? 'CALL TO COUNTER'
-                        : terminology.isHotel
-                        ? 'NOTIFY ROOM SERVICE'
-                        : terminology.isCinema
-                        ? 'NOTIFY USHER'
-                        : terminology.isQsr || terminology.isBakery
-                        ? 'CALL TO COUNTER'
-                        : 'NOTIFY STAFF'
-                    }</span>
+                    <CheckCircle2 size={18} />
+                    <span>✓ Ready to Serve (तैयार है)</span>
                   </button>
                 </div>
               </div>

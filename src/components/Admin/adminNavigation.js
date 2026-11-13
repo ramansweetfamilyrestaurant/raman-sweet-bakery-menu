@@ -38,7 +38,7 @@ export const ADMIN_NAVIGATION_ITEMS = Object.freeze([
     showInMobileDrawer: true,
     showInBottomNav: true,
     hasBadge: true,
-    matchTabs: ['orders', 'floor-map', 'service-requests']
+    matchTabs: ['orders', 'floor-map', 'service-requests', 'kds']
   },
   {
     id: 'dishes',

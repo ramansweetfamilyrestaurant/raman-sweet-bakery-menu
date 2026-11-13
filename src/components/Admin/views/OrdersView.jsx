@@ -689,35 +689,27 @@ export default function OrdersView({
             <span>Service Calls {safeServiceRequests.length > 0 ? `(${safeServiceRequests.length})` : ''}</span>
           </button>
 
-          {/* KDS Subtab */}
+          {/* Kitchen Display Subtab */}
           <button
-            onClick={() => {
-              if (isKdsEntitled) {
-                const currentSlug = restaurantInfo?.slug || settingsForm?.slug || '';
-                window.open(currentSlug ? `/${currentSlug}/kitchen` : '/kitchen', '_blank');
-              } else if (onNavigateToSetup) {
-                onNavigateToSetup('subscription');
-              } else {
-                setActiveSubTab && setActiveSubTab('kds');
-              }
-            }}
+            onClick={() => setActiveSubTab && setActiveSubTab('kds')}
             style={{
               padding: '8px 14px',
               borderRadius: '10px',
-              border: '1px solid #E2E8F0',
-              background: '#FFFFFF',
-              color: '#0F172A',
+              border: '1px solid',
+              borderColor: activeSubTab === 'kds' ? '#261B14' : '#E2E8F0',
+              background: activeSubTab === 'kds' ? '#261B14' : '#FFFFFF',
+              color: activeSubTab === 'kds' ? '#FFFFFF' : '#334155',
               fontSize: '0.78rem',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              transition: 'all 0.15s ease'
             }}
           >
-            <ChefHat size={15} color="#D97706" />
-            <span>{isCinema ? 'Concession Display' : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? 'Dispatch Display' : 'Kitchen Display'}</span>
-            <ArrowUpRight size={13} color="#94A3B8" />
+            <ChefHat size={15} color={activeSubTab === 'kds' ? '#F59E0B' : '#D97706'} />
+            <span>Kitchen Display</span>
           </button>
         </div>
       </div>
@@ -2321,89 +2313,13 @@ export default function OrdersView({
       )}
 
       {activeSubTab === 'kds' && isKdsEntitled && (
-        <div style={{ padding: '32px 16px', maxWidth: '800px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #E2E8F0',
-            padding: '32px 24px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            textAlign: 'center',
-            gap: '16px'
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '14px',
-              background: '#FEF3C7',
-              color: '#D97706',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <ChefHat size={30} />
-            </div>
-            <div>
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
-                {isCinema ? "Concession Display (KDS) Active" : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? "Dispatch Display (KDS) Active" : "Kitchen Display System (KDS) Active"}
-              </h3>
-              <p style={{ margin: 0, fontSize: '0.86rem', color: '#64748B', maxWidth: '520px', lineHeight: 1.5 }}>
-                {isCinema
-                  ? "Your dedicated concession terminal runs as a standalone, distraction-free screen designed for dispatch tablets with real-time ticket sync, ticking timers, and PIN protection."
-                  : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz)
-                    ? "Your dedicated packaging terminal runs as a standalone, distraction-free screen designed for dispatch tablets with real-time ticket sync, ticking timers, and PIN protection."
-                    : "Your dedicated chef terminal runs as a standalone, distraction-free screen designed for kitchen tablets with real-time ticket sync, ticking timers, and PIN protection."}
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', marginTop: '6px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const currentSlug = restaurantInfo?.slug || settingsForm?.slug || '';
-                  window.open(currentSlug ? `/${currentSlug}/kitchen` : '/kitchen', '_blank');
-                }}
-                style={{
-                  background: '#261B14',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '10px 20px',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 2px 8px rgba(38, 27, 20, 0.2)'
-                }}
-              >
-                <ChefHat size={16} color="#F59E0B" />
-                <span>Open Kitchen Display</span>
-                <ArrowUpRight size={14} />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveSubTab && setActiveSubTab('orders')}
-                style={{
-                  background: '#F1F5F9',
-                  color: '#334155',
-                  border: '1px solid #CBD5E1',
-                  borderRadius: '10px',
-                  padding: '10px 18px',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                Back to Live Orders
-              </button>
-            </div>
-          </div>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
+          <KdsDisplayView
+            orders={orders}
+            onUpdateStatus={onUpdateStatus}
+            restaurantInfo={restaurantInfo || settingsForm}
+            kdsEnabled={isKdsEntitled}
+          />
         </div>
       )}
 
