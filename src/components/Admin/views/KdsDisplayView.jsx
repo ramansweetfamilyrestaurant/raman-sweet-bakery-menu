@@ -129,48 +129,43 @@ export default function KdsDisplayView({
   };
 
   const formatKdsLocation = (raw, spaceType, fallbackPrefix = null) => {
-    if (!raw) return 'TAKEAWAY';
+    if (!raw) return 'Takeaway';
     const str = String(raw).trim();
 
     // Cinema Pattern
     const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
                    str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
     if (cMatch) {
-      return `🎬 SCREEN ${cMatch[1]} • ROW ${cMatch[2].toUpperCase()} • SEAT ${cMatch[3]}`;
+      return `Screen ${cMatch[1]} • Row ${cMatch[2].toUpperCase()} • Seat ${cMatch[3]}`;
     }
     if (str.toLowerCase().startsWith('screen')) {
-      return `🎬 ${str.toUpperCase()}`;
+      return str;
     }
 
     const cleanSpaceType = spaceType ? String(spaceType).trim().toLowerCase() : null;
-    if (cleanSpaceType === 'cinema_seat' || cleanSpaceType === 'cinema') return `🎬 SEAT ${str.toUpperCase()}`;
-    if (cleanSpaceType === 'room') return `🏨 ROOM ${str.replace(/^room\s*#?/i, '')}`;
-    if (cleanSpaceType === 'cabin') return `🛋️ CABIN ${str.replace(/^cabin\s*#?/i, '')}`;
-    if (cleanSpaceType === 'vip') return `👑 VIP ${str.replace(/^vip\s*#?/i, '')}`;
-    if (cleanSpaceType === 'counter') {
+    if (cleanSpaceType === 'cinema_seat' || cleanSpaceType === 'cinema') return `Seat ${str.replace(/^seat\s*#?/i, '').toUpperCase()}`;
+    if (cleanSpaceType === 'room' || /^room\s*#?\d+/i.test(str)) return `Room ${str.replace(/^room\s*#?/i, '').trim()}`;
+    if (cleanSpaceType === 'cabin' || /^cabin\s*#?\d+/i.test(str)) return `Cabin ${str.replace(/^cabin\s*#?/i, '').trim()}`;
+    if (cleanSpaceType === 'vip' || /^vip\s*#?\d+/i.test(str)) return `VIP ${str.replace(/^vip\s*#?/i, '').trim()}`;
+    if (cleanSpaceType === 'counter' || /^counter/i.test(str)) {
       const num = str.replace(/^counter\s*#?/i, '').trim();
-      return num ? `🧾 COUNTER ${num}` : `🧾 COUNTER`;
+      return num ? `Counter ${num}` : `Counter`;
     }
-    if (cleanSpaceType === 'table') return `TABLE ${str.replace(/^table\s*#?/i, '')}`;
-
-    if (/^counter/i.test(str)) {
-      const num = str.replace(/^counter\s*#?/i, '').trim();
-      return num ? `🧾 COUNTER ${num}` : `🧾 COUNTER`;
+    if (cleanSpaceType === 'table' || /^table/i.test(str)) {
+      const numOnly = str.replace(/^table\s*#?/i, '').trim();
+      return `Table ${numOnly}`;
     }
-    if (/^room\s*#?\d+/i.test(str)) return `🏨 ROOM ${str.replace(/^room\s*#?/i, '')}`;
-    if (/^cabin\s*#?\d+/i.test(str)) return `🛋️ CABIN ${str.replace(/^cabin\s*#?/i, '')}`;
-    if (/^vip\s*#?\d+/i.test(str)) return `👑 VIP ${str.replace(/^vip\s*#?/i, '')}`;
-    if (/^(takeaway|parcel)/i.test(str)) return `📦 ${str.toUpperCase()}`;
+    if (/^(takeaway|parcel)/i.test(str)) return 'Takeaway';
 
     if (fallbackPrefix) {
       const cleanFallback = String(fallbackPrefix).trim().toLowerCase();
-      if (cleanFallback === 'counter') return `🧾 COUNTER ${str}`;
-      if (cleanFallback === 'room') return `🏨 ROOM ${str}`;
-      if (cleanFallback === 'cabin') return `🛋️ CABIN ${str}`;
-      if (cleanFallback === 'vip') return `👑 VIP ${str}`;
+      if (cleanFallback === 'counter') return `Counter ${str}`;
+      if (cleanFallback === 'room') return `Room ${str}`;
+      if (cleanFallback === 'cabin') return `Cabin ${str}`;
+      if (cleanFallback === 'vip') return `VIP ${str}`;
     }
 
-    return `TABLE ${str}`;
+    return `Table ${str}`;
   };
 
   // Aggregated Chef Prep Matrix (Consolidated quantities across all active tickets)
