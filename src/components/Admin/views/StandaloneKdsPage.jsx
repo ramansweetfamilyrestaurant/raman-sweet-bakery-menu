@@ -1295,51 +1295,25 @@ export default function StandaloneKdsPage({ slug = '' }) {
           id="kds-audio-unlock-banner"
           onClick={unlockAudio}
           style={{
-            background: 'linear-gradient(90deg, #1E293B 0%, #0F172A 100%)',
-            border: '1.5px solid #10B981',
-            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)',
-            color: '#F8FAFC',
-            padding: '12px 20px',
-            borderRadius: '14px',
-            marginBottom: '14px',
+            background: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
+            color: '#34D399',
+            padding: '10px 16px',
+            borderRadius: '10px',
+            marginBottom: '12px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '12px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
+            fontSize: '0.8125rem',
+            fontWeight: 500,
+            cursor: 'pointer'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Volume2 size={18} color="#10B981" />
-            </div>
-            <div>
-              <span style={{ fontWeight: 800, fontSize: '0.90rem', color: '#F8FAFC', display: 'block' }}>
-                Tap to enable Kitchen Sound Alerts (साउंड अलर्ट चालू करें)
-              </span>
-              <span style={{ fontSize: '0.74rem', color: '#94A3B8' }}>
-                Browser requires one tap to allow audio chimes when new tickets arrive
-              </span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Volume2 size={16} />
+            <span>Click to enable kitchen order sound alerts.</span>
           </div>
-          <button
-            type="button"
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-              color: '#FFFFFF',
-              fontWeight: 800,
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            Enable Sound
-          </button>
+          <span style={{ textDecoration: 'underline', fontSize: '0.75rem', fontWeight: 600 }}>Enable</span>
         </div>
       )}
 
@@ -1347,31 +1321,25 @@ export default function StandaloneKdsPage({ slug = '' }) {
       {recallNotice && (
         <div
           style={{
-            background: recallNotice.type === 'success'
-              ? 'linear-gradient(90deg, #064E3B 0%, #065F46 100%)'
-              : 'linear-gradient(90deg, #7F1D1D 0%, #991B1B 100%)',
-            border: recallNotice.type === 'success' ? '1px solid #10B981' : '1px solid #EF4444',
-            color: recallNotice.type === 'success' ? '#D1FAE5' : '#FEE2E2',
-            padding: '12px 18px',
-            borderRadius: '12px',
-            marginBottom: '14px',
+            background: recallNotice.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            border: recallNotice.type === 'success' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)',
+            color: recallNotice.type === 'success' ? '#6EE7B7' : '#FCA5A5',
+            padding: '10px 16px',
+            borderRadius: '10px',
+            marginBottom: '12px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            fontSize: '0.86rem',
-            fontWeight: 800,
-            boxShadow: '0 4px 14px rgba(0,0,0,0.4)'
+            fontSize: '0.8125rem',
+            fontWeight: 500
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>{recallNotice.type === 'success' ? '✅' : '⚠️'}</span>
-            <span>{recallNotice.message}</span>
-          </div>
+          <span>{recallNotice.message}</span>
           <button
             onClick={() => setRecallNotice(null)}
             style={{
-              background: 'none', border: 'none', color: '#FFFFFF',
-              fontSize: '1rem', cursor: 'pointer', opacity: 0.8
+              background: 'none', border: 'none', color: '#94A3B8',
+              fontSize: '1rem', cursor: 'pointer', padding: 0
             }}
           >
             ✕
@@ -1388,134 +1356,66 @@ export default function StandaloneKdsPage({ slug = '' }) {
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '12px',
-          background: 'rgba(19, 27, 46, 0.95)',
-          backdropFilter: 'blur(12px)',
-          padding: '12px 18px',
-          borderRadius: '16px',
+          background: '#0F172A',
+          padding: '10px 16px',
+          borderRadius: '12px',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           marginBottom: '14px',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
           boxSizing: 'border-box'
         }}
       >
-        {/* Left: Brand Icon + Title + Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.4rem',
-            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
-            flexShrink: 0
-          }}>
-            {terminology.spaceIcon || '🍳'}
-          </div>
+        {/* Left: Store Name & Section */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <h1
-                className="kds-header-title"
-                style={{
-                  fontSize: '1.18rem',
-                  fontWeight: 800,
-                  color: '#F8FAFC',
-                  margin: 0,
-                  letterSpacing: '-0.02em',
-                  textTransform: 'capitalize',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {restaurantName}
-              </h1>
-              <span style={{
-                fontSize: '0.68rem',
-                fontWeight: 800,
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                color: '#34D399',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                letterSpacing: '0.04em'
-              }}>
-                Kitchen KOT
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', fontSize: '0.74rem', color: '#94A3B8', flexWrap: 'wrap' }}>
-              <span>Queue: <strong style={{ color: orders.length > 0 ? '#38BDF8' : '#34D399' }}>{orders.length} Active Tickets</strong></span>
+            <h1
+              className="kds-header-title"
+              style={{
+                fontSize: '0.9375rem',
+                fontWeight: 600,
+                color: '#F8FAFC',
+                margin: 0,
+                letterSpacing: '-0.01em',
+                textTransform: 'capitalize',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {restaurantName}
+            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', fontSize: '0.75rem', color: '#64748B' }}>
+              <span>Kitchen</span>
               <span>•</span>
-              <span>Dishes to Cook: <strong style={{ color: '#FCD34D' }}>{totalDishesCount} qty</strong></span>
-              {rushCount > 0 && (
-                <>
-                  <span>•</span>
-                  <span style={{ color: '#F87171', fontWeight: 800 }}>⚠️ {rushCount} Rush (&gt;15m)</span>
-                </>
-              )}
+              <span style={{ color: orders.length > 0 ? '#38BDF8' : '#94A3B8' }}>{orders.length} active {orders.length === 1 ? 'order' : 'orders'}</span>
             </div>
           </div>
         </div>
 
-        {/* Right Controls: Unified pill row */}
+        {/* Right Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Live connection indicator */}
+          {/* Connection indicator */}
           <div
             id="kds-connection-indicator"
-            title={
-              connectionStatus === 'online'
-                ? `Connected & Live • Last sync ${lastSyncTime ? lastSyncTime.toLocaleTimeString() : 'just now'}`
-                : connectionStatus === 'reconnecting'
-                ? 'Network issue detected. Retrying connection...'
-                : 'Offline. Retrying automatically...'
-            }
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '0 10px',
-              height: '36px',
-              borderRadius: '8px',
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              letterSpacing: '0.04em',
-              background:
-                connectionStatus === 'online'
-                  ? 'rgba(16, 185, 129, 0.12)'
-                  : connectionStatus === 'reconnecting'
-                  ? 'rgba(245, 158, 11, 0.12)'
-                  : 'rgba(239, 68, 68, 0.15)',
-              border:
-                connectionStatus === 'online'
-                  ? '1px solid rgba(16, 185, 129, 0.3)'
-                  : connectionStatus === 'reconnecting'
-                  ? '1px solid rgba(245, 158, 11, 0.3)'
-                  : '1px solid #EF4444',
-              color:
-                connectionStatus === 'online'
-                  ? '#34D399'
-                  : connectionStatus === 'reconnecting'
-                  ? '#FCD34D'
-                  : '#FCA5A5'
+              padding: '0 8px',
+              height: '32px',
+              fontSize: '0.75rem',
+              fontWeight: 500,
+              color: connectionStatus === 'online' ? '#94A3B8' : '#FCA5A5'
             }}
           >
             <span
               style={{
-                width: '7px',
-                height: '7px',
+                width: '6px',
+                height: '6px',
                 borderRadius: '50%',
-                background:
-                  connectionStatus === 'online'
-                    ? '#10B981'
-                    : connectionStatus === 'reconnecting'
-                    ? '#F59E0B'
-                    : '#EF4444',
-                boxShadow: connectionStatus === 'online' ? '0 0 8px #10B981' : 'none'
+                background: connectionStatus === 'online' ? '#10B981' : '#EF4444'
               }}
             />
-            <span>{connectionStatus === 'online' ? 'ONLINE' : 'RECONNECTING'}</span>
+            <span>{connectionStatus === 'online' ? 'Online' : 'Offline'}</span>
           </div>
 
           {/* Sound toggle */}
@@ -1524,167 +1424,168 @@ export default function StandaloneKdsPage({ slug = '' }) {
             type="button"
             onClick={handleToggleSound}
             style={{
-              height: '36px',
-              padding: '0 12px',
-              borderRadius: '8px',
-              border: soundPreference === 'muted' ? '1px solid #334155' : '1px solid rgba(16, 185, 129, 0.3)',
-              background: soundPreference === 'muted' ? '#1E293B' : 'rgba(16, 185, 129, 0.12)',
-              color: soundPreference === 'muted' ? '#94A3B8' : '#34D399',
-              fontSize: '0.74rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-            title={soundPreference === 'muted' ? 'Sound is muted. Tap to enable alerts.' : 'Sound alert is active. Tap to mute or test.'}
-          >
-            {soundPreference === 'muted' ? <VolumeX size={14} /> : <Volume2 size={14} />}
-            <span>{soundPreference === 'muted' ? 'Sound Muted' : 'Sound ON'}</span>
-          </button>
-
-          {/* Prep Totals */}
-          <button
-            type="button"
-            onClick={() => setShowPrepSummary(!showPrepSummary)}
-            style={{
-              height: '36px',
-              padding: '0 12px',
+              height: '32px',
+              padding: '0 10px',
               borderRadius: '8px',
               border: '1px solid #334155',
-              background: showPrepSummary ? 'rgba(56, 189, 248, 0.12)' : '#1E293B',
-              color: showPrepSummary ? '#38BDF8' : '#94A3B8',
-              fontSize: '0.74rem',
-              fontWeight: 800,
+              background: '#1E293B',
+              color: soundPreference === 'muted' ? '#64748B' : '#E2E8F0',
+              fontSize: '0.75rem',
+              fontWeight: 500,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px'
             }}
           >
-            <Layers size={14} />
-            <span>{showPrepSummary ? 'Hide Totals' : 'Dish Totals'}</span>
+            {soundPreference === 'muted' ? <VolumeX size={13} /> : <Volume2 size={13} />}
+            <span>{soundPreference === 'muted' ? 'Muted' : 'Sound on'}</span>
           </button>
 
-          {/* Recall Drawer Button */}
-          {recentlyCompleted.length > 0 && (
+          {/* Summary toggle */}
+          {aggregatedPrepItems.length > 0 && (
             <button
               type="button"
-              onClick={() => setShowCompletedDrawer(!showCompletedDrawer)}
+              onClick={() => setShowPrepSummary(!showPrepSummary)}
               style={{
-                height: '36px',
-                padding: '0 12px',
+                height: '32px',
+                padding: '0 10px',
                 borderRadius: '8px',
                 border: '1px solid #334155',
-                background: '#1E293B',
-                color: '#F1F5F9',
-                fontSize: '0.74rem',
-                fontWeight: 800,
+                background: showPrepSummary ? 'rgba(56, 189, 248, 0.1)' : '#1E293B',
+                color: showPrepSummary ? '#38BDF8' : '#94A3B8',
+                fontSize: '0.75rem',
+                fontWeight: 500,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
               }}
             >
-              <RotateCcw size={13} color="#F59E0B" />
+              <Layers size={13} />
+              <span>Summary</span>
+            </button>
+          )}
+
+          {/* Recall */}
+          {recentlyCompleted.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowCompletedDrawer(!showCompletedDrawer)}
+              style={{
+                height: '32px',
+                padding: '0 10px',
+                borderRadius: '8px',
+                border: '1px solid #334155',
+                background: '#1E293B',
+                color: '#E2E8F0',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <RotateCcw size={12} color="#F59E0B" />
               <span>Recall ({recentlyCompleted.length})</span>
             </button>
           )}
 
-          {/* Live Clock */}
+          {/* Clock */}
           <div style={{
-            height: '36px',
-            background: '#131D31',
-            color: '#F1F5F9',
-            padding: '0 12px',
+            height: '32px',
+            background: '#1E293B',
+            color: '#94A3B8',
+            padding: '0 10px',
             borderRadius: '8px',
-            fontWeight: 800,
-            fontSize: '0.80rem',
             border: '1px solid #334155',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '6px',
+            fontSize: '0.75rem',
+            fontWeight: 500,
             fontVariantNumeric: 'tabular-nums'
           }}>
-            <Clock size={14} color="#38BDF8" />
-            <span>{currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
+            {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
           </div>
 
-          {/* Fullscreen Button */}
+          {/* Fullscreen */}
           <button
             onClick={toggleFullscreen}
-            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             style={{
-              height: '36px',
+              height: '32px',
+              width: '32px',
               background: '#1E293B',
               border: '1px solid #334155',
-              color: '#E2E8F0',
-              padding: '0 12px',
+              color: '#94A3B8',
               borderRadius: '8px',
-              fontWeight: 800,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.74rem'
+              justifyContent: 'center'
             }}
           >
-            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            <span>{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
+            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
 
-          {/* Lock Button */}
+          {/* Lock */}
           <button
             onClick={handleLockScreen}
-            title="Lock Kitchen Display Screen with PIN"
+            title="Lock Display"
             style={{
-              height: '36px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#FCA5A5',
-              padding: '0 12px',
+              height: '32px',
+              width: '32px',
+              background: '#1E293B',
+              border: '1px solid #334155',
+              color: '#94A3B8',
               borderRadius: '8px',
-              fontWeight: 800,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.74rem'
+              justifyContent: 'center'
             }}
           >
-            <Lock size={14} />
-            <span>Lock</span>
+            <Lock size={13} />
           </button>
         </div>
       </div>
 
-      {/* CHEF PREP SUMMARY MATRIX */}
+      {/* SUMMARY BAR */}
       {showPrepSummary && aggregatedPrepItems.length > 0 && (
         <div style={{
-          background: '#0D1526', border: '1px solid #1E293B', borderRadius: '14px',
-          padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px',
-          overflowX: 'auto', scrollbarWidth: 'none', marginBottom: '14px'
+          background: '#0F172A',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          borderRadius: '10px',
+          padding: '8px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          marginBottom: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', color: '#94A3B8', fontSize: '0.70rem', fontWeight: 800, textTransform: 'uppercase' }}>
-            <Flame size={14} color="#F59E0B" />
-            <span>Items to Cook (पकाने के लिए कुल):</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
+          <span style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+            Summary:
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
             {aggregatedPrepItems.map(item => (
               <div
                 key={item.name}
                 style={{
-                  background: '#1E293B', border: '1px solid #334155', borderRadius: '8px',
-                  padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap'
+                  background: '#1E293B',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  fontSize: '0.75rem'
                 }}
               >
-                <span style={{ background: '#2563EB', color: '#FFFFFF', padding: '1px 6px', borderRadius: '5px', fontSize: '0.74rem', fontWeight: 900 }}>
-                  {item.count}×
-                </span>
-                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#F1F5F9' }}>
-                  {item.name}
-                </span>
+                <span style={{ color: '#38BDF8', fontWeight: 600 }}>{item.count}×</span>
+                <span style={{ color: '#E2E8F0', fontWeight: 400 }}>{item.name}</span>
               </div>
             ))}
           </div>
@@ -1694,55 +1595,48 @@ export default function StandaloneKdsPage({ slug = '' }) {
       {/* RECALL DRAWER */}
       {showCompletedDrawer && recentlyCompleted.length > 0 && (
         <div style={{
-          background: '#0F172A', border: '1px solid #334155', borderRadius: '14px',
-          padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px'
+          background: '#0F172A', border: '1px solid #334155', borderRadius: '10px',
+          padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 900, color: '#34D399', textTransform: 'uppercase' }}>
-              ✓ Recently Prepared Orders (Click Undo to restore to active queue)
+            <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#94A3B8' }}>
+              Recently Completed
             </span>
             <button
               type="button"
               onClick={() => setShowCompletedDrawer(false)}
-              style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 700 }}
+              style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.75rem', cursor: 'pointer' }}
             >
-              Close ✕
+              Close
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
             {recentlyCompleted.map(ord => {
               const isRecallingThis = recallingOrderIds.includes(ord.id);
               return (
                 <div
                   key={ord.id}
                   style={{
-                    background: '#1E293B', border: '1px solid #334155', borderRadius: '10px',
-                    padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap'
+                    background: '#1E293B', border: '1px solid #334155', borderRadius: '8px',
+                    padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
                   }}
                 >
-                  <div>
-                    <strong style={{ fontSize: '0.80rem', color: '#F8FAFC' }}>
-                      {formatKdsLocation(ord.table_number, ord.space_type)}
-                    </strong>
-                    <span style={{ fontSize: '0.68rem', color: '#94A3B8', display: 'block' }}>
-                      Order #{ord.id}
-                    </span>
-                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#F8FAFC', fontWeight: 500 }}>
+                    {formatKdsLocation(ord.table_number, ord.space_type)}
+                  </span>
                   <button
                     type="button"
                     disabled={isRecallingThis}
                     onClick={() => handleRecallOrder(ord)}
                     style={{
-                      padding: '4px 8px', borderRadius: '6px', border: '1px solid #F59E0B',
-                      background: isRecallingThis ? '#334155' : 'rgba(245, 158, 11, 0.15)',
-                      color: isRecallingThis ? '#94A3B8' : '#FDE68A', fontSize: '0.70rem',
-                      fontWeight: 800, cursor: isRecallingThis ? 'not-allowed' : 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '4px'
+                      padding: '3px 8px', borderRadius: '5px', border: '1px solid #334155',
+                      background: 'transparent',
+                      color: '#FCD34D', fontSize: '0.70rem',
+                      fontWeight: 500, cursor: isRecallingThis ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    <RotateCcw size={11} />
-                    <span>{isRecallingThis ? 'Recalling...' : 'Undo'}</span>
+                    {isRecallingThis ? 'Restoring...' : 'Undo'}
                   </button>
                 </div>
               );
@@ -1754,165 +1648,47 @@ export default function StandaloneKdsPage({ slug = '' }) {
       {/* TICKETS GRID */}
       {orders.length === 0 ? (
         <div style={{
-          maxWidth: '580px',
-          margin: '60px auto 40px auto',
-          background: 'linear-gradient(180deg, #131E35 0%, #0F172A 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '24px',
-          padding: '52px 32px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '60vh',
           textAlign: 'center',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1) inset'
+          padding: '40px 20px'
         }}>
-          {/* Glowing Kitchen Cloche Icon */}
           <div style={{
-            width: '80px',
-            height: '80px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(16, 185, 129, 0.06) 70%)',
-            border: '2px solid rgba(16, 185, 129, 0.4)',
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 22px auto',
-            boxShadow: '0 0 28px rgba(16, 185, 129, 0.25)'
+            marginBottom: '16px',
+            color: '#64748B'
           }}>
-            <UtensilsCrossed size={38} color="#10B981" />
+            <UtensilsCrossed size={22} strokeWidth={1.5} />
           </div>
-
           <h2 style={{
-            fontSize: '1.5rem',
-            fontWeight: 900,
-            color: '#F8FAFC',
+            fontSize: '1rem',
+            fontWeight: 600,
+            color: '#F1F5F9',
             margin: '0 0 6px 0',
-            letterSpacing: '-0.02em'
+            letterSpacing: '-0.01em'
           }}>
-            All Orders Prepared!
+            No active orders
           </h2>
-
-          <div style={{
-            fontSize: '0.92rem',
-            fontWeight: 800,
-            color: '#34D399',
-            marginBottom: '14px'
-          }}>
-            रसोई खाली है • Kitchen Queue Clear
-          </div>
-
           <p style={{
-            fontSize: '0.88rem',
-            color: '#94A3B8',
-            lineHeight: 1.6,
-            maxWidth: '440px',
-            margin: '0 auto 24px auto'
+            fontSize: '0.875rem',
+            fontWeight: 400,
+            color: '#64748B',
+            margin: 0,
+            maxWidth: '320px',
+            lineHeight: 1.5
           }}>
-            Waiting for new dining or counter orders. Incoming tickets from QR codes will automatically appear here with a kitchen bell alert.
+            New orders will appear here automatically.
           </p>
-
-          {/* System status pills */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            flexWrap: 'wrap',
-            marginBottom: '26px'
-          }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              color: '#34D399',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '0.72rem',
-              fontWeight: 800
-            }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
-              Live Sync (2s)
-            </div>
-
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'rgba(56, 189, 248, 0.1)',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              color: '#38BDF8',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '0.72rem',
-              fontWeight: 800
-            }}>
-              <Volume2 size={13} />
-              {soundPreference === 'muted' ? 'Audio Muted' : 'Sound Alert Active'}
-            </div>
-
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'rgba(148, 163, 184, 0.1)',
-              border: '1px solid rgba(148, 163, 184, 0.25)',
-              color: '#CBD5E1',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '0.72rem',
-              fontWeight: 800
-            }}>
-              ⚡ Station Online
-            </div>
-          </div>
-
-          {/* Quick interactive test buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => {
-                try { playKdsChime(); } catch(e) {}
-              }}
-              style={{
-                padding: '9px 16px',
-                borderRadius: '10px',
-                border: '1px solid #334155',
-                background: '#1E293B',
-                color: '#F8FAFC',
-                fontSize: '0.80rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <BellRing size={14} color="#F59E0B" />
-              <span>Test Bell Sound</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => fetchOrders()}
-              style={{
-                padding: '9px 16px',
-                borderRadius: '10px',
-                border: '1px solid #334155',
-                background: '#1E293B',
-                color: '#F8FAFC',
-                fontSize: '0.80rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <RefreshCw size={13} color="#38BDF8" />
-              <span>Refresh Queue</span>
-            </button>
-          </div>
         </div>
       ) : (
         <div className="touchqr-kds-grid">
@@ -1948,9 +1724,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
               >
                 {/* TICKET TOP HEADER */}
                 <div style={{
-                  background: isCritical ? 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)' : (isRush ? 'linear-gradient(135deg, #78350F 0%, #92400E 100%)' : 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)'),
-                  padding: '12px 14px',
-                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  background: isCritical ? 'rgba(239, 68, 68, 0.15)' : (isRush ? 'rgba(245, 158, 11, 0.15)' : '#1E293B'),
+                  padding: '10px 14px',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -1959,78 +1735,66 @@ export default function StandaloneKdsPage({ slug = '' }) {
                 }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <div style={{ fontSize: '1.22rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em', lineHeight: 1.1, wordBreak: 'break-word' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
                         {formatKdsLocation(order.table_number, order.space_type, restaurantMeta?.business_type === 'hotel_resort' ? 'room' : restaurantMeta?.table_prefix)}
                       </div>
                       {isMultiRound && (
                         <span style={{
-                          background: '#8B5CF6',
-                          color: '#FFFFFF',
-                          padding: '2px 8px',
-                          borderRadius: '6px',
-                          fontSize: '0.72rem',
-                          fontWeight: 900,
-                          letterSpacing: '0.04em',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          boxShadow: '0 1px 4px rgba(139, 92, 246, 0.4)'
+                          background: 'rgba(139, 92, 246, 0.2)',
+                          border: '1px solid rgba(139, 92, 246, 0.4)',
+                          color: '#C4B5FD',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 500
                         }}>
-                          ROUND {roundNum}
+                          Round {roundNum}
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: isRush ? '#FEF08A' : '#94A3B8', fontWeight: 700, wordBreak: 'break-word' }}>
-                      Ticket #{order.id} • {order.customer_name || 'Dine-in'}
+                    <span style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 400 }}>
+                      #{order.id} • {order.customer_name || 'Dine-in'}
                     </span>
                   </div>
 
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{
-                      background: isCritical ? '#DC2626' : (isRush ? '#D97706' : '#2563EB'),
-                      color: '#FFFFFF',
-                      padding: '4px 9px',
-                      borderRadius: '8px',
-                      fontSize: '0.78rem',
-                      fontWeight: 900,
+                      background: isCritical ? 'rgba(239, 68, 68, 0.2)' : (isRush ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.06)'),
+                      border: isCritical ? '1px solid rgba(239, 68, 68, 0.4)' : (isRush ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)'),
+                      color: isCritical ? '#FCA5A5' : (isRush ? '#FCD34D' : '#E2E8F0'),
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px'
                     }}>
-                      <Clock size={13} />
-                      <span>{elapsedMins}m ago</span>
+                      <Clock size={12} />
+                      <span>{elapsedMins}m</span>
                     </div>
-                    {isRush && (
-                      <span style={{ fontSize: '0.65rem', color: isCritical ? '#FCA5A5' : '#FDE68A', fontWeight: 900, display: 'block', marginTop: '2px' }}>
-                        {isCritical ? '🚨 CRITICAL DELAY' : '⚠️ RUSH TICKET'}
-                      </span>
-                    )}
                   </div>
                 </div>
 
                 {/* TICKET BODY */}
-                <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                <div style={{ padding: '10px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
                   {hasNotes && (
                     <div style={{
-                      background: 'rgba(245, 158, 11, 0.15)',
-                      border: '1.5px solid #F59E0B',
-                      borderRadius: '10px',
-                      padding: '8px 10px',
-                      color: '#FDE68A',
-                      fontSize: '0.78rem',
-                      fontWeight: 800,
+                      background: 'rgba(245, 158, 11, 0.08)',
+                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                      borderRadius: '8px',
+                      padding: '6px 10px',
+                      color: '#FCD34D',
+                      fontSize: '0.75rem',
+                      fontWeight: 400,
                       display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '8px',
+                      alignItems: 'center',
+                      gap: '6px',
                       minWidth: 0,
                       boxSizing: 'border-box'
                     }}>
-                      <AlertTriangle size={16} color="#F59E0B" style={{ flexShrink: 0, marginTop: '2px' }} />
-                      <div style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', minWidth: 0 }}>
-                        <span style={{ fontSize: '0.66rem', color: '#FBBF24', textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>
-                          CHEF INSTRUCTION:
-                        </span>
-                        <span style={{ color: '#FFFFFF', fontWeight: 800 }}>"{notesText}"</span>
-                      </div>
+                      <span style={{ color: '#F59E0B', fontWeight: 600 }}>Note:</span>
+                      <span style={{ color: '#F1F5F9' }}>"{notesText}"</span>
                     </div>
                   )}
 
@@ -2050,21 +1814,21 @@ export default function StandaloneKdsPage({ slug = '' }) {
                           onClick={() => toggleItemCheck(order.id, idx)}
                           className="kds-item-row"
                           style={{
-                            background: isChecked ? 'rgba(30, 41, 59, 0.5)' : '#131D31',
-                            border: '1px solid #1E293B',
-                            borderRadius: '10px',
-                            padding: '8px 10px',
+                            background: isChecked ? 'rgba(30, 41, 59, 0.4)' : '#1E293B',
+                            border: '1px solid rgba(255, 255, 255, 0.04)',
+                            borderRadius: '8px',
+                            padding: '6px 10px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             cursor: 'pointer',
-                            opacity: isChecked ? 0.6 : 1,
+                            opacity: isChecked ? 0.5 : 1,
                             userSelect: 'none',
                             minWidth: 0,
                             boxSizing: 'border-box'
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                             <div style={{
                               color: isChecked ? '#10B981' : '#64748B',
                               display: 'flex',
@@ -2072,59 +1836,46 @@ export default function StandaloneKdsPage({ slug = '' }) {
                               justifyContent: 'center',
                               flexShrink: 0
                             }}>
-                              {isChecked ? <CheckSquare size={18} /> : <Square size={18} />}
+                              {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
                             </div>
 
                             <span style={{
-                              background: isChecked ? '#334155' : '#2563EB',
-                              color: '#FFFFFF',
-                              minWidth: '28px',
-                              height: '28px',
-                              padding: '0 6px',
-                              borderRadius: '7px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '0.90rem',
-                              fontWeight: 900,
+                              color: isChecked ? '#64748B' : '#38BDF8',
+                              fontSize: '0.8125rem',
+                              fontWeight: 600,
                               flexShrink: 0
                             }}>
-                              ×{item.quantity || item.qty || 1}
+                              {item.quantity || item.qty || 1}×
                             </span>
 
                             <div style={{ minWidth: 0, flex: 1 }}>
-                              <strong style={{
-                                fontSize: '0.92rem',
-                                color: isChecked ? '#94A3B8' : '#F8FAFC',
-                                fontWeight: 800,
+                              <span style={{
+                                fontSize: '0.8125rem',
+                                color: isChecked ? '#64748B' : '#F1F5F9',
+                                fontWeight: 500,
                                 textDecoration: isChecked ? 'line-through' : 'none',
                                 display: 'block',
-                                lineHeight: 1.2,
+                                lineHeight: 1.3,
                                 wordBreak: 'break-word',
                                 overflowWrap: 'anywhere'
                               }}>
                                 {item.name || item.dish_name}
-                              </strong>
+                              </span>
 
                               {(item.includes || item.comboIncludes) && (
                                 <div style={{
-                                  fontSize: '0.74rem',
-                                  fontWeight: 700,
+                                  fontSize: '0.6875rem',
                                   color: '#34D399',
-                                  background: 'rgba(5, 150, 105, 0.18)',
-                                  border: '1px solid rgba(52, 211, 153, 0.35)',
-                                  borderRadius: '6px',
-                                  padding: '2px 6px',
-                                  marginTop: '3px',
-                                  lineHeight: 1.3
+                                  marginTop: '2px',
+                                  lineHeight: 1.2
                                 }}>
-                                  🍱 <strong>Included:</strong> {item.includes || item.comboIncludes}
+                                  Includes: {item.includes || item.comboIncludes}
                                 </div>
                               )}
 
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
                                 {item.portion && (
-                                  <span style={{ fontSize: '0.68rem', color: '#93C5FD', fontWeight: 700, background: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>
+                                  <span style={{ fontSize: '0.6875rem', color: '#94A3B8', background: 'rgba(255, 255, 255, 0.05)', padding: '1px 5px', borderRadius: '4px' }}>
                                     {item.portion}
                                   </span>
                                 )}
@@ -2133,17 +1884,14 @@ export default function StandaloneKdsPage({ slug = '' }) {
                                   <span
                                     key={mIdx}
                                     style={{
-                                      fontSize: '0.66rem',
-                                      color: '#FEF08A',
-                                      background: 'rgba(202, 138, 4, 0.2)',
-                                      border: '1px solid #CA8A04',
+                                      fontSize: '0.6875rem',
+                                      color: '#FCD34D',
+                                      background: 'rgba(245, 158, 11, 0.1)',
                                       padding: '1px 5px',
-                                      borderRadius: '4px',
-                                      fontWeight: 800,
-                                      wordBreak: 'break-word'
+                                      borderRadius: '4px'
                                     }}
                                   >
-                                    ➕ {m.name}
+                                    + {m.name}
                                   </span>
                                 ))}
                               </div>
@@ -2156,7 +1904,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                 </div>
 
                 {/* TICKET FOOTER: READY BUTTON */}
-                <div style={{ padding: '12px 14px', background: '#0A101C', borderTop: '1px solid #1E293B', boxSizing: 'border-box' }}>
+                <div style={{ padding: '10px 14px', background: '#0F172A', borderTop: '1px solid rgba(255, 255, 255, 0.06)', boxSizing: 'border-box' }}>
                   <button
                     onClick={() => {
                       setRecentlyCompleted(prev => [{ ...order, completedAt: new Date() }, ...prev.slice(0, 9)]);
@@ -2165,26 +1913,23 @@ export default function StandaloneKdsPage({ slug = '' }) {
                     className="kds-action-btn"
                     style={{
                       width: '100%',
-                      minHeight: '44px',
-                      borderRadius: '10px',
+                      height: '38px',
+                      borderRadius: '8px',
                       border: 'none',
-                      background: allItemsChecked 
-                        ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
-                        : 'linear-gradient(135deg, #10B981 0%, #047857 100%)',
+                      background: '#10B981',
                       color: '#FFFFFF',
-                      fontSize: '0.86rem',
-                      fontWeight: 900,
+                      fontSize: '0.8125rem',
+                      fontWeight: 500,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                      gap: '6px',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <CheckCircle size={18} />
-                    <span>✓ Ready to Serve (तैयार है)</span>
+                    <CheckCircle size={16} />
+                    <span>Mark Ready</span>
                   </button>
                 </div>
               </div>
