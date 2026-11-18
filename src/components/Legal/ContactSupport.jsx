@@ -10,7 +10,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
     document.title = 'TouchQR - Contact & Support';
     window.scrollTo(0, 0);
 
-    fetch('/api/keys')
+    fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
         if (data && data.support_whatsapp) {

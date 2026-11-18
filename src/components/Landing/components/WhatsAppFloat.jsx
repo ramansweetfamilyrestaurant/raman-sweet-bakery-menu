@@ -5,7 +5,7 @@ export default function WhatsAppFloat() {
   const [supportPhone, setSupportPhone] = useState('919876543210');
 
   useEffect(() => {
-    fetch('/api/keys')
+    fetch('/api/settings')
       .then(res => res.json())
       .then(data => {
         if (data && data.support_whatsapp) {

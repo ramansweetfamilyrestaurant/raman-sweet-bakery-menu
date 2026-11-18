@@ -29,40 +29,11 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
     setSuccessMsg('');
 
     if (mode === 'forgot') {
-      if (!username.trim() || !newPassword) {
-        setError('Please fill in all fields');
-        return;
-      }
-      if (newPassword.length < 4) {
-        setError('New password must be at least 4 characters long');
-        return;
-      }
-      if (newPassword !== confirmPassword) {
-        setError('Passwords do not match');
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const res = await fetch('/api/admin/forgot-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone_or_username: username,
-            new_password: newPassword
-          })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || data.error || 'Failed to reset password');
-
-        setSuccessMsg(data.message || 'Password reset successfully!');
-        setMode('login');
-        setPassword('');
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+      const targetIdentifier = username.trim() || 'My Registered Account';
+      const cleanWa = (supportPhone || '919876543210').replace(/[^0-9]/g, '');
+      const msg = `Hello Super Admin, I am requesting password recovery assistance for business: ${restaurantName || targetSlug || 'My Business'}. Registered Username / Mobile: ${targetIdentifier}`;
+      window.open(`https://wa.me/${cleanWa}?text=${encodeURIComponent(msg)}`, '_blank');
+      setSuccessMsg('Opening WhatsApp support for password recovery...');
       return;
     }
 
@@ -366,6 +337,32 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                 </button>
               </div>
             </div>
+          )}
+
+          {mode === 'forgot' && (
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                height: '48px',
+                marginTop: '4px',
+                borderRadius: '12px',
+                background: '#059669',
+                color: '#FFFFFF',
+                border: 'none',
+                fontSize: '0.92rem',
+                fontWeight: 900,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 16px rgba(5, 150, 105, 0.25)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>💬 Open WhatsApp to Recover Password</span>
+            </button>
           )}
 
           {mode === 'login' && (

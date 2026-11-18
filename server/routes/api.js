@@ -151,19 +151,38 @@ function isSensitiveSettingKey(key) {
   });
 }
 
-// GET public system settings (e.g. Master Super Admin WhatsApp Support Number)
+// Strict Public Settings Whitelist (P0 Zero-Leakage Policy)
+// ONLY safe public display properties are ever returned to unauthenticated clients
+const PUBLIC_SETTINGS_WHITELIST = new Set([
+  'support_whatsapp',
+  'default_trial_days',
+  'platform_logo_url'
+]);
+
+// GET public system settings (e.g. Master Super Admin WhatsApp Support Number, Trial Days)
 router.get('/settings', async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM system_settings');
+    const rows = await query("SELECT key, value FROM system_settings WHERE key IN ('support_whatsapp', 'default_trial_days', 'platform_logo_url')");
     const settings = { support_whatsapp: '919876543210' };
     (rows || []).forEach(r => {
-      if (r && r.key && !isSensitiveSettingKey(r.key)) {
+      if (r && r.key && PUBLIC_SETTINGS_WHITELIST.has(r.key) && !isSensitiveSettingKey(r.key)) {
         settings[r.key] = r.value;
       }
     });
     res.json(settings);
   } catch (err) {
     console.error('Fetch public settings error:', err);
+    res.json({ support_whatsapp: '919876543210' });
+  }
+});
+
+// Backward-compatibility alias for legacy clients requesting /api/keys
+router.get('/keys', async (req, res) => {
+  try {
+    const rows = await query("SELECT key, value FROM system_settings WHERE key = 'support_whatsapp'");
+    const supportNum = rows && rows[0]?.value ? rows[0].value : '919876543210';
+    res.json({ support_whatsapp: supportNum });
+  } catch (_) {
     res.json({ support_whatsapp: '919876543210' });
   }
 });
