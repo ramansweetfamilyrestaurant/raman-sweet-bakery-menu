@@ -168,7 +168,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
         {/* Form Body */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label 
+            <label
               htmlFor="admin-username-input"
               style={{
                 display: 'block',
@@ -257,7 +257,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
           ) : (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label 
+                <label
                   htmlFor="admin-password-input"
                   style={{
                     fontSize: '0.76rem',
