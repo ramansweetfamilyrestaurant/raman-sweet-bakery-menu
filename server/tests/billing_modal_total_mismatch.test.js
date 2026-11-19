@@ -203,7 +203,7 @@ async function runTests() {
 
     // 2.1: Verify import of calculateBillDetails
     assert.ok(
-      adminDashboardCode.includes("import { calculateBillDetails } from '../../utils/billingHelper';"),
+      /import\s*\{[^}]*calculateBillDetails[^}]*\}\s*from\s*['"]\.\.\/\.\.\/utils\/billingHelper['"]/.test(adminDashboardCode),
       'AdminDashboard.jsx must import calculateBillDetails from billingHelper'
     );
     record('UI_CODE', 'AdminDashboard.jsx imports calculateBillDetails from billingHelper', true);

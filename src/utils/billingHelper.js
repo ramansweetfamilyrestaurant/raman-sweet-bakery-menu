@@ -198,6 +198,12 @@ export function formatOrderLocation(order = {}, restaurantInfo = {}) {
   if (order.token_display) {
     return `Takeaway • Token #${order.token_display}`;
   }
+  if (order.token_number) {
+    return `Takeaway • Token #${order.token_number}`;
+  }
+  if (order.counter_token) {
+    return `Takeaway • Token #${order.counter_token}`;
+  }
   if (order.order_type === 'takeaway') {
     return 'Takeaway';
   }

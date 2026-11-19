@@ -37,6 +37,11 @@ const suites = [
     requiresDb: false
   },
   {
+    name: 'Final Bill & Thermal Printing E2E Specifications',
+    file: 'server/tests/final_bill_e2e.test.js',
+    requiresDb: false
+  },
+  {
     name: 'Database Isolation Hardening & Guard',
     file: 'server/tests/test_db_isolation.test.js',
     requiresDb: false // Tests isolation guard logic itself
