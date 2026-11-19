@@ -27,6 +27,11 @@ const suites = [
     requiresDb: false
   },
   {
+    name: 'Takeaway & Daily Sequential Token Lifecycle',
+    file: 'server/tests/takeaway_token_lifecycle.test.js',
+    requiresDb: false
+  },
+  {
     name: 'Database Isolation Hardening & Guard',
     file: 'server/tests/test_db_isolation.test.js',
     requiresDb: false // Tests isolation guard logic itself

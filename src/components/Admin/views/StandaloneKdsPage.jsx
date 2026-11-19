@@ -1736,6 +1736,20 @@ export default function StandaloneKdsPage({ slug = '' }) {
                       <div style={{ fontSize: '1rem', fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
                         {formatKdsLocation(order.table_number, order.space_type, restaurantMeta?.business_type === 'hotel_resort' ? 'room' : restaurantMeta?.table_prefix)}
                       </div>
+                      {(order.token_display || order.token_number) && (
+                        <span style={{
+                          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.35) 100%)',
+                          border: '1.5px solid #F59E0B',
+                          color: '#FDE68A',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.82rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.5px'
+                        }}>
+                          TOKEN #{order.token_display || order.token_number}
+                        </span>
+                      )}
                       {isMultiRound && (
                         <span style={{
                           background: 'rgba(139, 92, 246, 0.2)',

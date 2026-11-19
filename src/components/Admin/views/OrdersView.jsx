@@ -2377,7 +2377,7 @@ export default function OrdersView({
                   Order #{selectedOrder.id}
                 </h3>
                 <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                  {new Date(selectedOrder.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} • {formatCleanTableLabel(selectedOrder.table_number, selectedOrder.space_type)}
+                  {new Date(selectedOrder.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} • {formatCleanTableLabel(selectedOrder.table_number, selectedOrder.space_type, selectedOrder.token_display)}
                 </span>
               </div>
               <button

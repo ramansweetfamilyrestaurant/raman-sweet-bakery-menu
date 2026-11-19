@@ -156,7 +156,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           _runtime_cashfree_env: data._runtime_cashfree_env || 'sandbox',
           _runtime_env_source: data._runtime_env_source || 'system_settings',
           _is_secret_configured: data._is_secret_configured,
-          webhook_evidence: data.webhook_evidence || prev.webhook_evidence || { configured: data._is_secret_configured, production_verified: false },
+          webhook_evidence: (typeof data.webhook_evidence === 'object' && data.webhook_evidence !== null) ? data.webhook_evidence : { configured: Boolean(data._is_secret_configured), production_verified: false },
           db_status: data.db_status || prev.db_status || 'connected',
           r2_status: data.r2_status || prev.r2_status || 'active',
           support_whatsapp: data.support_whatsapp || prev.support_whatsapp || '919876543210',

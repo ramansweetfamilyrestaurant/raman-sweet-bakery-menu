@@ -2331,6 +2331,7 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
     const rows = await query('SELECT * FROM system_settings');
     const settings = {};
     (rows || []).forEach(r => {
+      if (['webhook_evidence', '_saved_env', 'db_status', 'r2_status'].includes(r.key)) return;
       if (isSensitiveSettingKey(r.key)) {
         settings[r.key] = (r.value && r.value.trim()) ? '••••••••' : '';
       } else {
@@ -2440,13 +2441,18 @@ router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) 
       'confirm_production_switch',
       '_runtime_cashfree_env',
       '_runtime_env_source',
-      '_is_secret_configured'
+      '_is_secret_configured',
+      '_saved_env',
+      'webhook_evidence',
+      'db_status',
+      'r2_status'
     ]);
 
     let updatedPaymentKeys = false;
 
     for (let [k, v] of Object.entries(payload)) {
       if (ignoredKeys.has(k)) continue;
+      if (typeof v === 'object' && v !== null) continue; // Never serialize complex objects to [object Object]
 
       if (v !== undefined && v !== null) {
         let strVal = String(v).trim().replace(/^['"]+|['"]+$/g, '');

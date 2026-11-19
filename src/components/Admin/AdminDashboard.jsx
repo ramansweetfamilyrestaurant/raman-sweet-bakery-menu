@@ -4055,7 +4055,10 @@ export default function AdminDashboard({
 
             <div style={{ background: 'var(--adm-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--adm-border)' }}>
               <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--adm-primary)' }}>
-                {((String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter')) ? '⚡ Billing Counter' : `Table ${acceptRoutingModal.table_number || 'Takeaway'}`} • Order {acceptRoutingModal.id}
+                {acceptRoutingModal.token_display
+                  ? `⚡ Takeaway • Token #${acceptRoutingModal.token_display}`
+                  : (((String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter')) ? '⚡ Billing Counter' : `Table ${acceptRoutingModal.table_number || 'Takeaway'}`)
+                } • Order {acceptRoutingModal.id}
               </div>
               <div style={{ fontSize: '0.78rem', color: 'var(--adm-muted)', marginTop: '2px' }}>
                 Customer: {acceptRoutingModal.customer_name || 'Guest'} • Total: {settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}{acceptRoutingModal.total_amount}
