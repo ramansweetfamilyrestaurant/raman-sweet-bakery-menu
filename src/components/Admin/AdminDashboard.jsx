@@ -32,6 +32,34 @@ import OffersView from './views/OffersView';
 import CustomersView from './views/CustomersView';
 import BillingView from './views/BillingView';
 
+const safeParseItems = (rawItems) => {
+  if (!rawItems) return [];
+  if (Array.isArray(rawItems)) return rawItems;
+  if (typeof rawItems === 'string') {
+    try {
+      const parsed = JSON.parse(rawItems);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+};
+
+const safeParseModifiers = (rawModifiers) => {
+  if (!rawModifiers) return [];
+  if (Array.isArray(rawModifiers)) return rawModifiers;
+  if (typeof rawModifiers === 'string') {
+    try {
+      const parsed = JSON.parse(rawModifiers);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export default function AdminDashboard({
   token,
   username,
@@ -101,6 +129,8 @@ export default function AdminDashboard({
   const [kotFilter, setKotFilter] = useState('all');
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(() => getInitialAdminState('info', null));
+  const [exportingReport, setExportingReport] = useState(false);
+  const [exportingAll, setExportingAll] = useState(false);
 
   // Settings State
   const [settingsForm, setSettingsForm] = useState(() => {
@@ -361,6 +391,31 @@ export default function AdminDashboard({
     } catch (e) { }
   };
 
+  const pendingLoopRef = useRef(null);
+  const orderAlarmEnabledRef = useRef(true);
+  const pendingUpdatesRef = useRef(new Map());
+  const activeTenantKeyRef = useRef('');
+  const activeRequestIdRef = useRef(0);
+
+  const stopPendingAlarm = () => {
+    if (pendingLoopRef.current) {
+      clearInterval(pendingLoopRef.current);
+      pendingLoopRef.current = null;
+    }
+    stopKitchenSiren();
+  };
+
+  const playKitchenChime = () => {
+    if (!orderAlarmEnabledRef.current) {
+      return;
+    }
+    try {
+      playKitchenSiren();
+    } catch (e) {
+      console.warn('Loud Kitchen Alarm error:', e);
+    }
+  };
+
   const requestAudioPermission = () => {
     try {
       handleEnableSound();
@@ -403,31 +458,6 @@ export default function AdminDashboard({
     } catch (e) {
       console.warn('Notification error:', e);
       return 'denied';
-    }
-  };
-
-  const pendingLoopRef = useRef(null);
-  const orderAlarmEnabledRef = useRef(true);
-  const pendingUpdatesRef = useRef(new Map());
-  const activeTenantKeyRef = useRef('');
-  const activeRequestIdRef = useRef(0);
-
-  const stopPendingAlarm = () => {
-    if (pendingLoopRef.current) {
-      clearInterval(pendingLoopRef.current);
-      pendingLoopRef.current = null;
-    }
-    stopKitchenSiren();
-  };
-
-  const playKitchenChime = () => {
-    if (!orderAlarmEnabledRef.current) {
-      return;
-    }
-    try {
-      playKitchenSiren();
-    } catch (e) {
-      console.warn('Loud Kitchen Alarm error:', e);
     }
   };
 
@@ -752,7 +782,6 @@ export default function AdminDashboard({
   };
 
   // 📊 Unified 1-Click Professional Sales Report Export (Step 3.16C)
-  const [exportingReport, setExportingReport] = useState(false);
   const handleExportSalesReport = async (period = 'all', year = null, month = null) => {
     if (exportingReport) return;
     setExportingReport(true);
@@ -778,7 +807,6 @@ export default function AdminDashboard({
   };
 
   // 📊 Backward compatibility fallback handlers
-  const [exportingAll, setExportingAll] = useState(false);
   const handleDownloadAllSalesReport = async (period = 'all', year = null, month = null) => {
     return handleExportSalesReport(period, year, month);
   };
@@ -917,34 +945,6 @@ export default function AdminDashboard({
       alert(err.message || 'Failed to update order status');
       loadOrders(); // rollback on failure
     }
-  };
-
-  const safeParseItems = (rawItems) => {
-    if (!rawItems) return [];
-    if (Array.isArray(rawItems)) return rawItems;
-    if (typeof rawItems === 'string') {
-      try {
-        const parsed = JSON.parse(rawItems);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  };
-
-  const safeParseModifiers = (rawModifiers) => {
-    if (!rawModifiers) return [];
-    if (Array.isArray(rawModifiers)) return rawModifiers;
-    if (typeof rawModifiers === 'string') {
-      try {
-        const parsed = JSON.parse(rawModifiers);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    }
-    return [];
   };
 
   // ⚡ RawBT Direct Thermal Printer ESC/POS Generator
@@ -1103,7 +1103,10 @@ export default function AdminDashboard({
         targetDoc.write(htmlContent);
         targetDoc.close();
 
-        setTimeout(() => {
+        let printed = false;
+        const triggerPrint = () => {
+          if (printed) return;
+          printed = true;
           try {
             iframe.contentWindow.focus();
             iframe.contentWindow.print();
@@ -1111,7 +1114,32 @@ export default function AdminDashboard({
           } catch (err) {
             reject(err);
           }
-        }, 250);
+        };
+
+        // Guarantee image decoding (e.g. UPI QR code) completes before opening print spooler
+        try {
+          const images = targetDoc.querySelectorAll('img');
+          if (images && images.length > 0) {
+            let pending = images.length;
+            const onImgDone = () => {
+              pending--;
+              if (pending <= 0) setTimeout(triggerPrint, 100);
+            };
+            images.forEach(img => {
+              if (img.complete) {
+                onImgDone();
+              } else {
+                img.onload = onImgDone;
+                img.onerror = onImgDone;
+              }
+            });
+            setTimeout(triggerPrint, 800);
+          } else {
+            setTimeout(triggerPrint, 250);
+          }
+        } catch (_) {
+          setTimeout(triggerPrint, 300);
+        }
       } catch (err) {
         reject(err);
       }
@@ -1442,14 +1470,6 @@ export default function AdminDashboard({
     `;
   };
 
-  const handleDirectBluetoothPrint = (order, printType = 'kot') => {
-    if (printType === 'kot') {
-      handlePrintKOT(order);
-    } else {
-      setBillOrderModal(order);
-    }
-  };
-
   const handlePrintKOT = async (order) => {
     if (!order || (printingOrderId === order.id && printingType === 'kot')) return;
     setPrintingOrderId(order.id);
@@ -1496,6 +1516,14 @@ export default function AdminDashboard({
       setPrintingOrderId(null);
       setPrintingType(null);
       showPrintToast('error', '⚠ Printer unavailable', order, 'kot');
+    }
+  };
+
+  const handleDirectBluetoothPrint = (order, printType = 'kot') => {
+    if (printType === 'kot') {
+      handlePrintKOT(order);
+    } else {
+      setBillOrderModal(order);
     }
   };
 
@@ -1691,9 +1719,17 @@ export default function AdminDashboard({
     printWindow.document.write(`
       ${htmlContent}
       <script>
-        window.onload = function() {
+        function doPrint() {
+          window.focus();
           window.print();
-        };
+        }
+        if (document.readyState === 'complete') {
+          setTimeout(doPrint, 250);
+        } else {
+          window.addEventListener('load', function() {
+            setTimeout(doPrint, 250);
+          });
+        }
       </script>
     `);
     printWindow.document.close();

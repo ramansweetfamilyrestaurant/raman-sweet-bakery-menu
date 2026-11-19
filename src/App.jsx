@@ -419,6 +419,19 @@ export default function App() {
     return localStorage.getItem('touchqr_impersonated_resto_name') || '';
   });
 
+  // Master Super Admin Tokens
+  const getInitialSuperToken = () => {
+    const t = localStorage.getItem('saas_super_token');
+    return (t && t !== 'undefined' && t !== 'null') ? t : '';
+  };
+  const getInitialSuperUser = () => {
+    const u = localStorage.getItem('saas_super_user');
+    return (u && u !== 'undefined' && u !== 'null') ? u : '';
+  };
+
+  const [superToken, setSuperToken] = useState(getInitialSuperToken());
+  const [superUsername, setSuperUsername] = useState(getInitialSuperUser());
+
   const handleExitImpersonation = () => {
     const restoId = localStorage.getItem('touchqr_impersonated_resto_id');
     const currentSuperToken = superToken || localStorage.getItem('touchqr_super_token');
@@ -506,19 +519,6 @@ export default function App() {
       }
     }
   }, []);
-
-  // Master Super Admin Tokens
-  const getInitialSuperToken = () => {
-    const t = localStorage.getItem('saas_super_token');
-    return (t && t !== 'undefined' && t !== 'null') ? t : '';
-  };
-  const getInitialSuperUser = () => {
-    const u = localStorage.getItem('saas_super_user');
-    return (u && u !== 'undefined' && u !== 'null') ? u : '';
-  };
-
-  const [superToken, setSuperToken] = useState(getInitialSuperToken());
-  const [superUsername, setSuperUsername] = useState(getInitialSuperUser());
 
   // Menu Data State
   const [categories, setCategories] = useState([]);
@@ -670,6 +670,14 @@ export default function App() {
     }
   };
 
+  const [orderTableInput, setOrderTableInput] = useState(initialTableNum || '1');
+  const [customerNameInput, setCustomerNameInput] = useState('');
+  const [customerPhoneInput, setCustomerPhoneInput] = useState('');
+  const [orderTypeChoice, setOrderTypeChoice] = useState(() => (currentSpaceType === 'counter' ? 'takeaway' : 'dine_in'));
+  const [orderSuccessModal, setOrderSuccessModal] = useState(null);
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const isPlacingOrderRef = useRef(false);
+
   const handleSendWhatsAppOrder = () => {
     if (!info || cartItems.length === 0) return;
     const rawPhone = info.whatsapp_number || info.phone || '';
@@ -704,14 +712,6 @@ export default function App() {
     const targetPhone = phone.length === 10 ? `91${phone}` : phone;
     window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
-
-  const [orderTableInput, setOrderTableInput] = useState(initialTableNum || '1');
-  const [customerNameInput, setCustomerNameInput] = useState('');
-  const [customerPhoneInput, setCustomerPhoneInput] = useState('');
-  const [orderTypeChoice, setOrderTypeChoice] = useState(() => (currentSpaceType === 'counter' ? 'takeaway' : 'dine_in'));
-  const [orderSuccessModal, setOrderSuccessModal] = useState(null);
-  const [placingOrder, setPlacingOrder] = useState(false);
-  const isPlacingOrderRef = useRef(false);
 
   useEffect(() => {
     if (currentSpaceType === 'counter') {
@@ -1043,17 +1043,6 @@ export default function App() {
     }
   };
 
-  // Called when customer table presence is verified (via GPS or Staff)
-  const handlePresenceVerified = (verifiedToken, method) => {
-    setPresenceToken(verifiedToken);
-    presenceTokenRef.current = verifiedToken;
-    setPresenceModalOpen(false);
-
-    if (pendingOrderPayloadRef.current) {
-      executePendingOrderRetry(verifiedToken);
-    }
-  };
-
   // Dedicated single-shot retry with verified presence token
   const executePendingOrderRetry = async (verifiedToken) => {
     const payload = pendingOrderPayloadRef.current;
@@ -1105,6 +1094,17 @@ export default function App() {
       setTimeout(() => {
         isPlacingOrderRef.current = false;
       }, 300);
+    }
+  };
+
+  // Called when customer table presence is verified (via GPS or Staff)
+  const handlePresenceVerified = (verifiedToken, method) => {
+    setPresenceToken(verifiedToken);
+    presenceTokenRef.current = verifiedToken;
+    setPresenceModalOpen(false);
+
+    if (pendingOrderPayloadRef.current) {
+      executePendingOrderRetry(verifiedToken);
     }
   };
 
@@ -1502,7 +1502,7 @@ export default function App() {
     };
   }, []);
 
-  const handleAdminLoginSuccess = (token, username, slug, initialRestoInfo = null) => {
+  function handleAdminLoginSuccess(token, username, slug, initialRestoInfo = null) {
     // 1. Immediately clear old tenant data state to prevent cross-tenant UI flash
     setDishes([]);
     setCategories([]);

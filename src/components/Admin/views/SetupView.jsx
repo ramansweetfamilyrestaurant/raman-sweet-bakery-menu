@@ -180,6 +180,47 @@ function EmbeddedLocationMap({ lat, lng, radius, restaurantName, onLocationChang
   );
 }
 
+const ToggleSwitch = ({ checked, onChange, disabled = false }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    onClick={(e) => {
+      e.stopPropagation();
+      if (!disabled) onChange(!checked);
+    }}
+    style={{
+      width: '44px',
+      height: '24px',
+      borderRadius: '12px',
+      background: checked ? '#064E3B' : '#E2E8F0',
+      position: 'relative',
+      border: 'none',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      padding: '2px',
+      display: 'inline-flex',
+      alignItems: 'center',
+      flexShrink: 0,
+      outline: 'none',
+      boxSizing: 'border-box'
+    }}
+  >
+    <span
+      style={{
+        width: '20px',
+        height: '20px',
+        borderRadius: '50%',
+        background: '#FFFFFF',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+        transform: checked ? 'translateX(20px)' : 'translateX(0px)',
+        transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        display: 'block'
+      }}
+    />
+  </button>
+);
+
 export default function SetupView({
   settingsForm = {},
   setSettingsForm,
@@ -2745,47 +2786,6 @@ export default function SetupView({
       </div>
     );
   };
-
-  const ToggleSwitch = ({ checked, onChange, disabled = false }) => (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!disabled) onChange(!checked);
-      }}
-      style={{
-        width: '44px',
-        height: '24px',
-        borderRadius: '12px',
-        background: checked ? '#064E3B' : '#E2E8F0',
-        position: 'relative',
-        border: 'none',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        padding: '2px',
-        display: 'inline-flex',
-        alignItems: 'center',
-        flexShrink: 0,
-        outline: 'none',
-        boxSizing: 'border-box'
-      }}
-    >
-      <span
-        style={{
-          width: '20px',
-          height: '20px',
-          borderRadius: '50%',
-          background: '#FFFFFF',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-          transform: checked ? 'translateX(20px)' : 'translateX(0px)',
-          transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          display: 'block'
-        }}
-      />
-    </button>
-  );
 
   const renderPrefModal = () => {
     if (!activePrefModal) return null;
