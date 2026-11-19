@@ -102,6 +102,104 @@ export default function AdminDashboard({
   const [prevPendingCount, setPrevPendingCount] = useState(0);
   const [restaurantInfo, setRestaurantInfo] = useState(() => getInitialAdminState('info', null));
 
+  // Settings State
+  const [settingsForm, setSettingsForm] = useState(() => {
+    const infoData = getInitialAdminState('info', null);
+    const defaultVis = { must_try: true, combo: true, special: true, under100: true, veg: true, nonveg: true, egg: true, customizable: true };
+    if (infoData) {
+      return {
+        id: infoData.id,
+        name: infoData.name || '',
+        slug: infoData.slug || '',
+        tagline: infoData.tagline || '',
+        logo: infoData.logo || '',
+        phone: infoData.phone || '',
+        address: infoData.address || '',
+        openingHours: infoData.openingHours || '',
+        google_review_url: infoData.google_review_url || '',
+        google_maps_url: infoData.google_maps_url || '',
+        currency_symbol: (infoData.currency_symbol !== null && infoData.currency_symbol !== undefined) ? infoData.currency_symbol : '₹',
+        fssai_lic_no: infoData.fssai_lic_no || '',
+        resto_type: infoData.resto_type || 'pure_veg',
+        business_type: infoData.business_type !== undefined ? infoData.business_type : null,
+        food_type: infoData.food_type !== undefined ? infoData.food_type : null,
+        service_model: infoData.service_model || 'dine_in',
+        latitude: infoData.latitude !== undefined && infoData.latitude !== null ? infoData.latitude : 26.6500,
+        longitude: infoData.longitude !== undefined && infoData.longitude !== null ? infoData.longitude : 84.9167,
+        max_distance_meters: infoData.max_distance_meters || 100,
+        gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
+        gstin_number: infoData.gstin_number || '',
+        total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
+        total_cabins: infoData.total_cabins !== undefined && infoData.total_cabins !== null ? Number(infoData.total_cabins) : 0,
+        total_rooms: infoData.total_rooms !== undefined && infoData.total_rooms !== null ? Number(infoData.total_rooms) : 0,
+        total_vip: infoData.total_vip !== undefined && infoData.total_vip !== null ? Number(infoData.total_vip) : 0,
+        table_prefix: infoData.table_prefix || 'table',
+        counter_ordering_enabled: Boolean(infoData.counter_ordering_enabled === 1 || infoData.counter_ordering_enabled === true || infoData.counter_ordering_enabled === '1'),
+        order_retention_days: infoData.order_retention_days || 7,
+        custom_domain: infoData.custom_domain || '',
+        watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
+        custom_domain_enabled: infoData.custom_domain_enabled === 1 || infoData.custom_domain_enabled === true || infoData.custom_domain_enabled === '1',
+        analytics_export_enabled: infoData.analytics_export_enabled === 1 || infoData.analytics_export_enabled === true || infoData.analytics_export_enabled === '1',
+        gst_invoice_enabled: infoData.gst_invoice_enabled === 1 || infoData.gst_invoice_enabled === true || infoData.gst_invoice_enabled === '1',
+        ai_review_enabled: infoData.ai_review_enabled === 1 || infoData.ai_review_enabled === true || infoData.ai_review_enabled === '1',
+        bluetooth_kot_enabled: infoData.bluetooth_kot_enabled === 1 || infoData.bluetooth_kot_enabled === true || infoData.bluetooth_kot_enabled === '1',
+        kds_enabled: (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === 1 || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === true || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === '1',
+        kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
+        dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1',
+        theme_color: infoData.theme_color || 'gold',
+        table_verification_mode: infoData.table_verification_mode || 'GPS_WITH_STAFF_FALLBACK',
+        staff_verification_timeout_seconds: infoData.staff_verification_timeout_seconds !== undefined ? Number(infoData.staff_verification_timeout_seconds) : 120,
+        order_alarm_enabled: infoData.order_alarm_enabled !== undefined ? (infoData.order_alarm_enabled !== false && infoData.order_alarm_enabled !== 0 && infoData.order_alarm_enabled !== '0') : true,
+        upi_id: infoData.upi_id || '',
+        upi_payee_name: infoData.upi_payee_name || '',
+        print_upi_qr: (infoData.print_upi_qr !== undefined && infoData.print_upi_qr !== null) ? Number(infoData.print_upi_qr) : 1,
+        filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
+      };
+    }
+    return {
+      name: '',
+      tagline: '',
+      phone: '',
+      address: '',
+      openingHours: '',
+      google_review_url: '',
+      google_maps_url: '',
+      currency_symbol: '₹',
+      fssai_lic_no: '',
+      resto_type: 'pure_veg',
+      theme_color: 'gold',
+      custom_domain: '',
+      total_tables: 0,
+      total_cabins: 0,
+      total_rooms: 0,
+      total_vip: 0,
+      table_prefix: 'table',
+      counter_ordering_enabled: false,
+      watermark_removal_enabled: false,
+      custom_domain_enabled: false,
+      analytics_export_enabled: false,
+      gst_invoice_enabled: false,
+      ai_review_enabled: false,
+      bluetooth_kot_enabled: false,
+      kds_enabled: false,
+      kds_screen_enabled: 0,
+      dual_printer_enabled: false,
+      latitude: 26.6500,
+      longitude: 84.9167,
+      max_distance_meters: 100,
+      gst_enabled: false,
+      gstin_number: '',
+      order_retention_days: 7,
+      table_verification_mode: 'GPS_WITH_STAFF_FALLBACK',
+      staff_verification_timeout_seconds: 120,
+      order_alarm_enabled: true,
+      upi_id: '',
+      upi_payee_name: '',
+      print_upi_qr: 1,
+      filters_visibility: defaultVis
+    };
+  });
+
   const [combos, setCombos] = useState(() => getInitialAdminState('combos', []));
   const [comboModalData, setComboModalData] = useState(null);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
@@ -1644,98 +1742,6 @@ export default function AdminDashboard({
       console.warn('Filter analytics error:', err);
     }
   };
-
-  // Settings State
-  const [settingsForm, setSettingsForm] = useState(() => {
-    const infoData = getInitialAdminState('info', null);
-    const defaultVis = { must_try: true, combo: true, special: true, under100: true, veg: true, nonveg: true, egg: true, customizable: true };
-    if (infoData) {
-      return {
-        id: infoData.id,
-        name: infoData.name || '',
-        slug: infoData.slug || '',
-        tagline: infoData.tagline || '',
-        logo: infoData.logo || '',
-        phone: infoData.phone || '',
-        address: infoData.address || '',
-        openingHours: infoData.openingHours || '',
-        google_review_url: infoData.google_review_url || '',
-        google_maps_url: infoData.google_maps_url || '',
-        currency_symbol: (infoData.currency_symbol !== null && infoData.currency_symbol !== undefined) ? infoData.currency_symbol : '₹',
-        fssai_lic_no: infoData.fssai_lic_no || '',
-        resto_type: infoData.resto_type || 'pure_veg',
-        business_type: infoData.business_type !== undefined ? infoData.business_type : null,
-        food_type: infoData.food_type !== undefined ? infoData.food_type : null,
-        service_model: infoData.service_model || 'dine_in',
-        latitude: infoData.latitude !== undefined && infoData.latitude !== null ? infoData.latitude : 26.6500,
-        longitude: infoData.longitude !== undefined && infoData.longitude !== null ? infoData.longitude : 84.9167,
-        max_distance_meters: infoData.max_distance_meters || 100,
-        gst_enabled: infoData.gst_enabled !== undefined ? infoData.gst_enabled : false,
-        gstin_number: infoData.gstin_number || '',
-        total_tables: infoData.total_tables !== undefined && infoData.total_tables !== null ? Number(infoData.total_tables) : 0,
-        total_cabins: infoData.total_cabins !== undefined && infoData.total_cabins !== null ? Number(infoData.total_cabins) : 0,
-        total_rooms: infoData.total_rooms !== undefined && infoData.total_rooms !== null ? Number(infoData.total_rooms) : 0,
-        total_vip: infoData.total_vip !== undefined && infoData.total_vip !== null ? Number(infoData.total_vip) : 0,
-        table_prefix: infoData.table_prefix || 'table',
-        counter_ordering_enabled: Boolean(infoData.counter_ordering_enabled === 1 || infoData.counter_ordering_enabled === true || infoData.counter_ordering_enabled === '1'),
-        order_retention_days: infoData.order_retention_days || 7,
-        custom_domain: infoData.custom_domain || '',
-        watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
-        custom_domain_enabled: infoData.custom_domain_enabled === 1 || infoData.custom_domain_enabled === true || infoData.custom_domain_enabled === '1',
-        analytics_export_enabled: infoData.analytics_export_enabled === 1 || infoData.analytics_export_enabled === true || infoData.analytics_export_enabled === '1',
-        gst_invoice_enabled: infoData.gst_invoice_enabled === 1 || infoData.gst_invoice_enabled === true || infoData.gst_invoice_enabled === '1',
-        ai_review_enabled: infoData.ai_review_enabled === 1 || infoData.ai_review_enabled === true || infoData.ai_review_enabled === '1',
-        bluetooth_kot_enabled: infoData.bluetooth_kot_enabled === 1 || infoData.bluetooth_kot_enabled === true || infoData.bluetooth_kot_enabled === '1',
-        kds_enabled: (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === 1 || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === true || (infoData.kds_enabled ?? infoData.permissions?.kds_enabled) === '1',
-        kds_screen_enabled: infoData.kds_screen_enabled !== undefined ? infoData.kds_screen_enabled : 1,
-        dual_printer_enabled: (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === 1 || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === true || (infoData.dual_printer_enabled ?? infoData.permissions?.dual_printer_enabled) === '1',
-        theme_color: infoData.theme_color || 'gold',
-        table_verification_mode: infoData.table_verification_mode || 'GPS_WITH_STAFF_FALLBACK',
-        staff_verification_timeout_seconds: infoData.staff_verification_timeout_seconds !== undefined ? Number(infoData.staff_verification_timeout_seconds) : 120,
-        order_alarm_enabled: infoData.order_alarm_enabled !== undefined ? (infoData.order_alarm_enabled !== false && infoData.order_alarm_enabled !== 0 && infoData.order_alarm_enabled !== '0') : true,
-        filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
-      };
-    }
-    return {
-      name: '',
-      tagline: '',
-      phone: '',
-      address: '',
-      openingHours: '',
-      google_review_url: '',
-      google_maps_url: '',
-      currency_symbol: '₹',
-      fssai_lic_no: '',
-      resto_type: 'pure_veg',
-      theme_color: 'gold',
-      custom_domain: '',
-      total_tables: 0,
-      total_cabins: 0,
-      total_rooms: 0,
-      total_vip: 0,
-      table_prefix: 'table',
-      counter_ordering_enabled: false,
-      watermark_removal_enabled: false,
-      custom_domain_enabled: false,
-      analytics_export_enabled: false,
-      gst_invoice_enabled: false,
-      ai_review_enabled: false,
-      bluetooth_kot_enabled: false,
-      kds_enabled: false,
-      kds_screen_enabled: 0,
-      dual_printer_enabled: false,
-      latitude: 26.6500,
-      longitude: 84.9167,
-      max_distance_meters: 100,
-      gst_enabled: false,
-      gstin_number: '',
-      order_retention_days: 7,
-      table_verification_mode: 'GPS_WITH_STAFF_FALLBACK',
-      staff_verification_timeout_seconds: 120,
-      order_alarm_enabled: true,
-      filters_visibility: defaultVis
-    };
-  });
 
   useEffect(() => {
     const isAlarmOn = settingsForm?.order_alarm_enabled !== false;
