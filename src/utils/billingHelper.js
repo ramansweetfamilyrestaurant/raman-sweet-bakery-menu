@@ -286,22 +286,28 @@ export function buildUpiPaymentUri({ upiId, payeeName = '', amount = 0, invoiceI
   const cleanPayee = (payeeName || 'Restaurant Merchant').trim().substring(0, 99);
 
   let noteParts = [];
-  if (invoiceId) noteParts.push(`Bill #${invoiceId}`);
-  if (spaceLabel) noteParts.push(spaceLabel);
-  const rawNote = noteParts.join(' - ') || 'Restaurant Bill';
-  const cleanNote = rawNote.substring(0, 50).replace(/[^\w\s\-\#\.]/g, '');
+  if (invoiceId) noteParts.push(`Bill ${String(invoiceId).replace(/[^\w]/g, '')}`);
+  if (spaceLabel) noteParts.push(String(spaceLabel).replace(/[^\w\s]/g, '').trim());
+  const rawNote = noteParts.filter(Boolean).join(' ') || 'Restaurant Bill';
+  const cleanNote = rawNote.substring(0, 50).trim();
 
-  const params = new URLSearchParams();
-  params.set('pa', cleanId);
-  params.set('pn', cleanPayee);
+  // NPCI UPI Specification requires literal '@' in pa parameter and standard percent-encoding (%20) for spaces.
+  // Using URLSearchParams converts '@' to '%40' and spaces to '+', which breaks bank routing in GPay, PhonePe & Paytm.
+  const queryParts = [
+    `pa=${cleanId}`,
+    `pn=${encodeURIComponent(cleanPayee)}`
+  ];
+
   if (formattedAmount) {
-    params.set('am', formattedAmount);
-  }
-  params.set('cu', 'INR');
-  if (cleanNote) {
-    params.set('tn', cleanNote);
+    queryParts.push(`am=${formattedAmount}`);
   }
 
-  return `upi://pay?${params.toString()}`;
+  queryParts.push('cu=INR');
+
+  if (cleanNote) {
+    queryParts.push(`tn=${encodeURIComponent(cleanNote)}`);
+  }
+
+  return `upi://pay?${queryParts.join('&')}`;
 }
 

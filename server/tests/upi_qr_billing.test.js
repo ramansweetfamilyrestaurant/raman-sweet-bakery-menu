@@ -30,11 +30,11 @@ describe('UPI QR Code Billing & Payment Specifications', () => {
 
     assert.ok(uri, 'URI must be generated');
     assert.ok(uri.startsWith('upi://pay?'), 'URI must start with upi://pay?');
-    assert.ok(uri.includes('pa=merchant%40upi') || uri.includes('pa=merchant@upi'), 'Must contain payee address');
+    assert.ok(uri.includes('pa=merchant@upi'), 'Must contain payee address with literal @ (not %40)');
     assert.ok(uri.includes('am=450.00'), 'Must contain formatted 2-decimal amount 450.00');
     assert.ok(uri.includes('cu=INR'), 'Must contain currency INR');
-    assert.ok(uri.includes('pn='), 'Must contain payee name');
-    assert.ok(uri.includes('tn='), 'Must contain transaction note');
+    assert.ok(uri.includes('pn=Raman%20Sweets%20%26%20Restro'), 'Must contain standard percent-encoded payee name');
+    assert.ok(uri.includes('tn=Bill%20101%20Table%204'), 'Must contain transaction note without special characters like #');
 
     // 2. Returns null when UPI ID is missing or invalid (no @)
     assert.strictEqual(buildUpiPaymentUri({ upiId: '' }), null, 'Empty UPI ID must return null');
@@ -74,6 +74,9 @@ describe('UPI QR Code Billing & Payment Specifications', () => {
 
   test('AdminDashboard.jsx includes UPI QR code in thermal print & RawBT ESC/POS text', () => {
     const dashboardCode = fs.readFileSync(adminDashboardPath, 'utf8');
+    // State persistence
+    assert.ok(dashboardCode.includes('upi_id: infoData.upi_id'), 'loadData must populate upi_id from server infoData');
+    assert.ok(dashboardCode.includes('upi_payee_name: infoData.upi_payee_name'), 'loadData must populate upi_payee_name from server infoData');
     // Bill HTML
     assert.ok(dashboardCode.includes('SCAN TO PAY VIA UPI'), 'getBillHTML must include UPI QR banner');
     assert.ok(dashboardCode.includes('<img src="${upiQrDataUrl}"'), 'getBillHTML must embed QR data URL');
@@ -89,5 +92,6 @@ describe('UPI QR Code Billing & Payment Specifications', () => {
     assert.ok(setupCode.includes('admin-upi-payee-name'), 'SetupView must have UPI Payee Name input');
     assert.ok(setupCode.includes('devicePrintUpiQr'), 'SetupView must have devicePrintUpiQr state');
     assert.ok(setupCode.includes('deviceUpiId'), 'SetupView must have deviceUpiId state');
+    assert.ok(setupCode.includes('setDeviceUpiId(upiId)'), 'SetupView must synchronize deviceUpiId with settingsForm');
   });
 });

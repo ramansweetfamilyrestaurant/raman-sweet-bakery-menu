@@ -45,7 +45,7 @@ try {
     iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
-} catch (e) {}
+} catch (e) { }
 
 const restaurantMarkerIcon = L.divIcon({
   className: 'custom-resto-marker',
@@ -147,7 +147,7 @@ function EmbeddedLocationMap({ lat, lng, radius, restaurantName, onLocationChang
         try {
           mapInstanceRef.current.remove();
           mapInstanceRef.current = null;
-        } catch (e) {}
+        } catch (e) { }
       }
     };
   }, []);
@@ -207,13 +207,13 @@ export default function SetupView({
   const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'restaurant' | 'operations' | 'menu-billing' | 'security' | 'advanced'
   const [activeSubPage, setActiveSubPage] = useState(
     initialDrawer === 'profile' ? 'profile' :
-    initialDrawer === 'menu-preferences' ? 'menu-preferences' :
-    initialDrawer === 'devices' || initialDrawer === 'orders-devices' ? 'orders-devices' :
-    initialDrawer === 'subscription' || initialDrawer === 'billing' ? 'subscription' :
-    initialDrawer === 'location' || initialDrawer === 'gps' ? 'location' :
-    initialDrawer === 'security' || initialDrawer === 'credentials' ? 'security' :
-    initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize' ? 'database' :
-    null
+      initialDrawer === 'menu-preferences' ? 'menu-preferences' :
+        initialDrawer === 'devices' || initialDrawer === 'orders-devices' ? 'orders-devices' :
+          initialDrawer === 'subscription' || initialDrawer === 'billing' ? 'subscription' :
+            initialDrawer === 'location' || initialDrawer === 'gps' ? 'location' :
+              initialDrawer === 'security' || initialDrawer === 'credentials' ? 'security' :
+                initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize' ? 'database' :
+                  null
   );
   const [openDrawer, setOpenDrawer] = useState(
     (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing' || initialDrawer === 'location' || initialDrawer === 'gps' || initialDrawer === 'security' || initialDrawer === 'credentials' || initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize') ? null : initialDrawer
@@ -321,8 +321,8 @@ export default function SetupView({
         const Δφ = ((rLat - dLat) * Math.PI) / 180;
         const Δλ = ((rLng - dLng) * Math.PI) / 180;
         const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                  Math.cos(φ1) * Math.cos(φ2) *
-                  Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+          Math.cos(φ1) * Math.cos(φ2) *
+          Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         const distMeters = Math.round(R * c);
 
@@ -452,6 +452,18 @@ export default function SetupView({
   const [devicePrinterSectionExpanded, setDevicePrinterSectionExpanded] = useState(true);
   const [deviceSaveSuccess, setDeviceSaveSuccess] = useState(false);
   const [showPrinterPairingModal, setShowPrinterPairingModal] = useState(false);
+
+  // Synchronize device and UPI settings when settingsForm or restaurantInfo updates from server
+  useEffect(() => {
+    const upiId = settingsForm?.upi_id || restaurantInfo?.upi_id || '';
+    const payee = settingsForm?.upi_payee_name || restaurantInfo?.upi_payee_name || '';
+    const printQr = (settingsForm?.print_upi_qr ?? restaurantInfo?.print_upi_qr);
+    setDeviceUpiId(upiId);
+    setDeviceUpiPayeeName(payee);
+    if (printQr !== undefined && printQr !== null) {
+      setDevicePrintUpiQr(Boolean(printQr !== 0));
+    }
+  }, [settingsForm?.upi_id, settingsForm?.upi_payee_name, settingsForm?.print_upi_qr, restaurantInfo?.upi_id, restaurantInfo?.upi_payee_name, restaurantInfo?.print_upi_qr]);
 
   const handleSaveMenuPreferences = async (e) => {
     if (e) e.preventDefault();
@@ -1503,7 +1515,7 @@ export default function SetupView({
                   setSettingsForm(updated);
                   document.documentElement.setAttribute('data-theme', t.key);
                   if (typeof handleSaveSettings === 'function') {
-                    handleSaveSettings(updated).catch(() => {});
+                    handleSaveSettings(updated).catch(() => { });
                   }
                   closeModal();
                 }}
@@ -1998,8 +2010,8 @@ export default function SetupView({
                     {isHotel
                       ? `${Number(settingsForm.total_rooms) || 0} Rooms configured`
                       : isCinema
-                      ? `${Number(settingsForm.total_screens) || 0} Screens • ${Number(settingsForm.total_seats) || 0} Seats`
-                      : `${Number(settingsForm.total_tables) || 0} Tables • ${Number(settingsForm.total_cabins) || 0} Cabins • ${Number(settingsForm.total_vip) || 0} Lounges`}
+                        ? `${Number(settingsForm.total_screens) || 0} Screens • ${Number(settingsForm.total_seats) || 0} Seats`
+                        : `${Number(settingsForm.total_tables) || 0} Tables • ${Number(settingsForm.total_cabins) || 0} Cabins • ${Number(settingsForm.total_vip) || 0} Lounges`}
                   </span>
                 </div>
               </div>
@@ -2618,56 +2630,56 @@ export default function SetupView({
                       boxSizing: 'border-box',
                       boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)'
                     }}>
-                {settingsForm.logo || restaurantInfo?.logo ? (
-                  <img
-                    src={settingsForm.logo || restaurantInfo?.logo}
-                    alt="Logo"
-                    style={{
-                      width: '46px',
-                      height: '46px',
-                      borderRadius: '10px',
-                      objectFit: 'cover',
-                      border: '1.5px solid #F59E0B',
-                      flexShrink: 0,
-                      background: '#FFFFFF',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-                    }}
-                  />
-                ) : (
-                  <div style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)',
-                    color: '#F59E0B',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 900,
-                    fontSize: '1.2rem',
-                    border: '1.5px solid #F59E0B',
-                    flexShrink: 0
-                  }}>
-                    {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
+                      {settingsForm.logo || restaurantInfo?.logo ? (
+                        <img
+                          src={settingsForm.logo || restaurantInfo?.logo}
+                          alt="Logo"
+                          style={{
+                            width: '46px',
+                            height: '46px',
+                            borderRadius: '10px',
+                            objectFit: 'cover',
+                            border: '1.5px solid #F59E0B',
+                            flexShrink: 0,
+                            background: '#FFFFFF',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '46px',
+                          height: '46px',
+                          borderRadius: '10px',
+                          background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)',
+                          color: '#F59E0B',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 900,
+                          fontSize: '1.2rem',
+                          border: '1.5px solid #F59E0B',
+                          flexShrink: 0
+                        }}>
+                          {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {settingsForm.name || restaurantInfo?.name || 'Restaurant Name'}
+                        </div>
+                        <div style={{ fontSize: '0.70rem', color: '#FDE68A', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {settingsForm.tagline || 'Pure Veg Family Restaurant & Bakery'}
+                        </div>
+                        <div style={{ fontSize: '0.64rem', color: '#A7F3D0', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>✨</span>
+                          <span>Scan QR Code • Digital Menu</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {settingsForm.name || restaurantInfo?.name || 'Restaurant Name'}
-                  </div>
-                  <div style={{ fontSize: '0.70rem', color: '#FDE68A', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {settingsForm.tagline || 'Pure Veg Family Restaurant & Bakery'}
-                  </div>
-                  <div style={{ fontSize: '0.64rem', color: '#A7F3D0', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span>✨</span>
-                    <span>Scan QR Code • Digital Menu</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            </>
-          );
-        })()}
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -5080,8 +5092,8 @@ export default function SetupView({
           token={token}
           capabilities={capabilities}
           currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-          onUpgrade={() => {}}
-          onNavigate={(tab) => {}}
+          onUpgrade={() => { }}
+          onNavigate={(tab) => { }}
           onRefreshInfo={() => loadSubscriptionStatus()}
         />
       </div>
@@ -5090,19 +5102,19 @@ export default function SetupView({
 
   const _deprecated_renderSubscriptionBillingFullPage = () => {
     const activePlanPrice = subData?.plan_price || restaurantInfo?.plan_price || 999;
-    const isComplimentary = subData?.mandate_status === 'admin_granted' || 
-                            restaurantInfo?.subscription_type === 'ADMIN_GRANTED' || 
-                            subData?.subscription_type === 'ADMIN_GRANTED';
+    const isComplimentary = subData?.mandate_status === 'admin_granted' ||
+      restaurantInfo?.subscription_type === 'ADMIN_GRANTED' ||
+      subData?.subscription_type === 'ADMIN_GRANTED';
 
-    const rawExpiryDate = subData?.current_period_end || 
-                          subData?.subscription?.current_period_end || 
-                          subData?.subscription?.next_billing_at || 
-                          subData?.plan_expires_at || 
-                          subData?.trial_ends_at || 
-                          subData?.access_until || 
-                          restaurantInfo?.access_until || 
-                          restaurantInfo?.plan_expires_at || 
-                          restaurantInfo?.trial_ends_at;
+    const rawExpiryDate = subData?.current_period_end ||
+      subData?.subscription?.current_period_end ||
+      subData?.subscription?.next_billing_at ||
+      subData?.plan_expires_at ||
+      subData?.trial_ends_at ||
+      subData?.access_until ||
+      restaurantInfo?.access_until ||
+      restaurantInfo?.plan_expires_at ||
+      restaurantInfo?.trial_ends_at;
 
     const formatBillingDate = (dateVal) => {
       if (!dateVal) return null;
@@ -5117,7 +5129,7 @@ export default function SetupView({
 
     const formattedDate = formatBillingDate(rawExpiryDate);
     const isExplicitLifetime = !rawExpiryDate || String(rawExpiryDate).toLowerCase() === 'lifetime';
-    const renewalText = isComplimentary 
+    const renewalText = isComplimentary
       ? (isExplicitLifetime ? 'Complimentary Lifetime' : (formattedDate ? `Complimentary (Valid until ${formattedDate})` : 'Complimentary Lifetime'))
       : (formattedDate || '24 Jun 2026');
 
@@ -5132,12 +5144,12 @@ export default function SetupView({
 
     const actualInvoices = (paymentHistory?.data && paymentHistory.data.length > 0)
       ? paymentHistory.data.map((pay, idx) => ({
-          id: pay.gateway_payment_id || `INV-2026-0${5 - (idx % 5)}${24 - (idx * 2)}`,
-          date: pay.paid_at ? new Date(pay.paid_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : `24 May 2026`,
-          amount: pay.amount || activePlanPrice,
-          method: pay.payment_method || 'UPI AutoPay',
-          status: (pay.status || 'paid').toLowerCase() === 'success' || (pay.status || '').toLowerCase() === 'paid' ? 'Paid' : 'Failed'
-        }))
+        id: pay.gateway_payment_id || `INV-2026-0${5 - (idx % 5)}${24 - (idx * 2)}`,
+        date: pay.paid_at ? new Date(pay.paid_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : `24 May 2026`,
+        amount: pay.amount || activePlanPrice,
+        method: pay.payment_method || 'UPI AutoPay',
+        status: (pay.status || 'paid').toLowerCase() === 'success' || (pay.status || '').toLowerCase() === 'paid' ? 'Paid' : 'Failed'
+      }))
       : sampleInvoices;
 
     const filteredInvoices = actualInvoices.filter(inv => {
@@ -5380,7 +5392,7 @@ export default function SetupView({
         {/* TAB 1: OVERVIEW */}
         {subTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            
+
             {/* 1. CURRENT PLAN CARD */}
             <div style={{
               background: '#FFFFFF',
@@ -6097,7 +6109,7 @@ export default function SetupView({
 
         {/* 2-COLUMN MAIN CONTENT GRID */}
         <div className="location-page-grid">
-          
+
           {/* LEFT / MAIN COLUMN */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
@@ -6641,7 +6653,7 @@ export default function SetupView({
                           type="radio"
                           name="outside_geofence_action"
                           checked={isSelected}
-                          onChange={() => {}}
+                          onChange={() => { }}
                           style={{ accentColor: '#064E3B', cursor: 'pointer' }}
                         />
                         <div>
@@ -7152,7 +7164,7 @@ export default function SetupView({
 
         {/* 2-COLUMN MAIN CONTENT GRID */}
         <div className="security-page-grid">
-          
+
           {/* LEFT / MAIN COLUMN */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
@@ -8150,9 +8162,9 @@ export default function SetupView({
     const activeSlug = settingsForm?.slug || '';
 
     // System Data Counts (Factual derived data)
-    const totalSpacesCount = (Number(settingsForm?.total_tables) || 0) + 
-      (Number(settingsForm?.total_cabins) || 0) + 
-      (Number(settingsForm?.total_rooms) || 0) + 
+    const totalSpacesCount = (Number(settingsForm?.total_tables) || 0) +
+      (Number(settingsForm?.total_cabins) || 0) +
+      (Number(settingsForm?.total_rooms) || 0) +
       (Number(settingsForm?.total_vip) || 0);
 
     const handleExecuteOptimize = async () => {
@@ -8380,7 +8392,7 @@ export default function SetupView({
 
         {/* 2-COLUMN MAIN CONTENT GRID */}
         <div className="db-tools-grid">
-          
+
           {/* LEFT / MAIN COLUMN */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
@@ -8850,9 +8862,9 @@ export default function SetupView({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
                   {dbConfirmType === 'optimize' ? 'Run Database Maintenance?' :
-                   dbConfirmType === 'clear_logs' ? 'Clear Temporary Logs?' :
-                   dbConfirmType === 'clean_drafts' ? 'Clean Incomplete Drafts?' :
-                   'Purge Temporary Cache?'}
+                    dbConfirmType === 'clear_logs' ? 'Clear Temporary Logs?' :
+                      dbConfirmType === 'clean_drafts' ? 'Clean Incomplete Drafts?' :
+                        'Purge Temporary Cache?'}
                 </h3>
                 <button type="button" onClick={() => setDbConfirmType(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
                   <X size={20} />
@@ -8861,9 +8873,9 @@ export default function SetupView({
 
               <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748B', lineHeight: 1.45 }}>
                 {dbConfirmType === 'optimize' ? 'This operation will safely compact historical data records and rebuild query indexes. Your live menu and orders will remain available.' :
-                 dbConfirmType === 'clear_logs' ? 'This operation is unavailable. Server logs are managed by the hosting runtime and cannot be cleared from this dashboard.' :
-                 dbConfirmType === 'clean_drafts' ? 'This operation is unavailable. TouchQR does not store separate server drafts.' :
-                 'This will clear local client session data and force a fresh sync with the server database.'}
+                  dbConfirmType === 'clear_logs' ? 'This operation is unavailable. Server logs are managed by the hosting runtime and cannot be cleared from this dashboard.' :
+                    dbConfirmType === 'clean_drafts' ? 'This operation is unavailable. TouchQR does not store separate server drafts.' :
+                      'This will clear local client session data and force a fresh sync with the server database.'}
               </p>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
@@ -9298,1198 +9310,1198 @@ export default function SetupView({
           {/* ========================================================
               1. MASTER PAGE HEADER WITH PROGRESS INDICATOR
              ======================================================== */}
-      <div className="settings-header-card">
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: '1.18rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-              Settings & Setup
-            </h2>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              background: '#DCFCE7',
-              color: '#16A34A',
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              padding: '3px 8px',
-              borderRadius: '12px',
-              border: '1px solid #BBF7D0'
-            }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
-              All systems ready
-            </span>
-          </div>
-          <p style={{ fontSize: '0.74rem', color: '#64748B', margin: '3px 0 0 0', fontWeight: 500 }}>
-            Manage your business settings, catalog preferences, operations, security and account.
-          </p>
-        </div>
-
-        {/* Right Side: Interactive Setup Progress Indicator */}
-        <div ref={progressMenuRef} style={{ position: 'relative' }}>
-          <div
-            onClick={() => setShowProgressMenu(prev => !prev)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              background: '#FAF8F5',
-              padding: '8px 14px',
-              borderRadius: '12px',
-              border: '1px solid #EAE5DF',
-              cursor: 'pointer',
-              userSelect: 'none',
-              transition: 'all 0.2s ease',
-              boxShadow: showProgressMenu ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
-            }}
-          >
-            <div style={{ position: 'relative', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="32" height="32" viewBox="0 0 36 36">
-                <path
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  fill="none"
-                  stroke="#E2E8F0"
-                  strokeWidth="3.5"
-                />
-                <path
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  fill="none"
-                  stroke="#16A34A"
-                  strokeWidth="3.5"
-                  strokeDasharray={`${(passedChecks / totalChecks) * 100}, 100`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <Check size={14} color="#16A34A" style={{ position: 'absolute' }} />
-            </div>
+          <div className="settings-header-card">
             <div>
-              <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Setup Progress</div>
-              <div style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span>{passedChecks} / {totalChecks} Complete</span>
-                <ChevronDown size={14} color="#64748B" style={{ transform: showProgressMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Floating Interactive Checklist Menu */}
-          {showProgressMenu && (
-            <div style={{
-              position: 'absolute',
-              top: 'calc(100% + 8px)',
-              right: 0,
-              width: '290px',
-              background: '#FFFFFF',
-              borderRadius: '16px',
-              border: '1px solid #EAE5DF',
-              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
-              padding: '16px',
-              zIndex: 100
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Setup Checklist</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h2 style={{ fontSize: '1.18rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                  Settings & Setup
+                </h2>
                 <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: '#DCFCE7',
+                  color: '#16A34A',
                   fontSize: '0.68rem',
                   fontWeight: 800,
-                  color: isFullySetup ? '#15803D' : '#D97706',
-                  background: isFullySetup ? '#DCFCE7' : '#FEF3C7',
-                  padding: '2px 8px',
-                  borderRadius: '10px'
+                  padding: '3px 8px',
+                  borderRadius: '12px',
+                  border: '1px solid #BBF7D0'
                 }}>
-                  {isFullySetup ? 'All Ready 🎉' : `${passedChecks}/${totalChecks} Done`}
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
+                  All systems ready
                 </span>
               </div>
+              <p style={{ fontSize: '0.74rem', color: '#64748B', margin: '3px 0 0 0', fontWeight: 500 }}>
+                Manage your business settings, catalog preferences, operations, security and account.
+              </p>
+            </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {/* 1. Business Profile */}
-                <div 
-                  onClick={() => { setShowProgressMenu(false); setActiveSubPage('profile'); }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    background: '#F8FAFC',
-                    cursor: 'pointer',
-                    border: '1px solid #F1F5F9'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isProfileConfigured ? '#DCFCE7' : '#FEE2E2', color: isProfileConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
-                      {isProfileConfigured ? '✓' : '!'}
-                    </span>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Business Profile</span>
-                  </div>
-                  <span style={{ fontSize: '0.70rem', color: isProfileConfigured ? '#16A34A' : '#DC2626', fontWeight: 700 }}>
-                    {isProfileConfigured ? 'Done' : 'Setup'}
-                  </span>
+            {/* Right Side: Interactive Setup Progress Indicator */}
+            <div ref={progressMenuRef} style={{ position: 'relative' }}>
+              <div
+                onClick={() => setShowProgressMenu(prev => !prev)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  background: '#FAF8F5',
+                  padding: '8px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #EAE5DF',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  transition: 'all 0.2s ease',
+                  boxShadow: showProgressMenu ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+                }}
+              >
+                <div style={{ position: 'relative', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="32" height="32" viewBox="0 0 36 36">
+                    <path
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="#E2E8F0"
+                      strokeWidth="3.5"
+                    />
+                    <path
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="#16A34A"
+                      strokeWidth="3.5"
+                      strokeDasharray={`${(passedChecks / totalChecks) * 100}, 100`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <Check size={14} color="#16A34A" style={{ position: 'absolute' }} />
                 </div>
-
-                {/* 2. Brand Logo */}
-                <div 
-                  onClick={() => { setShowProgressMenu(false); setActiveSubPage('profile'); }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    background: '#F8FAFC',
-                    cursor: 'pointer',
-                    border: '1px solid #F1F5F9'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isLogoConfigured ? '#DCFCE7' : '#FEE2E2', color: isLogoConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
-                      {isLogoConfigured ? '✓' : '!'}
-                    </span>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Brand Logo</span>
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Setup Progress</div>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>{passedChecks} / {totalChecks} Complete</span>
+                    <ChevronDown size={14} color="#64748B" style={{ transform: showProgressMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
                   </div>
-                  <span style={{ fontSize: '0.70rem', color: isLogoConfigured ? '#16A34A' : '#DC2626', fontWeight: 700 }}>
-                    {isLogoConfigured ? 'Done' : 'Upload'}
-                  </span>
-                </div>
-
-                {/* 3. Location & GPS */}
-                <div 
-                  onClick={() => { setShowProgressMenu(false); setActiveSubPage('location'); }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    background: '#F8FAFC',
-                    cursor: 'pointer',
-                    border: '1px solid #F1F5F9'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isGpsConfigured ? '#DCFCE7' : '#FEE2E2', color: isGpsConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
-                      {isGpsConfigured ? '✓' : '!'}
-                    </span>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Location & GPS</span>
-                  </div>
-                  <span style={{ fontSize: '0.70rem', color: isGpsConfigured ? '#16A34A' : '#DC2626', fontWeight: 700 }}>
-                    {isGpsConfigured ? 'Done' : 'Set GPS'}
-                  </span>
-                </div>
-
-                {/* 4. Order Alerts */}
-                <div 
-                  onClick={() => { setShowProgressMenu(false); testAlarmSound(); }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    background: '#F8FAFC',
-                    cursor: 'pointer',
-                    border: '1px solid #F1F5F9'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isAlertsConfigured ? '#DCFCE7' : '#FEE2E2', color: isAlertsConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
-                      {isAlertsConfigured ? '✓' : '!'}
-                    </span>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Order Alert Sound</span>
-                  </div>
-                  <span style={{ fontSize: '0.70rem', color: '#0284C7', fontWeight: 700 }}>
-                    Test 🔔
-                  </span>
                 </div>
               </div>
+
+              {/* Floating Interactive Checklist Menu */}
+              {showProgressMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  width: '290px',
+                  background: '#FFFFFF',
+                  borderRadius: '16px',
+                  border: '1px solid #EAE5DF',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                  padding: '16px',
+                  zIndex: 100
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Setup Checklist</span>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      color: isFullySetup ? '#15803D' : '#D97706',
+                      background: isFullySetup ? '#DCFCE7' : '#FEF3C7',
+                      padding: '2px 8px',
+                      borderRadius: '10px'
+                    }}>
+                      {isFullySetup ? 'All Ready 🎉' : `${passedChecks}/${totalChecks} Done`}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* 1. Business Profile */}
+                    <div
+                      onClick={() => { setShowProgressMenu(false); setActiveSubPage('profile'); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        background: '#F8FAFC',
+                        cursor: 'pointer',
+                        border: '1px solid #F1F5F9'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isProfileConfigured ? '#DCFCE7' : '#FEE2E2', color: isProfileConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
+                          {isProfileConfigured ? '✓' : '!'}
+                        </span>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Business Profile</span>
+                      </div>
+                      <span style={{ fontSize: '0.70rem', color: isProfileConfigured ? '#16A34A' : '#DC2626', fontWeight: 700 }}>
+                        {isProfileConfigured ? 'Done' : 'Setup'}
+                      </span>
+                    </div>
+
+                    {/* 2. Brand Logo */}
+                    <div
+                      onClick={() => { setShowProgressMenu(false); setActiveSubPage('profile'); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        background: '#F8FAFC',
+                        cursor: 'pointer',
+                        border: '1px solid #F1F5F9'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isLogoConfigured ? '#DCFCE7' : '#FEE2E2', color: isLogoConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
+                          {isLogoConfigured ? '✓' : '!'}
+                        </span>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Brand Logo</span>
+                      </div>
+                      <span style={{ fontSize: '0.70rem', color: isLogoConfigured ? '#16A34A' : '#DC2626', fontWeight: 700 }}>
+                        {isLogoConfigured ? 'Done' : 'Upload'}
+                      </span>
+                    </div>
+
+                    {/* 3. Location & GPS */}
+                    <div
+                      onClick={() => { setShowProgressMenu(false); setActiveSubPage('location'); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        background: '#F8FAFC',
+                        cursor: 'pointer',
+                        border: '1px solid #F1F5F9'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isGpsConfigured ? '#DCFCE7' : '#FEE2E2', color: isGpsConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
+                          {isGpsConfigured ? '✓' : '!'}
+                        </span>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Location & GPS</span>
+                      </div>
+                      <span style={{ fontSize: '0.70rem', color: isGpsConfigured ? '#16A34A' : '#DC2626', fontWeight: 700 }}>
+                        {isGpsConfigured ? 'Done' : 'Set GPS'}
+                      </span>
+                    </div>
+
+                    {/* 4. Order Alerts */}
+                    <div
+                      onClick={() => { setShowProgressMenu(false); testAlarmSound(); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        background: '#F8FAFC',
+                        cursor: 'pointer',
+                        border: '1px solid #F1F5F9'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isAlertsConfigured ? '#DCFCE7' : '#FEE2E2', color: isAlertsConfigured ? '#16A34A' : '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 900 }}>
+                          {isAlertsConfigured ? '✓' : '!'}
+                        </span>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>Order Alert Sound</span>
+                      </div>
+                      <span style={{ fontSize: '0.70rem', color: '#0284C7', fontWeight: 700 }}>
+                        Test 🔔
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {saveSuccessMsg && (
+            <div style={{
+              background: '#DCFCE7',
+              color: '#15803D',
+              border: '1px solid #86EFAC',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <CheckCircle2 size={16} />
+              <span>{saveSuccessMsg}</span>
             </div>
           )}
-        </div>
-      </div>
 
-      {saveSuccessMsg && (
-        <div style={{
-          background: '#DCFCE7',
-          color: '#15803D',
-          border: '1px solid #86EFAC',
-          padding: '10px 16px',
-          borderRadius: '12px',
-          fontSize: '0.82rem',
-          fontWeight: 800,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <CheckCircle2 size={16} />
-          <span>{saveSuccessMsg}</span>
-        </div>
-      )}
+          {/* MOBILE HORIZONTAL TABS STRIP (Visible on mobile/tablets) */}
+          <div className="settings-mobile-tabs">
+            {navTabs.map(tab => {
+              const isActive = settingsTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setSettingsTab(tab.id)}
+                  className={`settings-mobile-tab-btn ${isActive ? 'active' : ''}`}
+                >
+                  {isActive && (
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#FF5A1F' }} />
+                  )}
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-      {/* MOBILE HORIZONTAL TABS STRIP (Visible on mobile/tablets) */}
-      <div className="settings-mobile-tabs">
-        {navTabs.map(tab => {
-          const isActive = settingsTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setSettingsTab(tab.id)}
-              className={`settings-mobile-tab-btn ${isActive ? 'active' : ''}`}
-            >
-              {isActive && (
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#FF5A1F' }} />
-              )}
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ========================================================
+          {/* ========================================================
           2. MAIN BODY: LEFT SUBMENU SIDEBAR + RIGHT CONTENT
          ======================================================== */}
-      <div className="settings-body-layout">
-        {/* DESKTOP VERTICAL SUBMENU SIDEBAR */}
-        <div className="settings-left-sidebar">
-          {navTabs.map(tab => {
-            const isActive = settingsTab === tab.id;
-            const IconComponent = tab.icon;
-            return (
-              <div
-                key={tab.id}
-                onClick={() => setSettingsTab(tab.id)}
-                className={`settings-sidebar-link ${isActive ? 'active' : ''}`}
-              >
-                <IconComponent size={17} color={isActive ? '#FF5A1F' : '#64748B'} />
-                <span>{tab.label}</span>
-              </div>
-            );
-          })}
-        </div>
+          <div className="settings-body-layout">
+            {/* DESKTOP VERTICAL SUBMENU SIDEBAR */}
+            <div className="settings-left-sidebar">
+              {navTabs.map(tab => {
+                const isActive = settingsTab === tab.id;
+                const IconComponent = tab.icon;
+                return (
+                  <div
+                    key={tab.id}
+                    onClick={() => setSettingsTab(tab.id)}
+                    className={`settings-sidebar-link ${isActive ? 'active' : ''}`}
+                  >
+                    <IconComponent size={17} color={isActive ? '#FF5A1F' : '#64748B'} />
+                    <span>{tab.label}</span>
+                  </div>
+                );
+              })}
+            </div>
 
-        {/* RIGHT MAIN CONTENT CONTAINER */}
-        <div className="settings-main-content">
-          {/* ========================================================
+            {/* RIGHT MAIN CONTENT CONTAINER */}
+            <div className="settings-main-content">
+              {/* ========================================================
               TAB VIEW 1: GENERAL (DASHBOARD OVERVIEW)
              ======================================================== */}
-          {settingsTab === 'general' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* SECTION 1: QUICK ACTIONS */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontWeight: 800 }}>Quick Actions</strong>
-                  <span style={{ fontSize: '0.72rem', color: '#FF5A1F', fontWeight: 700, cursor: 'pointer' }} onClick={() => setSettingsTab('operations')}>View all</span>
-                </div>
-
-                {/* DESKTOP: 3 Cards Row */}
-                <div className="quick-actions-desktop">
-                  <div className="quick-action-card-desktop" onClick={() => setActiveSubPage('profile')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                      <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Store size={18} />
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Edit Profile</strong>
-                        <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Update business details</span>
-                      </div>
-                    </div>
-                    <ChevronRight size={16} color="#94A3B8" />
-                  </div>
-
-                  <div className="quick-action-card-desktop" onClick={() => onNavigate && onNavigate('qr-generator')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                      <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Printer size={18} />
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Generate QR</strong>
-                        <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Create QR standees</span>
-                      </div>
-                    </div>
-                    <ChevronRight size={16} color="#94A3B8" />
-                  </div>
-
-                  <div className="quick-action-card-desktop" onClick={testAlarmSound}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                      <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Bell size={18} />
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Test Order Alert</strong>
-                        <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Test sound & notification</span>
-                      </div>
-                    </div>
-                    <ChevronRight size={16} color="#94A3B8" />
-                  </div>
-                </div>
-
-                {/* MOBILE: 2x2 Compact Grid matching mockup */}
-                <div className="quick-actions-mobile">
-                  <div className="quick-action-tile-mobile" onClick={() => setActiveSubPage('profile')}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Store size={20} />
-                    </div>
-                    <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Edit Profile</strong>
-                  </div>
-
-                  <div className="quick-action-tile-mobile" onClick={() => onNavigate && onNavigate('qr-generator')}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Printer size={20} />
-                    </div>
-                    <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Generate QR</strong>
-                  </div>
-
-                  <div className="quick-action-tile-mobile" onClick={testAlarmSound}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Bell size={20} />
-                    </div>
-                    <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Test Alert</strong>
-                  </div>
-
-                  <div className="quick-action-tile-mobile" onClick={() => setActiveSubPage('menu-preferences')}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Utensils size={20} />
-                    </div>
-                    <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>GST & Currency</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 2: BUSINESS HEALTH BANNER */}
-              <div className="restaurant-health-banner">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {settingsTab === 'general' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* SECTION 1: QUICK ACTIONS */}
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <ShieldCheck size={17} color="#16A34A" />
-                      <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>Business Health</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontWeight: 800 }}>Quick Actions</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#FF5A1F', fontWeight: 700, cursor: 'pointer' }} onClick={() => setSettingsTab('operations')}>View all</span>
                     </div>
-                    <p style={{ fontSize: '0.74rem', color: '#64748B', margin: '2px 0 0 0' }}>
-                      All core settings are configured and ready.
-                    </p>
-                  </div>
-                  <span style={{ fontSize: '0.72rem', color: '#FF5A1F', fontWeight: 700, cursor: 'pointer' }} onClick={() => setSettingsTab('restaurant')}>View all</span>
-                </div>
 
-                {/* Desktop 4-col */}
-                <div className="health-items-desktop">
-                  <div className="health-item-card">
-                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: isProfileConfigured ? '#DCFCE7' : '#F1F5F9', color: isProfileConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 900 }}>✓</span>
-                    <div>
-                      <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A' }}>Business Profile</div>
-                      <div style={{ fontSize: '0.68rem', color: isProfileConfigured ? '#15803D' : '#64748B', fontWeight: 600 }}>{isProfileConfigured ? 'Configured' : 'Needs attention'}</div>
+                    {/* DESKTOP: 3 Cards Row */}
+                    <div className="quick-actions-desktop">
+                      <div className="quick-action-card-desktop" onClick={() => setActiveSubPage('profile')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Store size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Edit Profile</strong>
+                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Update business details</span>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} color="#94A3B8" />
+                      </div>
+
+                      <div className="quick-action-card-desktop" onClick={() => onNavigate && onNavigate('qr-generator')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Printer size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Generate QR</strong>
+                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Create QR standees</span>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} color="#94A3B8" />
+                      </div>
+
+                      <div className="quick-action-card-desktop" onClick={testAlarmSound}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Bell size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Test Order Alert</strong>
+                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Test sound & notification</span>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} color="#94A3B8" />
+                      </div>
+                    </div>
+
+                    {/* MOBILE: 2x2 Compact Grid matching mockup */}
+                    <div className="quick-actions-mobile">
+                      <div className="quick-action-tile-mobile" onClick={() => setActiveSubPage('profile')}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Store size={20} />
+                        </div>
+                        <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Edit Profile</strong>
+                      </div>
+
+                      <div className="quick-action-tile-mobile" onClick={() => onNavigate && onNavigate('qr-generator')}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Printer size={20} />
+                        </div>
+                        <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Generate QR</strong>
+                      </div>
+
+                      <div className="quick-action-tile-mobile" onClick={testAlarmSound}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Bell size={20} />
+                        </div>
+                        <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Test Alert</strong>
+                      </div>
+
+                      <div className="quick-action-tile-mobile" onClick={() => setActiveSubPage('menu-preferences')}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Utensils size={20} />
+                        </div>
+                        <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>GST & Currency</strong>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="health-item-card">
-                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: isLogoConfigured ? '#DCFCE7' : '#F1F5F9', color: isLogoConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 900 }}>✓</span>
-                    <div>
-                      <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A' }}>Brand Logo</div>
-                      <div style={{ fontSize: '0.68rem', color: isLogoConfigured ? '#15803D' : '#64748B', fontWeight: 600 }}>{isLogoConfigured ? 'Configured' : 'Pending'}</div>
+                  {/* SECTION 2: BUSINESS HEALTH BANNER */}
+                  <div className="restaurant-health-banner">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <ShieldCheck size={17} color="#16A34A" />
+                          <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800 }}>Business Health</strong>
+                        </div>
+                        <p style={{ fontSize: '0.74rem', color: '#64748B', margin: '2px 0 0 0' }}>
+                          All core settings are configured and ready.
+                        </p>
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: '#FF5A1F', fontWeight: 700, cursor: 'pointer' }} onClick={() => setSettingsTab('restaurant')}>View all</span>
+                    </div>
+
+                    {/* Desktop 4-col */}
+                    <div className="health-items-desktop">
+                      <div className="health-item-card">
+                        <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: isProfileConfigured ? '#DCFCE7' : '#F1F5F9', color: isProfileConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 900 }}>✓</span>
+                        <div>
+                          <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A' }}>Business Profile</div>
+                          <div style={{ fontSize: '0.68rem', color: isProfileConfigured ? '#15803D' : '#64748B', fontWeight: 600 }}>{isProfileConfigured ? 'Configured' : 'Needs attention'}</div>
+                        </div>
+                      </div>
+
+                      <div className="health-item-card">
+                        <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: isLogoConfigured ? '#DCFCE7' : '#F1F5F9', color: isLogoConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 900 }}>✓</span>
+                        <div>
+                          <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A' }}>Brand Logo</div>
+                          <div style={{ fontSize: '0.68rem', color: isLogoConfigured ? '#15803D' : '#64748B', fontWeight: 600 }}>{isLogoConfigured ? 'Configured' : 'Pending'}</div>
+                        </div>
+                      </div>
+
+                      <div className="health-item-card">
+                        <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: isGpsConfigured ? '#DCFCE7' : '#F1F5F9', color: isGpsConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 900 }}>✓</span>
+                        <div>
+                          <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A' }}>Location & GPS</div>
+                          <div style={{ fontSize: '0.68rem', color: isGpsConfigured ? '#15803D' : '#64748B', fontWeight: 600 }}>{isGpsConfigured ? 'Configured' : 'Pending'}</div>
+                        </div>
+                      </div>
+
+                      <div className="health-item-card">
+                        <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#DCFCE7', color: '#16A34A', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 900 }}>✓</span>
+                        <div>
+                          <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A' }}>Order Alerts</div>
+                          <div style={{ fontSize: '0.68rem', color: '#15803D', fontWeight: 600 }}>Configured</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mobile compact checklist */}
+                    <div className="health-items-mobile">
+                      <div className="health-item-row-mobile">
+                        <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isProfileConfigured ? '#DCFCE7' : '#F1F5F9', color: isProfileConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
+                        <span>Business Profile</span>
+                      </div>
+                      <div className="health-item-row-mobile">
+                        <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isLogoConfigured ? '#DCFCE7' : '#F1F5F9', color: isLogoConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
+                        <span>Brand Logo</span>
+                      </div>
+                      <div className="health-item-row-mobile">
+                        <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isGpsConfigured ? '#DCFCE7' : '#F1F5F9', color: isGpsConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
+                        <span>Location & GPS</span>
+                      </div>
+                      <div className="health-item-row-mobile">
+                        <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#DCFCE7', color: '#16A34A', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
+                        <span>Order Alerts</span>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 700, background: '#F0FDF4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #DCFCE7' }}>
+                      Your business is ready to go 🎉
                     </div>
                   </div>
 
-                  <div className="health-item-card">
-                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: isGpsConfigured ? '#DCFCE7' : '#F1F5F9', color: isGpsConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 900 }}>✓</span>
-                    <div>
-                      <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A' }}>Location & GPS</div>
-                      <div style={{ fontSize: '0.68rem', color: isGpsConfigured ? '#15803D' : '#64748B', fontWeight: 600 }}>{isGpsConfigured ? 'Configured' : 'Pending'}</div>
-                    </div>
-                  </div>
-
-                  <div className="health-item-card">
-                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#DCFCE7', color: '#16A34A', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 900 }}>✓</span>
-                    <div>
-                      <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A' }}>Order Alerts</div>
-                      <div style={{ fontSize: '0.68rem', color: '#15803D', fontWeight: 600 }}>Configured</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobile compact checklist */}
-                <div className="health-items-mobile">
-                  <div className="health-item-row-mobile">
-                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isProfileConfigured ? '#DCFCE7' : '#F1F5F9', color: isProfileConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
-                    <span>Business Profile</span>
-                  </div>
-                  <div className="health-item-row-mobile">
-                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isLogoConfigured ? '#DCFCE7' : '#F1F5F9', color: isLogoConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
-                    <span>Brand Logo</span>
-                  </div>
-                  <div className="health-item-row-mobile">
-                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: isGpsConfigured ? '#DCFCE7' : '#F1F5F9', color: isGpsConfigured ? '#16A34A' : '#94A3B8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
-                    <span>Location & GPS</span>
-                  </div>
-                  <div className="health-item-row-mobile">
-                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#DCFCE7', color: '#16A34A', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.70rem', fontWeight: 900 }}>✓</span>
-                    <span>Order Alerts</span>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 700, background: '#F0FDF4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #DCFCE7' }}>
-                  Your business is ready to go 🎉
-                </div>
-              </div>
-
-              {/* SECTION 3: FREQUENTLY USED */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  {/* SECTION 3: FREQUENTLY USED */}
                   <div>
-                    <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Frequently Used</strong>
-                    <span style={{ fontSize: '0.74rem', color: '#64748B' }}>Quick access to the most important settings.</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <div>
+                        <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Frequently Used</strong>
+                        <span style={{ fontSize: '0.74rem', color: '#64748B' }}>Quick access to the most important settings.</span>
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: '#FF5A1F', fontWeight: 700, cursor: 'pointer' }} onClick={() => setSettingsTab('restaurant')}>View all</span>
+                    </div>
+
+                    {/* Desktop 4-col Cards */}
+                    <div className="frequently-used-grid">
+                      <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Store size={20} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Business Profile</strong>
+                          <span style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
+                            Business name, logo, contact details and address
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                            Configured
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+
+                      <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Utensils size={20} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Menu Preferences</strong>
+                          <span style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
+                            Currency, GST, categories and more
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                            Configured
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+
+                      <div className="settings-card-primary" onClick={() => setActiveSubPage('orders-devices')}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Bell size={20} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Orders & Devices</strong>
+                          <span style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
+                            Order alerts, devices, printers and notifications
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
+                            Connected
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+
+                      <div className="settings-card-primary" onClick={() => setActiveSubPage('subscription')}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <CreditCard size={20} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Billing & Subscription</strong>
+                          <span style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
+                            Current plan, invoices, usage and upgrades
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
+                            Active Plan
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mobile Compact List Rows */}
+                    <div className="frequently-used-list-mobile">
+                      <div className="mobile-list-item-row" onClick={() => setActiveSubPage('profile')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Store size={18} />
+                          </div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Business Profile</strong>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                            Configured
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+
+                      <div className="mobile-list-item-row" onClick={() => setActiveSubPage('menu-preferences')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Utensils size={18} />
+                          </div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Menu Preferences</strong>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                            Configured
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+
+                      <div className="mobile-list-item-row" onClick={() => setActiveSubPage('orders-devices')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Bell size={18} />
+                          </div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Orders & Devices</strong>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
+                            Connected
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+
+                      <div className="mobile-list-item-row" onClick={() => setActiveSubPage('subscription')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <CreditCard size={18} />
+                          </div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Billing & Subscription</strong>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
+                            Active Plan
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#FF5A1F', fontWeight: 700, cursor: 'pointer' }} onClick={() => setSettingsTab('restaurant')}>View all</span>
+
+                  {/* SECTION 4: MORE SETTINGS */}
+                  <div>
+                    <div style={{ marginBottom: '10px' }}>
+                      <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>More Settings</strong>
+                      <span style={{ fontSize: '0.74rem', color: '#64748B' }}>Additional settings and tools for your business.</span>
+                    </div>
+
+                    {/* Desktop 5-col Grid */}
+                    <div className="more-settings-grid">
+                      <div className="settings-card-secondary" onClick={() => setActiveSubPage('location')}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <MapPin size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Location & GPS</strong>
+                          <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                            Manage location, geofence & presence
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                            Connected
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="settings-card-secondary" onClick={() => onNavigate && onNavigate('qr-generator')}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Printer size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>QR Standees & Space Stickers</strong>
+                          <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                            Generate & manage QR codes
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
+                            Ready
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="settings-card-secondary" onClick={() => setActiveSubPage('security')}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Lock size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Security & Credentials</strong>
+                          <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                            Admin login, password and security
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}>
+                            Secure
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="settings-card-secondary" onClick={() => onNavigate && onNavigate('review')}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <ShieldCheck size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Reviews & AI Auto-Reply</strong>
+                          <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                            Google reviews and AI reply
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}>
+                            Connected
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="settings-card-secondary" onClick={() => setActiveSubPage('database')}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Upload size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Database Tools</strong>
+                          <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
+                            Database health, cleanup and optimization
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                            Optimized
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mobile Compact List Rows for More Settings */}
+                    <div className="more-settings-list-mobile">
+                      <div className="mobile-list-item-row" onClick={() => setActiveSubPage('location')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <MapPin size={18} />
+                          </div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Location & GPS</strong>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                            Connected
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+
+                      <div className="mobile-list-item-row" onClick={() => onNavigate && onNavigate('qr-generator')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Printer size={18} />
+                          </div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>QR Standees & Space Stickers</strong>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
+                            Ready
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+
+                      <div className="mobile-list-item-row" onClick={() => setActiveSubPage('security')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Lock size={18} />
+                          </div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Security & Credentials</strong>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}>
+                            Secure
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+
+                      <div className="mobile-list-item-row" onClick={() => onNavigate && onNavigate('review')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ShieldCheck size={18} />
+                          </div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Reviews & AI Auto-Reply</strong>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}>
+                            Connected
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+
+                      <div className="mobile-list-item-row" onClick={() => setActiveSubPage('database')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Upload size={18} />
+                          </div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Database Tools</strong>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                            Optimized
+                          </span>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              )}
 
-                {/* Desktop 4-col Cards */}
-                <div className="frequently-used-grid">
-                  <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Store size={20} />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Business Profile</strong>
-                      <span style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
-                        Business name, logo, contact details and address
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                        Configured
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-
-                  <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Utensils size={20} />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Menu Preferences</strong>
-                      <span style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
-                        Currency, GST, categories and more
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                        Configured
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-
-                  <div className="settings-card-primary" onClick={() => setActiveSubPage('orders-devices')}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Bell size={20} />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Orders & Devices</strong>
-                      <span style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
-                        Order alerts, devices, printers and notifications
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
-                        Connected
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-
-                  <div className="settings-card-primary" onClick={() => setActiveSubPage('subscription')}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <CreditCard size={20} />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Billing & Subscription</strong>
-                      <span style={{ fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4, display: 'block' }}>
-                        Current plan, invoices, usage and upgrades
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
-                        Active Plan
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobile Compact List Rows */}
-                <div className="frequently-used-list-mobile">
-                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('profile')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Store size={18} />
-                      </div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Business Profile</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                        Configured
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-
-                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('menu-preferences')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Utensils size={18} />
-                      </div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Menu Preferences</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                        Configured
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-
-                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('orders-devices')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Bell size={18} />
-                      </div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Orders & Devices</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
-                        Connected
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-
-                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('subscription')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <CreditCard size={18} />
-                      </div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Billing & Subscription</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
-                        Active Plan
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 4: MORE SETTINGS */}
-              <div>
-                <div style={{ marginBottom: '10px' }}>
-                  <strong style={{ fontSize: '0.90rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>More Settings</strong>
-                  <span style={{ fontSize: '0.74rem', color: '#64748B' }}>Additional settings and tools for your business.</span>
-                </div>
-
-                {/* Desktop 5-col Grid */}
-                <div className="more-settings-grid">
-                  <div className="settings-card-secondary" onClick={() => setActiveSubPage('location')}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <MapPin size={18} />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Location & GPS</strong>
-                      <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
-                        Manage location, geofence & presence
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                        Connected
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="settings-card-secondary" onClick={() => onNavigate && onNavigate('qr-generator')}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Printer size={18} />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>QR Standees & Space Stickers</strong>
-                      <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
-                        Generate & manage QR codes
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
-                        Ready
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="settings-card-secondary" onClick={() => setActiveSubPage('security')}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Lock size={18} />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Security & Credentials</strong>
-                      <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
-                        Admin login, password and security
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}>
-                        Secure
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="settings-card-secondary" onClick={() => onNavigate && onNavigate('review')}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <ShieldCheck size={18} />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Reviews & AI Auto-Reply</strong>
-                      <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
-                        Google reviews and AI reply
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}>
-                        Connected
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="settings-card-secondary" onClick={() => setActiveSubPage('database')}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Upload size={18} />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Database Tools</strong>
-                      <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
-                        Database health, cleanup and optimization
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                        Optimized
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobile Compact List Rows for More Settings */}
-                <div className="more-settings-list-mobile">
-                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('location')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <MapPin size={18} />
-                      </div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Location & GPS</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                        Connected
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-
-                  <div className="mobile-list-item-row" onClick={() => onNavigate && onNavigate('qr-generator')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Printer size={18} />
-                      </div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>QR Standees & Space Stickers</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
-                        Ready
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-
-                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('security')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Lock size={18} />
-                      </div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Security & Credentials</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}>
-                        Secure
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-
-                  <div className="mobile-list-item-row" onClick={() => onNavigate && onNavigate('review')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <ShieldCheck size={18} />
-                      </div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Reviews & AI Auto-Reply</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}>
-                        Connected
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-
-                  <div className="mobile-list-item-row" onClick={() => setActiveSubPage('database')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Upload size={18} />
-                      </div>
-                      <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Database Tools</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                        Optimized
-                      </span>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
+              {/* ========================================================
               TAB VIEW 2: RESTAURANT
              ======================================================== */}
-          {settingsTab === 'restaurant' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
-                  🏪 {terms.businessNoun || 'Business'} Settings
-                </h3>
-                <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                  Manage your business profile, branding logo, physical address and customer location geofence.
-                </span>
-              </div>
-
-              <div className="tab-content-grid-3col">
-                {/* Card 1: Business Profile */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Store size={22} />
-                  </div>
+              {settingsTab === 'restaurant' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Business Profile</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Business name, contact phone number, address, and license details.
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
+                      🏪 {terms.businessNoun || 'Business'} Settings
+                    </h3>
+                    <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
+                      Manage your business profile, branding logo, physical address and customer location geofence.
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: isProfileConfigured ? '#DCFCE7' : '#FEF3C7', color: isProfileConfigured ? '#15803D' : '#D97706', border: isProfileConfigured ? '1px solid #BBF7D0' : '1px solid #FDE68A' }}>
-                      {isProfileConfigured ? 'Configured' : 'Needs Attention'}
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Edit Profile →</span>
+
+                  <div className="tab-content-grid-3col">
+                    {/* Card 1: Business Profile */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Store size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Business Profile</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Business name, contact phone number, address, and license details.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: isProfileConfigured ? '#DCFCE7' : '#FEF3C7', color: isProfileConfigured ? '#15803D' : '#D97706', border: isProfileConfigured ? '1px solid #BBF7D0' : '1px solid #FDE68A' }}>
+                          {isProfileConfigured ? 'Configured' : 'Needs Attention'}
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Edit Profile →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 2: Brand Logo & Banner */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Upload size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Brand Logo & Banner</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Upload your official brand logo icon and high-resolution header banner.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: isLogoConfigured ? '#DCFCE7' : '#FEF3C7', color: isLogoConfigured ? '#15803D' : '#D97706', border: isLogoConfigured ? '1px solid #BBF7D0' : '1px solid #FDE68A' }}>
+                          {isLogoConfigured ? 'Logo Active' : 'No Logo'}
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Manage Logo →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Location & GPS Geofence */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('location')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <MapPin size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Location & GPS Geofence</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Set physical GPS coordinates and customer presence verification radius.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: isGpsConfigured ? '#DCFCE7' : '#FEF3C7', color: isGpsConfigured ? '#15803D' : '#D97706', border: isGpsConfigured ? '1px solid #BBF7D0' : '1px solid #FDE68A' }}>
+                          {isGpsConfigured ? 'GPS Active' : 'Setup Required'}
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Configure GPS →</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                {/* Card 2: Brand Logo & Banner */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Upload size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Brand Logo & Banner</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Upload your official brand logo icon and high-resolution header banner.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: isLogoConfigured ? '#DCFCE7' : '#FEF3C7', color: isLogoConfigured ? '#15803D' : '#D97706', border: isLogoConfigured ? '1px solid #BBF7D0' : '1px solid #FDE68A' }}>
-                      {isLogoConfigured ? 'Logo Active' : 'No Logo'}
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Manage Logo →</span>
-                  </div>
-                </div>
-
-                {/* Card 3: Location & GPS Geofence */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('location')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <MapPin size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Location & GPS Geofence</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Set physical GPS coordinates and customer presence verification radius.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: isGpsConfigured ? '#DCFCE7' : '#FEF3C7', color: isGpsConfigured ? '#15803D' : '#D97706', border: isGpsConfigured ? '1px solid #BBF7D0' : '1px solid #FDE68A' }}>
-                      {isGpsConfigured ? 'GPS Active' : 'Setup Required'}
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Configure GPS →</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
+              {/* ========================================================
               TAB VIEW 3: OPERATIONS
              ======================================================== */}
-          {settingsTab === 'operations' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
-                  ⚙️ Operations & Devices
-                </h3>
-                <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                  Manage incoming order siren sounds, notifications, thermal receipt printers, and QR standees.
-                </span>
-              </div>
-
-              <div className="tab-content-grid-3col">
-                {/* Card 1: Orders & Devices */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('orders-devices')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Bell size={22} />
-                  </div>
+              {settingsTab === 'operations' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Order Siren & Notifications</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Swiggy/Zomato style order alarm, volume adjustment, browser and push alerts.
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
+                      ⚙️ Operations & Devices
+                    </h3>
+                    <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
+                      Manage incoming order siren sounds, notifications, thermal receipt printers, and QR standees.
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
-                      Alerts Enabled
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#0284C7', fontWeight: 700 }}>Device Settings →</span>
+
+                  <div className="tab-content-grid-3col">
+                    {/* Card 1: Orders & Devices */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('orders-devices')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Bell size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Order Siren & Notifications</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Swiggy/Zomato style order alarm, volume adjustment, browser and push alerts.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
+                          Alerts Enabled
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#0284C7', fontWeight: 700 }}>Device Settings →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 2: QR Standees & Space Stickers */}
+                    <div className="settings-card-primary" onClick={() => onNavigate && onNavigate('qr-generator')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Printer size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>QR Standees & Space Stickers</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Generate and print high-resolution QR standees, tent cards, and stickers.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
+                          Ready to Print
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#D97706', fontWeight: 700 }}>Open Generator →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Thermal Receipt Printer */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('orders-devices')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Printer size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Thermal POS Printer</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Configure 58mm/80mm thermal receipt printer, Bluetooth & USB direct printing.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
+                          Connected
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Configure Printer →</span>
+                      </div>
+                    </div>
+
+                    {/* Cinema Card if active */}
+                    {isCinema && (
+                      <div className="settings-card-primary" onClick={() => setOpenDrawer('cinema')} style={{ borderColor: '#0284C7', background: '#F0F9FF' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
+                          🎬
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Cinema Screens & Seats</strong>
+                          <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                            Auditorium screens, rows and seats for seat-based QR ordering.
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                          <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
+                            {cinemaScreens.length} {cinemaScreens.length === 1 ? 'Screen' : 'Screens'}
+                          </span>
+                          <span style={{ fontSize: '0.78rem', color: '#0284C7', fontWeight: 700 }}>Manage Screens →</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Hotel Guest Rooms Card if active */}
+                    {isHotel && (
+                      <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')} style={{ borderColor: '#10B981', background: '#F0FDF4' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
+                          🏨
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Hotel Guest Rooms</strong>
+                          <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                            Configure total guest rooms for in-room QR dining, service calls, and room status.
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                          <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
+                            {Number(settingsForm?.total_rooms ?? restaurantInfo?.total_rooms ?? 0)} Rooms Active
+                          </span>
+                          <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Configure Rooms →</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
+              )}
 
-                {/* Card 2: QR Standees & Space Stickers */}
-                <div className="settings-card-primary" onClick={() => onNavigate && onNavigate('qr-generator')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Printer size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>QR Standees & Space Stickers</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Generate and print high-resolution QR standees, tent cards, and stickers.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
-                      Ready to Print
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#D97706', fontWeight: 700 }}>Open Generator →</span>
-                  </div>
-                </div>
-
-                {/* Card 3: Thermal Receipt Printer */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('orders-devices')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Printer size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Thermal POS Printer</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Configure 58mm/80mm thermal receipt printer, Bluetooth & USB direct printing.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
-                      Connected
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Configure Printer →</span>
-                  </div>
-                </div>
-
-                {/* Cinema Card if active */}
-                {isCinema && (
-                  <div className="settings-card-primary" onClick={() => setOpenDrawer('cinema')} style={{ borderColor: '#0284C7', background: '#F0F9FF' }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
-                      🎬
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Cinema Screens & Seats</strong>
-                      <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                        Auditorium screens, rows and seats for seat-based QR ordering.
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                      <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
-                        {cinemaScreens.length} {cinemaScreens.length === 1 ? 'Screen' : 'Screens'}
-                      </span>
-                      <span style={{ fontSize: '0.78rem', color: '#0284C7', fontWeight: 700 }}>Manage Screens →</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Hotel Guest Rooms Card if active */}
-                {isHotel && (
-                  <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')} style={{ borderColor: '#10B981', background: '#F0FDF4' }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
-                      🏨
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Hotel Guest Rooms</strong>
-                      <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                        Configure total guest rooms for in-room QR dining, service calls, and room status.
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                      <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
-                        {Number(settingsForm?.total_rooms ?? restaurantInfo?.total_rooms ?? 0)} Rooms Active
-                      </span>
-                      <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Configure Rooms →</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
+              {/* ========================================================
               TAB VIEW 4: MENU & BILLING
              ======================================================== */}
-          {settingsTab === 'menu-billing' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
-                  🍽️ Menu & Billing Preferences
-                </h3>
-                <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                  Configure dish badges, 5% GST calculation, currency symbol, and TouchQR subscription plan.
-                </span>
-              </div>
-
-              <div className="tab-content-grid-3col">
-                {/* Card 1: Menu Preferences */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Utensils size={22} />
-                  </div>
+              {settingsTab === 'menu-billing' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Menu Preferences</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Vegetarian/Non-veg markers, spice indicators, cuisine classifications, and badge filters.
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
+                      🍽️ Menu & Billing Preferences
+                    </h3>
+                    <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
+                      Configure dish badges, 5% GST calculation, currency symbol, and TouchQR subscription plan.
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                      Configured
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Menu Settings →</span>
+
+                  <div className="tab-content-grid-3col">
+                    {/* Card 1: Menu Preferences */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Utensils size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Menu Preferences</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Vegetarian/Non-veg markers, spice indicators, cuisine classifications, and badge filters.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                          Configured
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Menu Settings →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 2: GST & Tax Calculation */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <FileText size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>5% GST & Tax Billing</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Automatic GST tax calculation on checkout bills, CGST/SGST breakdown.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                          5% GST Active
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Configure Tax →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Billing & Subscription */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('subscription')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CreditCard size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Billing & Subscription</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Current active SaaS plan, usage limits, invoice receipts, and plan upgrades.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
+                          Active Plan
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Manage Billing →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 4: Customer Menu Badges & Filters */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Sparkles size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Customer Menu Badges & Filters</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Toggle Must Try, Special, Combo, Customizable, Veg, Non-Veg, Egg, and Under ₹100 pills.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                          8 Badges & Filters
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Customize Badges →</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                {/* Card 2: GST & Tax Calculation */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FileText size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>5% GST & Tax Billing</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Automatic GST tax calculation on checkout bills, CGST/SGST breakdown.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                      5% GST Active
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Configure Tax →</span>
-                  </div>
-                </div>
-
-                {/* Card 3: Billing & Subscription */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('subscription')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <CreditCard size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Billing & Subscription</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Current active SaaS plan, usage limits, invoice receipts, and plan upgrades.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
-                      Active Plan
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Manage Billing →</span>
-                  </div>
-                </div>
-
-                {/* Card 4: Customer Menu Badges & Filters */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Sparkles size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Customer Menu Badges & Filters</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Toggle Must Try, Special, Combo, Customizable, Veg, Non-Veg, Egg, and Under ₹100 pills.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                      8 Badges & Filters
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Customize Badges →</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
+              {/* ========================================================
               TAB VIEW 5: SECURITY
              ======================================================== */}
-          {settingsTab === 'security' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
-                  🔒 Security & Credentials
-                </h3>
-                <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                  Update admin username, change password, manage kitchen KDS PIN, and account protection.
-                </span>
-              </div>
-
-              <div className="tab-content-grid-3col">
-                {/* Card 1: Security & Credentials */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Lock size={22} />
-                  </div>
+              {settingsTab === 'security' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Admin Credentials</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Update admin login username and password with encrypted hash protection.
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
+                      🔒 Security & Credentials
+                    </h3>
+                    <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
+                      Update admin username, change password, manage kitchen KDS PIN, and account protection.
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}>
-                      Secure
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#DC2626', fontWeight: 700 }}>Change Password →</span>
+
+                  <div className="tab-content-grid-3col">
+                    {/* Card 1: Security & Credentials */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Lock size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Admin Credentials</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Update admin login username and password with encrypted hash protection.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA' }}>
+                          Secure
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#DC2626', fontWeight: 700 }}>Change Password →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 2: KDS Kitchen PIN */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ShieldCheck size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>KDS 4-Digit Kitchen PIN</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Lock kitchen display console so only authorized kitchen staff can mark items ready.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
+                          PIN Protected
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#D97706', fontWeight: 700 }}>Set PIN →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Account Protection */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ShieldCheck size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Session & Data Protection</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          JWT token encrypted session, automated auto-timeout, and security audit log.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
+                          Active
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>View Details →</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                {/* Card 2: KDS Kitchen PIN */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ShieldCheck size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>KDS 4-Digit Kitchen PIN</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Lock kitchen display console so only authorized kitchen staff can mark items ready.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
-                      PIN Protected
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#D97706', fontWeight: 700 }}>Set PIN →</span>
-                  </div>
-                </div>
-
-                {/* Card 3: Account Protection */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ShieldCheck size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Session & Data Protection</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      JWT token encrypted session, automated auto-timeout, and security audit log.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
-                      Active
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>View Details →</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
+              {/* ========================================================
               TAB VIEW 6: ADVANCED
              ======================================================== */}
-          {settingsTab === 'advanced' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
-                  🚀 Advanced Tools & System Health
-                </h3>
-                <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                  Google Reviews integration, instant AI review assistant, database optimization, and data export.
-                </span>
-              </div>
-
-              <div className="tab-content-grid-3col">
-                {/* Card 1: Reviews & AI Auto-Reply */}
-                <div className="settings-card-primary" onClick={() => onNavigate && onNavigate('review')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ShieldCheck size={22} />
-                  </div>
+              {settingsTab === 'advanced' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Reviews & AI Auto-Reply</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Google reviews connection and AI powered smart auto-reply review assistant.
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 2px 0' }}>
+                      🚀 Advanced Tools & System Health
+                    </h3>
+                    <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
+                      Google Reviews integration, instant AI review assistant, database optimization, and data export.
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}>
-                      Connected
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#7E22CE', fontWeight: 700 }}>Open Reviews →</span>
+
+                  <div className="tab-content-grid-3col">
+                    {/* Card 1: Reviews & AI Auto-Reply */}
+                    <div className="settings-card-primary" onClick={() => onNavigate && onNavigate('review')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ShieldCheck size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Reviews & AI Auto-Reply</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Google reviews connection and AI powered smart auto-reply review assistant.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}>
+                          Connected
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#7E22CE', fontWeight: 700 }}>Open Reviews →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 2: Database Tools */}
+                    <div className="settings-card-primary" onClick={() => setActiveSubPage('database')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Upload size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Database Maintenance</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Purge temporary logs, compact database tables, and optimize query indexes.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                          Optimized
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 700 }}>Run Optimizer →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Data Refresh & Sync */}
+                    <div className="settings-card-primary" onClick={() => onRefreshInfo && onRefreshInfo()}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Zap size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>System Cache & Sync</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          Force reload cache, synchronize real-time socket connections, and verify server health.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
+                          Realtime
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#0284C7', fontWeight: 700 }}>Sync Now →</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                {/* Card 2: Database Tools */}
-                <div className="settings-card-primary" onClick={() => setActiveSubPage('database')}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Upload size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Database Maintenance</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Purge temporary logs, compact database tables, and optimize query indexes.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                      Optimized
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 700 }}>Run Optimizer →</span>
-                  </div>
-                </div>
-
-                {/* Card 3: Data Refresh & Sync */}
-                <div className="settings-card-primary" onClick={() => onRefreshInfo && onRefreshInfo()}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Zap size={22} />
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>System Cache & Sync</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                      Force reload cache, synchronize real-time socket connections, and verify server health.
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                    <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
-                      Realtime
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#0284C7', fontWeight: 700 }}>Sync Now →</span>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
-      </>
+          </div>
+        </>
       )}
 
       {/* Drawer 1: Business Profile (Mobile-First Polish) */}
@@ -10530,7 +10542,7 @@ export default function SetupView({
         )}
       >
         <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.84rem' }}>
-          
+
           {/* 1. BUSINESS IDENTITY */}
           <div style={{
             background: '#FFFFFF',
@@ -11059,34 +11071,6 @@ export default function SetupView({
                 <ArrowUpRight size={16} color="#64748B" style={{ position: 'absolute', right: '12px', top: '15px' }} />
               </div>
             </div>
-
-            <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '4px' }}>
-                Google Review Page Link <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="url"
-                  placeholder="https://g.page/r/your-business-review"
-                  value={settingsForm.google_review_url || ''}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, google_review_url: e.target.value })}
-                  style={{
-                    width: '100%',
-                    height: '46px',
-                    padding: '0 36px 0 14px',
-                    borderRadius: '10px',
-                    border: '1px solid #E2E8F0',
-                    background: '#FFFFFF',
-                    fontSize: '0.82rem',
-                    color: '#0F172A',
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                />
-                <ArrowUpRight size={16} color="#64748B" style={{ position: 'absolute', right: '12px', top: '15px' }} />
-              </div>
-            </div>
           </div>
 
           {/* 6. LIVE MENU PREVIEW CARD (MATCHING MOBILE MOCKUP) */}
@@ -11152,1789 +11136,1843 @@ export default function SetupView({
                     }}
                   />
                 ) : (
-                  <div style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)',
-                    color: '#F59E0B',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #7C1D1D 0%, #450A0A 100%)',
+                color: '#F59E0B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 900,
+                fontSize: '1.4rem',
+                border: '2px solid #F59E0B',
+                margin: '0 auto 8px auto',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+              }}>
+                {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
+              </div>
+                )}
+            </div>
+
+            {/* Body Content Area */}
+            <div style={{ padding: '0 16px 16px 16px', textAlign: 'center', background: '#FFFFFF' }}>
+              <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900, display: 'block', marginBottom: '2px' }}>
+                {settingsForm.name || 'Business Name'}
+              </strong>
+              <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginBottom: '10px' }}>
+                {settingsForm.tagline || 'Pure Veg Family Restaurant & Bakery'}
+              </span>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#059669' }} /> Pure Veg
+                </span>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>•</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#0F172A' }}>
+                  🕒 8:00 AM - 10:30 PM <span style={{ color: '#059669' }}>Open</span>
+                </span>
+              </div>
+
+              <button
+                type="button"
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#064E3B',
+                  color: '#FFFFFF',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginBottom: '14px'
+                }}
+              >
+                <span>View Digital Menu</span>
+                <Printer size={14} />
+              </button>
+
+              {/* 4 Action Icons */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                  <Printer size={14} color="#64748B" />
+                  <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>Scan QR</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                  <Utensils size={14} color="#64748B" />
+                  <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>View Menu</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                  <Store size={14} color="#64748B" />
+                  <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>Place Order</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                  <CreditCard size={14} color="#64748B" />
+                  <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>Pay Bill</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Informational Tip Card */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px',
+            padding: '10px 12px',
+            background: '#FFFBEB',
+            borderRadius: '10px',
+            border: '1px solid #FEF3C7',
+            fontSize: '0.74rem',
+            color: '#92400E'
+          }}>
+            <span>💡</span>
+            <span>This is how your customers will see your digital menu and business information.</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => window.open(window.location.origin, '_blank')}
+            style={{
+              width: '100%',
+              padding: '9px 14px',
+              borderRadius: '10px',
+              border: '1px solid #E2E8F0',
+              background: '#FFFFFF',
+              color: '#0F172A',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <span>Preview Full Menu</span>
+            <ArrowUpRight size={14} />
+          </button>
+        </div>
+
+        <div style={{ fontSize: '0.72rem', color: '#64748B', textAlign: 'center', padding: '4px 0' }}>
+          ℹ️ All changes are saved automatically.
+        </div>
+
+        {/* Custom Menu Domain (CNAME) - Only displayed if custom_domain_enabled on plan */}
+        {(() => {
+          const isCustomDomainPlanAllowed = Boolean(
+            settingsForm?.custom_domain_enabled === 1 ||
+            settingsForm?.custom_domain_enabled === true ||
+            settingsForm?.custom_domain_enabled === '1' ||
+            restaurantInfo?.custom_domain_enabled === 1 ||
+            restaurantInfo?.custom_domain_enabled === true ||
+            restaurantInfo?.custom_domain_enabled === '1' ||
+            restaurantInfo?.permissions?.custom_domain_enabled === true
+          );
+
+          if (!isCustomDomainPlanAllowed) return null;
+
+          return (
+            <div>
+              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                🌐 Custom Menu Domain (CNAME):
+                <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
+                  INCLUDED IN PLAN
+                </span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. menu.yourrestaurant.com"
+                value={settingsForm.custom_domain || ''}
+                onChange={(e) => setSettingsForm({ ...settingsForm, custom_domain: e.target.value })}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
+              />
+              <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px' }}>
+                Point CNAME record in GoDaddy to: <strong style={{ color: '#059669' }}>cname.vercel-dns.com</strong>
+              </div>
+            </div>
+          );
+        })()}
+      </form>
+    </AdminDrawer>
+
+      {/* Drawer 2: Orders & Devices */ }
+  <AdminDrawer
+    isOpen={openDrawer === 'devices'}
+    onClose={() => setOpenDrawer(null)}
+    title="🔔 Orders & Devices"
+    subtitle="Manage live order siren ringtones and thermal printer settings"
+    footer={(
+      <button
+        onClick={handleFormSave}
+        style={{
+          width: '100%',
+          padding: '12px',
+          borderRadius: '12px',
+          border: 'none',
+          background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+          color: '#FFFFFF',
+          fontWeight: 900,
+          fontSize: '0.90rem',
+          cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+        }}
+      >
+        Save Device Settings
+      </button>
+    )}
+  >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* Card 1: Siren Audio Alert Box */}
+      <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+              🔊
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Live Order Siren Ringtone</strong>
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Swiggy/Zomato style order alert sound</span>
+            </div>
+          </div>
+          <input
+            type="checkbox"
+            checked={settingsForm.order_alarm_enabled !== false}
+            onChange={(e) => setSettingsForm({ ...settingsForm, order_alarm_enabled: e.target.checked })}
+            style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#059669' }}
+          />
+        </div>
+        <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 12px 0', lineHeight: 1.45, paddingLeft: '46px' }}>
+          Plays a loud ringing alarm automatically whenever a new customer order arrives.
+        </p>
+        <div style={{ display: 'flex', gap: '10px', paddingLeft: '46px' }}>
+          <button
+            type="button"
+            onClick={testAlarmSound}
+            style={{
+              flex: 1,
+              padding: '9px 12px',
+              borderRadius: '10px',
+              background: '#FFFBEB',
+              color: '#B45309',
+              border: '1px solid #FDE68A',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Volume2 size={15} /> Test Siren Sound
+          </button>
+          <button
+            type="button"
+            onClick={requestPushPermission}
+            style={{
+              flex: 1,
+              padding: '9px 12px',
+              borderRadius: '10px',
+              background: '#F1F5F9',
+              color: '#334155',
+              border: '1px solid #CBD5E1',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            🔔 Push Notifications
+          </button>
+        </div>
+      </div>
+
+      {/* Card 2: Kitchen Display System (KDS) Screen Toggle */}
+      {(() => {
+        const isKdsPlanAllowed = Boolean(
+          settingsForm?.kds_enabled === 1 ||
+          settingsForm?.kds_enabled === true ||
+          settingsForm?.kds_enabled === '1' ||
+          restaurantInfo?.kds_enabled === 1 ||
+          restaurantInfo?.kds_enabled === true ||
+          restaurantInfo?.kds_enabled === '1' ||
+          restaurantInfo?.permissions?.kds_enabled === true
+        );
+
+        return (
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  🍳
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Kitchen Display System (KDS)</strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Dedicated kitchen tablet screen for chef prep</span>
+                </div>
+              </div>
+              {isKdsPlanAllowed ? (
+                <input
+                  type="checkbox"
+                  checked={settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, kds_screen_enabled: e.target.checked ? 1 : 0 })}
+                  style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#059669' }}
+                />
+              ) : (
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 10px', borderRadius: '20px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  🔒 Enterprise Feature
+                </span>
+              )}
+            </div>
+            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0, lineHeight: 1.45, paddingLeft: '46px' }}>
+              {isKdsPlanAllowed
+                ? 'Enables the fullscreen Kitchen Display Screen tab for chef order preparation and instant completed alerts.'
+                : 'Kitchen Display screen access is restricted to the Enterprise Plan tier. Contact SuperAdmin to upgrade.'}
+            </p>
+          </div>
+        );
+      })()}
+
+      {/* Card 3: Printer Setup Box */}
+      <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+              🖨️
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Thermal Receipt Printer & Routing</strong>
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>58mm / 80mm ESC/POS, Bluetooth, USB & RawBT</span>
+            </div>
+          </div>
+          {(() => {
+            const isDualAllowed = Boolean(
+              resolvedCaps?.dual_printer_enabled ||
+              capabilities?.dual_printer_enabled ||
+              restaurantInfo?.permissions?.dual_printer_enabled ||
+              settingsForm?.dual_printer_enabled === 1 ||
+              settingsForm?.dual_printer_enabled === true ||
+              settingsForm?.dual_printer_enabled === '1'
+            );
+            return (
+              <span style={{
+                padding: '4px 10px',
+                borderRadius: '20px',
+                fontSize: '0.70rem',
+                fontWeight: 900,
+                background: isDualAllowed ? '#DCFCE7' : '#F1F5F9',
+                color: isDualAllowed ? '#15803D' : '#64748B',
+                border: `1px solid ${isDualAllowed ? '#86EFAC' : '#CBD5E1'}`
+              }}>
+                {isDualAllowed ? '⚡ DUAL PRINTER READY (VIP ULTRA)' : '🔒 SINGLE PRINTER MODE'}
+              </span>
+            );
+          })()}
+        </div>
+        <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0', lineHeight: 1.45, paddingLeft: '46px' }}>
+          Configure Kitchen Order Ticket (KOT) and Customer Bill thermal printing.
+        </p>
+
+        <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {(() => {
+            const isDualAllowed = Boolean(
+              resolvedCaps?.dual_printer_enabled ||
+              capabilities?.dual_printer_enabled ||
+              restaurantInfo?.permissions?.dual_printer_enabled ||
+              settingsForm?.dual_printer_enabled === 1 ||
+              settingsForm?.dual_printer_enabled === true ||
+              settingsForm?.dual_printer_enabled === '1'
+            );
+
+            return (
+              <>
+                <div>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Printer Routing Mode:
+                  </label>
+
+                  <select
+                    value={isDualAllowed ? (settingsForm.printer_mode || 'single') : 'single'}
+                    onChange={(e) => {
+                      if (!isDualAllowed) return;
+                      setSettingsForm({ ...settingsForm, printer_mode: e.target.value });
+                    }}
+                    disabled={!isDualAllowed}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box' }}
+                  >
+                    <option value="single">🟢 Single Printer (Same Printer for KOT & Customer Bill)</option>
+                    {isDualAllowed && (
+                      <option value="dual">⚡ Dual Separate Printers (Kitchen KOT + Customer Bill)</option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Single Mode Card */}
+                {(!isDualAllowed || settingsForm.printer_mode !== 'dual') && (
+                  <div style={{ padding: '14px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      🖨️ Main Receipt Printer (KOT & Billing)
+                    </strong>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '3px' }}>
+                          PAPER WIDTH:
+                        </label>
+                        <select
+                          value={settingsForm.printer_paper_width || '80mm'}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, printer_paper_width: e.target.value })}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: 700, boxSizing: 'border-box' }}
+                        >
+                          <option value="80mm">80mm (Standard 3-Inch)</option>
+                          <option value="58mm">58mm (Compact 2-Inch)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '3px' }}>
+                          CONNECTION:
+                        </label>
+                        <select
+                          value={settingsForm.connection_type || 'browser_dialog'}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, connection_type: e.target.value })}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: 700, boxSizing: 'border-box' }}
+                        >
+                          <option value="browser_dialog">Default OS / Browser Dialog</option>
+                          <option value="rawbt">Android RawBT Direct App</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={settingsForm.auto_print_kot === 1 || settingsForm.auto_print_kot === true}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_kot: e.target.checked ? 1 : 0 })}
+                        />
+                        <span>Auto-prompt KOT print on new live orders</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_bill: e.target.checked ? 1 : 0 })}
+                        />
+                        <span>Auto-prompt Bill print on order settlement</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={settingsForm.print_upi_qr !== 0}
+                          onChange={(e) => {
+                            const val = e.target.checked ? 1 : 0;
+                            setSettingsForm({ ...settingsForm, print_upi_qr: val });
+                            setDevicePrintUpiQr(Boolean(val !== 0));
+                          }}
+                        />
+                        <span>Print dynamic UPI payment QR on customer bills</span>
+                      </label>
+                      {settingsForm.print_upi_qr !== 0 && (
+                        <div style={{ marginTop: '8px', padding: '10px 12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div>
+                            <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '2px' }}>
+                              UPI ID / VPA *
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 9876543210@paytm or store@upi"
+                              value={settingsForm.upi_id || ''}
+                              onChange={(e) => {
+                                const val = e.target.value.trim();
+                                setSettingsForm({ ...settingsForm, upi_id: val });
+                                setDeviceUpiId(val);
+                              }}
+                              style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.80rem', fontWeight: 700, boxSizing: 'border-box' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.68rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '2px' }}>
+                              Payee / Business Name
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Raman Sweets & Restro"
+                              value={settingsForm.upi_payee_name || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setSettingsForm({ ...settingsForm, upi_payee_name: val });
+                                setDeviceUpiPayeeName(val);
+                              }}
+                              style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.80rem', fontWeight: 700, boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Dual Mode Cards */}
+                {isDualAllowed && settingsForm.printer_mode === 'dual' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Kitchen Printer Card */}
+                    <div style={{ padding: '14px', background: '#FEF3C7', borderRadius: '12px', border: '1px solid #FCD34D', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '0.86rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🍳 KITCHEN PRINTER (KOT Receipts Only)
+                        </strong>
+                        <span style={{ fontSize: '0.70rem', background: '#F59E0B', color: '#FFF', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>KITCHEN</span>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#78350F', display: 'block', marginBottom: '2px' }}>
+                          PRINTER NAME / TARGET:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Kitchen_Thermal_KOT or 192.168.1.200"
+                          value={settingsForm.kot_printer_target || ''}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, kot_printer_target: e.target.value })}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '0.84rem', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#78350F', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={settingsForm.auto_print_kot === 1 || settingsForm.auto_print_kot === true}
+                            onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_kot: e.target.checked ? 1 : 0 })}
+                          />
+                          <span>Auto-print KOT on new round</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Counter Billing Printer Card */}
+                    <div style={{ padding: '14px', background: '#E0F2FE', borderRadius: '12px', border: '1px solid #BAE6FD', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '0.86rem', color: '#0369A1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🧾 CUSTOMER BILL PRINTER (Customer Invoices Only)
+                        </strong>
+                        <span style={{ fontSize: '0.70rem', background: '#0284C7', color: '#FFF', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>BILLING</span>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#075985', display: 'block', marginBottom: '2px' }}>
+                          PRINTER NAME / TARGET:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Bill_Thermal_Printer or 192.168.1.201"
+                          value={settingsForm.bill_printer_target || ''}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, bill_printer_target: e.target.value })}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BAE6FD', fontSize: '0.84rem', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#075985', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true}
+                            onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_bill: e.target.checked ? 1 : 0 })}
+                          />
+                          <span>Auto-print Bill on settlement</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
+          <button
+            onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }}
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: '#F1F5F9',
+              color: '#334155',
+              border: '1px solid #CBD5E1',
+              fontWeight: 800,
+              fontSize: '0.80rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <Printer size={15} /> Open Printer Pairing Guide & Test Suite
+          </button>
+        </div>
+      </div>
+    </div>
+  </AdminDrawer>
+
+  {/* Drawer 3: Menu Settings */ }
+  <AdminDrawer
+    isOpen={openDrawer === 'menu'}
+    onClose={() => setOpenDrawer(null)}
+    title="🍽 Menu & GST Settings"
+    subtitle="Configure cuisine type, tax rate, and dish badge visibility"
+    footer={(
+      <button
+        onClick={handleFormSave}
+        style={{
+          width: '100%',
+          padding: '12px',
+          borderRadius: '12px',
+          border: 'none',
+          background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+          color: '#FFFFFF',
+          fontWeight: 900,
+          fontSize: '0.90rem',
+          cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+        }}
+      >
+        Save Menu & Tax Settings
+      </button>
+    )}
+  >
+    <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* Card 1: Business Profile */}
+      {(() => {
+        const resolvedProfile = resolveBusinessProfile(settingsForm);
+        const currentBusinessType = settingsForm.business_type || resolvedProfile.business_type;
+        const currentFoodType = settingsForm.food_type || resolvedProfile.food_type;
+        const currentServiceModel = settingsForm.service_model || resolvedProfile.service_model;
+
+        const isLegacyBiz = settingsForm.business_type == null;
+        const isLegacyFood = settingsForm.food_type == null;
+
+        // Canonical category badge & service mode derivation
+        const serviceModelMeta = SERVICE_MODEL_METADATA[currentServiceModel] || SERVICE_MODEL_METADATA.dine_in;
+        const bannerBadgeText = resolveBannerBadge(settingsForm);
+
+        const serviceModeDescription = currentServiceModel === 'hotel'
+          ? '🏨 In-Room Guest Dining'
+          : currentServiceModel === 'cinema'
+            ? '🎬 Cinema Seat Ordering'
+            : '🍽️ Dine-In Table Ordering';
+
+        return (
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                🏢
+              </div>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Business Profile</strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Configure business venue type, dietary profile and ordering mode</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingLeft: '46px' }}>
+              {/* Control A: Business Type (Verified & Locked) */}
+              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label htmlFor="admin-business-type" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
+                    Business Type & Industry
+                  </label>
+                  <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#065F46', background: '#D1FAE5', padding: '2px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    🔒 Verified Category
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
+                  Business vertical is bound to your account and SaaS plan. To request an industry change, please contact SuperAdmin.
+                </span>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  background: '#F1F5F9',
+                  color: '#0F172A',
+                  fontWeight: 700,
+                  fontSize: '0.84rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{BUSINESS_TYPE_METADATA[currentBusinessType || 'restaurant']?.icon || '🏢'}</span>
+                    <span>{BUSINESS_TYPE_METADATA[currentBusinessType || 'restaurant']?.label || currentBusinessType}</span>
+                  </div>
+                  <Lock size={14} color="#64748B" />
+                </div>
+              </div>
+
+              {/* Control B: Food Type */}
+              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label htmlFor="admin-food-type" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
+                    Food Dietary Type
+                  </label>
+                  {isLegacyFood && (
+                    <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#64748B', background: '#E2E8F0', padding: '2px 6px', borderRadius: '8px' }}>
+                      Using legacy setting
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
+                  Tell customers what dietary profile applies to this menu.
+                </span>
+                <select
+                  id="admin-food-type"
+                  value={currentFoodType || 'pure_veg'}
+                  onChange={(e) => {
+                    const newFood = e.target.value;
+                    const safeResto = (newFood === 'pure_veg' ? 'pure_veg' : newFood === 'non_veg' ? 'non_veg' : (currentBusinessType === 'bakery_confectionery' ? 'bakery' : 'veg_nonveg'));
+                    setSettingsForm({
+                      ...settingsForm,
+                      food_type: newFood,
+                      resto_type: safeResto
+                    });
+                  }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
+                >
+                  {FOOD_TYPES.map(type => (
+                    <option key={type} value={type}>
+                      {FOOD_TYPE_METADATA[type]?.icon || '🥗'} {FOOD_TYPE_METADATA[type]?.label || type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Premium Summary Card: Business Profile Preview */}
+              <div style={{
+                padding: '14px 16px',
+                background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '0.70rem', fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    ✨ Live Profile Preview
+                  </span>
+                  <span style={{
+                    fontSize: '0.72rem',
                     fontWeight: 900,
-                    fontSize: '1.4rem',
-                    border: '2px solid #F59E0B',
-                    margin: '0 auto 8px auto',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                    background: currentServiceModel === 'hotel' ? '#EFF6FF' : currentServiceModel === 'cinema' ? '#FDF2F8' : '#F0FDF4',
+                    color: currentServiceModel === 'hotel' ? '#1D4ED8' : currentServiceModel === 'cinema' ? '#BE185D' : '#15803D',
+                    border: `1px solid ${currentServiceModel === 'hotel' ? '#BFDBFE' : currentServiceModel === 'cinema' ? '#FBCFE8' : '#BBF7D0'}`,
+                    padding: '3px 9px',
+                    borderRadius: '20px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}>
-                    {(settingsForm.name || restaurantInfo?.name || 'Your Restaurant').charAt(0).toUpperCase()}
+                    {serviceModelMeta.emoji} {currentServiceModel === 'hotel' ? 'HOTEL' : currentServiceModel === 'cinema' ? 'CINEMA' : 'DINE-IN'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                  <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Business</span>
+                    <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                      {BUSINESS_TYPE_METADATA[currentBusinessType]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[currentBusinessType]?.label?.replace(/\s*\(.*\)/, '') || currentBusinessType}
+                    </strong>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Food Dietary</span>
+                    <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                      {FOOD_TYPE_METADATA[currentFoodType]?.icon || '🟢'} {FOOD_TYPE_METADATA[currentFoodType]?.label || currentFoodType}
+                    </strong>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Service Mode</span>
+                    <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                      {serviceModeDescription}
+                    </strong>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Menu Badge</span>
+                    <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                      🏷️ {bannerBadgeText}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Card 2: Currency Symbol */}
+      <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+            🪙
+          </div>
+          <div>
+            <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Currency & Pricing Symbol</strong>
+            <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Shown on customer QR menu and printed receipts</span>
+          </div>
+        </div>
+        <div style={{ paddingLeft: '46px' }}>
+          <select
+            value={settingsForm.currency_symbol != null ? settingsForm.currency_symbol : '₹'}
+            onChange={(e) => setSettingsForm({ ...settingsForm, currency_symbol: e.target.value })}
+            style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
+          >
+            <option value="₹">₹ — Indian Rupee (INR)</option>
+            <option value="$">$ — US Dollar (USD)</option>
+            <option value="€">€ — Euro (EUR)</option>
+            <option value="£">£ — British Pound (GBP)</option>
+            <option value="">None — No Currency Symbol</option>
+          </select>
+        </div>
+      </div>
+
+
+
+      {/* Card 3: GST Configuration */}
+      <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: settingsForm.gst_enabled ? '12px' : '0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+              🏷️
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>5% GST Tax Billing & Invoicing</strong>
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Adds 5% GST tax automatically on customer orders</span>
+            </div>
+          </div>
+
+          {(settingsForm.gst_invoice_enabled !== false && settingsForm.gst_invoice_enabled !== 0) ? (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(settingsForm.gst_enabled)}
+              aria-label="Toggle 5% GST Tax Billing"
+              onClick={() => setSettingsForm({ ...settingsForm, gst_enabled: !settingsForm.gst_enabled })}
+              style={{
+                width: '48px',
+                height: '28px',
+                minWidth: '48px',
+                minHeight: '28px',
+                padding: '2px',
+                borderRadius: '14px',
+                border: 'none',
+                background: settingsForm.gst_enabled ? '#059669' : '#CBD5E1',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'background-color 0.2s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                boxSizing: 'border-box'
+              }}
+            >
+              <span
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: '#FFFFFF',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  transform: settingsForm.gst_enabled ? 'translateX(20px)' : 'translateX(0px)',
+                  transition: 'transform 0.2s ease',
+                  display: 'block'
+                }}
+              />
+            </button>
+          ) : (
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 10px', borderRadius: '20px' }}>
+              🔒 Pro Feature
+            </span>
+          )}
+        </div>
+
+        {settingsForm.gst_enabled && (
+          <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F1F5F9', paddingLeft: '46px' }}>
+            <label htmlFor="admin-gstin-number" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              GSTIN Number:
+            </label>
+            <input
+              id="admin-gstin-number"
+              type="text"
+              placeholder="e.g. 10AAAAA0000A1Z5"
+              value={settingsForm.gstin_number || ''}
+              onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value.toUpperCase() })}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
+            />
+            <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Printed on all customer receipt printouts and tax reports.</span>
+          </div>
+        )}
+      </div>
+
+      {/* Card 3B: Direct Dynamic UPI Payment QR on Bills */}
+      <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (settingsForm.print_upi_qr !== 0) ? '12px' : '0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DBEAFE', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+              📱
+            </div>
+            <div>
+              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Dynamic UPI QR on Printed Bills</strong>
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Prints QR code with auto-filled bill amount for GPay, PhonePe & Paytm (0% Fee)</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(settingsForm.print_upi_qr !== 0)}
+            aria-label="Toggle Dynamic UPI QR on Bills"
+            onClick={() => setSettingsForm({ ...settingsForm, print_upi_qr: (settingsForm.print_upi_qr !== 0) ? 0 : 1 })}
+            style={{
+              width: '48px',
+              height: '28px',
+              minWidth: '48px',
+              minHeight: '28px',
+              padding: '2px',
+              borderRadius: '14px',
+              border: 'none',
+              background: (settingsForm.print_upi_qr !== 0) ? '#2563EB' : '#CBD5E1',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'background-color 0.2s ease',
+              display: 'inline-flex',
+              alignItems: 'center',
+              boxSizing: 'border-box'
+            }}
+          >
+            <span
+              style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                background: '#FFFFFF',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                transform: (settingsForm.print_upi_qr !== 0) ? 'translateX(20px)' : 'translateX(0px)',
+                transition: 'transform 0.2s ease',
+                display: 'block'
+              }}
+            />
+          </button>
+        </div>
+
+        {(settingsForm.print_upi_qr !== 0) && (
+          <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F1F5F9', paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div>
+              <label htmlFor="admin-upi-id" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                UPI ID / VPA (e.g. 9876543210@paytm or store@upi) *:
+              </label>
+              <input
+                id="admin-upi-id"
+                type="text"
+                placeholder="e.g. 9876543210@paytm, store@okaxis"
+                value={settingsForm.upi_id || ''}
+                onChange={(e) => {
+                  const val = e.target.value.trim();
+                  setSettingsForm({ ...settingsForm, upi_id: val });
+                  setDeviceUpiId(val);
+                }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
+              />
+              <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Money goes straight to your bank account with 0% payment gateway deduction.</span>
+            </div>
+
+            <div>
+              <label htmlFor="admin-upi-payee-name" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Payee Name / Business Name on UPI:
+              </label>
+              <input
+                id="admin-upi-payee-name"
+                type="text"
+                placeholder="e.g. Raman Sweets & Restro"
+                value={settingsForm.upi_payee_name || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSettingsForm({ ...settingsForm, upi_payee_name: val });
+                  setDeviceUpiPayeeName(val);
+                }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
+              />
+              <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Displayed in GPay / PhonePe when customer scans the printed QR code.</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Card 4: Dish Filter Visibility Toggles */}
+      <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+            👁️
+          </div>
+          <div>
+            <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Customer Menu Badges & Filters</strong>
+            <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Toggle badge visibility pills in the customer QR menu</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '46px' }}>
+          {/* Filter 1 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+            <div>
+              <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>⭐ "Must Try" Badge Filter</strong>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Highlights chef special recommended items</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={settingsForm.filters_visibility?.must_try !== false}
+              onChange={(e) => setSettingsForm({
+                ...settingsForm,
+                filters_visibility: { ...settingsForm.filters_visibility, must_try: e.target.checked }
+              })}
+              style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+            />
+          </div>
+
+          {/* Filter 2 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+            <div>
+              <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>✨ "Today Special" Badge Filter</strong>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Highlights daily limited-time special dishes</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={settingsForm.filters_visibility?.special !== false}
+              onChange={(e) => setSettingsForm({
+                ...settingsForm,
+                filters_visibility: { ...settingsForm.filters_visibility, special: e.target.checked }
+              })}
+              style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+            />
+          </div>
+
+          {/* Filter 3 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+            <div>
+              <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🍱 "Combos & Thalis" Navigation Pill</strong>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Displays dedicated combos and thalis category pill</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={settingsForm.filters_visibility?.combo !== false}
+              onChange={(e) => setSettingsForm({
+                ...settingsForm,
+                filters_visibility: { ...settingsForm.filters_visibility, combo: e.target.checked }
+              })}
+              style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+            />
+          </div>
+
+          {/* Filter 4: Under 100 Budget Pill */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+            <div>
+              <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>⚡ "Under ₹100" Budget Filter Pill</strong>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Allows customers to filter affordable pocket-friendly items</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={settingsForm.filters_visibility?.under100 !== false}
+              onChange={(e) => setSettingsForm({
+                ...settingsForm,
+                filters_visibility: { ...settingsForm.filters_visibility, under100: e.target.checked }
+              })}
+              style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+            />
+          </div>
+
+          {/* Filter 5: Pure Veg Pill */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+            <div>
+              <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🟢 "Pure Veg" Dietary Filter Pill</strong>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Quick toggle for 100% vegetarian dishes</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={settingsForm.filters_visibility?.veg !== false}
+              onChange={(e) => setSettingsForm({
+                ...settingsForm,
+                filters_visibility: { ...settingsForm.filters_visibility, veg: e.target.checked }
+              })}
+              style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+            />
+          </div>
+
+          {/* Filter 6: Non-Veg Pill */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+            <div>
+              <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🔴 "Non-Veg" Dietary Filter Pill</strong>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Quick toggle for non-vegetarian dishes</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={settingsForm.filters_visibility?.nonveg !== false}
+              onChange={(e) => setSettingsForm({
+                ...settingsForm,
+                filters_visibility: { ...settingsForm.filters_visibility, nonveg: e.target.checked }
+              })}
+              style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+            />
+          </div>
+
+          {/* Filter 7: Egg Pill */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+            <div>
+              <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🟡 "Egg" Dietary Filter Pill</strong>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Quick toggle for egg-containing items</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={settingsForm.filters_visibility?.egg !== false}
+              onChange={(e) => setSettingsForm({
+                ...settingsForm,
+                filters_visibility: { ...settingsForm.filters_visibility, egg: e.target.checked }
+              })}
+              style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+            />
+          </div>
+
+          {/* Filter 8: Customizable Badge */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+            <div>
+              <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>✨ "Customizable" Dish Badge</strong>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Shows pill on dishes with half/full portions or add-on modifiers</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={settingsForm.filters_visibility?.customizable !== false}
+              onChange={(e) => setSettingsForm({
+                ...settingsForm,
+                filters_visibility: { ...settingsForm.filters_visibility, customizable: e.target.checked }
+              })}
+              style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+            />
+          </div>
+        </div>
+      </div>
+    </form>
+  </AdminDrawer>
+
+
+
+  {/* Drawer 7: Dedicated Cinema Management Drawer */ }
+  {
+    isCinema && (
+      <AdminDrawer
+        isOpen={openDrawer === 'cinema'}
+        onClose={() => {
+          setOpenDrawer(null);
+          setSelectedScreenForSeats(null);
+        }}
+        title="🎬 Cinema Management"
+        subtitle="Configure auditorium screens, rows and seats for seat-based QR ordering"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Header Action Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            <div>
+              <strong style={{ fontSize: '0.98rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
+                Auditorium Screens & Seats
+              </strong>
+              <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                Manage screen layouts and generate unique cryptographic seat QR codes
+              </span>
+            </div>
+
+            {!selectedScreenForSeats && (
+              <button
+                type="button"
+                onClick={handleOpenAddScreen}
+                className="adm-btn adm-btn-primary adm-btn-sm"
+                style={{ fontWeight: 800 }}
+              >
+                <Plus size={15} /> Add Screen
+              </button>
+            )}
+          </div>
+
+          {/* Feedback Message Banner */}
+          {cinemaMsg && (
+            <div style={{
+              padding: '10px 14px',
+              borderRadius: '10px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+              background: cinemaMsg.type === 'success' ? '#F0FDF4' : '#FEF2F2',
+              border: `1px solid ${cinemaMsg.type === 'success' ? '#BBF7D0' : '#FECACA'}`,
+              color: cinemaMsg.type === 'success' ? '#166534' : '#991B1B'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {cinemaMsg.type === 'success' ? <Check size={16} /> : <AlertTriangle size={16} />}
+                <span>{cinemaMsg.text}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCinemaMsg(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '2px' }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loadingCinema && (
+            <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '0.82rem', fontWeight: 700 }}>
+              ⏳ Loading configured auditorium screens & seats...
+            </div>
+          )}
+
+          {/* VIEW A: SCREENS LIST (Default View) */}
+          {!selectedScreenForSeats && !loadingCinema && (
+            <div>
+              {cinemaScreens.length === 0 ? (
+                <div style={{
+                  padding: '28px 20px',
+                  background: '#F8FAFC',
+                  borderRadius: '12px',
+                  border: '1.5px dashed #CBD5E1',
+                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <div style={{ fontSize: '2.2rem' }}>🎬</div>
+                  <strong style={{ fontSize: '1rem', color: '#0F172A' }}>No Cinema Screens Configured</strong>
+                  <p style={{ fontSize: '0.80rem', color: '#64748B', margin: 0, maxWidth: '360px' }}>
+                    Create your first auditorium screen and add rows/seats to enable seat QR ordering.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddScreen}
+                    className="adm-btn adm-btn-primary"
+                    style={{ marginTop: '8px', fontWeight: 800, padding: '10px 18px' }}
+                  >
+                    <Plus size={16} /> Add Screen
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {cinemaScreens.map(screen => {
+                    const screenSeats = cinemaSeats.filter(st => String(st.screen_id) === String(screen.id) && st.active !== false);
+                    const seatCount = screenSeats.length;
+                    return (
+                      <div
+                        key={screen.id}
+                        style={{
+                          padding: '14px 16px',
+                          background: '#FFFFFF',
+                          borderRadius: '12px',
+                          border: '1px solid #E2E8F0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '10px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '10px',
+                            background: screen.active !== false ? '#F1F5F9' : '#FEE2E2',
+                            color: screen.active !== false ? '#0F172A' : '#EF4444',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 900,
+                            fontSize: '0.92rem'
+                          }}>
+                            S{screen.screen_number}
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800 }}>
+                                {screen.name || `Screen ${screen.screen_number}`}
+                              </strong>
+                              <span style={{
+                                fontSize: '0.7rem',
+                                fontWeight: 800,
+                                padding: '1px 6px',
+                                borderRadius: '10px',
+                                background: screen.active !== false ? '#DCFCE7' : '#F3F4F6',
+                                color: screen.active !== false ? '#15803D' : '#6B7280'
+                              }}>
+                                {screen.active !== false ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>
+                              {seatCount} {seatCount === 1 ? 'Seat' : 'Seats'} Configured
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedScreenForSeats(screen);
+                              setBulkSeatForm({ row_label: 'A', seat_start: 1, seat_end: 20 });
+                              setCinemaMsg(null);
+                            }}
+                            className="adm-btn adm-btn-primary adm-btn-sm"
+                            style={{ fontWeight: 800, padding: '6px 12px', fontSize: '0.78rem' }}
+                          >
+                            💺 Manage Seats
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditScreen(screen)}
+                            className="adm-btn adm-btn-secondary adm-btn-sm"
+                            style={{ padding: '6px 10px', fontSize: '0.78rem' }}
+                            title="Edit Screen"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteScreen(screen)}
+                            className="adm-btn adm-btn-danger adm-btn-sm"
+                            style={{ padding: '6px 10px', fontSize: '0.78rem' }}
+                            title="Delete Screen"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VIEW B: SEAT MANAGEMENT FOR SELECTED SCREEN */}
+          {selectedScreenForSeats && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Top Bar with Back Button */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedScreenForSeats(null)}
+                    className="adm-btn adm-btn-secondary adm-btn-sm"
+                    style={{ fontWeight: 800 }}
+                  >
+                    ← Back to Screens
+                  </button>
+                  <div>
+                    <strong style={{ fontSize: '0.95rem', color: '#0F172A' }}>
+                      Screen {selectedScreenForSeats.screen_number}: {selectedScreenForSeats.name}
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block' }}>
+                      Configure seat layout and manage row ranges
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bulk Add Row / Seats Form */}
+              <div style={{ padding: '14px 16px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #CBD5E1', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <strong style={{ fontSize: '0.84rem', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  ➕ Add / Configure Seats by Row
+                </strong>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                      ROW LETTER:
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={2}
+                      placeholder="e.g. A"
+                      value={bulkSeatForm.row_label}
+                      onChange={(e) => setBulkSeatForm({ ...bulkSeatForm, row_label: e.target.value.toUpperCase() })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.86rem', textTransform: 'uppercase' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                      START SEAT:
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={bulkSeatForm.seat_start}
+                      onChange={(e) => setBulkSeatForm({ ...bulkSeatForm, seat_start: parseInt(e.target.value, 10) || 1 })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.86rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                      END SEAT:
+                    </label>
+                    <input
+                      type="number"
+                      min={bulkSeatForm.seat_start || 1}
+                      max={100}
+                      value={bulkSeatForm.seat_end}
+                      onChange={(e) => setBulkSeatForm({ ...bulkSeatForm, seat_end: parseInt(e.target.value, 10) || 1 })}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.86rem' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={handleBatchCreateSeats}
+                      disabled={savingSeats}
+                      className="adm-btn adm-btn-primary"
+                      style={{ width: '100%', padding: '8px 14px', fontWeight: 800, fontSize: '0.82rem' }}
+                    >
+                      {savingSeats ? 'Creating...' : '+ Create Seats'}
+                    </button>
+                  </div>
+                </div>
+
+                {bulkSeatForm.row_label && (
+                  <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                    Preview: <strong>Row {bulkSeatForm.row_label.toUpperCase()}</strong> • Seats {bulkSeatForm.seat_start}–{bulkSeatForm.seat_end} ({Math.max(0, bulkSeatForm.seat_end - bulkSeatForm.seat_start + 1)} seats)
                   </div>
                 )}
               </div>
 
-              {/* Body Content Area */}
-              <div style={{ padding: '0 16px 16px 16px', textAlign: 'center', background: '#FFFFFF' }}>
-                <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900, display: 'block', marginBottom: '2px' }}>
-                  {settingsForm.name || 'Business Name'}
+              {/* Configured Seats Grid Grouped by Row */}
+              <div>
+                <strong style={{ fontSize: '0.82rem', color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                  Configured Seats for Screen {selectedScreenForSeats.screen_number}:
                 </strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginBottom: '10px' }}>
-                  {settingsForm.tagline || 'Pure Veg Family Restaurant & Bakery'}
-                </span>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#059669' }} /> Pure Veg
-                  </span>
-                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>•</span>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#0F172A' }}>
-                    🕒 8:00 AM - 10:30 PM <span style={{ color: '#059669' }}>Open</span>
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  style={{
-                    width: '100%',
-                    height: '42px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: '#064E3B',
-                    color: '#FFFFFF',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    marginBottom: '14px'
-                  }}
-                >
-                  <span>View Digital Menu</span>
-                  <Printer size={14} />
-                </button>
-
-                {/* 4 Action Icons */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                    <Printer size={14} color="#64748B" />
-                    <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>Scan QR</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                    <Utensils size={14} color="#64748B" />
-                    <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>View Menu</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                    <Store size={14} color="#64748B" />
-                    <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>Place Order</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                    <CreditCard size={14} color="#64748B" />
-                    <span style={{ fontSize: '0.60rem', color: '#64748B', fontWeight: 600 }}>Pay Bill</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Informational Tip Card */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
-              padding: '10px 12px',
-              background: '#FFFBEB',
-              borderRadius: '10px',
-              border: '1px solid #FEF3C7',
-              fontSize: '0.74rem',
-              color: '#92400E'
-            }}>
-              <span>💡</span>
-              <span>This is how your customers will see your digital menu and business information.</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => window.open(window.location.origin, '_blank')}
-              style={{
-                width: '100%',
-                padding: '9px 14px',
-                borderRadius: '10px',
-                border: '1px solid #E2E8F0',
-                background: '#FFFFFF',
-                color: '#0F172A',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
-            >
-              <span>Preview Full Menu</span>
-              <ArrowUpRight size={14} />
-            </button>
-          </div>
-
-          <div style={{ fontSize: '0.72rem', color: '#64748B', textAlign: 'center', padding: '4px 0' }}>
-            ℹ️ All changes are saved automatically.
-          </div>
-
-          {/* Custom Menu Domain (CNAME) - Only displayed if custom_domain_enabled on plan */}
-          {(() => {
-            const isCustomDomainPlanAllowed = Boolean(
-              settingsForm?.custom_domain_enabled === 1 ||
-              settingsForm?.custom_domain_enabled === true ||
-              settingsForm?.custom_domain_enabled === '1' ||
-              restaurantInfo?.custom_domain_enabled === 1 ||
-              restaurantInfo?.custom_domain_enabled === true ||
-              restaurantInfo?.custom_domain_enabled === '1' ||
-              restaurantInfo?.permissions?.custom_domain_enabled === true
-            );
-
-            if (!isCustomDomainPlanAllowed) return null;
-
-            return (
-              <div>
-                <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  🌐 Custom Menu Domain (CNAME):
-                  <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
-                    INCLUDED IN PLAN
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. menu.yourrestaurant.com"
-                  value={settingsForm.custom_domain || ''}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, custom_domain: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-                />
-                <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px' }}>
-                  Point CNAME record in GoDaddy to: <strong style={{ color: '#059669' }}>cname.vercel-dns.com</strong>
-                </div>
-              </div>
-            );
-          })()}
-        </form>
-      </AdminDrawer>
-
-      {/* Drawer 2: Orders & Devices */}
-      <AdminDrawer
-        isOpen={openDrawer === 'devices'}
-        onClose={() => setOpenDrawer(null)}
-        title="🔔 Orders & Devices"
-        subtitle="Manage live order siren ringtones and thermal printer settings"
-        footer={(
-          <button
-            onClick={handleFormSave}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-              color: '#FFFFFF',
-              fontWeight: 900,
-              fontSize: '0.90rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
-            }}
-          >
-            Save Device Settings
-          </button>
-        )}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Card 1: Siren Audio Alert Box */}
-          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                  🔊
-                </div>
-                <div>
-                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Live Order Siren Ringtone</strong>
-                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Swiggy/Zomato style order alert sound</span>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={settingsForm.order_alarm_enabled !== false}
-                onChange={(e) => setSettingsForm({ ...settingsForm, order_alarm_enabled: e.target.checked })}
-                style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#059669' }}
-              />
-            </div>
-            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 12px 0', lineHeight: 1.45, paddingLeft: '46px' }}>
-              Plays a loud ringing alarm automatically whenever a new customer order arrives.
-            </p>
-            <div style={{ display: 'flex', gap: '10px', paddingLeft: '46px' }}>
-              <button
-                type="button"
-                onClick={testAlarmSound}
-                style={{
-                  flex: 1,
-                  padding: '9px 12px',
-                  borderRadius: '10px',
-                  background: '#FFFBEB',
-                  color: '#B45309',
-                  border: '1px solid #FDE68A',
-                  fontWeight: 800,
-                  fontSize: '0.78rem',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Volume2 size={15} /> Test Siren Sound
-              </button>
-              <button
-                type="button"
-                onClick={requestPushPermission}
-                style={{
-                  flex: 1,
-                  padding: '9px 12px',
-                  borderRadius: '10px',
-                  background: '#F1F5F9',
-                  color: '#334155',
-                  border: '1px solid #CBD5E1',
-                  fontWeight: 800,
-                  fontSize: '0.78rem',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                🔔 Push Notifications
-              </button>
-            </div>
-          </div>
-
-          {/* Card 2: Kitchen Display System (KDS) Screen Toggle */}
-          {(() => {
-            const isKdsPlanAllowed = Boolean(
-              settingsForm?.kds_enabled === 1 ||
-              settingsForm?.kds_enabled === true ||
-              settingsForm?.kds_enabled === '1' ||
-              restaurantInfo?.kds_enabled === 1 ||
-              restaurantInfo?.kds_enabled === true ||
-              restaurantInfo?.kds_enabled === '1' ||
-              restaurantInfo?.permissions?.kds_enabled === true
-            );
-
-            return (
-              <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                      🍳
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Kitchen Display System (KDS)</strong>
-                      <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Dedicated kitchen tablet screen for chef prep</span>
-                    </div>
-                  </div>
-                  {isKdsPlanAllowed ? (
-                    <input
-                      type="checkbox"
-                      checked={settingsForm.kds_screen_enabled !== false && settingsForm.kds_screen_enabled !== 0}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, kds_screen_enabled: e.target.checked ? 1 : 0 })}
-                      style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#059669' }}
-                    />
-                  ) : (
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 10px', borderRadius: '20px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      🔒 Enterprise Feature
-                    </span>
-                  )}
-                </div>
-                <p style={{ fontSize: '0.76rem', color: '#64748B', margin: 0, lineHeight: 1.45, paddingLeft: '46px' }}>
-                  {isKdsPlanAllowed 
-                    ? 'Enables the fullscreen Kitchen Display Screen tab for chef order preparation and instant completed alerts.' 
-                    : 'Kitchen Display screen access is restricted to the Enterprise Plan tier. Contact SuperAdmin to upgrade.'}
-                </p>
-              </div>
-            );
-          })()}
-
-          {/* Card 3: Printer Setup Box */}
-          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                  🖨️
-                </div>
-                <div>
-                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Thermal Receipt Printer & Routing</strong>
-                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>58mm / 80mm ESC/POS, Bluetooth, USB & RawBT</span>
-                </div>
-              </div>
-              {(() => {
-                const isDualAllowed = Boolean(
-                  resolvedCaps?.dual_printer_enabled ||
-      capabilities?.dual_printer_enabled ||
-      restaurantInfo?.permissions?.dual_printer_enabled ||
-      settingsForm?.dual_printer_enabled === 1 ||
-                  settingsForm?.dual_printer_enabled === true ||
-                  settingsForm?.dual_printer_enabled === '1'
-                );
-                return (
-                  <span style={{
-                    padding: '4px 10px',
-                    borderRadius: '20px',
-                    fontSize: '0.70rem',
-                    fontWeight: 900,
-                    background: isDualAllowed ? '#DCFCE7' : '#F1F5F9',
-                    color: isDualAllowed ? '#15803D' : '#64748B',
-                    border: `1px solid ${isDualAllowed ? '#86EFAC' : '#CBD5E1'}`
-                  }}>
-                    {isDualAllowed ? '⚡ DUAL PRINTER READY (VIP ULTRA)' : '🔒 SINGLE PRINTER MODE'}
-                  </span>
-                );
-              })()}
-            </div>
-            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0', lineHeight: 1.45, paddingLeft: '46px' }}>
-              Configure Kitchen Order Ticket (KOT) and Customer Bill thermal printing.
-            </p>
-
-            <div style={{ paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {(() => {
-                const isDualAllowed = Boolean(
-                  resolvedCaps?.dual_printer_enabled ||
-      capabilities?.dual_printer_enabled ||
-      restaurantInfo?.permissions?.dual_printer_enabled ||
-      settingsForm?.dual_printer_enabled === 1 ||
-                  settingsForm?.dual_printer_enabled === true ||
-                  settingsForm?.dual_printer_enabled === '1'
-                );
-
-                return (
-                  <>
-                    <div>
-                      <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Printer Routing Mode:
-                      </label>
-
-                      <select
-                        value={isDualAllowed ? (settingsForm.printer_mode || 'single') : 'single'}
-                        onChange={(e) => {
-                          if (!isDualAllowed) return;
-                          setSettingsForm({ ...settingsForm, printer_mode: e.target.value });
-                        }}
-                        disabled={!isDualAllowed}
-                        style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box' }}
-                      >
-                        <option value="single">🟢 Single Printer (Same Printer for KOT & Customer Bill)</option>
-                        {isDualAllowed && (
-                          <option value="dual">⚡ Dual Separate Printers (Kitchen KOT + Customer Bill)</option>
-                        )}
-                      </select>
-                    </div>
-
-                    {/* Single Mode Card */}
-                    {(!isDualAllowed || settingsForm.printer_mode !== 'dual') && (
-                      <div style={{ padding: '14px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          🖨️ Main Receipt Printer (KOT & Billing)
-                        </strong>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                          <div>
-                            <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '3px' }}>
-                              PAPER WIDTH:
-                            </label>
-                            <select
-                              value={settingsForm.printer_paper_width || '80mm'}
-                              onChange={(e) => setSettingsForm({ ...settingsForm, printer_paper_width: e.target.value })}
-                              style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: 700, boxSizing: 'border-box' }}
-                            >
-                              <option value="80mm">80mm (Standard 3-Inch)</option>
-                              <option value="58mm">58mm (Compact 2-Inch)</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '3px' }}>
-                              CONNECTION:
-                            </label>
-                            <select
-                              value={settingsForm.connection_type || 'browser_dialog'}
-                              onChange={(e) => setSettingsForm({ ...settingsForm, connection_type: e.target.value })}
-                              style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: 700, boxSizing: 'border-box' }}
-                            >
-                              <option value="browser_dialog">Default OS / Browser Dialog</option>
-                              <option value="rawbt">Android RawBT Direct App</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155', cursor: 'pointer' }}>
-                            <input
-                              type="checkbox"
-                              checked={settingsForm.auto_print_kot === 1 || settingsForm.auto_print_kot === true}
-                              onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_kot: e.target.checked ? 1 : 0 })}
-                            />
-                            <span>Auto-prompt KOT print on new live orders</span>
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155', cursor: 'pointer' }}>
-                            <input
-                              type="checkbox"
-                              checked={settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true}
-                              onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_bill: e.target.checked ? 1 : 0 })}
-                            />
-                            <span>Auto-prompt Bill print on order settlement</span>
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155', cursor: 'pointer' }}>
-                            <input
-                              type="checkbox"
-                              checked={settingsForm.print_upi_qr !== 0}
-                              onChange={(e) => setSettingsForm({ ...settingsForm, print_upi_qr: e.target.checked ? 1 : 0 })}
-                            />
-                            <span>Print dynamic UPI payment QR on customer bills</span>
-                          </label>
-                        </div>
+                {(() => {
+                  const screenSeats = cinemaSeats.filter(st => String(st.screen_id) === String(selectedScreenForSeats.id) && st.active !== false);
+                  if (screenSeats.length === 0) {
+                    return (
+                      <div style={{ padding: '18px', background: '#F8FAFC', borderRadius: '10px', border: '1px dashed #CBD5E1', textAlign: 'center', fontSize: '0.8rem', color: '#64748B' }}>
+                        No seats configured yet for this screen. Use the builder above to add your first row of seats.
                       </div>
-                    )}
+                    );
+                  }
 
-                    {/* Dual Mode Cards */}
-                    {isDualAllowed && settingsForm.printer_mode === 'dual' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {/* Kitchen Printer Card */}
-                        <div style={{ padding: '14px', background: '#FEF3C7', borderRadius: '12px', border: '1px solid #FCD34D', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <strong style={{ fontSize: '0.86rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              🍳 KITCHEN PRINTER (KOT Receipts Only)
-                            </strong>
-                            <span style={{ fontSize: '0.70rem', background: '#F59E0B', color: '#FFF', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>KITCHEN</span>
-                          </div>
-                          <div>
-                            <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#78350F', display: 'block', marginBottom: '2px' }}>
-                              PRINTER NAME / TARGET:
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. Kitchen_Thermal_KOT or 192.168.1.200"
-                              value={settingsForm.kot_printer_target || ''}
-                              onChange={(e) => setSettingsForm({ ...settingsForm, kot_printer_target: e.target.value })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '0.84rem', boxSizing: 'border-box' }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#78350F', cursor: 'pointer' }}>
-                              <input
-                                type="checkbox"
-                                checked={settingsForm.auto_print_kot === 1 || settingsForm.auto_print_kot === true}
-                                onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_kot: e.target.checked ? 1 : 0 })}
-                              />
-                              <span>Auto-print KOT on new round</span>
-                            </label>
-                          </div>
-                        </div>
+                  // Group by row_label
+                  const rowMap = {};
+                  screenSeats.forEach(st => {
+                    const r = st.row_label || 'A';
+                    if (!rowMap[r]) rowMap[r] = [];
+                    rowMap[r].push(st);
+                  });
 
-                        {/* Counter Billing Printer Card */}
-                        <div style={{ padding: '14px', background: '#E0F2FE', borderRadius: '12px', border: '1px solid #BAE6FD', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <strong style={{ fontSize: '0.86rem', color: '#0369A1', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              🧾 CUSTOMER BILL PRINTER (Customer Invoices Only)
-                            </strong>
-                            <span style={{ fontSize: '0.70rem', background: '#0284C7', color: '#FFF', padding: '2px 8px', borderRadius: '6px', fontWeight: 800 }}>BILLING</span>
-                          </div>
-                          <div>
-                            <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#075985', display: 'block', marginBottom: '2px' }}>
-                              PRINTER NAME / TARGET:
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. Bill_Thermal_Printer or 192.168.1.201"
-                              value={settingsForm.bill_printer_target || ''}
-                              onChange={(e) => setSettingsForm({ ...settingsForm, bill_printer_target: e.target.value })}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BAE6FD', fontSize: '0.84rem', boxSizing: 'border-box' }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#075985', cursor: 'pointer' }}>
-                              <input
-                                type="checkbox"
-                                checked={settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true}
-                                onChange={(e) => setSettingsForm({ ...settingsForm, auto_print_bill: e.target.checked ? 1 : 0 })}
-                              />
-                              <span>Auto-print Bill on settlement</span>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
+                  const sortedRows = Object.keys(rowMap).sort();
 
-              <button
-                onClick={() => { setOpenDrawer(null); setShowPrinterModal(true); }}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  background: '#F1F5F9',
-                  color: '#334155',
-                  border: '1px solid #CBD5E1',
-                  fontWeight: 800,
-                  fontSize: '0.80rem',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
-              >
-                <Printer size={15} /> Open Printer Pairing Guide & Test Suite
-              </button>
-            </div>
-          </div>
-        </div>
-      </AdminDrawer>
-
-      {/* Drawer 3: Menu Settings */}
-      <AdminDrawer
-        isOpen={openDrawer === 'menu'}
-        onClose={() => setOpenDrawer(null)}
-        title="🍽 Menu & GST Settings"
-        subtitle="Configure cuisine type, tax rate, and dish badge visibility"
-        footer={(
-          <button
-            onClick={handleFormSave}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-              color: '#FFFFFF',
-              fontWeight: 900,
-              fontSize: '0.90rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
-            }}
-          >
-            Save Menu & Tax Settings
-          </button>
-        )}
-      >
-        <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Card 1: Business Profile */}
-          {(() => {
-            const resolvedProfile = resolveBusinessProfile(settingsForm);
-            const currentBusinessType = settingsForm.business_type || resolvedProfile.business_type;
-            const currentFoodType = settingsForm.food_type || resolvedProfile.food_type;
-            const currentServiceModel = settingsForm.service_model || resolvedProfile.service_model;
-
-            const isLegacyBiz = settingsForm.business_type == null;
-            const isLegacyFood = settingsForm.food_type == null;
-
-            // Canonical category badge & service mode derivation
-            const serviceModelMeta = SERVICE_MODEL_METADATA[currentServiceModel] || SERVICE_MODEL_METADATA.dine_in;
-            const bannerBadgeText = resolveBannerBadge(settingsForm);
-
-            const serviceModeDescription = currentServiceModel === 'hotel'
-              ? '🏨 In-Room Guest Dining'
-              : currentServiceModel === 'cinema'
-              ? '🎬 Cinema Seat Ordering'
-              : '🍽️ Dine-In Table Ordering';
-
-            return (
-              <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                    🏢
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Business Profile</strong>
-                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Configure business venue type, dietary profile and ordering mode</span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingLeft: '46px' }}>
-                  {/* Control A: Business Type (Verified & Locked) */}
-                  <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label htmlFor="admin-business-type" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
-                        Business Type & Industry
-                      </label>
-                      <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#065F46', background: '#D1FAE5', padding: '2px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        🔒 Verified Category
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
-                      Business vertical is bound to your account and SaaS plan. To request an industry change, please contact SuperAdmin.
-                    </span>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid #CBD5E1',
-                      background: '#F1F5F9',
-                      color: '#0F172A',
-                      fontWeight: 700,
-                      fontSize: '0.84rem'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>{BUSINESS_TYPE_METADATA[currentBusinessType || 'restaurant']?.icon || '🏢'}</span>
-                        <span>{BUSINESS_TYPE_METADATA[currentBusinessType || 'restaurant']?.label || currentBusinessType}</span>
-                      </div>
-                      <Lock size={14} color="#64748B" />
-                    </div>
-                  </div>
-
-                  {/* Control B: Food Type */}
-                  <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label htmlFor="admin-food-type" style={{ fontSize: '0.80rem', fontWeight: 800, color: '#1E293B' }}>
-                        Food Dietary Type
-                      </label>
-                      {isLegacyFood && (
-                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#64748B', background: '#E2E8F0', padding: '2px 6px', borderRadius: '8px' }}>
-                          Using legacy setting
-                        </span>
-                      )}
-                    </div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginBottom: '8px' }}>
-                      Tell customers what dietary profile applies to this menu.
-                    </span>
-                    <select
-                      id="admin-food-type"
-                      value={currentFoodType || 'pure_veg'}
-                      onChange={(e) => {
-                        const newFood = e.target.value;
-                        const safeResto = (newFood === 'pure_veg' ? 'pure_veg' : newFood === 'non_veg' ? 'non_veg' : (currentBusinessType === 'bakery_confectionery' ? 'bakery' : 'veg_nonveg'));
-                        setSettingsForm({
-                          ...settingsForm,
-                          food_type: newFood,
-                          resto_type: safeResto
-                        });
-                      }}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, background: '#FFFFFF', color: '#0F172A' }}
-                    >
-                      {FOOD_TYPES.map(type => (
-                        <option key={type} value={type}>
-                          {FOOD_TYPE_METADATA[type]?.icon || '🥗'} {FOOD_TYPE_METADATA[type]?.label || type}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Premium Summary Card: Business Profile Preview */}
-                  <div style={{
-                    padding: '14px 16px',
-                    background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
-                    borderRadius: '12px',
-                    border: '1px solid #E2E8F0',
-                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '0.70rem', fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        ✨ Live Profile Preview
-                      </span>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 900,
-                        background: currentServiceModel === 'hotel' ? '#EFF6FF' : currentServiceModel === 'cinema' ? '#FDF2F8' : '#F0FDF4',
-                        color: currentServiceModel === 'hotel' ? '#1D4ED8' : currentServiceModel === 'cinema' ? '#BE185D' : '#15803D',
-                        border: `1px solid ${currentServiceModel === 'hotel' ? '#BFDBFE' : currentServiceModel === 'cinema' ? '#FBCFE8' : '#BBF7D0'}`,
-                        padding: '3px 9px',
-                        borderRadius: '20px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        {serviceModelMeta.emoji} {currentServiceModel === 'hotel' ? 'HOTEL' : currentServiceModel === 'cinema' ? 'CINEMA' : 'DINE-IN'}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
-                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                        <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Business</span>
-                        <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                          {BUSINESS_TYPE_METADATA[currentBusinessType]?.icon || '🏢'} {BUSINESS_TYPE_METADATA[currentBusinessType]?.label?.replace(/\s*\(.*\)/, '') || currentBusinessType}
-                        </strong>
-                      </div>
-
-                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                        <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Food Dietary</span>
-                        <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                          {FOOD_TYPE_METADATA[currentFoodType]?.icon || '🟢'} {FOOD_TYPE_METADATA[currentFoodType]?.label || currentFoodType}
-                        </strong>
-                      </div>
-
-                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                        <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Service Mode</span>
-                        <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                          {serviceModeDescription}
-                        </strong>
-                      </div>
-
-                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                        <span style={{ fontSize: '0.64rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Menu Badge</span>
-                        <strong style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                          🏷️ {bannerBadgeText}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Card 2: Currency Symbol */}
-          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                🪙
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Currency & Pricing Symbol</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Shown on customer QR menu and printed receipts</span>
-              </div>
-            </div>
-            <div style={{ paddingLeft: '46px' }}>
-              <select
-                value={settingsForm.currency_symbol != null ? settingsForm.currency_symbol : '₹'}
-                onChange={(e) => setSettingsForm({ ...settingsForm, currency_symbol: e.target.value })}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
-              >
-                <option value="₹">₹ — Indian Rupee (INR)</option>
-                <option value="$">$ — US Dollar (USD)</option>
-                <option value="€">€ — Euro (EUR)</option>
-                <option value="£">£ — British Pound (GBP)</option>
-                <option value="">None — No Currency Symbol</option>
-              </select>
-            </div>
-          </div>
-
-
-
-          {/* Card 3: GST Configuration */}
-          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: settingsForm.gst_enabled ? '12px' : '0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                  🏷️
-                </div>
-                <div>
-                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>5% GST Tax Billing & Invoicing</strong>
-                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Adds 5% GST tax automatically on customer orders</span>
-                </div>
-              </div>
-
-              {(settingsForm.gst_invoice_enabled !== false && settingsForm.gst_invoice_enabled !== 0) ? (
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={Boolean(settingsForm.gst_enabled)}
-                  aria-label="Toggle 5% GST Tax Billing"
-                  onClick={() => setSettingsForm({ ...settingsForm, gst_enabled: !settingsForm.gst_enabled })}
-                  style={{
-                    width: '48px',
-                    height: '28px',
-                    minWidth: '48px',
-                    minHeight: '28px',
-                    padding: '2px',
-                    borderRadius: '14px',
-                    border: 'none',
-                    background: settingsForm.gst_enabled ? '#059669' : '#CBD5E1',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    transition: 'background-color 0.2s ease',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      background: '#FFFFFF',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                      transform: settingsForm.gst_enabled ? 'translateX(20px)' : 'translateX(0px)',
-                      transition: 'transform 0.2s ease',
-                      display: 'block'
-                    }}
-                  />
-                </button>
-              ) : (
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#B45309', background: '#FEF3C7', border: '1px solid #F59E0B', padding: '3px 10px', borderRadius: '20px' }}>
-                  🔒 Pro Feature
-                </span>
-              )}
-            </div>
-
-            {settingsForm.gst_enabled && (
-              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F1F5F9', paddingLeft: '46px' }}>
-                <label htmlFor="admin-gstin-number" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  GSTIN Number:
-                </label>
-                <input
-                  id="admin-gstin-number"
-                  type="text"
-                  placeholder="e.g. 10AAAAA0000A1Z5"
-                  value={settingsForm.gstin_number || ''}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, gstin_number: e.target.value.toUpperCase() })}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
-                />
-                <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Printed on all customer receipt printouts and tax reports.</span>
-              </div>
-            )}
-          </div>
-
-          {/* Card 3B: Direct Dynamic UPI Payment QR on Bills */}
-          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (settingsForm.print_upi_qr !== 0) ? '12px' : '0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DBEAFE', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                  📱
-                </div>
-                <div>
-                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Dynamic UPI QR on Printed Bills</strong>
-                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Prints QR code with auto-filled bill amount for GPay, PhonePe & Paytm (0% Fee)</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                role="switch"
-                aria-checked={Boolean(settingsForm.print_upi_qr !== 0)}
-                aria-label="Toggle Dynamic UPI QR on Bills"
-                onClick={() => setSettingsForm({ ...settingsForm, print_upi_qr: (settingsForm.print_upi_qr !== 0) ? 0 : 1 })}
-                style={{
-                  width: '48px',
-                  height: '28px',
-                  minWidth: '48px',
-                  minHeight: '28px',
-                  padding: '2px',
-                  borderRadius: '14px',
-                  border: 'none',
-                  background: (settingsForm.print_upi_qr !== 0) ? '#2563EB' : '#CBD5E1',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  transition: 'background-color 0.2s ease',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <span
-                  style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    background: '#FFFFFF',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                    transform: (settingsForm.print_upi_qr !== 0) ? 'translateX(20px)' : 'translateX(0px)',
-                    transition: 'transform 0.2s ease',
-                    display: 'block'
-                  }}
-                />
-              </button>
-            </div>
-
-            {(settingsForm.print_upi_qr !== 0) && (
-              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F1F5F9', paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div>
-                  <label htmlFor="admin-upi-id" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    UPI ID / VPA (e.g. 9876543210@paytm or store@upi) *:
-                  </label>
-                  <input
-                    id="admin-upi-id"
-                    type="text"
-                    placeholder="e.g. 9876543210@paytm, store@okaxis"
-                    value={settingsForm.upi_id || ''}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, upi_id: e.target.value.trim() })}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
-                  />
-                  <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Money goes straight to your bank account with 0% payment gateway deduction.</span>
-                </div>
-
-                <div>
-                  <label htmlFor="admin-upi-payee-name" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Payee Name / Business Name on UPI:
-                  </label>
-                  <input
-                    id="admin-upi-payee-name"
-                    type="text"
-                    placeholder="e.g. Raman Sweets & Restro"
-                    value={settingsForm.upi_payee_name || ''}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, upi_payee_name: e.target.value })}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
-                  />
-                  <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Displayed in GPay / PhonePe when customer scans the printed QR code.</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Card 4: Dish Filter Visibility Toggles */}
-          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                👁️
-              </div>
-              <div>
-                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Customer Menu Badges & Filters</strong>
-                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Toggle badge visibility pills in the customer QR menu</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '46px' }}>
-              {/* Filter 1 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                <div>
-                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>⭐ "Must Try" Badge Filter</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Highlights chef special recommended items</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settingsForm.filters_visibility?.must_try !== false}
-                  onChange={(e) => setSettingsForm({
-                    ...settingsForm,
-                    filters_visibility: { ...settingsForm.filters_visibility, must_try: e.target.checked }
-                  })}
-                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
-                />
-              </div>
-
-              {/* Filter 2 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                <div>
-                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>✨ "Today Special" Badge Filter</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Highlights daily limited-time special dishes</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settingsForm.filters_visibility?.special !== false}
-                  onChange={(e) => setSettingsForm({
-                    ...settingsForm,
-                    filters_visibility: { ...settingsForm.filters_visibility, special: e.target.checked }
-                  })}
-                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
-                />
-              </div>
-
-              {/* Filter 3 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                <div>
-                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🍱 "Combos & Thalis" Navigation Pill</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Displays dedicated combos and thalis category pill</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settingsForm.filters_visibility?.combo !== false}
-                  onChange={(e) => setSettingsForm({
-                    ...settingsForm,
-                    filters_visibility: { ...settingsForm.filters_visibility, combo: e.target.checked }
-                  })}
-                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
-                />
-              </div>
-
-              {/* Filter 4: Under 100 Budget Pill */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                <div>
-                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>⚡ "Under ₹100" Budget Filter Pill</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Allows customers to filter affordable pocket-friendly items</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settingsForm.filters_visibility?.under100 !== false}
-                  onChange={(e) => setSettingsForm({
-                    ...settingsForm,
-                    filters_visibility: { ...settingsForm.filters_visibility, under100: e.target.checked }
-                  })}
-                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
-                />
-              </div>
-
-              {/* Filter 5: Pure Veg Pill */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                <div>
-                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🟢 "Pure Veg" Dietary Filter Pill</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Quick toggle for 100% vegetarian dishes</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settingsForm.filters_visibility?.veg !== false}
-                  onChange={(e) => setSettingsForm({
-                    ...settingsForm,
-                    filters_visibility: { ...settingsForm.filters_visibility, veg: e.target.checked }
-                  })}
-                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
-                />
-              </div>
-
-              {/* Filter 6: Non-Veg Pill */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                <div>
-                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🔴 "Non-Veg" Dietary Filter Pill</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Quick toggle for non-vegetarian dishes</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settingsForm.filters_visibility?.nonveg !== false}
-                  onChange={(e) => setSettingsForm({
-                    ...settingsForm,
-                    filters_visibility: { ...settingsForm.filters_visibility, nonveg: e.target.checked }
-                  })}
-                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
-                />
-              </div>
-
-              {/* Filter 7: Egg Pill */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                <div>
-                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🟡 "Egg" Dietary Filter Pill</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Quick toggle for egg-containing items</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settingsForm.filters_visibility?.egg !== false}
-                  onChange={(e) => setSettingsForm({
-                    ...settingsForm,
-                    filters_visibility: { ...settingsForm.filters_visibility, egg: e.target.checked }
-                  })}
-                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
-                />
-              </div>
-
-              {/* Filter 8: Customizable Badge */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                <div>
-                  <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>✨ "Customizable" Dish Badge</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Shows pill on dishes with half/full portions or add-on modifiers</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settingsForm.filters_visibility?.customizable !== false}
-                  onChange={(e) => setSettingsForm({
-                    ...settingsForm,
-                    filters_visibility: { ...settingsForm.filters_visibility, customizable: e.target.checked }
-                  })}
-                  style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
-                />
-              </div>
-            </div>
-          </div>
-        </form>
-      </AdminDrawer>
-
-
-
-      {/* Drawer 7: Dedicated Cinema Management Drawer */}
-      {isCinema && (
-        <AdminDrawer
-          isOpen={openDrawer === 'cinema'}
-          onClose={() => {
-            setOpenDrawer(null);
-            setSelectedScreenForSeats(null);
-          }}
-          title="🎬 Cinema Management"
-          subtitle="Configure auditorium screens, rows and seats for seat-based QR ordering"
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Header Action Bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <strong style={{ fontSize: '0.98rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
-                  Auditorium Screens & Seats
-                </strong>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
-                  Manage screen layouts and generate unique cryptographic seat QR codes
-                </span>
-              </div>
-
-              {!selectedScreenForSeats && (
-                <button
-                  type="button"
-                  onClick={handleOpenAddScreen}
-                  className="adm-btn adm-btn-primary adm-btn-sm"
-                  style={{ fontWeight: 800 }}
-                >
-                  <Plus size={15} /> Add Screen
-                </button>
-              )}
-            </div>
-
-            {/* Feedback Message Banner */}
-            {cinemaMsg && (
-              <div style={{
-                padding: '10px 14px',
-                borderRadius: '10px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '8px',
-                background: cinemaMsg.type === 'success' ? '#F0FDF4' : '#FEF2F2',
-                border: `1px solid ${cinemaMsg.type === 'success' ? '#BBF7D0' : '#FECACA'}`,
-                color: cinemaMsg.type === 'success' ? '#166534' : '#991B1B'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {cinemaMsg.type === 'success' ? <Check size={16} /> : <AlertTriangle size={16} />}
-                  <span>{cinemaMsg.text}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setCinemaMsg(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '2px' }}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-
-            {/* Loading State */}
-            {loadingCinema && (
-              <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '0.82rem', fontWeight: 700 }}>
-                ⏳ Loading configured auditorium screens & seats...
-              </div>
-            )}
-
-            {/* VIEW A: SCREENS LIST (Default View) */}
-            {!selectedScreenForSeats && !loadingCinema && (
-              <div>
-                {cinemaScreens.length === 0 ? (
-                  <div style={{
-                    padding: '28px 20px',
-                    background: '#F8FAFC',
-                    borderRadius: '12px',
-                    border: '1.5px dashed #CBD5E1',
-                    textAlign: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '10px'
-                  }}>
-                    <div style={{ fontSize: '2.2rem' }}>🎬</div>
-                    <strong style={{ fontSize: '1rem', color: '#0F172A' }}>No Cinema Screens Configured</strong>
-                    <p style={{ fontSize: '0.80rem', color: '#64748B', margin: 0, maxWidth: '360px' }}>
-                      Create your first auditorium screen and add rows/seats to enable seat QR ordering.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleOpenAddScreen}
-                      className="adm-btn adm-btn-primary"
-                      style={{ marginTop: '8px', fontWeight: 800, padding: '10px 18px' }}
-                    >
-                      <Plus size={16} /> Add Screen
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {cinemaScreens.map(screen => {
-                      const screenSeats = cinemaSeats.filter(st => String(st.screen_id) === String(screen.id) && st.active !== false);
-                      const seatCount = screenSeats.length;
-                      return (
-                        <div
-                          key={screen.id}
-                          style={{
-                            padding: '14px 16px',
-                            background: '#FFFFFF',
-                            borderRadius: '12px',
-                            border: '1px solid #E2E8F0',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: '10px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{
-                              width: '38px',
-                              height: '38px',
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {sortedRows.map(rowLetter => {
+                        const rowSeats = rowMap[rowLetter].sort((a, b) => Number(a.seat_number) - Number(b.seat_number));
+                        return (
+                          <div
+                            key={rowLetter}
+                            style={{
+                              padding: '10px 14px',
+                              background: '#FFFFFF',
                               borderRadius: '10px',
-                              background: screen.active !== false ? '#F1F5F9' : '#FEE2E2',
-                              color: screen.active !== false ? '#0F172A' : '#EF4444',
+                              border: '1px solid #E2E8F0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              flexWrap: 'wrap'
+                            }}
+                          >
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '6px',
+                              background: '#0A2315',
+                              color: '#D4AF37',
+                              fontWeight: 900,
+                              fontSize: '0.88rem',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontWeight: 900,
-                              fontSize: '0.92rem'
+                              flexShrink: 0
                             }}>
-                              S{screen.screen_number}
+                              {rowLetter}
                             </div>
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800 }}>
-                                  {screen.name || `Screen ${screen.screen_number}`}
-                                </strong>
-                                <span style={{
-                                  fontSize: '0.7rem',
-                                  fontWeight: 800,
-                                  padding: '1px 6px',
-                                  borderRadius: '10px',
-                                  background: screen.active !== false ? '#DCFCE7' : '#F3F4F6',
-                                  color: screen.active !== false ? '#15803D' : '#6B7280'
-                                }}>
-                                  {screen.active !== false ? 'Active' : 'Inactive'}
+
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', flex: 1 }}>
+                              {rowSeats.map(seat => (
+                                <span
+                                  key={seat.id}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '3px 8px',
+                                    borderRadius: '6px',
+                                    background: '#F1F5F9',
+                                    border: '1px solid #CBD5E1',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 800,
+                                    color: '#0F172A'
+                                  }}
+                                >
+                                  <span>{seat.row_label}{seat.seat_number}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSeat(seat)}
+                                    title={`Delete Seat ${seat.seat_code}`}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: '#94A3B8',
+                                      cursor: 'pointer',
+                                      padding: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      marginLeft: '2px'
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.color = '#EF4444'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8'; }}
+                                  >
+                                    <X size={12} />
+                                  </button>
                                 </span>
-                              </div>
-                              <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>
-                                {seatCount} {seatCount === 1 ? 'Seat' : 'Seats'} Configured
-                              </span>
+                              ))}
                             </div>
                           </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedScreenForSeats(screen);
-                                setBulkSeatForm({ row_label: 'A', seat_start: 1, seat_end: 20 });
-                                setCinemaMsg(null);
-                              }}
-                              className="adm-btn adm-btn-primary adm-btn-sm"
-                              style={{ fontWeight: 800, padding: '6px 12px', fontSize: '0.78rem' }}
-                            >
-                              💺 Manage Seats
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditScreen(screen)}
-                              className="adm-btn adm-btn-secondary adm-btn-sm"
-                              style={{ padding: '6px 10px', fontSize: '0.78rem' }}
-                              title="Edit Screen"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteScreen(screen)}
-                              className="adm-btn adm-btn-danger adm-btn-sm"
-                              style={{ padding: '6px 10px', fontSize: '0.78rem' }}
-                              title="Delete Screen"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* VIEW B: SEAT MANAGEMENT FOR SELECTED SCREEN */}
-            {selectedScreenForSeats && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {/* Top Bar with Back Button */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedScreenForSeats(null)}
-                      className="adm-btn adm-btn-secondary adm-btn-sm"
-                      style={{ fontWeight: 800 }}
-                    >
-                      ← Back to Screens
-                    </button>
-                    <div>
-                      <strong style={{ fontSize: '0.95rem', color: '#0F172A' }}>
-                        Screen {selectedScreenForSeats.screen_number}: {selectedScreenForSeats.name}
-                      </strong>
-                      <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block' }}>
-                        Configure seat layout and manage row ranges
-                      </span>
+                        );
+                      })}
                     </div>
-                  </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* ADD / EDIT SCREEN MODAL */}
+          {showScreenModal && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 99999,
+              padding: '16px'
+            }}>
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                width: '100%',
+                maxWidth: '420px',
+                padding: '24px',
+                boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '1.05rem', color: '#0F172A' }}>
+                    {editingScreen ? '✏️ Edit Cinema Screen' : '🎬 Add Cinema Screen'}
+                  </strong>
+                  <button
+                    type="button"
+                    onClick={() => setShowScreenModal(false)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
 
-                {/* Bulk Add Row / Seats Form */}
-                <div style={{ padding: '14px 16px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #CBD5E1', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <strong style={{ fontSize: '0.84rem', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    ➕ Add / Configure Seats by Row
-                  </strong>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px' }}>
-                    <div>
-                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                        ROW LETTER:
-                      </label>
-                      <input
-                        type="text"
-                        maxLength={2}
-                        placeholder="e.g. A"
-                        value={bulkSeatForm.row_label}
-                        onChange={(e) => setBulkSeatForm({ ...bulkSeatForm, row_label: e.target.value.toUpperCase() })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.86rem', textTransform: 'uppercase' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                        START SEAT:
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={bulkSeatForm.seat_start}
-                        onChange={(e) => setBulkSeatForm({ ...bulkSeatForm, seat_start: parseInt(e.target.value, 10) || 1 })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.86rem' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                        END SEAT:
-                      </label>
-                      <input
-                        type="number"
-                        min={bulkSeatForm.seat_start || 1}
-                        max={100}
-                        value={bulkSeatForm.seat_end}
-                        onChange={(e) => setBulkSeatForm({ ...bulkSeatForm, seat_end: parseInt(e.target.value, 10) || 1 })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.86rem' }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                      <button
-                        type="button"
-                        onClick={handleBatchCreateSeats}
-                        disabled={savingSeats}
-                        className="adm-btn adm-btn-primary"
-                        style={{ width: '100%', padding: '8px 14px', fontWeight: 800, fontSize: '0.82rem' }}
-                      >
-                        {savingSeats ? 'Creating...' : '+ Create Seats'}
-                      </button>
-                    </div>
+                <form onSubmit={handleSaveScreen} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                      SCREEN NUMBER:
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      disabled={Boolean(editingScreen)}
+                      value={screenForm.screen_number}
+                      onChange={(e) => setScreenForm({ ...screenForm, screen_number: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #CBD5E1',
+                        fontWeight: 800,
+                        background: editingScreen ? '#F1F5F9' : '#FFFFFF'
+                      }}
+                      placeholder="e.g. 1"
+                    />
+                    {editingScreen && (
+                      <span style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                        Screen number cannot be changed after creation.
+                      </span>
+                    )}
                   </div>
 
-                  {bulkSeatForm.row_label && (
-                    <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
-                      Preview: <strong>Row {bulkSeatForm.row_label.toUpperCase()}</strong> • Seats {bulkSeatForm.seat_start}–{bulkSeatForm.seat_end} ({Math.max(0, bulkSeatForm.seat_end - bulkSeatForm.seat_start + 1)} seats)
+                  <div>
+                    <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                      SCREEN NAME:
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={100}
+                      value={screenForm.name}
+                      onChange={(e) => setScreenForm({ ...screenForm, name: e.target.value })}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800 }}
+                      placeholder="e.g. Audi 1 - Dolby Atmos"
+                    />
+                  </div>
+
+                  {editingScreen && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <input
+                        type="checkbox"
+                        id="screenActiveCheckbox"
+                        checked={screenForm.active}
+                        onChange={(e) => setScreenForm({ ...screenForm, active: e.target.checked })}
+                      />
+                      <label htmlFor="screenActiveCheckbox" style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A', cursor: 'pointer' }}>
+                        Screen is active and accepting QR orders
+                      </label>
                     </div>
                   )}
-                </div>
 
-                {/* Configured Seats Grid Grouped by Row */}
-                <div>
-                  <strong style={{ fontSize: '0.82rem', color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
-                    Configured Seats for Screen {selectedScreenForSeats.screen_number}:
-                  </strong>
-
-                  {(() => {
-                    const screenSeats = cinemaSeats.filter(st => String(st.screen_id) === String(selectedScreenForSeats.id) && st.active !== false);
-                    if (screenSeats.length === 0) {
-                      return (
-                        <div style={{ padding: '18px', background: '#F8FAFC', borderRadius: '10px', border: '1px dashed #CBD5E1', textAlign: 'center', fontSize: '0.8rem', color: '#64748B' }}>
-                          No seats configured yet for this screen. Use the builder above to add your first row of seats.
-                        </div>
-                      );
-                    }
-
-                    // Group by row_label
-                    const rowMap = {};
-                    screenSeats.forEach(st => {
-                      const r = st.row_label || 'A';
-                      if (!rowMap[r]) rowMap[r] = [];
-                      rowMap[r].push(st);
-                    });
-
-                    const sortedRows = Object.keys(rowMap).sort();
-
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {sortedRows.map(rowLetter => {
-                          const rowSeats = rowMap[rowLetter].sort((a, b) => Number(a.seat_number) - Number(b.seat_number));
-                          return (
-                            <div
-                              key={rowLetter}
-                              style={{
-                                padding: '10px 14px',
-                                background: '#FFFFFF',
-                                borderRadius: '10px',
-                                border: '1px solid #E2E8F0',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                flexWrap: 'wrap'
-                              }}
-                            >
-                              <div style={{
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '6px',
-                                background: '#0A2315',
-                                color: '#D4AF37',
-                                fontWeight: 900,
-                                fontSize: '0.88rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
-                              }}>
-                                {rowLetter}
-                              </div>
-
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', flex: 1 }}>
-                                {rowSeats.map(seat => (
-                                  <span
-                                    key={seat.id}
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      padding: '3px 8px',
-                                      borderRadius: '6px',
-                                      background: '#F1F5F9',
-                                      border: '1px solid #CBD5E1',
-                                      fontSize: '0.74rem',
-                                      fontWeight: 800,
-                                      color: '#0F172A'
-                                    }}
-                                  >
-                                    <span>{seat.row_label}{seat.seat_number}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteSeat(seat)}
-                                      title={`Delete Seat ${seat.seat_code}`}
-                                      style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#94A3B8',
-                                        cursor: 'pointer',
-                                        padding: 0,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        marginLeft: '2px'
-                                      }}
-                                      onMouseEnter={(e) => { e.currentTarget.style.color = '#EF4444'; }}
-                                      onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8'; }}
-                                    >
-                                      <X size={12} />
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            )}
-
-            {/* ADD / EDIT SCREEN MODAL */}
-            {showScreenModal && (
-              <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0,0,0,0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 99999,
-                padding: '16px'
-              }}>
-                <div style={{
-                  background: '#FFFFFF',
-                  borderRadius: '16px',
-                  width: '100%',
-                  maxWidth: '420px',
-                  padding: '24px',
-                  boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <strong style={{ fontSize: '1.05rem', color: '#0F172A' }}>
-                      {editingScreen ? '✏️ Edit Cinema Screen' : '🎬 Add Cinema Screen'}
-                    </strong>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
                     <button
                       type="button"
                       onClick={() => setShowScreenModal(false)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleSaveScreen} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                        SCREEN NUMBER:
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={99}
-                        disabled={Boolean(editingScreen)}
-                        value={screenForm.screen_number}
-                        onChange={(e) => setScreenForm({ ...screenForm, screen_number: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid #CBD5E1',
-                          fontWeight: 800,
-                          background: editingScreen ? '#F1F5F9' : '#FFFFFF'
-                        }}
-                        placeholder="e.g. 1"
-                      />
-                      {editingScreen && (
-                        <span style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '2px', display: 'block' }}>
-                          Screen number cannot be changed after creation.
-                        </span>
-                      )}
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                        SCREEN NAME:
-                      </label>
-                      <input
-                        type="text"
-                        maxLength={100}
-                        value={screenForm.name}
-                        onChange={(e) => setScreenForm({ ...screenForm, name: e.target.value })}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800 }}
-                        placeholder="e.g. Audi 1 - Dolby Atmos"
-                      />
-                    </div>
-
-                    {editingScreen && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                        <input
-                          type="checkbox"
-                          id="screenActiveCheckbox"
-                          checked={screenForm.active}
-                          onChange={(e) => setScreenForm({ ...screenForm, active: e.target.checked })}
-                        />
-                        <label htmlFor="screenActiveCheckbox" style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A', cursor: 'pointer' }}>
-                          Screen is active and accepting QR orders
-                        </label>
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setShowScreenModal(false)}
-                        className="adm-btn adm-btn-secondary"
-                        style={{ fontWeight: 800 }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={savingScreen}
-                        className="adm-btn adm-btn-primary"
-                        style={{ fontWeight: 800 }}
-                      >
-                        {savingScreen ? 'Saving...' : (editingScreen ? 'Save Changes' : 'Create Screen')}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
-        </AdminDrawer>
-      )}
-
-      {/* Modal: Confirm Cancel Auto-Renew */}
-      {showCancelModal && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 11000,
-          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div style={{
-            background: '#FFFFFF', borderRadius: '20px', maxWidth: '440px', width: '100%',
-            padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', animation: 'fadeIn 0.2s ease-out'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <AlertTriangle size={22} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A' }}>Turn off auto-renew?</h3>
-                <span style={{ fontSize: '0.76rem', color: '#64748B' }}>Your current billing period remains active</span>
-              </div>
-            </div>
-
-            <p style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.5, margin: '0 0 18px' }}>
-              Your service will remain fully active until the current billing period ends. After that, your account will switch to the free view-only plan without recurring charges.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <button
-                type="button"
-                disabled={actionLoading}
-                onClick={() => setShowCancelModal(false)}
-                style={{
-                  padding: '11px',
-                  borderRadius: '10px',
-                  border: '1px solid #CBD5E1',
-                  background: '#FFFFFF',
-                  color: '#334155',
-                  fontWeight: 800,
-                  fontSize: '0.84rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Keep Auto-Renew
-              </button>
-              <button
-                type="button"
-                disabled={actionLoading}
-                onClick={handleCancelAutoRenew}
-                style={{
-                  padding: '11px',
-                  borderRadius: '10px',
-                  border: '1px solid #FECACA',
-                  background: '#FEF2F2',
-                  color: '#DC2626',
-                  fontWeight: 800,
-                  fontSize: '0.84rem',
-                  cursor: actionLoading ? 'not-allowed' : 'pointer',
-                  opacity: actionLoading ? 0.7 : 1,
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {actionLoading ? 'Cancelling...' : 'Turn Off'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Confirm Plan Change (Upgrade / Downgrade) */}
-      {planToChange && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 11000,
-          background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div style={{
-            background: '#FFFFFF', borderRadius: '18px', border: '1px solid #EAE5DF', maxWidth: '460px', width: '100%',
-            padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', animation: 'fadeIn 0.2s ease-out'
-          }}>
-            {(() => {
-              const currentPlanPrice = subData?.plan_price || restaurantInfo?.plan_price || 999;
-              const isUpgrade = Number(planToChange.price) > Number(currentPlanPrice);
-              const isTrial = (subData?.status || restaurantInfo?.subscription_status) === 'trialing';
-              const rawDate = subData?.current_period_end || subData?.trial_ends_at || restaurantInfo?.access_until;
-              const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
-
-              return (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-                    <div style={{
-                      width: '42px', height: '42px', borderRadius: '12px',
-                      background: isUpgrade ? '#ECFDF5' : '#FFFBEB',
-                      color: isUpgrade ? '#064E3B' : '#D97706',
-                      border: `1px solid ${isUpgrade ? '#A7F3D0' : '#FDE68A'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                    }}>
-                      {isUpgrade ? <Zap size={22} /> : <ArrowDownRight size={22} />}
-                    </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A' }}>
-                        Confirm {isUpgrade ? 'Upgrade' : 'Plan Switch'}
-                      </h3>
-                      <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
-                        Switching to {planToChange.name} (₹{planToChange.price}/mo)
-                      </span>
-                    </div>
-                  </div>
-
-                  <div style={{ background: '#FAF8F5', padding: '14px', borderRadius: '12px', border: '1px solid #EAE5DF', marginBottom: '14px', fontSize: '0.80rem', color: '#334155', lineHeight: 1.5 }}>
-                    {isTrial ? (
-                      <div>
-                        🚀 <strong>Immediate Trial Switch:</strong> Your trial continues unchanged until <strong>{formattedDate || 'trial end'}</strong>. Your new plan price of ₹{planToChange.price}/month will apply starting on your first billing cycle.
-                      </div>
-                    ) : (
-                      <div>
-                        🕒 <strong>Scheduled Plan Change:</strong> Your current plan continues until <strong>{formattedDate || 'your next billing date'}</strong>. <strong>{planToChange.name}</strong> (₹{planToChange.price}/month) will activate from your next billing cycle.
-                      </div>
-                    )}
-                  </div>
-
-                  {!isUpgrade && (
-                    <div style={{
-                      background: '#FFFBEB',
-                      border: '1px solid #FDE68A',
-                      borderRadius: '12px',
-                      padding: '12px 14px',
-                      marginBottom: '18px',
-                      fontSize: '0.76rem',
-                      color: '#92400E',
-                      lineHeight: 1.4
-                    }}>
-                      ⚠️ <strong>Data Safety:</strong> Lower limits will apply to future space and menu additions. Your existing tables, dishes, categories, and custom domain configuration remain <strong>100% preserved</strong>.
-                    </div>
-                  )}
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <button
-                      type="button"
-                      disabled={actionLoading}
-                      onClick={() => setPlanToChange(null)}
-                      style={{
-                        padding: '11px',
-                        borderRadius: '10px',
-                        border: '1px solid #CBD5E1',
-                        background: '#FFFFFF',
-                        color: '#475569',
-                        fontWeight: 800,
-                        fontSize: '0.84rem',
-                        cursor: 'pointer'
-                      }}
+                      className="adm-btn adm-btn-secondary"
+                      style={{ fontWeight: 800 }}
                     >
                       Cancel
                     </button>
                     <button
-                      type="button"
-                      disabled={actionLoading}
-                      onClick={handleConfirmPlanChange}
-                      style={{
-                        padding: '11px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: '#064E3B',
-                        color: '#FFFFFF',
-                        fontWeight: 900,
-                        fontSize: '0.84rem',
-                        cursor: actionLoading ? 'not-allowed' : 'pointer',
-                        opacity: actionLoading ? 0.7 : 1,
-                        boxShadow: '0 2px 8px rgba(6, 78, 59, 0.25)'
-                      }}
+                      type="submit"
+                      disabled={savingScreen}
+                      className="adm-btn adm-btn-primary"
+                      style={{ fontWeight: 800 }}
                     >
-                      {actionLoading ? 'Processing...' : `Confirm ${isUpgrade ? 'Upgrade' : 'Switch'}`}
+                      {savingScreen ? 'Saving...' : (editingScreen ? 'Save Changes' : 'Create Screen')}
                     </button>
                   </div>
-                </div>
-              );
-            })()}
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      </AdminDrawer>
+    )
+  }
+
+  {/* Modal: Confirm Cancel Auto-Renew */ }
+  {
+    showCancelModal && (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 11000,
+        background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+      }}>
+        <div style={{
+          background: '#FFFFFF', borderRadius: '20px', maxWidth: '440px', width: '100%',
+          padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <AlertTriangle size={22} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A' }}>Turn off auto-renew?</h3>
+              <span style={{ fontSize: '0.76rem', color: '#64748B' }}>Your current billing period remains active</span>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.5, margin: '0 0 18px' }}>
+            Your service will remain fully active until the current billing period ends. After that, your account will switch to the free view-only plan without recurring charges.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <button
+              type="button"
+              disabled={actionLoading}
+              onClick={() => setShowCancelModal(false)}
+              style={{
+                padding: '11px',
+                borderRadius: '10px',
+                border: '1px solid #CBD5E1',
+                background: '#FFFFFF',
+                color: '#334155',
+                fontWeight: 800,
+                fontSize: '0.84rem',
+                cursor: 'pointer'
+              }}
+            >
+              Keep Auto-Renew
+            </button>
+            <button
+              type="button"
+              disabled={actionLoading}
+              onClick={handleCancelAutoRenew}
+              style={{
+                padding: '11px',
+                borderRadius: '10px',
+                border: '1px solid #FECACA',
+                background: '#FEF2F2',
+                color: '#DC2626',
+                fontWeight: 800,
+                fontSize: '0.84rem',
+                cursor: actionLoading ? 'not-allowed' : 'pointer',
+                opacity: actionLoading ? 0.7 : 1,
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {actionLoading ? 'Cancelling...' : 'Turn Off'}
+            </button>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    )
+  }
+
+  {/* Modal: Confirm Plan Change (Upgrade / Downgrade) */ }
+  {
+    planToChange && (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 11000,
+        background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+      }}>
+        <div style={{
+          background: '#FFFFFF', borderRadius: '18px', border: '1px solid #EAE5DF', maxWidth: '460px', width: '100%',
+          padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', animation: 'fadeIn 0.2s ease-out'
+        }}>
+          {(() => {
+            const currentPlanPrice = subData?.plan_price || restaurantInfo?.plan_price || 999;
+            const isUpgrade = Number(planToChange.price) > Number(currentPlanPrice);
+            const isTrial = (subData?.status || restaurantInfo?.subscription_status) === 'trialing';
+            const rawDate = subData?.current_period_end || subData?.trial_ends_at || restaurantInfo?.access_until;
+            const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+
+            return (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '12px',
+                    background: isUpgrade ? '#ECFDF5' : '#FFFBEB',
+                    color: isUpgrade ? '#064E3B' : '#D97706',
+                    border: `1px solid ${isUpgrade ? '#A7F3D0' : '#FDE68A'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                  }}>
+                    {isUpgrade ? <Zap size={22} /> : <ArrowDownRight size={22} />}
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A' }}>
+                      Confirm {isUpgrade ? 'Upgrade' : 'Plan Switch'}
+                    </h3>
+                    <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                      Switching to {planToChange.name} (₹{planToChange.price}/mo)
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ background: '#FAF8F5', padding: '14px', borderRadius: '12px', border: '1px solid #EAE5DF', marginBottom: '14px', fontSize: '0.80rem', color: '#334155', lineHeight: 1.5 }}>
+                  {isTrial ? (
+                    <div>
+                      🚀 <strong>Immediate Trial Switch:</strong> Your trial continues unchanged until <strong>{formattedDate || 'trial end'}</strong>. Your new plan price of ₹{planToChange.price}/month will apply starting on your first billing cycle.
+                    </div>
+                  ) : (
+                    <div>
+                      🕒 <strong>Scheduled Plan Change:</strong> Your current plan continues until <strong>{formattedDate || 'your next billing date'}</strong>. <strong>{planToChange.name}</strong> (₹{planToChange.price}/month) will activate from your next billing cycle.
+                    </div>
+                  )}
+                </div>
+
+                {!isUpgrade && (
+                  <div style={{
+                    background: '#FFFBEB',
+                    border: '1px solid #FDE68A',
+                    borderRadius: '12px',
+                    padding: '12px 14px',
+                    marginBottom: '18px',
+                    fontSize: '0.76rem',
+                    color: '#92400E',
+                    lineHeight: 1.4
+                  }}>
+                    ⚠️ <strong>Data Safety:</strong> Lower limits will apply to future space and menu additions. Your existing tables, dishes, categories, and custom domain configuration remain <strong>100% preserved</strong>.
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={() => setPlanToChange(null)}
+                    style={{
+                      padding: '11px',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      color: '#475569',
+                      fontWeight: 800,
+                      fontSize: '0.84rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={handleConfirmPlanChange}
+                    style={{
+                      padding: '11px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: '#064E3B',
+                      color: '#FFFFFF',
+                      fontWeight: 900,
+                      fontSize: '0.84rem',
+                      cursor: actionLoading ? 'not-allowed' : 'pointer',
+                      opacity: actionLoading ? 0.7 : 1,
+                      boxShadow: '0 2px 8px rgba(6, 78, 59, 0.25)'
+                    }}
+                  >
+                    {actionLoading ? 'Processing...' : `Confirm ${isUpgrade ? 'Upgrade' : 'Switch'}`}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    )
+  }
+    </div >
   );
 }

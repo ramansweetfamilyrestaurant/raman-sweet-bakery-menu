@@ -2095,6 +2095,13 @@ export default function AdminDashboard({
           table_verification_mode: infoData.table_verification_mode || 'GPS_WITH_STAFF_FALLBACK',
           staff_verification_timeout_seconds: infoData.staff_verification_timeout_seconds !== undefined ? Number(infoData.staff_verification_timeout_seconds) : 120,
           order_alarm_enabled: infoData.order_alarm_enabled !== undefined ? (infoData.order_alarm_enabled !== false && infoData.order_alarm_enabled !== 0 && infoData.order_alarm_enabled !== '0') : true,
+          printer_mode: infoData.printer_mode || 'single',
+          printer_paper_width: infoData.printer_paper_width || '80mm',
+          auto_print_kot: Boolean(infoData.auto_print_kot === 1 || infoData.auto_print_kot === true),
+          auto_print_bill: Boolean(infoData.auto_print_bill === 1 || infoData.auto_print_bill === true),
+          upi_id: infoData.upi_id || '',
+          upi_payee_name: infoData.upi_payee_name || '',
+          print_upi_qr: (infoData.print_upi_qr !== undefined && infoData.print_upi_qr !== null) ? Number(infoData.print_upi_qr) : 1,
           filters_visibility: { ...defaultVis, ...infoData.filters_visibility }
         });
       } else {
