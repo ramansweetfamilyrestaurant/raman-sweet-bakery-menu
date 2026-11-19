@@ -13,8 +13,7 @@ import ComboFormModal from './ComboFormModal';
 import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X, BarChart2, TrendingUp, Download, Award, MapPin, RefreshCw, CreditCard } from 'lucide-react';
 
 import PaymentModal from '../PaymentModal';
-import { calculateBillDetails } from '../../utils/billingHelper';
-import { formatOrderLocation } from '../../utils/billingHelper';
+import { calculateBillDetails, formatOrderLocation, buildUpiPaymentUri } from '../../utils/billingHelper';
 
 import './styles/Admin.css';
 import AdminSidebar from './components/AdminSidebar';
@@ -95,6 +94,8 @@ export default function AdminDashboard({
   const [serviceRequests, setServiceRequests] = useState([]);
   const [analyticsData, setAnalyticsData] = useState(() => getInitialAdminState('analytics', null));
   const [billOrderModal, setBillOrderModal] = useState(null);
+  const [showModalUpiQr, setShowModalUpiQr] = useState(false);
+  const [modalUpiQrUrl, setModalUpiQrUrl] = useState(null);
   const [acceptRoutingModal, setAcceptRoutingModal] = useState(null); // { order, show: true }
   const [isRoutingSubmitting, setIsRoutingSubmitting] = useState(false);
   const [kotFilter, setKotFilter] = useState('all');
@@ -138,6 +139,31 @@ export default function AdminDashboard({
       })
       .catch(() => { });
   }, []);
+
+  useEffect(() => {
+    if (!billOrderModal) {
+      setShowModalUpiQr(false);
+      setModalUpiQrUrl(null);
+      return;
+    }
+    const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
+    const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
+    if (upiId) {
+      const billData = calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
+      const uri = buildUpiPaymentUri({
+        upiId,
+        payeeName,
+        amount: billData.grandTotal,
+        invoiceId: billOrderModal.id,
+        spaceLabel: billData.spaceLabel
+      });
+      if (uri) {
+        QRCode.toDataURL(uri, { width: 220, margin: 1, errorCorrectionLevel: 'M' })
+          .then(url => setModalUpiQrUrl(url))
+          .catch(() => setModalUpiQrUrl(null));
+      }
+    }
+  }, [billOrderModal, restaurantInfo, settingsForm, orders]);
 
   const getDaysRemaining = (expiryStr) => {
     if (!expiryStr) return null;
@@ -824,7 +850,7 @@ export default function AdminDashboard({
   };
 
   // ⚡ RawBT Direct Thermal Printer ESC/POS Generator
-  const generateRawBTText = (order, type = 'kot', restoInfo = {}, isReprint = false, paymentMode = 'CASH') => {
+  const generateRawBTText = (order, type = 'kot', restoInfo = {}, isReprint = false, paymentMode = 'CASH', upiUri = null) => {
     let text = '';
     const orderItems = safeParseItems(order.items);
     const currency = getCurrencySymbol(restoInfo?.currency_symbol);
@@ -927,19 +953,28 @@ export default function AdminDashboard({
         text += `Grand Total:   ${(currency + formatPriceNumber(grandTotal)).padStart(17)}\n`;
       }
       text += "================================" + "\n";
+      const upiId = restoInfo?.upi_id || settingsForm?.upi_id;
+      if (type !== 'kot' && upiUri && upiId) {
+        text += "--------------------------------\n";
+        text += "     SCAN TO PAY VIA UPI        \n";
+        text += " GPay • PhonePe • Paytm • BHIM  \n";
+        text += `<qrcode size="5">${upiUri}</qrcode>\n`;
+        text += `UPI ID: ${upiId}\n`;
+        text += "--------------------------------\n";
+      }
       text += "   Thank you! Visit Again 🙏\n\n\n";
     }
     return text;
   };
 
   // 🖨️ Silent Thermal Printer Engine (Zero-Popup Hidden Iframe / RawBT Printer)
-  const silentIframePrint = (htmlContent, order = null, type = 'kot', isReprint = false, paymentMode = 'CASH') => {
+  const silentIframePrint = (htmlContent, order = null, type = 'kot', isReprint = false, paymentMode = 'CASH', upiUri = null) => {
     return new Promise((resolve, reject) => {
       try {
         const isAndroid = /Android/i.test(navigator.userAgent);
         if (isAndroid && order) {
           try {
-            const rawText = generateRawBTText(order, type, restaurantInfo, isReprint, paymentMode);
+            const rawText = generateRawBTText(order, type, restaurantInfo, isReprint, paymentMode, upiUri);
             const b64Data = btoa(unescape(encodeURIComponent(rawText)));
             window.location.href = `intent:base64,${b64Data}#Intent;scheme=rawbt;package=ru.a2o.rawbtprinter;end;`;
             resolve(true);
@@ -1142,7 +1177,7 @@ export default function AdminDashboard({
     `;
   };
 
-  const getBillHTML = (order, paymentMode = 'CASH', isReprint = false, paperWidth = '80mm') => {
+  const getBillHTML = (order, paymentMode = 'CASH', isReprint = false, paperWidth = '80mm', upiQrDataUrl = null, upiDetails = null) => {
     const gstin = restaurantInfo?.gstin_number || '';
     const fssai = restaurantInfo?.fssai_lic_no || '';
     const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null) ? restaurantInfo.currency_symbol : '₹';
@@ -1281,6 +1316,25 @@ export default function AdminDashboard({
             </div>
           </div>
 
+          ${upiQrDataUrl ? `
+            <div style="margin: 10px auto 4px auto; text-align: center; border: 1.5px dashed #000; padding: 8px 6px; border-radius: 6px; background: #FFF;">
+              <div style="font-size: 11px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px;">
+                ⚡ SCAN TO PAY VIA UPI
+              </div>
+              <div style="font-size: 9px; color: #333; margin-bottom: 5px; font-weight: 600;">
+                GPay • PhonePe • Paytm • BHIM • Cred
+              </div>
+              <div style="display: flex; justify-content: center; align-items: center; margin: 4px 0;">
+                <img src="${upiQrDataUrl}" style="width: 140px; height: 140px; display: block; margin: 0 auto; image-rendering: pixelated;" alt="Scan UPI to Pay" />
+              </div>
+              <div style="font-size: 13px; font-weight: 900; margin-top: 4px;">
+                EXACT AMOUNT: ${currency}${grandTotal}
+              </div>
+              ${upiDetails?.upiId ? `<div style="font-size: 9.5px; color: #444; word-break: break-all; margin-top: 2px;">UPI ID: <strong>${upiDetails.upiId}</strong></div>` : ''}
+              ${upiDetails?.payeeName ? `<div style="font-size: 9px; color: #666; margin-top: 1px;">Payee: ${upiDetails.payeeName}</div>` : ''}
+            </div>
+          ` : ''}
+
           <div class="footer">
             <p style="margin:0;font-weight:bold;">${isHotel ? 'Thank you for choosing In-Room Dining!' : isCinema ? 'Enjoy the show and your snacks!' : 'Thank you for dining with us!'}</p>
             <p style="margin:2px 0 0 0;">${isHotel ? 'Have a wonderful stay 🙏' : 'Please Visit Again 🙏'}</p>
@@ -1382,8 +1436,38 @@ export default function AdminDashboard({
         console.warn('Notice logging print job:', logErr);
       }
 
-      const htmlContent = getBillHTML(order, paymentMode, isReprint, paperWidth);
-      await silentIframePrint(htmlContent, order, 'bill', isReprint, paymentMode);
+      // 📱 Resolve Dynamic UPI Payment QR
+      const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
+      const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
+      const printUpiQr = (restaurantInfo?.print_upi_qr ?? settingsForm?.print_upi_qr) !== 0;
+
+      let upiQrDataUrl = null;
+      let upiUri = null;
+      if (printUpiQr && upiId) {
+        const billData = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
+        upiUri = buildUpiPaymentUri({
+          upiId,
+          payeeName,
+          amount: billData.grandTotal,
+          invoiceId: order.id,
+          spaceLabel: billData.spaceLabel
+        });
+        if (upiUri) {
+          try {
+            upiQrDataUrl = await QRCode.toDataURL(upiUri, {
+              width: 160,
+              margin: 1,
+              errorCorrectionLevel: 'M',
+              color: { dark: '#000000', light: '#FFFFFF' }
+            });
+          } catch (qrErr) {
+            console.warn('Failed to generate bill UPI QR data URL:', qrErr);
+          }
+        }
+      }
+
+      const htmlContent = getBillHTML(order, paymentMode, isReprint, paperWidth, upiQrDataUrl, { upiId, payeeName });
+      await silentIframePrint(htmlContent, order, 'bill', isReprint, paymentMode, upiUri);
       setPrintedOrdersMap(prev => ({ ...prev, [printKey]: (prev[printKey] || 0) + 1 }));
       setPrintingOrderId(null);
       setPrintingType(null);
@@ -1469,14 +1553,43 @@ export default function AdminDashboard({
     }
   };
 
-  const handlePreviewPrint = (order, type = 'kot', paymentMode = 'CASH') => {
+  const handlePreviewPrint = async (order, type = 'kot', paymentMode = 'CASH') => {
     const printWindow = window.open('', '_blank', 'width=400,height=700');
     if (!printWindow) {
       alert('Please allow popups to open the print preview.');
       return;
     }
     const isReprint = Boolean(printedOrdersMap[`${order.id}_${type}`]);
-    const htmlContent = type === 'kot' ? getKOTHTML(order, isReprint) : getBillHTML(order, paymentMode, isReprint);
+    let htmlContent = '';
+    if (type === 'kot') {
+      htmlContent = getKOTHTML(order, isReprint);
+    } else {
+      const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
+      const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
+      const printUpiQr = (restaurantInfo?.print_upi_qr ?? settingsForm?.print_upi_qr) !== 0;
+      let upiQrDataUrl = null;
+      if (printUpiQr && upiId) {
+        const billData = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
+        const upiUri = buildUpiPaymentUri({
+          upiId,
+          payeeName,
+          amount: billData.grandTotal,
+          invoiceId: order.id,
+          spaceLabel: billData.spaceLabel
+        });
+        if (upiUri) {
+          try {
+            upiQrDataUrl = await QRCode.toDataURL(upiUri, {
+              width: 160,
+              margin: 1,
+              errorCorrectionLevel: 'M',
+              color: { dark: '#000000', light: '#FFFFFF' }
+            });
+          } catch (_) {}
+        }
+      }
+      htmlContent = getBillHTML(order, paymentMode, isReprint, settingsForm.printer_paper_width || '80mm', upiQrDataUrl, { upiId, payeeName });
+    }
     printWindow.document.write(`
       ${htmlContent}
       <script>
@@ -4223,6 +4336,54 @@ export default function AdminDashboard({
                 <span id="payment-modal-order-summary" style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
                   Order {billOrderModal.id} • Total: {currency}{billOrderModal.total_amount}
                 </span>
+              );
+            })()}
+
+            {/* Dynamic UPI On-Screen QR Option */}
+            {(() => {
+              const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
+              if (!upiId) return null;
+              const billData = calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
+              const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'));
+              return (
+                <div style={{ marginBottom: '14px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowModalUpiQr(prev => !prev)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: showModalUpiQr ? '#EFF6FF' : '#F8FAFC',
+                      border: '1px solid #BFDBFE',
+                      borderRadius: '10px',
+                      color: '#1D4ED8',
+                      fontSize: '0.80rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>{showModalUpiQr ? '▲ Hide On-Screen UPI QR' : '📱 Show UPI QR Code on Screen'}</span>
+                  </button>
+
+                  {showModalUpiQr && modalUpiQrUrl && (
+                    <div style={{ marginTop: '10px', padding: '12px', background: '#F8FAFC', borderRadius: '14px', border: '1.5px dashed #3B82F6' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 900, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                        Scan & Pay via GPay • PhonePe • Paytm
+                      </span>
+                      <img src={modalUpiQrUrl} alt="UPI Payment QR" style={{ width: '150px', height: '150px', margin: '8px auto', display: 'block', borderRadius: '8px', background: '#FFFFFF', padding: '6px', border: '1px solid #E2E8F0' }} />
+                      <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0F172A' }}>
+                        Pay Exact: {currency}{billData.grandTotal}
+                      </div>
+                      <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '2px' }}>
+                        UPI ID: <strong>{upiId}</strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })()}
 

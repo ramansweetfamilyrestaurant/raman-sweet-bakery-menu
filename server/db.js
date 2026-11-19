@@ -891,6 +891,9 @@ async function createTables(options = {}) {
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_idemp ON orders (restaurant_id, idempotency_key);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 0;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_id VARCHAR(100) DEFAULT NULL;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(150) DEFAULT NULL;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS print_upi_qr INT DEFAULT 1;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_screen_enabled INT DEFAULT 1;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS city VARCHAR(100);`,
@@ -1657,6 +1660,9 @@ async function createTables(options = {}) {
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash)");
 
       if (!restoCols.some(c => c.name === 'counter_ordering_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN counter_ordering_enabled INTEGER DEFAULT 0");
+      if (!restoCols.some(c => c.name === 'upi_id')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN upi_id TEXT DEFAULT NULL");
+      if (!restoCols.some(c => c.name === 'upi_payee_name')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN upi_payee_name TEXT DEFAULT NULL");
+      if (!restoCols.some(c => c.name === 'print_upi_qr')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN print_upi_qr INTEGER DEFAULT 1");
       if (!restoCols.some(c => c.name === 'kds_screen_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_screen_enabled INTEGER DEFAULT 1");
       if (!restoCols.some(c => c.name === 'kds_pin_hash')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_pin_hash TEXT DEFAULT NULL");
       if (!restoCols.some(c => c.name === 'kds_auth_version')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN kds_auth_version INTEGER DEFAULT 1");

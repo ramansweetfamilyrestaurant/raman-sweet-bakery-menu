@@ -993,6 +993,9 @@ router.get('/info', async (req, res) => {
       kds_pin_configured: Boolean(resto.kds_pin_hash),
       onboarding_completed: resto.onboarding_completed !== undefined && resto.onboarding_completed !== null ? (resto.onboarding_completed === true || resto.onboarding_completed === 1 || resto.onboarding_completed === 'true') : true,
       location_initialized: resto.location_initialized !== undefined && resto.location_initialized !== null ? (resto.location_initialized === true || resto.location_initialized === 1 || resto.location_initialized === 'true') : false,
+      upi_id: resto.upi_id || '',
+      upi_payee_name: resto.upi_payee_name || '',
+      print_upi_qr: resto.print_upi_qr !== undefined && resto.print_upi_qr !== null ? Number(resto.print_upi_qr) : 1,
       active: Boolean(isActive),
       suspended: Boolean(!isActive)
     });

@@ -446,6 +446,9 @@ export default function SetupView({
   const [deviceAutoPrintBill, setDeviceAutoPrintBill] = useState(Boolean(settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true));
   const [deviceKotTarget, setDeviceKotTarget] = useState(settingsForm.kot_printer_target || '');
   const [deviceBillTarget, setDeviceBillTarget] = useState(settingsForm.bill_printer_target || '');
+  const [devicePrintUpiQr, setDevicePrintUpiQr] = useState(Boolean(settingsForm.print_upi_qr !== 0));
+  const [deviceUpiId, setDeviceUpiId] = useState(settingsForm.upi_id || '');
+  const [deviceUpiPayeeName, setDeviceUpiPayeeName] = useState(settingsForm.upi_payee_name || '');
   const [devicePrinterSectionExpanded, setDevicePrinterSectionExpanded] = useState(true);
   const [deviceSaveSuccess, setDeviceSaveSuccess] = useState(false);
   const [showPrinterPairingModal, setShowPrinterPairingModal] = useState(false);
@@ -508,7 +511,10 @@ export default function SetupView({
         auto_print_kot: deviceAutoPrintKot ? 1 : 0,
         auto_print_bill: deviceAutoPrintBill ? 1 : 0,
         kot_printer_target: deviceKotTarget,
-        bill_printer_target: deviceBillTarget
+        bill_printer_target: deviceBillTarget,
+        print_upi_qr: devicePrintUpiQr ? 1 : 0,
+        upi_id: deviceUpiId ? deviceUpiId.trim() : '',
+        upi_payee_name: deviceUpiPayeeName ? deviceUpiPayeeName.trim() : ''
       };
       if (setSettingsForm) setSettingsForm(updated);
       if (handleSaveSettings) {
@@ -4223,7 +4229,10 @@ export default function SetupView({
       deviceAutoPrintKot !== Boolean(settingsForm.auto_print_kot === 1 || settingsForm.auto_print_kot === true) ||
       deviceAutoPrintBill !== Boolean(settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true) ||
       deviceKotTarget !== (settingsForm.kot_printer_target || '') ||
-      deviceBillTarget !== (settingsForm.bill_printer_target || '');
+      deviceBillTarget !== (settingsForm.bill_printer_target || '') ||
+      devicePrintUpiQr !== Boolean(settingsForm.print_upi_qr !== 0) ||
+      deviceUpiId !== (settingsForm.upi_id || '') ||
+      deviceUpiPayeeName !== (settingsForm.upi_payee_name || '');
 
     const handleDiscardDeviceSettings = () => {
       setDeviceOrderAlarm(settingsForm.order_alarm_enabled !== false);
@@ -4236,6 +4245,9 @@ export default function SetupView({
       setDeviceAutoPrintBill(Boolean(settingsForm.auto_print_bill === 1 || settingsForm.auto_print_bill === true));
       setDeviceKotTarget(settingsForm.kot_printer_target || '');
       setDeviceBillTarget(settingsForm.bill_printer_target || '');
+      setDevicePrintUpiQr(Boolean(settingsForm.print_upi_qr !== 0));
+      setDeviceUpiId(settingsForm.upi_id || '');
+      setDeviceUpiPayeeName(settingsForm.upi_payee_name || '');
     };
 
     return (
@@ -4857,7 +4869,7 @@ export default function SetupView({
                   <ToggleSwitch checked={deviceAutoPrintKot} onChange={setDeviceAutoPrintKot} />
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', minHeight: '52px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', minHeight: '52px', borderBottom: '1px solid #F1F5F9' }}>
                   <div>
                     <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>
                       Auto-print Bill on order settlement
@@ -4867,6 +4879,49 @@ export default function SetupView({
                     </span>
                   </div>
                   <ToggleSwitch checked={deviceAutoPrintBill} onChange={setDeviceAutoPrintBill} />
+                </div>
+
+                <div style={{ padding: '13px 16px', background: '#F8FAFC' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: devicePrintUpiQr ? '10px' : '0' }}>
+                    <div>
+                      <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>
+                        📱 Print Dynamic UPI QR on Customer Bills
+                      </strong>
+                      <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                        Prints QR code with auto-filled bill amount for GPay, PhonePe & Paytm (0% fee to your bank)
+                      </span>
+                    </div>
+                    <ToggleSwitch checked={devicePrintUpiQr} onChange={setDevicePrintUpiQr} />
+                  </div>
+
+                  {devicePrintUpiQr && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #E2E8F0' }}>
+                      <div>
+                        <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Merchant UPI ID / VPA *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 9876543210@paytm or store@upi"
+                          value={deviceUpiId}
+                          onChange={(e) => setDeviceUpiId(e.target.value.trim())}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Payee / Business Name
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Raman Sweets & Restro"
+                          value={deviceUpiPayeeName}
+                          onChange={(e) => setDeviceUpiPayeeName(e.target.value)}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.84rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF' }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -11532,6 +11587,14 @@ export default function SetupView({
                             />
                             <span>Auto-prompt Bill print on order settlement</span>
                           </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#334155', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={settingsForm.print_upi_qr !== 0}
+                              onChange={(e) => setSettingsForm({ ...settingsForm, print_upi_qr: e.target.checked ? 1 : 0 })}
+                            />
+                            <span>Print dynamic UPI payment QR on customer bills</span>
+                          </label>
                         </div>
                       </div>
                     )}
@@ -11925,6 +11988,92 @@ export default function SetupView({
                   style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
                 />
                 <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Printed on all customer receipt printouts and tax reports.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Card 3B: Direct Dynamic UPI Payment QR on Bills */}
+          <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (settingsForm.print_upi_qr !== 0) ? '12px' : '0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DBEAFE', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                  📱
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Dynamic UPI QR on Printed Bills</strong>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Prints QR code with auto-filled bill amount for GPay, PhonePe & Paytm (0% Fee)</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={Boolean(settingsForm.print_upi_qr !== 0)}
+                aria-label="Toggle Dynamic UPI QR on Bills"
+                onClick={() => setSettingsForm({ ...settingsForm, print_upi_qr: (settingsForm.print_upi_qr !== 0) ? 0 : 1 })}
+                style={{
+                  width: '48px',
+                  height: '28px',
+                  minWidth: '48px',
+                  minHeight: '28px',
+                  padding: '2px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  background: (settingsForm.print_upi_qr !== 0) ? '#2563EB' : '#CBD5E1',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  transition: 'background-color 0.2s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <span
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    background: '#FFFFFF',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    transform: (settingsForm.print_upi_qr !== 0) ? 'translateX(20px)' : 'translateX(0px)',
+                    transition: 'transform 0.2s ease',
+                    display: 'block'
+                  }}
+                />
+              </button>
+            </div>
+
+            {(settingsForm.print_upi_qr !== 0) && (
+              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F1F5F9', paddingLeft: '46px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label htmlFor="admin-upi-id" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    UPI ID / VPA (e.g. 9876543210@paytm or store@upi) *:
+                  </label>
+                  <input
+                    id="admin-upi-id"
+                    type="text"
+                    placeholder="e.g. 9876543210@paytm, store@okaxis"
+                    value={settingsForm.upi_id || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, upi_id: e.target.value.trim() })}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
+                  />
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Money goes straight to your bank account with 0% payment gateway deduction.</span>
+                </div>
+
+                <div>
+                  <label htmlFor="admin-upi-payee-name" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Payee Name / Business Name on UPI:
+                  </label>
+                  <input
+                    id="admin-upi-payee-name"
+                    type="text"
+                    placeholder="e.g. Raman Sweets & Restro"
+                    value={settingsForm.upi_payee_name || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, upi_payee_name: e.target.value })}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
+                  />
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px', display: 'block' }}>Displayed in GPay / PhonePe when customer scans the printed QR code.</span>
+                </div>
               </div>
             )}
           </div>

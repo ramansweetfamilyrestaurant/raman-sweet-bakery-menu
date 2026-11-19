@@ -261,3 +261,47 @@ export function triggerBillAction(order, onOpenBillModal, alertFn = (typeof aler
     }
   }
 }
+
+/**
+ * Builds an authoritative NPCI UPI deep-link URI for instant QR scanning and payment.
+ * Works seamlessly across Google Pay, PhonePe, Paytm, BHIM, CRED, Amazon Pay, and all Indian banking apps.
+ *
+ * Spec: upi://pay?pa={upiId}&pn={payeeName}&am={amount}&cu=INR&tn={note}
+ *
+ * @param {Object} params
+ * @param {string} params.upiId - Merchant VPA (e.g. 'merchant@upi' or '9876543210@paytm')
+ * @param {string} [params.payeeName] - Business display name (e.g. 'Raman Sweets')
+ * @param {number|string} params.amount - Total bill amount
+ * @param {string|number} [params.invoiceId] - Invoice/order identifier
+ * @param {string} [params.spaceLabel] - Table/Room/Counter location
+ * @returns {string|null} - NPCI UPI URI string, or null if upiId is missing/invalid
+ */
+export function buildUpiPaymentUri({ upiId, payeeName = '', amount = 0, invoiceId = '', spaceLabel = '' }) {
+  if (!upiId || typeof upiId !== 'string') return null;
+  const cleanId = upiId.trim();
+  if (!cleanId || !cleanId.includes('@')) return null;
+
+  const numAmount = Number(amount);
+  const formattedAmount = (!isNaN(numAmount) && numAmount > 0) ? numAmount.toFixed(2) : null;
+  const cleanPayee = (payeeName || 'Restaurant Merchant').trim().substring(0, 99);
+
+  let noteParts = [];
+  if (invoiceId) noteParts.push(`Bill #${invoiceId}`);
+  if (spaceLabel) noteParts.push(spaceLabel);
+  const rawNote = noteParts.join(' - ') || 'Restaurant Bill';
+  const cleanNote = rawNote.substring(0, 50).replace(/[^\w\s\-\#\.]/g, '');
+
+  const params = new URLSearchParams();
+  params.set('pa', cleanId);
+  params.set('pn', cleanPayee);
+  if (formattedAmount) {
+    params.set('am', formattedAmount);
+  }
+  params.set('cu', 'INR');
+  if (cleanNote) {
+    params.set('tn', cleanNote);
+  }
+
+  return `upi://pay?${params.toString()}`;
+}
+

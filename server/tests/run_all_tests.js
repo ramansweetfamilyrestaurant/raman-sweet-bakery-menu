@@ -32,6 +32,11 @@ const suites = [
     requiresDb: false
   },
   {
+    name: 'UPI QR Code Billing & Payment Specifications',
+    file: 'server/tests/upi_qr_billing.test.js',
+    requiresDb: false
+  },
+  {
     name: 'Database Isolation Hardening & Guard',
     file: 'server/tests/test_db_isolation.test.js',
     requiresDb: false // Tests isolation guard logic itself
