@@ -885,6 +885,9 @@ async function createTables(options = {}) {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_token_hash VARCHAR(64);`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS terminal_at TIMESTAMP DEFAULT NULL;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_type VARCHAR(20) DEFAULT 'dine_in';`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_number INT DEFAULT NULL;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_display VARCHAR(50) DEFAULT NULL;`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_idemp ON orders (restaurant_id, idempotency_key);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 0;`,
@@ -1644,6 +1647,9 @@ async function createTables(options = {}) {
       if (!orderCols.some(c => c.name === 'notes')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN notes TEXT");
       if (!orderCols.some(c => c.name === 'tracking_token_hash')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN tracking_token_hash TEXT DEFAULT NULL");
       if (!orderCols.some(c => c.name === 'terminal_at')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN terminal_at TEXT DEFAULT NULL");
+      if (!orderCols.some(c => c.name === 'order_type')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN order_type TEXT DEFAULT 'dine_in'");
+      if (!orderCols.some(c => c.name === 'token_number')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN token_number INTEGER DEFAULT NULL");
+      if (!orderCols.some(c => c.name === 'token_display')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN token_display TEXT DEFAULT NULL");
       if (!orderCols.some(c => c.name === 'updated_at')) {
         sqliteDb.exec("ALTER TABLE orders ADD COLUMN updated_at TEXT DEFAULT NULL");
         sqliteDb.exec("UPDATE orders SET updated_at = created_at WHERE updated_at IS NULL");

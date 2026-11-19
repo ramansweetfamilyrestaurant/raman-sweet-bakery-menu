@@ -708,9 +708,16 @@ export default function App() {
   const [orderTableInput, setOrderTableInput] = useState(initialTableNum || '1');
   const [customerNameInput, setCustomerNameInput] = useState('');
   const [customerPhoneInput, setCustomerPhoneInput] = useState('');
+  const [orderTypeChoice, setOrderTypeChoice] = useState(() => (currentSpaceType === 'counter' ? 'takeaway' : 'dine_in'));
   const [orderSuccessModal, setOrderSuccessModal] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
   const isPlacingOrderRef = useRef(false);
+
+  useEffect(() => {
+    if (currentSpaceType === 'counter') {
+      setOrderTypeChoice('takeaway');
+    }
+  }, [currentSpaceType]);
 
   // Table Presence Verification State & Refs
   const [presenceToken, setPresenceToken] = useState(null);
@@ -948,6 +955,7 @@ export default function App() {
       slug,
       table_number: targetTable,
       space_type: targetSpaceType,
+      order_type: orderTypeChoice,
       table_token: effectiveQrToken,
       customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : (targetSpaceType === 'cinema_seat' || targetSpaceType === 'cinema') ? 'Seat Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
       customer_phone: customerPhoneInput || '',
@@ -988,6 +996,7 @@ export default function App() {
           slug,
           table_number: targetTable,
           space_type: targetSpaceType,
+          order_type: orderTypeChoice,
           table_token: effectiveQrToken,
           customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : (targetSpaceType === 'cinema_seat' || targetSpaceType === 'cinema') ? 'Seat Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
           customer_phone: customerPhoneInput || '',
@@ -1009,6 +1018,7 @@ export default function App() {
           slug,
           table_number: targetTable,
           space_type: targetSpaceType,
+          order_type: orderTypeChoice,
           table_token: effectiveQrToken,
           customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : (targetSpaceType === 'cinema_seat' || targetSpaceType === 'cinema') ? 'Seat Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
           customer_phone: customerPhoneInput || '',
@@ -3889,6 +3899,82 @@ export default function App() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
                     {!isAddon && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {/* 🍽️ Dine-In vs 📦 Takeaway Mode Toggle */}
+                        <div style={{
+                          display: 'flex',
+                          background: 'var(--bg-secondary, #F1F5F9)',
+                          padding: '3px',
+                          borderRadius: '12px',
+                          marginBottom: '2px',
+                          gap: '4px'
+                        }}>
+                          <button
+                            type="button"
+                            onClick={() => setOrderTypeChoice('dine_in')}
+                            style={{
+                              flex: 1,
+                              padding: '8px 10px',
+                              borderRadius: '9px',
+                              border: 'none',
+                              fontSize: '0.80rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              transition: 'all 0.15s ease',
+                              background: orderTypeChoice === 'dine_in' ? 'var(--theme-card-bg, #FFFFFF)' : 'transparent',
+                              color: orderTypeChoice === 'dine_in' ? 'var(--text-dark, #0F172A)' : 'var(--text-muted, #64748B)',
+                              boxShadow: orderTypeChoice === 'dine_in' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
+                            }}
+                          >
+                            <span>🍽️</span>
+                            <span>Dine-In</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOrderTypeChoice('takeaway')}
+                            style={{
+                              flex: 1,
+                              padding: '8px 10px',
+                              borderRadius: '9px',
+                              border: 'none',
+                              fontSize: '0.80rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              transition: 'all 0.15s ease',
+                              background: orderTypeChoice === 'takeaway' ? 'var(--primary-emerald, #10B981)' : 'transparent',
+                              color: orderTypeChoice === 'takeaway' ? '#FFFFFF' : 'var(--text-muted, #64748B)',
+                              boxShadow: orderTypeChoice === 'takeaway' ? '0 1px 4px rgba(16,185,129,0.3)' : 'none'
+                            }}
+                          >
+                            <span>📦</span>
+                            <span>Takeaway / Parcel</span>
+                          </button>
+                        </div>
+
+                        {orderTypeChoice === 'takeaway' && (
+                          <div style={{
+                            background: '#FFFBEB',
+                            border: '1px solid #FDE68A',
+                            borderRadius: '10px',
+                            padding: '6px 10px',
+                            fontSize: '0.74rem',
+                            color: '#92400E',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <span>📦</span>
+                            <span><strong>Takeaway Mode:</strong> Food will be packed. A Pickup Token will be assigned.</span>
+                          </div>
+                        )}
+
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
@@ -4156,8 +4242,28 @@ export default function App() {
             </h2>
 
             <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px', margin: '16px 0', border: '1px solid rgba(255,255,255,0.15)' }}>
+              {(orderSuccessModal.token_display || orderSuccessModal.token_number) && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.35) 100%)',
+                  border: '2px dashed #F59E0B',
+                  borderRadius: '14px',
+                  padding: '12px 10px',
+                  marginBottom: '12px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#FCD34D', fontWeight: 800 }}>
+                    ⚡ Takeaway Pickup Token
+                  </div>
+                  <div style={{ fontSize: '2.4rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '2px', lineHeight: 1.1, margin: '4px 0' }}>
+                    {orderSuccessModal.token_display || `TK-${String(orderSuccessModal.token_number).padStart(2, '0')}`}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#E5E7EB' }}>
+                    Please show this token at the counter to collect your parcel
+                  </div>
+                </div>
+              )}
               <p style={{ fontSize: '1.1rem', fontWeight: 900, color: '#34D399', margin: '0 0 4px 0' }}>
-                Order {orderSuccessModal.order_id} • {formatCustomerLocation(orderSuccessModal.table_number)}
+                Order #{orderSuccessModal.order_id} • {formatCustomerLocation(orderSuccessModal.table_number)}
               </p>
               <p style={{ fontSize: '0.82rem', color: '#D1D5DB', margin: 0 }}>
                 Status: <strong style={{ color: '#FBBF24' }}>Pending Kitchen Acceptance 🟡</strong>
@@ -4168,10 +4274,11 @@ export default function App() {
               {(() => {
                 const activeSpace = (orderSuccessModal?.space_type || currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
                 const isCounter = activeSpace === 'counter' || String(orderSuccessModal.table_number).toLowerCase().includes('counter');
+                const isTakeaway = orderSuccessModal?.order_type === 'takeaway' || isCounter || Boolean(orderSuccessModal.token_display || orderSuccessModal.token_number);
                 const isCin = activeSpace === 'cinema_seat' || activeSpace === 'cinema' || String(orderSuccessModal.table_number).toLowerCase().includes('screen') || String(orderSuccessModal.table_number).toLowerCase().includes('seat');
                 const isRoom = activeSpace === 'room' || String(orderSuccessModal.table_number).toLowerCase().includes('room');
                 const isCabin = activeSpace === 'cabin' || String(orderSuccessModal.table_number).toLowerCase().includes('cabin');
-                if (isCounter) return 'Your order has been received! Our staff will prepare it and notify you for pickup at the counter shortly.';
+                if (isTakeaway) return 'Your takeaway order has been sent to the kitchen! When your order is packed, staff will call your token number for pickup at the counter.';
                 if (isCin) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and bring it to your seat shortly.';
                 if (isRoom) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and deliver it to your room shortly.';
                 if (isCabin) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and deliver it to your cabin shortly.';

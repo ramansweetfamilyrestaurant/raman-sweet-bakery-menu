@@ -338,7 +338,31 @@ export default function QrGeneratorView({
         });
       }
 
+      // Billing / Takeaway Counter (when enabled or for quick-service businesses)
+      const isCounterEnabled = Boolean(
+        settingsForm?.counter_ordering_enabled === 1 ||
+        settingsForm?.counter_ordering_enabled === true ||
+        settingsForm?.counter_ordering_enabled === '1' ||
+        restaurantInfo?.counter_ordering_enabled === 1 ||
+        restaurantInfo?.counter_ordering_enabled === true ||
+        restaurantInfo?.counter_ordering_enabled === '1' ||
+        ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck', 'ice_cream_dessert', 'juice_beverage'].includes(effectiveBiz) ||
+        (tablesCount === 0 && cabinsCount === 0 && vipCount === 0)
+      );
 
+      if (isCounterEnabled) {
+        spaces.push({
+          key: 'counter:COUNTER',
+          spaceType: 'counter',
+          spaceNumber: 'COUNTER',
+          paramName: 'counter',
+          label: 'Takeaway / Billing Counter',
+          badge: 'BILLING COUNTER',
+          category: 'counter',
+          categoryLabel: 'Takeaway Counter',
+          icon: '⚡'
+        });
+      }
     }
 
     return spaces;
@@ -472,11 +496,16 @@ export default function QrGeneratorView({
     const isCabinsAllowed = Boolean(capabilities?.cabins_enabled);
     const isVipAllowed = Boolean(capabilities?.vip_enabled);
 
-    return [
+    const isCounterActive = configuredSpaces.some(s => s.category === 'counter');
+    const categoriesList = [
       { id: 'table', label: 'Dining Tables', icon: '🍽️', count: tCount },
       { id: 'cabin', label: isCabinsAllowed ? 'Private Cabins' : 'Private Cabins 🔒', icon: '🛋️', count: cCount },
       { id: 'vip', label: isVipAllowed ? 'VIP Lounges' : 'VIP Lounges 🔒', icon: '👑', count: vCount }
     ];
+    if (isCounterActive) {
+      categoriesList.push({ id: 'counter', label: 'Takeaway Counter', icon: '⚡', count: 1 });
+    }
+    return categoriesList;
   }, [
     isCinema,
     isHotel,

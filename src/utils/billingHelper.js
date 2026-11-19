@@ -195,6 +195,12 @@ export function calculateBillDetails(order, allOrders = [], restaurantInfo = {},
  */
 export function formatOrderLocation(order = {}, restaurantInfo = {}) {
   if (!order) return 'Takeaway / Counter';
+  if (order.token_display) {
+    return `Takeaway • Token #${order.token_display}`;
+  }
+  if (order.order_type === 'takeaway') {
+    return 'Takeaway';
+  }
   const raw = String(order.table_number || order.delivery_location || '').trim();
   const spaceType = String(order.space_type || '').toLowerCase();
   const bizType = String(restaurantInfo?.business_type || '').toLowerCase();

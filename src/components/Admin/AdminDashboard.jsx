@@ -837,7 +837,11 @@ export default function AdminDashboard({
       }
       text += "================================" + "\n";
       text += `KOT No: ${order.id}\n`;
+      if (order.token_display || order.token_number) {
+        text += `*** TOKEN: #${order.token_display || order.token_number} [TAKEAWAY] ***\n`;
+      }
       text += `Time: ${new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN')}\n`;
+      text += `Location: ${formatOrderLocation(order, restoInfo)}\n`;
       text += `Server/Guest: ${order.customer_name || 'Walk-In'}\n`;
       text += "--------------------------------" + "\n";
       text += "QTY  ITEM NAME\n";
@@ -1097,6 +1101,10 @@ export default function AdminDashboard({
           <div class="header">
             <h2>${ticketTitle}</h2>
             <div class="table-badge">${spaceLoc.toUpperCase()}</div>
+            ${(order.token_display || order.token_number)
+              ? `<div style="font-size:22px;font-weight:900;border:2px dashed #000;padding:6px;margin:6px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;">TOKEN #${order.token_display || order.token_number}</div>`
+              : ''
+            }
             <div style="font-size:12px;font-weight:900;margin-top:2px;">KOT #${order.id}</div>
             ${isRoundAddon
         ? `<div class="round-badge">🔄 ROUND ${order.round_number} (ADD-ON ORDER)</div>`

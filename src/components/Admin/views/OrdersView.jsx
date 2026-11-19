@@ -317,7 +317,28 @@ export default function OrdersView({
       });
     }
 
+    // Billing / Takeaway Counter
+    const isCounterEnabled = Boolean(
+      settingsForm?.counter_ordering_enabled === 1 ||
+      settingsForm?.counter_ordering_enabled === true ||
+      settingsForm?.counter_ordering_enabled === '1' ||
+      restaurantInfo?.counter_ordering_enabled === 1 ||
+      restaurantInfo?.counter_ordering_enabled === true ||
+      restaurantInfo?.counter_ordering_enabled === '1' ||
+      ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck', 'ice_cream_dessert', 'juice_beverage'].includes(effectiveBiz)
+    );
 
+    if (isCounterEnabled) {
+      spaces.push({
+        space_type: 'counter',
+        space_number: 'COUNTER',
+        category: 'counter',
+        label: 'Takeaway Counter',
+        displayLabel: '⚡ Takeaway Counter',
+        icon: '⚡',
+        prefix: 'COUNTER'
+      });
+    }
 
     return spaces;
   }, [isCinema, isHotel, effectiveBiz, restaurantInfo?.total_tables, settingsForm?.total_tables, restaurantInfo?.total_cabins, settingsForm?.total_cabins, restaurantInfo?.total_vip, settingsForm?.total_vip, restaurantInfo?.total_rooms, settingsForm?.total_rooms, restaurantInfo?.counter_ordering_enabled, settingsForm?.counter_ordering_enabled]);
@@ -419,12 +440,13 @@ export default function OrdersView({
     }
   };
 
-  const formatCleanTableLabel = (raw, spaceType) => {
+  const formatCleanTableLabel = (raw, spaceType, tokenDisplay = null) => {
+    if (tokenDisplay) return `⚡ Takeaway • #${tokenDisplay}`;
     if (!raw) return isCinema ? 'Screen 1 • Seat 1' : isHotel ? 'Room 101' : 'Table 1';
     const str = String(raw).trim();
     
     if (spaceType === 'counter' || str.toLowerCase() === 'counter' || str.toLowerCase() === 'counter:counter') {
-      return '⚡ Counter';
+      return '⚡ Takeaway Counter';
     }
     if (isCinema) {
       return `🎬 ${str.toLowerCase().startsWith('screen') ? str : `Screen 1 • Seat ${str}`}`;
@@ -1027,7 +1049,7 @@ export default function OrdersView({
                 {filteredOrders.map(order => {
                   const items = safeParseItems(order.items);
                   const spaceInfo = parseOrderSpaceLocation(order);
-                  const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type);
+                  const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type, order.token_display);
                   const isDone = isOrderCompleted(order);
                   const statusInfo = getStatusBadge(order);
                   const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
@@ -1369,7 +1391,7 @@ export default function OrdersView({
             {filteredOrders.map(order => {
               const items = safeParseItems(order.items);
               const spaceInfo = parseOrderSpaceLocation(order);
-              const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type);
+              const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type, order.token_display);
               const isDone = isOrderCompleted(order);
               const statusInfo = getStatusBadge(order);
               const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
@@ -1777,7 +1799,8 @@ export default function OrdersView({
               { id: 'room', label: `🏨 Rooms (${spaceGrid.filter(s => s.category === 'room').length})` },
               { id: 'table', label: `🍽️ Tables (${spaceGrid.filter(s => s.category === 'table').length})` },
               { id: 'cabin', label: `🛋️ Cabins (${spaceGrid.filter(s => s.category === 'cabin').length})` },
-              { id: 'vip', label: `👑 VIP (${spaceGrid.filter(s => s.category === 'vip').length})` }
+              { id: 'vip', label: `👑 VIP (${spaceGrid.filter(s => s.category === 'vip').length})` },
+              { id: 'counter', label: `⚡ Takeaway (${spaceGrid.filter(s => s.category === 'counter').length})` }
             ].filter(f => f.id === 'all' || spaceGrid.filter(s => s.category === f.id).length > 0).map(tab => (
               <button
                 key={tab.id}

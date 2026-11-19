@@ -71,7 +71,8 @@ const getRelativeTime = (dateVal) => {
   return `${diffDays}d ago`;
 };
 
-const formatLocation = (raw, spaceType) => {
+const formatLocation = (raw, spaceType, tokenDisplay = null) => {
+  if (tokenDisplay) return `Takeaway • Token #${tokenDisplay}`;
   if (!raw) return 'Takeaway';
   const str = String(raw).trim();
   const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
@@ -350,7 +351,7 @@ export default function HomeView({
         IconComponent = CheckCircle2;
       }
 
-      const loc = formatLocation(o.table_number || o.delivery_location, o.space_type);
+      const loc = formatLocation(o.table_number || o.delivery_location, o.space_type, o.token_display);
       const sub = `${loc} • ${currencySymbol}${o.total_amount || 0}${items.length > 0 ? ` (${items.length} ${items.length === 1 ? 'item' : 'items'})` : ''}`;
 
       activities.push({
