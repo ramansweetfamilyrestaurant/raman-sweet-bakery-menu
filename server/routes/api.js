@@ -1864,9 +1864,52 @@ router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (
   }
 });
 
+// Dynamic Schema Column Self-Healing Guard (Ensures all required Phase 1 & Takeaway columns exist BEFORE order transaction)
+let orderSchemaHealed = false;
+async function ensureOrderColumns() {
+  if (orderSchemaHealed) return;
+  try {
+    const isPg = getDbType() === 'postgres';
+    if (isPg) {
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_type VARCHAR(20) DEFAULT 'dine_in'");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_number INT DEFAULT NULL");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_display VARCHAR(50) DEFAULT NULL");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_settled INT DEFAULT 0");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS kitchen_prepared INT DEFAULT 0");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS subtotal_amount NUMERIC(10, 2) DEFAULT 0");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cgst_amount NUMERIC(10, 2) DEFAULT 0");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS sgst_amount NUMERIC(10, 2) DEFAULT 0");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(10, 2) DEFAULT 0");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS grand_total_amount NUMERIC(10, 2) DEFAULT 0");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_rate NUMERIC(5, 2) DEFAULT 0");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_latitude DECIMAL(10, 8)");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_longitude DECIMAL(11, 8)");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_accuracy INT");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS distance_meters INT");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128)");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_token_hash VARCHAR(64)");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT");
+    } else {
+      const cols = await query("PRAGMA table_info(orders)");
+      const colNames = (cols || []).map(c => c.name);
+      if (!colNames.includes('order_type')) await query("ALTER TABLE orders ADD COLUMN order_type TEXT DEFAULT 'dine_in'");
+      if (!colNames.includes('token_number')) await query("ALTER TABLE orders ADD COLUMN token_number INTEGER DEFAULT NULL");
+      if (!colNames.includes('token_display')) await query("ALTER TABLE orders ADD COLUMN token_display TEXT DEFAULT NULL");
+    }
+    orderSchemaHealed = true;
+  } catch (err) {
+    console.warn('[ORDER SCHEMA AUTO-HEAL NOTICE]', err.message);
+  }
+}
+
 // POST Authoritative Order Placement Endpoint
 router.post('/orders', orderCreationRateLimiter, async (req, res) => {
   try {
+    await ensureOrderColumns();
     const {
       slug,
       table_number,
@@ -2500,7 +2543,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           const todayIso = todayStart.toISOString();
 
           try {
-            const tokenRows = await txQuery(`
+            const tokenRows = await query(`
               SELECT MAX(token_number) as max_token
               FROM orders
               WHERE restaurant_id = $1 AND created_at >= $2
@@ -2732,7 +2775,10 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     }
   } catch (err) {
     console.error('Create order error:', err.message || 'Database error');
-    res.status(500).json({ error: 'Failed to place order' });
+    res.status(500).json({
+      error: 'Failed to place order',
+      message: err.message || 'Failed to place order. Please try again.'
+    });
   }
 });
 
