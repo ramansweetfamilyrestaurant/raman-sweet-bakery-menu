@@ -66,4 +66,19 @@ describe('Standee & Sticker Designer Multi-Vertical Capabilities', () => {
     assert.ok(html.includes('Scan QR'), 'Must render Scan QR step');
     assert.ok(html.includes('Order Food'), 'Must render Order Food step');
   });
+
+  it('buildStandeeCardHtml dynamically renders TAKEAWAY / COUNTER standees for restaurant billing counters', () => {
+    const html = buildStandeeCardHtml({
+      space: { spaceType: 'counter', spaceNumber: 'COUNTER', badge: 'BILLING COUNTER' },
+      restaurant: { name: 'Raman Sweet & Bakery' },
+      themeId: 'emerald',
+      frameStyle: 'acrylic',
+      qrDataUrl: 'data:image/png;base64,mock'
+    });
+
+    assert.ok(html.includes('TAKEAWAY / COUNTER'), 'Must render TAKEAWAY / COUNTER pill');
+    assert.ok(html.includes('BILLING COUNTER'), 'Must render BILLING COUNTER badge');
+    assert.ok(html.includes('पार्सल / काउंटर आर्डर करें'), 'Must render Hindi takeaway counter instruction');
+    assert.ok(html.includes('Pick Up'), 'Must render Pick Up step');
+  });
 });

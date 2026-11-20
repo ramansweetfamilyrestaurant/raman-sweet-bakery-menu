@@ -267,12 +267,14 @@ export function buildStandeeCardHtml({
   const currentName = restaurant.name || 'Digital Menu';
   const isCinema = space.spaceType === 'cinema_seat' || space.spaceType === 'cinema';
   const isHotel = space.spaceType === 'room';
+  const isCounter = space.spaceType === 'counter';
   const currentTagline = restaurant.tagline || (
     isCinema ? 'In-Seat Food Ordering' :
     isHotel ? 'In-Room Guest Dining' :
+    isCounter ? 'Takeaway & Express Billing' :
     'Scan QR Code for Digital Menu'
   );
-  const badgeLabel = space.badge || space.label || 'TABLE';
+  const badgeLabel = space.badge || space.label || (isCounter ? 'BILLING COUNTER' : 'TABLE');
 
   const innerFrameHtml = frame.hasInnerFrame
     ? `<div class="inner-frame" style="border-color: ${theme.innerBorder};"></div>`
@@ -322,7 +324,7 @@ export function buildStandeeCardHtml({
           color: ${theme.pillText};
           border: 1px solid ${theme.pillBorder};
         ">
-          ${isCinema ? 'DELIVER TO SEAT' : isHotel ? 'IN-ROOM DINING' : 'SCAN TO ORDER'}
+          ${isCinema ? 'DELIVER TO SEAT' : isHotel ? 'IN-ROOM DINING' : isCounter ? 'TAKEAWAY / COUNTER' : 'SCAN TO ORDER'}
         </div>
         <img src="${qrDataUrl}" alt="${escapeHtml(badgeLabel)} QR Code" />
       </div>
@@ -330,6 +332,7 @@ export function buildStandeeCardHtml({
       <div class="instruction-hi" style="color: ${theme.instructionHi};">${
         isCinema ? 'स्कैन करें और सीट पर मंगाएं' :
         isHotel ? 'स्कैन करें और कमरे में खाना मंगाएं' :
+        isCounter ? 'स्कैन करें और पार्सल / काउंटर आर्डर करें' :
         'कैमरे से स्कैन करें और स्वादिष्ट खाना ऑर्डर करें'
       }</div>
       <div class="steps-bar" style="
@@ -359,7 +362,7 @@ export function buildStandeeCardHtml({
         <span style="opacity:0.5;font-size:7.5px;">➔</span>
         <span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:11px;height:11px;min-width:11px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:7.5px;font-weight:900;line-height:11px;text-align:center;">3</span>
-          <span>${isCinema ? 'Seat Delivery' : isHotel ? 'Room Delivery' : 'Order Food'}</span>
+          <span>${isCinema ? 'Seat Delivery' : isHotel ? 'Room Delivery' : isCounter ? 'Pick Up' : 'Order Food'}</span>
         </span>
       </div>
       ${reassuranceHtml}

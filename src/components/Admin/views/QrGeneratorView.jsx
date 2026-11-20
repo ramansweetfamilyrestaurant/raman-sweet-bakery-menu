@@ -338,7 +338,7 @@ export default function QrGeneratorView({
         });
       }
 
-      // Billing / Takeaway Counter (when enabled or for quick-service businesses)
+      // Billing / Takeaway Counter (Available for Restaurants, Cafes, Bakeries & Food businesses)
       const isCounterEnabled = Boolean(
         settingsForm?.counter_ordering_enabled === 1 ||
         settingsForm?.counter_ordering_enabled === true ||
@@ -346,7 +346,8 @@ export default function QrGeneratorView({
         restaurantInfo?.counter_ordering_enabled === 1 ||
         restaurantInfo?.counter_ordering_enabled === true ||
         restaurantInfo?.counter_ordering_enabled === '1' ||
-        ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck', 'ice_cream_dessert', 'juice_beverage'].includes(effectiveBiz) ||
+        !isCinema && !isHotel || // All restaurants, cafes, bakeries & food venues have a billing/takeaway counter
+        ['restaurant', 'family_restaurant', 'fine_dining', 'cafe', 'bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck', 'ice_cream_dessert', 'juice_beverage'].includes(effectiveBiz) ||
         (tablesCount === 0 && cabinsCount === 0 && vipCount === 0)
       );
 

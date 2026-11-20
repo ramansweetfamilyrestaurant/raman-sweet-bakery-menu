@@ -2263,7 +2263,9 @@ router.post('/qr/generate', authenticateToken, async (req, res) => {
           resto.counter_ordering_enabled === '1'
         );
         if (!isCounterEnabled) {
-          return { error: 'Counter ordering capability is not enabled for this restaurant' };
+          // Auto-enable counter ordering capability for tenant when generating counter QR
+          query('UPDATE restaurants SET counter_ordering_enabled = 1 WHERE id = $1', [resto.id]).catch(() => {});
+          resto.counter_ordering_enabled = 1;
         }
       }
       const token = generateHmacQrToken(resto.slug, canonicalType, canonicalNum, resto.qr_secret);
