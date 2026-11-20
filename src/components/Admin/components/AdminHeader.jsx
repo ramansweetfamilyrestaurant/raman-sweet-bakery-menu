@@ -29,6 +29,8 @@ export default function AdminHeader({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
   const terms = getBusinessTerminology(restaurantInfo || {});
+  const isCinema = terms?.serviceModel === 'cinema';
+  const isHotel = terms?.serviceModel === 'hotel';
 
   useEffect(() => {
     if (!showUserMenu) return;
@@ -190,10 +192,10 @@ export default function AdminHeader({
               fontWeight: 800,
               boxShadow: '0 1px 2px rgba(6,78,59,0.08)'
             }}
-            title="Day-End Closing & Cash Tally"
+            title={isCinema ? "Cinema Concessions & Seat Shift Closing" : isHotel ? "Hotel Night Audit & Day Closing" : "Day-End Closing & Cash Tally"}
           >
-            <span>🌙</span>
-            <span className="hide-on-mobile">Day Closing</span>
+            <span>{isCinema ? '🎬' : isHotel ? '🏨' : '🌙'}</span>
+            <span className="hide-on-mobile">{isCinema ? 'Shift Closing' : isHotel ? 'Night Audit' : 'Day Closing'}</span>
           </button>
         )}
 
@@ -302,7 +304,7 @@ export default function AdminHeader({
                 gap: '8px'
               }}
             >
-              <span>🌙</span> Day Closing Report
+              <span>{isCinema ? '🎬' : isHotel ? '🏨' : '🌙'}</span> {isCinema ? 'Cinema Shift Closing' : isHotel ? 'Hotel Night Audit' : 'Day Closing Report'}
             </button>
 
             <button

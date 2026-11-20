@@ -346,6 +346,17 @@ export function buildDayClosingSlipHtml({
 
   const formatMoney = (val) => `${sym}${(Number(val) || 0).toFixed(2)}`;
 
+  const serviceModel = String(restaurant.service_model || closingData.service_model || '').toLowerCase();
+  const businessType = String(restaurant.business_type || closingData.business_type || '').toLowerCase();
+  const isCinema = serviceModel === 'cinema' || businessType === 'cinema_theatre' || Boolean(restaurant.is_cinema || closingData.is_cinema);
+  const isHotel = serviceModel === 'hotel' || businessType === 'hotel_resort' || Boolean(restaurant.is_hotel || closingData.is_hotel);
+
+  const reportTitle = isCinema
+    ? 'CINEMA CONCESSIONS & AUDI CLOSING'
+    : isHotel
+    ? 'HOTEL NIGHT AUDIT & DAY CLOSING'
+    : 'DAY CLOSING REPORT';
+
   const topItemsHtml = (closingData.top_items && closingData.top_items.length > 0)
     ? `
       <div style="margin: 6px 0; border-top: 1px dashed #000; padding-top: 4px;">
@@ -369,7 +380,7 @@ export function buildDayClosingSlipHtml({
     <html>
       <head>
         <meta charset="utf-8" />
-        <title>Day Closing Report</title>
+        <title>${reportTitle}</title>
         <style>
           @page { size: ${widthPx} auto; margin: 0; }
           body {
@@ -392,7 +403,7 @@ export function buildDayClosingSlipHtml({
       </head>
       <body>
         <div class="center bold" style="font-size: ${fontSizeHeader};">${(restaurant.name || 'RAMAN SWEET & BAKERY').toUpperCase()}</div>
-        <div class="center bold" style="margin: 2px 0;">DAY CLOSING REPORT</div>
+        <div class="center bold" style="margin: 2px 0;">${reportTitle}</div>
         <div class="center" style="font-size: 0.85em;">Date: ${closingData.date || new Date().toISOString().slice(0, 10)} | ${shiftName}</div>
         ${restaurant.phone ? `<div class="center" style="font-size: 0.8em;">Tel: ${restaurant.phone}</div>` : ''}
 
@@ -438,24 +449,63 @@ export function buildDayClosingSlipHtml({
 
         <div class="divider"></div>
         <div class="bold" style="margin-bottom: 2px;">SALES BY CHANNEL:</div>
-        <div class="row">
-          <span>• 🍽️ Dine-In (${closingData.dine_in_orders || 0}):</span>
-          <span>${formatMoney(closingData.dine_in_sales || 0)}</span>
-        </div>
-        <div class="row">
-          <span>• 📦 Takeaway (${closingData.takeaway_orders || 0}):</span>
-          <span>${formatMoney(closingData.takeaway_sales || 0)}</span>
-        </div>
-        ${((closingData.delivery_orders || 0) > 0 || (closingData.delivery_sales || 0) > 0) ? `
-        <div class="row">
-          <span>• 🛵 Delivery (${closingData.delivery_orders || 0}):</span>
-          <span>${formatMoney(closingData.delivery_sales || 0)}</span>
-        </div>` : ''}
-        ${((closingData.room_orders || 0) > 0 || (closingData.room_sales || 0) > 0) ? `
-        <div class="row">
-          <span>• 🏨 Room Service (${closingData.room_orders || 0}):</span>
-          <span>${formatMoney(closingData.room_sales || 0)}</span>
-        </div>` : ''}
+        ${isCinema ? `
+          <div class="row">
+            <span>• 🎬 Seat Audi Orders (${closingData.cinema_orders || 0}):</span>
+            <span>${formatMoney(closingData.cinema_sales || 0)}</span>
+          </div>
+          <div class="row">
+            <span>• 🍿 Concession Counter (${closingData.takeaway_orders || 0}):</span>
+            <span>${formatMoney(closingData.takeaway_sales || 0)}</span>
+          </div>
+          ${((closingData.dine_in_orders || 0) > 0 || (closingData.dine_in_sales || 0) > 0) ? `
+          <div class="row">
+            <span>• 🍽️ Lounge / Cafe (${closingData.dine_in_orders || 0}):</span>
+            <span>${formatMoney(closingData.dine_in_sales || 0)}</span>
+          </div>` : ''}
+        ` : isHotel ? `
+          <div class="row">
+            <span>• 🏨 Room Service (${closingData.room_orders || 0}):</span>
+            <span>${formatMoney(closingData.room_sales || 0)}</span>
+          </div>
+          <div class="row">
+            <span>• 🍽️ Hotel Restaurant (${closingData.dine_in_orders || 0}):</span>
+            <span>${formatMoney(closingData.dine_in_sales || 0)}</span>
+          </div>
+          <div class="row">
+            <span>• 📦 Front Desk / Cafe (${closingData.takeaway_orders || 0}):</span>
+            <span>${formatMoney(closingData.takeaway_sales || 0)}</span>
+          </div>
+          ${((closingData.delivery_orders || 0) > 0 || (closingData.delivery_sales || 0) > 0) ? `
+          <div class="row">
+            <span>• 🛵 Delivery (${closingData.delivery_orders || 0}):</span>
+            <span>${formatMoney(closingData.delivery_sales || 0)}</span>
+          </div>` : ''}
+        ` : `
+          <div class="row">
+            <span>• 🍽️ Dine-In (${closingData.dine_in_orders || 0}):</span>
+            <span>${formatMoney(closingData.dine_in_sales || 0)}</span>
+          </div>
+          <div class="row">
+            <span>• 📦 Takeaway (${closingData.takeaway_orders || 0}):</span>
+            <span>${formatMoney(closingData.takeaway_sales || 0)}</span>
+          </div>
+          ${((closingData.delivery_orders || 0) > 0 || (closingData.delivery_sales || 0) > 0) ? `
+          <div class="row">
+            <span>• 🛵 Delivery (${closingData.delivery_orders || 0}):</span>
+            <span>${formatMoney(closingData.delivery_sales || 0)}</span>
+          </div>` : ''}
+          ${((closingData.room_orders || 0) > 0 || (closingData.room_sales || 0) > 0) ? `
+          <div class="row">
+            <span>• 🏨 Room Service (${closingData.room_orders || 0}):</span>
+            <span>${formatMoney(closingData.room_sales || 0)}</span>
+          </div>` : ''}
+          ${((closingData.cinema_orders || 0) > 0 || (closingData.cinema_sales || 0) > 0) ? `
+          <div class="row">
+            <span>• 🎬 Seat Audi Orders (${closingData.cinema_orders || 0}):</span>
+            <span>${formatMoney(closingData.cinema_sales || 0)}</span>
+          </div>` : ''}
+        `}
 
         ${topItemsHtml}
 
@@ -504,8 +554,19 @@ export function buildDayClosingWhatsAppMessage({
   const sym = closingData.currency_symbol || restaurant.currency_symbol || '₹';
   const formatMoney = (val) => `${sym}${(Number(val) || 0).toFixed(2)}`;
 
+  const serviceModel = String(restaurant.service_model || closingData.service_model || '').toLowerCase();
+  const businessType = String(restaurant.business_type || closingData.business_type || '').toLowerCase();
+  const isCinema = serviceModel === 'cinema' || businessType === 'cinema_theatre' || Boolean(restaurant.is_cinema || closingData.is_cinema);
+  const isHotel = serviceModel === 'hotel' || businessType === 'hotel_resort' || Boolean(restaurant.is_hotel || closingData.is_hotel);
+
+  const reportHeader = isCinema
+    ? '🎬 *CINEMA CONCESSIONS & AUDI CLOSING REPORT*'
+    : isHotel
+    ? '🏨 *HOTEL NIGHT AUDIT & DAY CLOSING REPORT*'
+    : '📊 *DAY CLOSING REPORT*';
+
   let msg = `🏪 *${(restaurant.name || 'RAMAN SWEET & BAKERY').toUpperCase()}*\n`;
-  msg += `📊 *DAY CLOSING REPORT*\n`;
+  msg += `${reportHeader}\n`;
   msg += `📅 Date: ${closingData.date || new Date().toISOString().slice(0, 10)} (${shiftName})\n`;
   msg += `----------------------------------\n`;
   msg += `• Total Orders: *${closingData.total_orders || 0}*\n`;
@@ -520,13 +581,31 @@ export function buildDayClosingWhatsAppMessage({
     msg += `🧾 GST Tax (Incl): ${formatMoney(closingData.tax_amount)}\n`;
   }
   msg += `----------------------------------\n`;
-  msg += `🍽️ Dine-In Sales: *${formatMoney(closingData.dine_in_sales || 0)}* (${closingData.dine_in_orders || 0} orders)\n`;
-  msg += `📦 Takeaway / Parcel: *${formatMoney(closingData.takeaway_sales || 0)}* (${closingData.takeaway_orders || 0} orders)\n`;
-  if ((closingData.delivery_orders || 0) > 0 || (closingData.delivery_sales || 0) > 0) {
-    msg += `🛵 Delivery Sales: *${formatMoney(closingData.delivery_sales || 0)}* (${closingData.delivery_orders || 0} orders)\n`;
-  }
-  if ((closingData.room_orders || 0) > 0 || (closingData.room_sales || 0) > 0) {
-    msg += `🏨 Room Service: *${formatMoney(closingData.room_sales || 0)}* (${closingData.room_orders || 0} orders)\n`;
+  if (isCinema) {
+    msg += `🎬 Audi In-Seat Sales: *${formatMoney(closingData.cinema_sales || 0)}* (${closingData.cinema_orders || 0} orders)\n`;
+    msg += `🍿 Concession Counter: *${formatMoney(closingData.takeaway_sales || 0)}* (${closingData.takeaway_orders || 0} orders)\n`;
+    if ((closingData.dine_in_orders || 0) > 0 || (closingData.dine_in_sales || 0) > 0) {
+      msg += `🍽️ Lounge / Cafe     : *${formatMoney(closingData.dine_in_sales || 0)}* (${closingData.dine_in_orders || 0} orders)\n`;
+    }
+  } else if (isHotel) {
+    msg += `🏨 In-Room Dining    : *${formatMoney(closingData.room_sales || 0)}* (${closingData.room_orders || 0} orders)\n`;
+    msg += `🍽️ Hotel Restaurant  : *${formatMoney(closingData.dine_in_sales || 0)}* (${closingData.dine_in_orders || 0} orders)\n`;
+    msg += `📦 Front Desk / Cafe : *${formatMoney(closingData.takeaway_sales || 0)}* (${closingData.takeaway_orders || 0} orders)\n`;
+    if ((closingData.delivery_orders || 0) > 0 || (closingData.delivery_sales || 0) > 0) {
+      msg += `🛵 Delivery Sales    : *${formatMoney(closingData.delivery_sales || 0)}* (${closingData.delivery_orders || 0} orders)\n`;
+    }
+  } else {
+    msg += `🍽️ Dine-In Sales: *${formatMoney(closingData.dine_in_sales || 0)}* (${closingData.dine_in_orders || 0} orders)\n`;
+    msg += `📦 Takeaway / Parcel: *${formatMoney(closingData.takeaway_sales || 0)}* (${closingData.takeaway_orders || 0} orders)\n`;
+    if ((closingData.delivery_orders || 0) > 0 || (closingData.delivery_sales || 0) > 0) {
+      msg += `🛵 Delivery Sales: *${formatMoney(closingData.delivery_sales || 0)}* (${closingData.delivery_orders || 0} orders)\n`;
+    }
+    if ((closingData.room_orders || 0) > 0 || (closingData.room_sales || 0) > 0) {
+      msg += `🏨 Room Service: *${formatMoney(closingData.room_sales || 0)}* (${closingData.room_orders || 0} orders)\n`;
+    }
+    if ((closingData.cinema_orders || 0) > 0 || (closingData.cinema_sales || 0) > 0) {
+      msg += `🎬 Seat Audi Sales: *${formatMoney(closingData.cinema_sales || 0)}* (${closingData.cinema_orders || 0} orders)\n`;
+    }
   }
   msg += `----------------------------------\n`;
   msg += `💰 Actual Cash in Drawer: *${formatMoney(actualCash)}*\n`;

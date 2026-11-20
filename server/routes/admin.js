@@ -5311,8 +5311,12 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
     const targetDate = qDate ? String(qDate).trim() : getFormattedLocalDate(new Date());
 
     // 1. Fetch restaurant settings
-    const restoRows = await query('SELECT id, name, phone, whatsapp_number, gst_enabled, gstin_number, currency_symbol FROM restaurants WHERE id = $1', [targetId]);
+    const restoRows = await query('SELECT id, name, phone, whatsapp_number, gst_enabled, gstin_number, currency_symbol, service_model, business_type FROM restaurants WHERE id = $1', [targetId]);
     const resto = restoRows[0] || {};
+    const restoServiceModel = String(resto.service_model || '').toLowerCase();
+    const restoBizType = String(resto.business_type || '').toLowerCase();
+    const isCinema = restoServiceModel === 'cinema' || restoServiceModel === 'seat_service' || restoBizType === 'cinema_theatre' || restoBizType === 'cinema';
+    const isHotel = restoServiceModel === 'hotel' || restoServiceModel === 'in_room_dining' || restoBizType === 'hotel_resort' || restoBizType === 'hotel';
 
     // 2. Fetch all valid orders
     const orders = await query(`
@@ -5342,6 +5346,8 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
     let deliverySales = 0;
     let roomOrders = 0;
     let roomSales = 0;
+    let cinemaOrders = 0;
+    let cinemaSales = 0;
 
     const dishTally = new Map();
 
@@ -5353,7 +5359,14 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
       const oType = String(o.order_type || '').toLowerCase();
       const isDelivery = oType === 'delivery' || /^delivery/i.test(rawTable);
       const isTakeaway = oType === 'takeaway' || /^(takeaway|parcel|pickup|counter)/i.test(rawTable) || Boolean(o.token_number || o.token_display);
-      const isRoom = oType === 'room' || /^room/i.test(rawTable);
+      
+      const isCinemaSeat = isCinema
+        ? (!isTakeaway && !isDelivery)
+        : (/^seat/i.test(rawTable) || /^screen/i.test(rawTable) || /^audi/i.test(rawTable) || /^s\d+[- ]/i.test(rawTable));
+
+      const isHotelRoom = isHotel
+        ? (!isTakeaway && !isDelivery && (!rawTable.includes('table') && !rawTable.includes('buffet')))
+        : (oType === 'room' || /^room/i.test(rawTable));
 
       if (isDelivery) {
         deliveryOrders++;
@@ -5361,7 +5374,10 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
       } else if (isTakeaway) {
         takeawayOrders++;
         takeawaySales += amt;
-      } else if (isRoom) {
+      } else if (isCinemaSeat) {
+        cinemaOrders++;
+        cinemaSales += amt;
+      } else if (isHotelRoom) {
         roomOrders++;
         roomSales += amt;
       } else {
@@ -5428,6 +5444,10 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
       restaurant: {
         id: resto.id,
         name: resto.name || 'Restaurant',
+        service_model: resto.service_model || 'dine_in',
+        business_type: resto.business_type || '',
+        is_cinema: isCinema,
+        is_hotel: isHotel,
         phone: resto.phone || '',
         whatsapp_number: resto.whatsapp_number || resto.phone || '',
         gst_enabled: Boolean(resto.gst_enabled),
@@ -5450,7 +5470,11 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
         delivery_orders: deliveryOrders,
         delivery_sales: Math.round(deliverySales * 100) / 100,
         room_orders: roomOrders,
-        room_sales: Math.round(roomSales * 100) / 100
+        room_sales: Math.round(roomSales * 100) / 100,
+        cinema_orders: cinemaOrders,
+        cinema_sales: Math.round(cinemaSales * 100) / 100,
+        is_cinema: isCinema,
+        is_hotel: isHotel
       },
       latest_closing: latestClosing
     });
@@ -5491,8 +5515,12 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
       }
     };
 
-    const restoRows = await query('SELECT id, name, gst_enabled FROM restaurants WHERE id = $1', [targetId]);
+    const restoRows = await query('SELECT id, name, gst_enabled, service_model, business_type FROM restaurants WHERE id = $1', [targetId]);
     const resto = restoRows[0] || {};
+    const serviceModel = String(resto.service_model || '').toLowerCase();
+    const businessType = String(resto.business_type || '').toLowerCase();
+    const isCinema = serviceModel === 'cinema' || businessType === 'cinema_theatre';
+    const isHotel = serviceModel === 'hotel' || businessType === 'hotel_resort';
 
     const orders = await query(`
       SELECT id, total_amount, status, payment_method, items, created_at, table_number, order_type, token_number, token_display
@@ -5516,6 +5544,8 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
     let deliverySales = 0;
     let roomOrders = 0;
     let roomSales = 0;
+    let cinemaOrders = 0;
+    let cinemaSales = 0;
 
     const dishTally = new Map();
 
@@ -5527,7 +5557,12 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
       const oType = String(o.order_type || '').toLowerCase();
       const isDelivery = oType === 'delivery' || /^delivery/i.test(rawTable);
       const isTakeaway = oType === 'takeaway' || /^(takeaway|parcel|pickup|counter)/i.test(rawTable) || Boolean(o.token_number || o.token_display);
-      const isRoom = oType === 'room' || /^room/i.test(rawTable);
+      const isCinemaSeat = isCinema
+        ? (!isTakeaway && !isDelivery)
+        : (/^seat/i.test(rawTable) || /^screen/i.test(rawTable) || /^audi/i.test(rawTable) || /^s\d+[- ]/i.test(rawTable));
+      const isHotelRoom = isHotel
+        ? (!isTakeaway && !isDelivery && (!rawTable.includes('table') && !rawTable.includes('buffet')))
+        : (oType === 'room' || /^room/i.test(rawTable));
 
       if (isDelivery) {
         deliveryOrders++;
@@ -5535,7 +5570,10 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
       } else if (isTakeaway) {
         takeawayOrders++;
         takeawaySales += amt;
-      } else if (isRoom) {
+      } else if (isCinemaSeat) {
+        cinemaOrders++;
+        cinemaSales += amt;
+      } else if (isHotelRoom) {
         roomOrders++;
         roomSales += amt;
       } else {
@@ -5584,9 +5622,10 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
         tax_amount, discount_amount, actual_cash_counted, cash_discrepancy,
         dine_in_sales, dine_in_orders, takeaway_sales, takeaway_orders,
         delivery_sales, delivery_orders, room_sales, room_orders,
+        cinema_sales, cinema_orders,
         notes, top_items_json
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
       ) RETURNING *
     `, [
       targetId,
@@ -5611,6 +5650,8 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
       deliveryOrders,
       Math.round(roomSales * 100) / 100,
       roomOrders,
+      Math.round(cinemaSales * 100) / 100,
+      cinemaOrders,
       notes || '',
       JSON.stringify(topItems)
     ]);

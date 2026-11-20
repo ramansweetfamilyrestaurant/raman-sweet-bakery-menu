@@ -174,6 +174,120 @@ assert.equal(countedOver - cash, 50, 'Overage count should yield +50 discrepancy
 
 console.log('✅ Backend Day Closing Calculation Logic Passed.');
 
+// =============================================================================
+// 4. CINEMA CONCESSIONS & AUDI IN-SEAT CLOSING TEST
+// =============================================================================
+console.log('Testing: Cinema Concessions & Seat Shift Closing...');
+
+const mockCinemaResto = {
+  name: 'PVR Inox Wave Cinema',
+  service_model: 'cinema',
+  business_type: 'cinema_theatre',
+  currency_symbol: '₹'
+};
+
+const mockCinemaClosingData = {
+  date: '2026-11-20',
+  total_orders: 25,
+  gross_sales: 12500.00,
+  cash_sales: 4500.00,
+  upi_sales: 7500.00,
+  card_sales: 500.00,
+  cinema_orders: 18,
+  cinema_sales: 9800.00,
+  takeaway_orders: 7,
+  takeaway_sales: 2700.00,
+  currency_symbol: '₹',
+  is_cinema: true
+};
+
+const cinemaSlip = buildDayClosingSlipHtml({
+  restaurant: mockCinemaResto,
+  closingData: mockCinemaClosingData,
+  actualCash: 4500.00,
+  discrepancy: 0.00,
+  closedBy: 'Concession Cashier Vikas',
+  shiftName: 'Night Show Shift',
+  paperWidth: '80mm'
+});
+
+assert.ok(cinemaSlip.includes('CINEMA CONCESSIONS & AUDI CLOSING'), 'Should show cinema-specific closing header on slip');
+assert.ok(cinemaSlip.includes('Seat Audi Orders (18)'), 'Should break down in-seat Audi orders');
+assert.ok(cinemaSlip.includes('Concession Counter (7)'), 'Should break down interval canteen counter orders');
+
+const cinemaWa = buildDayClosingWhatsAppMessage({
+  restaurant: mockCinemaResto,
+  closingData: mockCinemaClosingData,
+  actualCash: 4500.00,
+  discrepancy: 0.00,
+  closedBy: 'Concession Cashier Vikas',
+  shiftName: 'Night Show Shift'
+});
+
+assert.ok(cinemaWa.includes('CINEMA CONCESSIONS & AUDI CLOSING REPORT'), 'WhatsApp message should use cinema header');
+assert.ok(cinemaWa.includes('Audi In-Seat Sales'), 'WhatsApp message should include Audi in-seat sales');
+assert.ok(cinemaWa.includes('Concession Counter'), 'WhatsApp message should include counter concession sales');
+
+console.log('✅ Cinema Concessions & Seat Shift Closing Passed.');
+
+// =============================================================================
+// 5. HOTEL DAY-END CLOSING & NIGHT AUDIT TEST
+// =============================================================================
+console.log('Testing: Hotel Night Audit & Room Service Day Closing...');
+
+const mockHotelResto = {
+  name: 'Grand Hyatt & Heritage Suites',
+  service_model: 'hotel',
+  business_type: 'hotel_resort',
+  currency_symbol: '₹'
+};
+
+const mockHotelClosingData = {
+  date: '2026-11-20',
+  total_orders: 34,
+  gross_sales: 28400.00,
+  cash_sales: 6400.00,
+  upi_sales: 14000.00,
+  card_sales: 8000.00,
+  room_orders: 22,
+  room_sales: 19600.00,
+  dine_in_orders: 8,
+  dine_in_sales: 6800.00,
+  takeaway_orders: 4,
+  takeaway_sales: 2000.00,
+  currency_symbol: '₹',
+  is_hotel: true
+};
+
+const hotelSlip = buildDayClosingSlipHtml({
+  restaurant: mockHotelResto,
+  closingData: mockHotelClosingData,
+  actualCash: 6400.00,
+  discrepancy: 0.00,
+  closedBy: 'Front Desk Night Auditor Sunita',
+  shiftName: 'Night Audit Shift',
+  paperWidth: '80mm'
+});
+
+assert.ok(hotelSlip.includes('HOTEL NIGHT AUDIT & DAY CLOSING'), 'Should show hotel-specific night audit header on slip');
+assert.ok(hotelSlip.includes('Room Service (22)'), 'Should break down in-room dining orders on slip');
+assert.ok(hotelSlip.includes('Hotel Restaurant (8)'), 'Should break down dining room orders on slip');
+
+const hotelWa = buildDayClosingWhatsAppMessage({
+  restaurant: mockHotelResto,
+  closingData: mockHotelClosingData,
+  actualCash: 6400.00,
+  discrepancy: 0.00,
+  closedBy: 'Front Desk Night Auditor Sunita',
+  shiftName: 'Night Audit Shift'
+});
+
+assert.ok(hotelWa.includes('HOTEL NIGHT AUDIT & DAY CLOSING REPORT'), 'WhatsApp message should use hotel night audit header');
+assert.ok(hotelWa.includes('In-Room Dining'), 'WhatsApp message should include In-Room Dining sales');
+assert.ok(hotelWa.includes('Hotel Restaurant'), 'WhatsApp message should include Hotel Restaurant sales');
+
+console.log('✅ Hotel Night Audit & Room Service Day Closing Passed.');
+
 console.log('======================================================================');
 console.log('🎉 ALL DAY-END CLOSING & CASHIER SHIFT REPORT TESTS PASSED (100%)');
 console.log('======================================================================');

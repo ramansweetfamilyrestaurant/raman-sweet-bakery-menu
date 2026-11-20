@@ -446,6 +446,8 @@ async function createTables(options = {}) {
         delivery_orders INT DEFAULT 0,
         room_sales DECIMAL(10, 2) DEFAULT 0.00,
         room_orders INT DEFAULT 0,
+        cinema_sales DECIMAL(10, 2) DEFAULT 0.00,
+        cinema_orders INT DEFAULT 0,
         notes TEXT,
         top_items_json TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -927,6 +929,8 @@ async function createTables(options = {}) {
       `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS delivery_orders INT DEFAULT 0;`,
       `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS room_sales DECIMAL(10, 2) DEFAULT 0.00;`,
       `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS room_orders INT DEFAULT 0;`,
+      `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS cinema_sales DECIMAL(10, 2) DEFAULT 0.00;`,
+      `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS cinema_orders INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_id VARCHAR(100) DEFAULT NULL;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(150) DEFAULT NULL;`,
@@ -1383,6 +1387,8 @@ async function createTables(options = {}) {
         delivery_orders INTEGER DEFAULT 0,
         room_sales REAL DEFAULT 0,
         room_orders INTEGER DEFAULT 0,
+        cinema_sales REAL DEFAULT 0,
+        cinema_orders INTEGER DEFAULT 0,
         notes TEXT,
         top_items_json TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -1787,6 +1793,8 @@ async function createTables(options = {}) {
       if (!closingCols.some(c => c.name === 'delivery_orders')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN delivery_orders INTEGER DEFAULT 0");
       if (!closingCols.some(c => c.name === 'room_sales')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN room_sales REAL DEFAULT 0");
       if (!closingCols.some(c => c.name === 'room_orders')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN room_orders INTEGER DEFAULT 0");
+      if (!closingCols.some(c => c.name === 'cinema_sales')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN cinema_sales REAL DEFAULT 0");
+      if (!closingCols.some(c => c.name === 'cinema_orders')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN cinema_orders INTEGER DEFAULT 0");
 
       // Step 3.21 Thermal Printer System SQLite Fallback
       if (!restoCols.some(c => c.name === 'printer_mode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN printer_mode TEXT DEFAULT 'single'");

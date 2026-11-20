@@ -764,10 +764,10 @@ export default function OrdersView({
                 marginLeft: 'auto',
                 transition: 'all 0.15s ease'
               }}
-              title="Day-End Closing & Shift Summary"
+              title={isCinema ? "Cinema Concessions & Seat Shift Closing" : isHotel ? "Hotel Night Audit & Day Closing" : "Day-End Closing & Shift Summary"}
             >
-              <span>🌙</span>
-              <span>Day Closing</span>
+              <span>{isCinema ? '🎬' : isHotel ? '🏨' : '🌙'}</span>
+              <span>{isCinema ? 'Shift Closing' : isHotel ? 'Night Audit' : 'Day Closing'}</span>
             </button>
           )}
         </div>

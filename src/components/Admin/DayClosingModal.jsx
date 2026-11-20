@@ -101,8 +101,15 @@ export default function DayClosingModal({
     delivery_orders: 0,
     delivery_sales: 0,
     room_orders: 0,
-    room_sales: 0
+    room_sales: 0,
+    cinema_orders: 0,
+    cinema_sales: 0
   };
+
+  const serviceModel = restaurantInfo?.service_model || settingsForm?.service_model || data?.restaurant?.service_model || '';
+  const businessType = restaurantInfo?.business_type || settingsForm?.business_type || data?.restaurant?.business_type || '';
+  const isCinema = serviceModel === 'cinema' || businessType === 'cinema_theatre' || Boolean(data?.restaurant?.is_cinema || data?.summary?.is_cinema);
+  const isHotel = serviceModel === 'hotel' || businessType === 'hotel_resort' || Boolean(data?.restaurant?.is_hotel || data?.summary?.is_hotel);
 
   const expectedCash = Number(summary.cash_sales) || 0;
   const countedCash = actualCashInput === '' ? expectedCash : (parseFloat(String(actualCashInput).replace(/,/g, '')) || 0);
@@ -141,9 +148,19 @@ export default function DayClosingModal({
   const handlePrintSlip = () => {
     const paperWidth = settingsForm?.printer_paper_width || '80mm';
     const htmlContent = buildDayClosingSlipHtml({
-      restaurant: restaurantInfo?.name ? restaurantInfo : settingsForm,
+      restaurant: {
+        ...(restaurantInfo?.name ? restaurantInfo : settingsForm),
+        service_model: serviceModel,
+        business_type: businessType,
+        is_cinema: isCinema,
+        is_hotel: isHotel
+      },
       closingData: {
         ...summary,
+        service_model: serviceModel,
+        business_type: businessType,
+        is_cinema: isCinema,
+        is_hotel: isHotel,
         date: selectedDate
       },
       actualCash: countedCash,
@@ -165,9 +182,19 @@ export default function DayClosingModal({
 
   const handleSendWhatsApp = () => {
     const msg = buildDayClosingWhatsAppMessage({
-      restaurant: restaurantInfo?.name ? restaurantInfo : settingsForm,
+      restaurant: {
+        ...(restaurantInfo?.name ? restaurantInfo : settingsForm),
+        service_model: serviceModel,
+        business_type: businessType,
+        is_cinema: isCinema,
+        is_hotel: isHotel
+      },
       closingData: {
         ...summary,
+        service_model: serviceModel,
+        business_type: businessType,
+        is_cinema: isCinema,
+        is_hotel: isHotel,
         date: selectedDate
       },
       actualCash: countedCash,
@@ -255,13 +282,21 @@ export default function DayClosingModal({
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.25rem' }}>🌙</span>
+              <span style={{ fontSize: '1.25rem' }}>{isCinema ? '🎬' : isHotel ? '🏨' : '🌙'}</span>
               <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900 }}>
-                Day-End Closing & Cash Tally
+                {isCinema
+                  ? 'Cinema Concessions & Seat Shift Closing'
+                  : isHotel
+                  ? 'Hotel Day-End Closing & Night Audit'
+                  : 'Day-End Closing & Cash Tally'}
               </strong>
             </div>
             <p style={{ margin: '3px 0 0 0', fontSize: '0.74rem', color: '#64748B' }}>
-              Audit daily cash in drawer, UPI collections, and sales summary
+              {isCinema
+                ? 'Audit screen seat deliveries, interval canteen counter, and cashier cash drawer'
+                : isHotel
+                ? 'Audit in-room dining, hotel restaurant billing, front desk cash, and daily guest revenue'
+                : 'Audit daily cash in drawer, UPI collections, and sales summary'}
             </p>
           </div>
           <button
@@ -431,7 +466,7 @@ export default function DayClosingModal({
                     </div>
                   </div>
 
-                  {/* SALES BY SERVICE CHANNEL (Dine-In, Takeaway / Parcel, Delivery) */}
+                  {/* SALES BY SERVICE CHANNEL (Dynamic for Cinema, Hotel, and Dine-In) */}
                   <div style={{
                     background: '#FFFFFF',
                     border: '1px solid #E2E8F0',
@@ -439,47 +474,133 @@ export default function DayClosingModal({
                     padding: '14px'
                   }}>
                     <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#334155', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Sales by Service Channel
+                      {isCinema ? '🎬 Cinema Sales Channels' : isHotel ? '🏨 Hotel Revenue Centers' : 'Sales by Service Channel'}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
-                      <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                        <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
-                          🍽️ Dine-In ({summary.dine_in_orders || 0})
-                        </div>
-                        <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
-                          {currency}{(summary.dine_in_sales || 0).toFixed(2)}
-                        </div>
-                      </div>
+                      {isCinema ? (
+                        <>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                              🎬 Seat Orders ({summary.cinema_orders || 0})
+                            </div>
+                            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
+                              {currency}{(summary.cinema_sales || 0).toFixed(2)}
+                            </div>
+                          </div>
 
-                      <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                        <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
-                          📦 Takeaway ({summary.takeaway_orders || 0})
-                        </div>
-                        <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
-                          {currency}{(summary.takeaway_sales || 0).toFixed(2)}
-                        </div>
-                      </div>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                              🍿 Concession ({summary.takeaway_orders || 0})
+                            </div>
+                            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
+                              {currency}{(summary.takeaway_sales || 0).toFixed(2)}
+                            </div>
+                          </div>
 
-                      {((summary.delivery_orders || 0) > 0 || (summary.delivery_sales || 0) > 0) && (
-                        <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                          <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
-                            🛵 Delivery ({summary.delivery_orders || 0})
+                          {((summary.dine_in_orders || 0) > 0 || (summary.dine_in_sales || 0) > 0) && (
+                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                                🍽️ Lounge ({summary.dine_in_orders || 0})
+                              </div>
+                              <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#2563EB', marginTop: '2px' }}>
+                                {currency}{(summary.dine_in_sales || 0).toFixed(2)}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : isHotel ? (
+                        <>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                              🏨 Room Service ({summary.room_orders || 0})
+                            </div>
+                            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#7C3AED', marginTop: '2px' }}>
+                              {currency}{(summary.room_sales || 0).toFixed(2)}
+                            </div>
                           </div>
-                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#2563EB', marginTop: '2px' }}>
-                            {currency}{(summary.delivery_sales || 0).toFixed(2)}
-                          </div>
-                        </div>
-                      )}
 
-                      {((summary.room_orders || 0) > 0 || (summary.room_sales || 0) > 0) && (
-                        <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                          <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
-                            🏨 Room Srv ({summary.room_orders || 0})
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                              🍽️ Restaurant ({summary.dine_in_orders || 0})
+                            </div>
+                            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
+                              {currency}{(summary.dine_in_sales || 0).toFixed(2)}
+                            </div>
                           </div>
-                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#7C3AED', marginTop: '2px' }}>
-                            {currency}{(summary.room_sales || 0).toFixed(2)}
+
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                              📦 Front Desk ({summary.takeaway_orders || 0})
+                            </div>
+                            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
+                              {currency}{(summary.takeaway_sales || 0).toFixed(2)}
+                            </div>
                           </div>
-                        </div>
+
+                          {((summary.delivery_orders || 0) > 0 || (summary.delivery_sales || 0) > 0) && (
+                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                                🛵 Delivery ({summary.delivery_orders || 0})
+                              </div>
+                              <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#2563EB', marginTop: '2px' }}>
+                                {currency}{(summary.delivery_sales || 0).toFixed(2)}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                              🍽️ Dine-In ({summary.dine_in_orders || 0})
+                            </div>
+                            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
+                              {currency}{(summary.dine_in_sales || 0).toFixed(2)}
+                            </div>
+                          </div>
+
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                              📦 Takeaway ({summary.takeaway_orders || 0})
+                            </div>
+                            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
+                              {currency}{(summary.takeaway_sales || 0).toFixed(2)}
+                            </div>
+                          </div>
+
+                          {((summary.delivery_orders || 0) > 0 || (summary.delivery_sales || 0) > 0) && (
+                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                                🛵 Delivery ({summary.delivery_orders || 0})
+                              </div>
+                              <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#2563EB', marginTop: '2px' }}>
+                                {currency}{(summary.delivery_sales || 0).toFixed(2)}
+                              </div>
+                            </div>
+                          )}
+
+                          {((summary.room_orders || 0) > 0 || (summary.room_sales || 0) > 0) && (
+                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                                🏨 Room Srv ({summary.room_orders || 0})
+                              </div>
+                              <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#7C3AED', marginTop: '2px' }}>
+                                {currency}{(summary.room_sales || 0).toFixed(2)}
+                              </div>
+                            </div>
+                          )}
+
+                          {((summary.cinema_orders || 0) > 0 || (summary.cinema_sales || 0) > 0) && (
+                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                                🎬 Seat Audi ({summary.cinema_orders || 0})
+                              </div>
+                              <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#D97706', marginTop: '2px' }}>
+                                {currency}{(summary.cinema_sales || 0).toFixed(2)}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
