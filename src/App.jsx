@@ -326,6 +326,32 @@ export default function App() {
     (info.permissions?.direct_ordering_enabled !== false && info.permissions?.direct_ordering_enabled !== 0 && info.permissions?.direct_ordering_enabled !== 'false')
   );
 
+  const isCinemaVenue = Boolean(
+    info?.business_type === 'cinema_theatre' || 
+    info?.service_model === 'cinema' || 
+    info?.service_model === 'seat_service' || 
+    currentSpaceType === 'cinema_seat' || 
+    currentSpaceType === 'cinema' || 
+    initialSpaceInfo?.type === 'cinema_seat' ||
+    String(currentTableNum || '').toLowerCase().includes('screen') || 
+    String(currentTableNum || '').toLowerCase().includes('seat')
+  );
+
+  const isHotelVenue = Boolean(
+    info?.business_type === 'hotel_resort' || 
+    info?.service_model === 'hotel' || 
+    info?.service_model === 'in_room_dining' || 
+    currentSpaceType === 'room' || 
+    initialSpaceInfo?.type === 'room' ||
+    String(currentTableNum || '').toLowerCase().includes('room')
+  );
+
+  const isCounterSpace = Boolean(
+    currentSpaceType === 'counter' || 
+    initialSpaceInfo?.type === 'counter' || 
+    String(currentTableNum || '').trim().toUpperCase() === 'COUNTER'
+  );
+
   // Language State ('en' or 'hi')
   const [lang, setLang] = useState('en');
 
@@ -676,6 +702,14 @@ export default function App() {
   const [customerNameInput, setCustomerNameInput] = useState('');
   const [customerPhoneInput, setCustomerPhoneInput] = useState('');
   const [orderTypeChoice, setOrderTypeChoice] = useState(() => (currentSpaceType === 'counter' ? 'takeaway' : 'dine_in'));
+
+  useEffect(() => {
+    if (isCinemaVenue || isHotelVenue) {
+      setOrderTypeChoice('dine_in');
+    } else if (isCounterSpace) {
+      setOrderTypeChoice('takeaway');
+    }
+  }, [isCinemaVenue, isHotelVenue, isCounterSpace]);
   const [orderSuccessModal, setOrderSuccessModal] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
   const isPlacingOrderRef = useRef(false);
@@ -960,12 +994,13 @@ export default function App() {
     }));
     const grandTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const attemptIdempKey = `attempt_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    const effectiveOrderType = (isCinemaVenue || isHotelVenue) ? 'dine_in' : (isCounterSpace ? 'takeaway' : orderTypeChoice);
 
     const orderPayload = {
       slug,
       table_number: targetTable,
       space_type: targetSpaceType,
-      order_type: orderTypeChoice,
+      order_type: effectiveOrderType,
       table_token: effectiveQrToken,
       customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : (targetSpaceType === 'cinema_seat' || targetSpaceType === 'cinema') ? 'Seat Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
       customer_phone: customerPhoneInput || '',
@@ -1006,7 +1041,7 @@ export default function App() {
           slug,
           table_number: targetTable,
           space_type: targetSpaceType,
-          order_type: orderTypeChoice,
+          order_type: effectiveOrderType,
           table_token: effectiveQrToken,
           customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : (targetSpaceType === 'cinema_seat' || targetSpaceType === 'cinema') ? 'Seat Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
           customer_phone: customerPhoneInput || '',
@@ -1028,7 +1063,7 @@ export default function App() {
           slug,
           table_number: targetTable,
           space_type: targetSpaceType,
-          order_type: orderTypeChoice,
+          order_type: effectiveOrderType,
           table_token: effectiveQrToken,
           customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : (targetSpaceType === 'cinema_seat' || targetSpaceType === 'cinema') ? 'Seat Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
           customer_phone: customerPhoneInput || '',
@@ -3909,80 +3944,132 @@ export default function App() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
                     {!isAddon && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {/* 🍽️ Dine-In vs 📦 Takeaway Mode Toggle */}
-                        <div style={{
-                          display: 'flex',
-                          background: 'var(--bg-secondary, #F1F5F9)',
-                          padding: '3px',
-                          borderRadius: '12px',
-                          marginBottom: '2px',
-                          gap: '4px'
-                        }}>
-                          <button
-                            type="button"
-                            onClick={() => setOrderTypeChoice('dine_in')}
-                            style={{
-                              flex: 1,
-                              padding: '8px 10px',
-                              borderRadius: '9px',
-                              border: 'none',
-                              fontSize: '0.80rem',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              transition: 'all 0.15s ease',
-                              background: orderTypeChoice === 'dine_in' ? 'var(--theme-card-bg, #FFFFFF)' : 'transparent',
-                              color: orderTypeChoice === 'dine_in' ? 'var(--text-dark, #0F172A)' : 'var(--text-muted, #64748B)',
-                              boxShadow: orderTypeChoice === 'dine_in' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
-                            }}
-                          >
-                            <span>🍽️</span>
-                            <span>Dine-In</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setOrderTypeChoice('takeaway')}
-                            style={{
-                              flex: 1,
-                              padding: '8px 10px',
-                              borderRadius: '9px',
-                              border: 'none',
-                              fontSize: '0.80rem',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              transition: 'all 0.15s ease',
-                              background: orderTypeChoice === 'takeaway' ? 'var(--primary-emerald, #10B981)' : 'transparent',
-                              color: orderTypeChoice === 'takeaway' ? '#FFFFFF' : 'var(--text-muted, #64748B)',
-                              boxShadow: orderTypeChoice === 'takeaway' ? '0 1px 4px rgba(16,185,129,0.3)' : 'none'
-                            }}
-                          >
-                            <span>📦</span>
-                            <span>Takeaway / Parcel</span>
-                          </button>
-                        </div>
-
-                        {orderTypeChoice === 'takeaway' && (
+                        {isCinemaVenue ? (
                           <div style={{
-                            background: '#FFFBEB',
-                            border: '1px solid #FDE68A',
-                            borderRadius: '10px',
-                            padding: '6px 10px',
-                            fontSize: '0.74rem',
-                            color: '#92400E',
+                            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(14, 165, 233, 0.18) 100%)',
+                            border: '1.5px solid #0284C7',
+                            borderRadius: '12px',
+                            padding: '8px 12px',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px'
+                            gap: '10px'
                           }}>
-                            <span>📦</span>
-                            <span><strong>Takeaway Mode:</strong> Food will be packed. A Pickup Token will be assigned.</span>
+                            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🎬</span>
+                            <div style={{ flex: 1 }}>
+                              <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>In-Seat Food Delivery</strong>
+                              <span style={{ fontSize: '0.72rem', color: '#0284C7', fontWeight: 600 }}>Food will be delivered directly to your cinema seat</span>
+                            </div>
                           </div>
+                        ) : isHotelVenue ? (
+                          <div style={{
+                            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.18) 100%)',
+                            border: '1.5px solid #D97706',
+                            borderRadius: '12px',
+                            padding: '8px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px'
+                          }}>
+                            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🏨</span>
+                            <div style={{ flex: 1 }}>
+                              <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>In-Room Dining Service</strong>
+                              <span style={{ fontSize: '0.72rem', color: '#B45309', fontWeight: 600 }}>Food will be delivered directly to your guest room</span>
+                            </div>
+                          </div>
+                        ) : isCounterSpace ? (
+                          <div style={{
+                            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.18) 100%)',
+                            border: '1.5px solid #059669',
+                            borderRadius: '12px',
+                            padding: '8px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px'
+                          }}>
+                            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>⚡</span>
+                            <div style={{ flex: 1 }}>
+                              <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>Takeaway Counter Pickup</strong>
+                              <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>Food will be packed. A Pickup Token will be assigned.</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* 🍽️ Dine-In vs 📦 Takeaway Mode Toggle */}
+                            <div style={{
+                              display: 'flex',
+                              background: 'var(--bg-secondary, #F1F5F9)',
+                              padding: '3px',
+                              borderRadius: '12px',
+                              marginBottom: '2px',
+                              gap: '4px'
+                            }}>
+                              <button
+                                type="button"
+                                onClick={() => setOrderTypeChoice('dine_in')}
+                                style={{
+                                  flex: 1,
+                                  padding: '8px 10px',
+                                  borderRadius: '9px',
+                                  border: 'none',
+                                  fontSize: '0.80rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  transition: 'all 0.15s ease',
+                                  background: orderTypeChoice === 'dine_in' ? 'var(--theme-card-bg, #FFFFFF)' : 'transparent',
+                                  color: orderTypeChoice === 'dine_in' ? 'var(--text-dark, #0F172A)' : 'var(--text-muted, #64748B)',
+                                  boxShadow: orderTypeChoice === 'dine_in' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
+                                }}
+                              >
+                                <span>🍽️</span>
+                                <span>Dine-In</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setOrderTypeChoice('takeaway')}
+                                style={{
+                                  flex: 1,
+                                  padding: '8px 10px',
+                                  borderRadius: '9px',
+                                  border: 'none',
+                                  fontSize: '0.80rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  transition: 'all 0.15s ease',
+                                  background: orderTypeChoice === 'takeaway' ? 'var(--primary-emerald, #10B981)' : 'transparent',
+                                  color: orderTypeChoice === 'takeaway' ? '#FFFFFF' : 'var(--text-muted, #64748B)',
+                                  boxShadow: orderTypeChoice === 'takeaway' ? '0 1px 4px rgba(16,185,129,0.3)' : 'none'
+                                }}
+                              >
+                                <span>📦</span>
+                                <span>Takeaway / Parcel</span>
+                              </button>
+                            </div>
+
+                            {orderTypeChoice === 'takeaway' && (
+                              <div style={{
+                                background: '#FFFBEB',
+                                border: '1px solid #FDE68A',
+                                borderRadius: '10px',
+                                padding: '6px 10px',
+                                fontSize: '0.74rem',
+                                color: '#92400E',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}>
+                                <span>📦</span>
+                                <span><strong>Takeaway Mode:</strong> Food will be packed. A Pickup Token will be assigned.</span>
+                              </div>
+                            )}
+                          </>
                         )}
 
                         <div style={{ display: 'flex', gap: '8px' }}>
