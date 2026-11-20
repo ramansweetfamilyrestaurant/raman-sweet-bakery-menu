@@ -72,7 +72,7 @@ const getRelativeTime = (dateVal) => {
 };
 
 const formatLocation = (raw, spaceType, tokenDisplay = null) => {
-  if (tokenDisplay) return `Takeaway • Token #${tokenDisplay}`;
+  if (tokenDisplay) return `Takeaway • Token ${tokenDisplay}`;
   if (!raw) return 'Takeaway';
   const str = String(raw).trim();
   const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||

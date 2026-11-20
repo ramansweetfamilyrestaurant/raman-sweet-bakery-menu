@@ -669,7 +669,7 @@ export default function KdsDisplayView({
                           fontWeight: 800,
                           letterSpacing: '0.5px'
                         }}>
-                          TOKEN #{order.token_display || order.token_number}
+                          TOKEN {order.token_display || order.token_number}
                         </span>
                       )}
                       {isMultiRound && (

@@ -446,7 +446,7 @@ export default function OrdersView({
   };
 
   const formatCleanTableLabel = (raw, spaceType, tokenDisplay = null, order = null) => {
-    if (tokenDisplay) return `⚡ Takeaway • #${tokenDisplay}`;
+    if (tokenDisplay) return `⚡ Takeaway • Token ${tokenDisplay}`;
     const orderType = order?.order_type ? String(order.order_type).toLowerCase() : null;
     if (orderType === 'takeaway') return '⚡ Takeaway / Parcel';
     if (orderType === 'delivery') return '🛵 Home Delivery';

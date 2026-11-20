@@ -284,10 +284,10 @@ async function runTestSuite() {
       assert.strictEqual(formatOrderLocation(dineInOrder), 'Table 1');
 
       const takeawayOrder = { table_number: '1', order_type: 'takeaway', token_display: 'TK-01' };
-      assert.strictEqual(formatOrderLocation(takeawayOrder), 'Takeaway • Token #TK-01');
+      assert.strictEqual(formatOrderLocation(takeawayOrder), 'Takeaway • Token TK-01');
 
       const counterOrder = { table_number: 'COUNTER', order_type: 'takeaway', token_display: 'TK-02' };
-      assert.strictEqual(formatOrderLocation(counterOrder), 'Takeaway • Token #TK-02');
+      assert.strictEqual(formatOrderLocation(counterOrder), 'Takeaway • Token TK-02');
     });
 
   } finally {

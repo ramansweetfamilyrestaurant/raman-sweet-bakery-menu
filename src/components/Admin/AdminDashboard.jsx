@@ -964,7 +964,7 @@ export default function AdminDashboard({
       text += "================================" + "\n";
       text += `KOT No: ${order.id}\n`;
       if (order.token_display || order.token_number) {
-        text += `*** TOKEN: #${order.token_display || order.token_number} [TAKEAWAY] ***\n`;
+        text += `*** TOKEN: ${order.token_display || order.token_number} [TAKEAWAY] ***\n`;
       }
       text += `Time: ${new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN')}\n`;
       text += `Location: ${formatOrderLocation(order, restoInfo)}\n`;
@@ -1265,7 +1265,7 @@ export default function AdminDashboard({
             <h2>${ticketTitle}</h2>
             <div class="table-badge">${spaceLoc.toUpperCase()}</div>
             ${(order.token_display || order.token_number)
-              ? `<div style="font-size:22px;font-weight:900;border:2px dashed #000;padding:6px;margin:6px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;">TOKEN #${order.token_display || order.token_number}</div>`
+              ? `<div style="font-size:22px;font-weight:900;border:2px dashed #000;padding:6px;margin:6px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;">TOKEN ${order.token_display || order.token_number}</div>`
               : ''
             }
             <div style="font-size:12px;font-weight:900;margin-top:2px;">KOT #${order.id}</div>
@@ -4222,7 +4222,7 @@ export default function AdminDashboard({
             <div style={{ background: 'var(--adm-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--adm-border)' }}>
               <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--adm-primary)' }}>
                 {acceptRoutingModal.token_display
-                  ? `⚡ Takeaway • Token #${acceptRoutingModal.token_display}`
+                  ? `⚡ Takeaway • Token ${acceptRoutingModal.token_display}`
                   : (((String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter')) ? '⚡ Billing Counter' : `Table ${acceptRoutingModal.table_number || 'Takeaway'}`)
                 } • Order {acceptRoutingModal.id}
               </div>
