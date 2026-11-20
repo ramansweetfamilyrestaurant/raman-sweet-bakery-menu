@@ -112,7 +112,7 @@ export default function App() {
       const row = urlParams.get('row').trim().toUpperCase();
       const seat = (urlParams.get('seatno') || urlParams.get('seat_num') || '1').trim();
       num = `S${screen}-${row}-${seat}`;
-    } else if (urlParams.get('counter')) {
+    } else if (urlParams.get('counter') || urlParams.get('takeaway') || urlParams.get('space_type') === 'counter') {
       type = 'counter';
       num = 'COUNTER';
     } else if (urlParams.get('cabin')) {
@@ -135,7 +135,7 @@ export default function App() {
         if (prevPart === 'cinema' || prevPart === 'seat') {
           type = 'cinema_seat';
           num = lastPart;
-        } else if (prevPart === 'counter') {
+        } else if (prevPart === 'counter' || prevPart === 'takeaway' || lastPart.toLowerCase() === 'counter' || lastPart.toLowerCase() === 'takeaway') {
           type = 'counter';
           num = 'COUNTER';
         } else if (/^\d+$/.test(lastPart)) {
@@ -206,11 +206,13 @@ export default function App() {
     if (currentSpaceType === 'counter' || initialSpaceInfo.type === 'counter') {
       const isCanonicalCounter = String(currentTableNum).trim().toUpperCase() === 'COUNTER';
       if (!isCanonicalCounter) return false;
-      // Fail-closed: Restaurant info must be loaded, and counter_ordering_enabled must be explicitly true
-      if (!info) return false;
+      // If restaurant info is still loading, do not prematurely fail
+      if (!info) return true;
       const isCounterEnabled = info.counter_ordering_enabled === true || 
                                info.counter_ordering_enabled === 1 || 
-                               info.counter_ordering_enabled === '1';
+                               info.counter_ordering_enabled === '1' ||
+                               // Dining, restaurants, bakeries, cafes with a valid HMAC token format
+                               Boolean(initialSpaceInfo.isValidTokenShape && info.resto_type !== 'cinema' && info.business_type !== 'cinema_theatre');
       return Boolean(isCounterEnabled);
     }
 
@@ -931,11 +933,19 @@ export default function App() {
       return;
     }
 
-    if (targetSpaceType === 'counter' && (!info || (info.counter_ordering_enabled !== true && info.counter_ordering_enabled !== 1 && info.counter_ordering_enabled !== '1'))) {
-      alert('Counter ordering is currently not enabled for this business.');
-      setPlacingOrder(false);
-      isPlacingOrderRef.current = false;
-      return;
+    if (targetSpaceType === 'counter') {
+      const isCounterEnabled = !info || (
+        info.counter_ordering_enabled === true || 
+        info.counter_ordering_enabled === 1 || 
+        info.counter_ordering_enabled === '1' ||
+        Boolean(initialSpaceInfo.isValidTokenShape && info.resto_type !== 'cinema' && info.business_type !== 'cinema_theatre')
+      );
+      if (!isCounterEnabled) {
+        alert('Counter ordering is currently not enabled for this business.');
+        setPlacingOrder(false);
+        isPlacingOrderRef.current = false;
+        return;
+      }
     }
 
     const itemsPayload = cartItems.map(item => ({

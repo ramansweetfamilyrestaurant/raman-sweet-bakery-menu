@@ -944,6 +944,7 @@ async function createTables(options = {}) {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50) DEFAULT 'dine_in';`,
       `UPDATE restaurants SET service_model = 'cinema' WHERE business_type = 'cinema_theatre' OR service_model = 'seat_service' OR service_model = 'cinema';`,
       `UPDATE restaurants SET service_model = 'hotel' WHERE business_type = 'hotel_resort' OR service_model = 'in_room_dining' OR service_model = 'hotel';`,
+      `UPDATE restaurants SET counter_ordering_enabled = 1 WHERE (counter_ordering_enabled IS NULL OR counter_ordering_enabled = 0) AND (service_model NOT IN ('cinema') AND business_type NOT IN ('cinema_theatre') OR service_model IS NULL);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_pin_hash VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS kds_auth_version INT DEFAULT 1;`,
       // Step 2.1 Table Presence Verification Foundation
@@ -1745,6 +1746,7 @@ async function createTables(options = {}) {
       if (!restoCols.some(c => c.name === 'table_verification_mode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN table_verification_mode TEXT DEFAULT 'GPS_WITH_STAFF_FALLBACK'");
       if (!restoCols.some(c => c.name === 'staff_verification_timeout_seconds')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN staff_verification_timeout_seconds INTEGER DEFAULT 120");
       if (!restoCols.some(c => c.name === 'inactive_spaces')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN inactive_spaces TEXT DEFAULT ''");
+      sqliteDb.exec("UPDATE restaurants SET counter_ordering_enabled = 1 WHERE (counter_ordering_enabled IS NULL OR counter_ordering_enabled = 0) AND (service_model NOT IN ('cinema') AND business_type NOT IN ('cinema_theatre') OR service_model IS NULL)");
 
       if (!planCols.some(c => c.name === 'presence_verification_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN presence_verification_enabled INTEGER DEFAULT 1");
       if (!planCols.some(c => c.name === 'allowed_verification_modes')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN allowed_verification_modes TEXT DEFAULT 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY'");

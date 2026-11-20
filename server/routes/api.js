@@ -787,6 +787,20 @@ router.get('/menu-bundle', async (req, res) => {
       staff_verification_timeout_seconds: Number(resto.staff_verification_timeout_seconds) || 120,
       location_initialized: Boolean(resto.location_initialized === true || resto.location_initialized === 1 || resto.location_initialized === 'true'),
       inactive_spaces: resto.inactive_spaces || '',
+      total_tables: resto.total_tables !== undefined && resto.total_tables !== null ? Number(resto.total_tables) : 0,
+      total_cabins: resto.total_cabins !== undefined && resto.total_cabins !== null ? Number(resto.total_cabins) : 0,
+      total_rooms: resto.total_rooms !== undefined && resto.total_rooms !== null ? Number(resto.total_rooms) : 0,
+      total_vip: resto.total_vip !== undefined && resto.total_vip !== null ? Number(resto.total_vip) : 0,
+      total_screens: resto.total_screens !== undefined && resto.total_screens !== null ? Number(resto.total_screens) : 0,
+      total_seats: resto.total_seats !== undefined && resto.total_seats !== null ? Number(resto.total_seats) : 0,
+      table_prefix: resto.table_prefix || 'table',
+      counter_ordering_enabled: Boolean(
+        resto.counter_ordering_enabled === 1 ||
+        resto.counter_ordering_enabled === true ||
+        resto.counter_ordering_enabled === '1' ||
+        ((resto.counter_ordering_enabled === undefined || resto.counter_ordering_enabled === null) &&
+         !['cinema_theatre'].includes(resto.business_type) && !['cinema'].includes(resto.service_model))
+      ),
       active: true
     };
 
@@ -984,7 +998,13 @@ router.get('/info', async (req, res) => {
       max_screens: (saasPlan.max_screens !== undefined && saasPlan.max_screens !== null) ? Number(saasPlan.max_screens) : 9999,
       max_seats: (saasPlan.max_seats !== undefined && saasPlan.max_seats !== null) ? Number(saasPlan.max_seats) : 9999,
       table_prefix: resto.table_prefix || 'table',
-      counter_ordering_enabled: Boolean(resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1'),
+      counter_ordering_enabled: Boolean(
+        resto.counter_ordering_enabled === 1 ||
+        resto.counter_ordering_enabled === true ||
+        resto.counter_ordering_enabled === '1' ||
+        ((resto.counter_ordering_enabled === undefined || resto.counter_ordering_enabled === null) &&
+         !['cinema_theatre'].includes(resto.business_type) && !['cinema'].includes(resto.service_model))
+      ),
       order_retention_days: resto.order_retention_days || 7,
       custom_domain: resto.custom_domain || '',
       table_verification_mode: resto.table_verification_mode || 'GPS_WITH_STAFF_FALLBACK',

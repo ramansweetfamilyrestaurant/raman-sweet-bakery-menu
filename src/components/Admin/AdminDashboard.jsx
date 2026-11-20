@@ -206,7 +206,7 @@ export default function AdminDashboard({
       total_rooms: 0,
       total_vip: 0,
       table_prefix: 'table',
-      counter_ordering_enabled: false,
+      counter_ordering_enabled: true,
       watermark_removal_enabled: false,
       custom_domain_enabled: false,
       analytics_export_enabled: false,
