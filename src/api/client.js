@@ -1211,4 +1211,37 @@ export async function addSuperAdminSupportTicketReply(ticketId, payload, token) 
   return handleResponse(res, 'Failed to send official reply');
 }
 
+// =============================================================================
+// DAY-END CLOSING & CASHIER SHIFT REPORT CLIENT APIS
+// =============================================================================
+
+export async function fetchDayClosingSummary(token, date = '') {
+  let url = `${API_BASE}/admin/day-closing/summary`;
+  if (date) url += `?date=${encodeURIComponent(date)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch day closing summary');
+}
+
+export async function submitDayClosing(token, payload) {
+  const res = await fetch(`${API_BASE}/admin/day-closing/submit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse(res, 'Failed to submit day closing');
+}
+
+export async function fetchDayClosingHistory(token) {
+  const res = await fetch(`${API_BASE}/admin/day-closing/history`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return handleResponse(res, 'Failed to fetch day closing history');
+}
+
+
 

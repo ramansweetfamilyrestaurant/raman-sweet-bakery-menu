@@ -5271,6 +5271,307 @@ router.post('/optimize-db', authenticateToken, requireActiveSubscription, async 
   }
 });
 
+// =============================================================================
+// DAY-END CLOSING & CASHIER SHIFT REPORT API
+// =============================================================================
+
+// GET /api/admin/day-closing/summary
+router.get('/day-closing/summary', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+
+    const { date: qDate } = req.query;
+
+    const parseSafeDate = (dateVal) => {
+      if (!dateVal) return null;
+      if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
+      let str = String(dateVal).trim();
+      if (str.includes(' ') && !str.includes('T')) str = str.replace(' ', 'T');
+      if (!str.endsWith('Z') && !str.includes('+') && !str.slice(10).includes('-')) str = str + 'Z';
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const getFormattedLocalDate = (dateObj) => {
+      const d = parseSafeDate(dateObj);
+      if (!d) return '';
+      try {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+      } catch (e) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    };
+
+    const targetDate = qDate ? String(qDate).trim() : getFormattedLocalDate(new Date());
+
+    // 1. Fetch restaurant settings
+    const restoRows = await query('SELECT id, name, phone, whatsapp_number, gst_enabled, gstin_number, currency_symbol FROM restaurants WHERE id = $1', [targetId]);
+    const resto = restoRows[0] || {};
+
+    // 2. Fetch all valid orders
+    const orders = await query(`
+      SELECT id, total_amount, status, payment_method, is_settled, items, created_at, table_number
+      FROM orders
+      WHERE restaurant_id = $1 AND status NOT IN ('cancelled', 'rejected')
+      ORDER BY id ASC
+    `, [targetId]);
+
+    const todayOrders = orders.filter(o => {
+      const dStr = getFormattedLocalDate(o.created_at);
+      return dStr === targetDate;
+    });
+
+    let totalOrders = todayOrders.length;
+    let grossSales = 0;
+    let cashSales = 0;
+    let upiSales = 0;
+    let cardSales = 0;
+    let otherSales = 0;
+
+    const dishTally = new Map();
+
+    todayOrders.forEach(o => {
+      const amt = Number(o.total_amount) || 0;
+      grossSales += amt;
+
+      const method = String(o.payment_method || '').toLowerCase().trim();
+      if (method === 'cash') {
+        cashSales += amt;
+      } else if (method === 'upi' || method === 'qr') {
+        upiSales += amt;
+      } else if (method === 'card') {
+        cardSales += amt;
+      } else if (method) {
+        otherSales += amt;
+      } else {
+        cashSales += amt;
+      }
+
+      let items = [];
+      try {
+        items = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
+      } catch (_) {
+        items = [];
+      }
+
+      items.forEach(item => {
+        const name = (item.name || item.dish?.name || 'Item').trim();
+        const qty = Number(item.quantity) || 1;
+        const itemPrice = Number(item.price || item.dish?.price || 0) * qty;
+
+        if (dishTally.has(name)) {
+          const curr = dishTally.get(name);
+          curr.quantity += qty;
+          curr.revenue += itemPrice;
+        } else {
+          dishTally.set(name, { name, quantity: qty, revenue: itemPrice });
+        }
+      });
+    });
+
+    const topItems = Array.from(dishTally.values())
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    const isGst = Boolean(resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1');
+    let taxAmount = 0;
+    if (isGst && grossSales > 0) {
+      taxAmount = Math.round((grossSales - (grossSales / 1.05)) * 100) / 100;
+    }
+
+    const prevClosingRows = await query(`
+      SELECT * FROM day_closings
+      WHERE restaurant_id = $1 AND closing_date = $2
+      ORDER BY id DESC LIMIT 1
+    `, [targetId, targetDate]);
+
+    const latestClosing = prevClosingRows[0] || null;
+
+    return res.json({
+      success: true,
+      date: targetDate,
+      restaurant: {
+        id: resto.id,
+        name: resto.name || 'Restaurant',
+        phone: resto.phone || '',
+        whatsapp_number: resto.whatsapp_number || resto.phone || '',
+        gst_enabled: Boolean(resto.gst_enabled),
+        gstin_number: resto.gstin_number || ''
+      },
+      summary: {
+        total_orders: totalOrders,
+        gross_sales: Math.round(grossSales * 100) / 100,
+        cash_sales: Math.round(cashSales * 100) / 100,
+        upi_sales: Math.round(upiSales * 100) / 100,
+        card_sales: Math.round(cardSales * 100) / 100,
+        other_sales: Math.round(otherSales * 100) / 100,
+        tax_amount: taxAmount,
+        top_items: topItems,
+        currency_symbol: resto.currency_symbol || '₹'
+      },
+      latest_closing: latestClosing
+    });
+  } catch (err) {
+    console.error('Error fetching day-closing summary:', err);
+    return res.status(500).json({ error: 'Failed to fetch day closing summary' });
+  }
+});
+
+// POST /api/admin/day-closing/submit
+router.post('/day-closing/submit', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+
+    const {
+      closing_date,
+      shift_name = 'Full Day',
+      closed_by,
+      actual_cash_counted = 0,
+      notes = ''
+    } = req.body;
+
+    if (!closing_date) {
+      return res.status(400).json({ error: 'closing_date is required' });
+    }
+
+    const getFormattedLocalDate = (dateObj) => {
+      if (!dateObj) return '';
+      let d = dateObj instanceof Date ? dateObj : new Date(dateObj);
+      if (isNaN(d.getTime())) return '';
+      try {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+      } catch (e) {
+        return d.toISOString().slice(0, 10);
+      }
+    };
+
+    const restoRows = await query('SELECT id, name, gst_enabled FROM restaurants WHERE id = $1', [targetId]);
+    const resto = restoRows[0] || {};
+
+    const orders = await query(`
+      SELECT id, total_amount, status, payment_method, items, created_at
+      FROM orders
+      WHERE restaurant_id = $1 AND status NOT IN ('cancelled', 'rejected')
+    `, [targetId]);
+
+    const matchingOrders = orders.filter(o => getFormattedLocalDate(o.created_at) === closing_date);
+
+    let grossSales = 0;
+    let cashSales = 0;
+    let upiSales = 0;
+    let cardSales = 0;
+    let otherSales = 0;
+    const dishTally = new Map();
+
+    matchingOrders.forEach(o => {
+      const amt = Number(o.total_amount) || 0;
+      grossSales += amt;
+      const method = String(o.payment_method || '').toLowerCase().trim();
+      if (method === 'cash') cashSales += amt;
+      else if (method === 'upi' || method === 'qr') upiSales += amt;
+      else if (method === 'card') cardSales += amt;
+      else if (method) otherSales += amt;
+      else cashSales += amt;
+
+      let items = [];
+      try {
+        items = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
+      } catch (_) {}
+      items.forEach(i => {
+        const name = (i.name || i.dish?.name || 'Item').trim();
+        const qty = Number(i.quantity) || 1;
+        const rev = Number(i.price || 0) * qty;
+        if (dishTally.has(name)) {
+          const c = dishTally.get(name);
+          c.quantity += qty;
+          c.revenue += rev;
+        } else {
+          dishTally.set(name, { name, quantity: qty, revenue: rev });
+        }
+      });
+    });
+
+    const isGst = Boolean(resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1');
+    const taxAmount = isGst && grossSales > 0 ? Math.round((grossSales - (grossSales / 1.05)) * 100) / 100 : 0;
+    const topItems = Array.from(dishTally.values()).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+
+    const countedCash = Number(actual_cash_counted) || 0;
+    const expectedCash = Math.round(cashSales * 100) / 100;
+    const cashDiscrepancy = Math.round((countedCash - expectedCash) * 100) / 100;
+    const callerName = closed_by || req.user?.username || 'Staff';
+
+    const insertResult = await query(`
+      INSERT INTO day_closings (
+        restaurant_id, closing_date, shift_name, closed_by,
+        total_orders, gross_sales, cash_sales, upi_sales, card_sales, other_sales,
+        tax_amount, discount_amount, actual_cash_counted, cash_discrepancy,
+        notes, top_items_json
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+      ) RETURNING *
+    `, [
+      targetId,
+      closing_date,
+      shift_name,
+      callerName,
+      matchingOrders.length,
+      Math.round(grossSales * 100) / 100,
+      expectedCash,
+      Math.round(upiSales * 100) / 100,
+      Math.round(cardSales * 100) / 100,
+      Math.round(otherSales * 100) / 100,
+      taxAmount,
+      0,
+      countedCash,
+      cashDiscrepancy,
+      notes || '',
+      JSON.stringify(topItems)
+    ]);
+
+    return res.json({
+      success: true,
+      record: insertResult[0] || null
+    });
+  } catch (err) {
+    console.error('Error submitting day-closing:', err);
+    return res.status(500).json({ error: 'Failed to record day closing' });
+  }
+});
+
+// GET /api/admin/day-closing/history
+router.get('/day-closing/history', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+
+    const history = await query(`
+      SELECT * FROM day_closings
+      WHERE restaurant_id = $1
+      ORDER BY id DESC
+      LIMIT 30
+    `, [targetId]);
+
+    return res.json({
+      success: true,
+      history: history || []
+    });
+  } catch (err) {
+    console.error('Error fetching day-closing history:', err);
+    return res.status(500).json({ error: 'Failed to fetch day closing history' });
+  }
+});
+
 // ========== COMBO / THALI DEALS CRUD (OPERATIONAL ROUTES) ==========
 
 // GET all combos for admin

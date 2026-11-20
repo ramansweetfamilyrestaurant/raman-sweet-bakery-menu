@@ -60,7 +60,8 @@ export default function OrdersView({
   settingsForm = {},
   capabilities = {},
   token = null,
-  onNavigateToSetup = null
+  onNavigateToSetup = null,
+  onOpenDayClosing = null
 }) {
   currencySymbol = (currencySymbol && String(currencySymbol).trim().toLowerCase() !== 'none') ? currencySymbol : '₹';
 
@@ -733,6 +734,32 @@ export default function OrdersView({
             <ChefHat size={15} color={activeSubTab === 'kds' ? '#F59E0B' : '#D97706'} />
             <span>Kitchen Display</span>
           </button>
+
+          {/* Day Closing Button */}
+          {onOpenDayClosing && (
+            <button
+              onClick={onOpenDayClosing}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid #064E3B',
+                background: '#F0FDF4',
+                color: '#064E3B',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginLeft: 'auto',
+                transition: 'all 0.15s ease'
+              }}
+              title="Day-End Closing & Shift Summary"
+            >
+              <span>🌙</span>
+              <span>Day Closing</span>
+            </button>
+          )}
         </div>
       </div>
 

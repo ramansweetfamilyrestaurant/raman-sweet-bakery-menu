@@ -317,3 +317,197 @@ export function buildUpiPaymentUri({ upiId, payeeName = '', amount = 0, invoiceI
   return `upi://pay?${queryParts.join('&')}`;
 }
 
+/**
+ * Generates clean thermal printer HTML for Cashier Day-End Closing Slip (58mm or 80mm).
+ */
+export function buildDayClosingSlipHtml({
+  restaurant = {},
+  closingData = {},
+  actualCash = 0,
+  discrepancy = 0,
+  closedBy = 'Cashier',
+  shiftName = 'Full Day',
+  notes = '',
+  paperWidth = '80mm'
+}) {
+  const is58mm = paperWidth === '58mm';
+  const widthPx = is58mm ? '58mm' : '80mm';
+  const bodyWidth = is58mm ? '48mm' : '72mm';
+  const fontSizeBase = is58mm ? '11px' : '12px';
+  const fontSizeHeader = is58mm ? '14px' : '16px';
+  const sym = closingData.currency_symbol || restaurant.currency_symbol || '₹';
+
+  const formatMoney = (val) => `${sym}${(Number(val) || 0).toFixed(2)}`;
+
+  const topItemsHtml = (closingData.top_items && closingData.top_items.length > 0)
+    ? `
+      <div style="margin: 6px 0; border-top: 1px dashed #000; padding-top: 4px;">
+        <div style="font-weight: bold; margin-bottom: 2px;">TOP ITEMS SOLD:</div>
+        ${closingData.top_items.map(i => `
+          <div style="display: flex; justify-content: space-between; font-size: 0.9em;">
+            <span>• ${i.name}</span>
+            <span>x${i.quantity} (${formatMoney(i.revenue)})</span>
+          </div>
+        `).join('')}
+      </div>
+    `
+    : '';
+
+  const discStatus = discrepancy === 0
+    ? 'MATCHED (₹0.00)'
+    : (discrepancy > 0 ? `+${formatMoney(discrepancy)} OVER` : `${formatMoney(discrepancy)} SHORT`);
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Day Closing Report</title>
+        <style>
+          @page { size: ${widthPx} auto; margin: 0; }
+          body {
+            margin: 0;
+            padding: ${is58mm ? '4mm 2mm' : '6mm 4mm'};
+            font-family: 'Courier New', Courier, monospace;
+            font-size: ${fontSizeBase};
+            line-height: 1.3;
+            color: #000;
+            background: #fff;
+            width: ${bodyWidth};
+            box-sizing: border-box;
+          }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .row { display: flex; justify-content: space-between; margin: 2px 0; }
+          .divider { border-top: 1px dashed #000; margin: 5px 0; }
+          .double-divider { border-top: 2px solid #000; margin: 6px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="center bold" style="font-size: ${fontSizeHeader};">${restaurant.name || 'RAMAN SWEET & BAKERY'}</div>
+        <div class="center bold" style="margin: 2px 0;">DAY CLOSING REPORT</div>
+        <div class="center" style="font-size: 0.85em;">Date: ${closingData.date || new Date().toISOString().slice(0, 10)} | ${shiftName}</div>
+        ${restaurant.phone ? `<div class="center" style="font-size: 0.8em;">Tel: ${restaurant.phone}</div>` : ''}
+
+        <div class="double-divider"></div>
+
+        <div class="row">
+          <span>Total Orders:</span>
+          <span class="bold">${closingData.total_orders || 0}</span>
+        </div>
+        <div class="row bold" style="font-size: 1.1em;">
+          <span>GROSS SALES:</span>
+          <span>${formatMoney(closingData.gross_sales)}</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <span>💵 Cash Sales:</span>
+          <span class="bold">${formatMoney(closingData.cash_sales)}</span>
+        </div>
+        <div class="row">
+          <span>📲 UPI / QR Pay:</span>
+          <span class="bold">${formatMoney(closingData.upi_sales)}</span>
+        </div>
+        ${(closingData.card_sales > 0) ? `
+          <div class="row">
+            <span>💳 Card Pay:</span>
+            <span class="bold">${formatMoney(closingData.card_sales)}</span>
+          </div>
+        ` : ''}
+        ${(closingData.other_sales > 0) ? `
+          <div class="row">
+            <span>Other Modes:</span>
+            <span class="bold">${formatMoney(closingData.other_sales)}</span>
+          </div>
+        ` : ''}
+        ${(closingData.tax_amount > 0) ? `
+          <div class="row" style="font-size: 0.9em;">
+            <span>GST Tax (Incl):</span>
+            <span>${formatMoney(closingData.tax_amount)}</span>
+          </div>
+        ` : ''}
+
+        ${topItemsHtml}
+
+        <div class="double-divider"></div>
+
+        <div class="row bold">
+          <span>Cash in Drawer:</span>
+          <span>${formatMoney(actualCash)}</span>
+        </div>
+        <div class="row bold" style="color: ${discrepancy === 0 ? '#000' : '#b91c1c'};">
+          <span>Discrepancy:</span>
+          <span>${discStatus}</span>
+        </div>
+
+        ${notes ? `
+          <div style="font-size: 0.85em; margin-top: 4px;">
+            <span class="bold">Notes:</span> ${notes}
+          </div>
+        ` : ''}
+
+        <div style="margin-top: 14px; text-align: left; font-size: 0.85em;">
+          <div>Closed By: ${closedBy}</div>
+          <div style="margin-top: 10px;">Signature: __________________</div>
+        </div>
+
+        <div class="center" style="margin-top: 10px; font-size: 0.75em;">
+          TouchQR POS • Automated Shift Audit
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+/**
+ * Builds formatted WhatsApp message text for 1-Click Day Closing share.
+ */
+export function buildDayClosingWhatsAppMessage({
+  restaurant = {},
+  closingData = {},
+  actualCash = 0,
+  discrepancy = 0,
+  closedBy = 'Cashier',
+  shiftName = 'Full Day',
+  notes = ''
+}) {
+  const sym = closingData.currency_symbol || restaurant.currency_symbol || '₹';
+  const formatMoney = (val) => `${sym}${(Number(val) || 0).toFixed(2)}`;
+
+  let msg = `🏪 *${(restaurant.name || 'RAMAN SWEET & BAKERY').toUpperCase()}*\n`;
+  msg += `📊 *DAY CLOSING REPORT*\n`;
+  msg += `📅 Date: ${closingData.date || new Date().toISOString().slice(0, 10)} (${shiftName})\n`;
+  msg += `----------------------------------\n`;
+  msg += `• Total Orders: *${closingData.total_orders || 0}*\n`;
+  msg += `• Gross Sales : *${formatMoney(closingData.gross_sales)}*\n`;
+  msg += `----------------------------------\n`;
+  msg += `💵 Cash Collected: *${formatMoney(closingData.cash_sales)}*\n`;
+  msg += `📲 UPI / QR Pay  : *${formatMoney(closingData.upi_sales)}*\n`;
+  if (closingData.card_sales > 0) {
+    msg += `💳 Card Pay      : *${formatMoney(closingData.card_sales)}*\n`;
+  }
+  if (closingData.tax_amount > 0) {
+    msg += `🧾 GST Tax (Incl): ${formatMoney(closingData.tax_amount)}\n`;
+  }
+  msg += `----------------------------------\n`;
+  msg += `💰 Actual Cash in Drawer: *${formatMoney(actualCash)}*\n`;
+  if (discrepancy === 0) {
+    msg += `✅ Discrepancy: *MATCHED (₹0.00)*\n`;
+  } else if (discrepancy > 0) {
+    msg += `⚠️ Discrepancy: *+${formatMoney(discrepancy)} (EXCESS)*\n`;
+  } else {
+    msg += `❌ Discrepancy: *${formatMoney(discrepancy)} (SHORTAGE)*\n`;
+  }
+  if (notes) {
+    msg += `📝 Notes: ${notes}\n`;
+  }
+  msg += `----------------------------------\n`;
+  msg += `👤 Shift Closed By: *${closedBy}*\n`;
+  msg += `_Generated via TouchQR POS_`;
+
+  return msg;
+}
+
+

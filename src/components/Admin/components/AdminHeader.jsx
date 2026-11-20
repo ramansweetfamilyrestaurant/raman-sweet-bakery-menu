@@ -17,6 +17,7 @@ export default function AdminHeader({
   onLogout,
   onReturnToMenu,
   onOpenHelp,
+  onOpenDayClosing,
   supportPhone,
   activeTab,
   setActiveTab,
@@ -170,6 +171,32 @@ export default function AdminHeader({
           <span className="header-biz-text">Storefront</span>
         </button>
 
+        {/* 🌙 Day-End Closing & Shift Summary Button */}
+        {onOpenDayClosing && (
+          <button
+            onClick={onOpenDayClosing}
+            style={{
+              height: '36px',
+              padding: '0 12px',
+              borderRadius: '10px',
+              border: '1.5px solid #064E3B',
+              background: '#F0FDF4',
+              color: '#064E3B',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              boxShadow: '0 1px 2px rgba(6,78,59,0.08)'
+            }}
+            title="Day-End Closing & Cash Tally"
+          >
+            <span>🌙</span>
+            <span className="hide-on-mobile">Day Closing</span>
+          </button>
+        )}
+
         {/* Notification Bell */}
         <button
           onClick={() => {
@@ -253,6 +280,30 @@ export default function AdminHeader({
               <strong style={{ fontSize: '0.80rem', color: '#0F172A', display: 'block' }}>{username}</strong>
               <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{terms.businessNoun ? `${terms.businessNoun} Admin` : 'Business Admin'}</span>
             </div>
+
+            <button
+              onClick={() => {
+                setShowUserMenu(false);
+                if (onOpenDayClosing) onOpenDayClosing();
+              }}
+              style={{
+                width: '100%',
+                padding: '8px 10px',
+                textAlign: 'left',
+                background: 'none',
+                border: 'none',
+                fontSize: '0.78rem',
+                color: '#064E3B',
+                fontWeight: 700,
+                cursor: 'pointer',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span>🌙</span> Day Closing Report
+            </button>
 
             <button
               onClick={() => {

@@ -13,6 +13,7 @@ import ComboFormModal from './ComboFormModal';
 import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, QrCode, Printer, Settings, Star, CheckCircle, Lock, ExternalLink, Megaphone, MessageSquare, Palette, Sparkles, Clock, CheckCircle2, XCircle, Upload, X, BarChart2, TrendingUp, Download, Award, MapPin, RefreshCw, CreditCard } from 'lucide-react';
 
 import PaymentModal from '../PaymentModal';
+import DayClosingModal from './DayClosingModal';
 import { calculateBillDetails, formatOrderLocation, buildUpiPaymentUri } from '../../utils/billingHelper';
 
 import './styles/Admin.css';
@@ -131,6 +132,7 @@ export default function AdminDashboard({
   const [restaurantInfo, setRestaurantInfo] = useState(() => getInitialAdminState('info', null));
   const [exportingReport, setExportingReport] = useState(false);
   const [exportingAll, setExportingAll] = useState(false);
+  const [showDayClosingModal, setShowDayClosingModal] = useState(false);
 
   // Settings State
   const [settingsForm, setSettingsForm] = useState(() => {
@@ -3632,6 +3634,7 @@ export default function AdminDashboard({
             onLogout={onLogout}
             onReturnToMenu={onReturnToMenu}
             onOpenHelp={() => setActiveTab('support')}
+            onOpenDayClosing={() => setShowDayClosingModal(true)}
             supportPhone={masterSupportPhone}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
@@ -3800,6 +3803,7 @@ export default function AdminDashboard({
                     setInitialSetupDrawer(drawer);
                     setActiveTab('settings');
                   }}
+                  onOpenDayClosing={() => setShowDayClosingModal(true)}
                   ordersEnabled={isDirectOrderingEnabled}
                 />
               )}
@@ -4756,6 +4760,18 @@ export default function AdminDashboard({
             setShowPaymentModal(false);
             setPaymentModalPlan(null);
           }}
+        />
+      )}
+
+      {/* 🌙 Day-End Closing & Cashier Shift Modal */}
+      {showDayClosingModal && (
+        <DayClosingModal
+          isOpen={showDayClosingModal}
+          onClose={() => setShowDayClosingModal(false)}
+          token={token}
+          restaurantInfo={restaurantInfo}
+          settingsForm={settingsForm}
+          onSilentPrint={silentIframePrint}
         />
       )}
 

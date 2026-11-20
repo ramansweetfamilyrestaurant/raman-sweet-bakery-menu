@@ -422,6 +422,27 @@ async function createTables(options = {}) {
         UNIQUE (restaurant_id, summary_date)
       );`,
 
+      `CREATE TABLE IF NOT EXISTS day_closings (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+        closing_date VARCHAR(50) NOT NULL,
+        shift_name VARCHAR(50) DEFAULT 'Full Day',
+        closed_by VARCHAR(100),
+        total_orders INT DEFAULT 0,
+        gross_sales DECIMAL(10, 2) DEFAULT 0.00,
+        cash_sales DECIMAL(10, 2) DEFAULT 0.00,
+        upi_sales DECIMAL(10, 2) DEFAULT 0.00,
+        card_sales DECIMAL(10, 2) DEFAULT 0.00,
+        other_sales DECIMAL(10, 2) DEFAULT 0.00,
+        tax_amount DECIMAL(10, 2) DEFAULT 0.00,
+        discount_amount DECIMAL(10, 2) DEFAULT 0.00,
+        actual_cash_counted DECIMAL(10, 2) DEFAULT 0.00,
+        cash_discrepancy DECIMAL(10, 2) DEFAULT 0.00,
+        notes TEXT,
+        top_items_json TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
       `CREATE TABLE IF NOT EXISTS subscriptions (
         id SERIAL PRIMARY KEY,
         restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
@@ -1320,6 +1341,31 @@ async function createTables(options = {}) {
     try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN payment_methods_summary TEXT"); } catch (e) {}
     try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_created_status ON orders(restaurant_id, created_at, status)"); } catch (e) {}
     try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_daily_sales_summaries_resto_date ON daily_sales_summaries(restaurant_id, summary_date)"); } catch (e) {}
+
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS day_closings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER NOT NULL,
+        closing_date TEXT NOT NULL,
+        shift_name TEXT DEFAULT 'Full Day',
+        closed_by TEXT,
+        total_orders INTEGER DEFAULT 0,
+        gross_sales REAL DEFAULT 0,
+        cash_sales REAL DEFAULT 0,
+        upi_sales REAL DEFAULT 0,
+        card_sales REAL DEFAULT 0,
+        other_sales REAL DEFAULT 0,
+        tax_amount REAL DEFAULT 0,
+        discount_amount REAL DEFAULT 0,
+        actual_cash_counted REAL DEFAULT 0,
+        cash_discrepancy REAL DEFAULT 0,
+        notes TEXT,
+        top_items_json TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
+      );
+    `);
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_day_closings_resto_date ON day_closings(restaurant_id, closing_date)"); } catch (e) {}
 
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS qr_scan_events (

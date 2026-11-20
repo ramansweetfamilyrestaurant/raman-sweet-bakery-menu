@@ -235,6 +235,11 @@ const suites = [
     name: 'Admin Dashboard Comprehensive Multi-Tenant Integration',
     file: 'server/tests/admin_dashboard_comprehensive.test.js',
     requiresDb: true
+  },
+  {
+    name: 'Cashier Day-End Closing & Shift Report Specifications',
+    file: 'server/tests/day_closing.test.js',
+    requiresDb: false
   }
 ];
 
