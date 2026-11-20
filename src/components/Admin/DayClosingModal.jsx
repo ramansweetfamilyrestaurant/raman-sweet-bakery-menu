@@ -47,15 +47,15 @@ export default function DayClosingModal({
         setData(res);
         // Pre-fill if already closed previously
         if (res.latest_closing) {
-          setActualCashInput(String(res.latest_closing.actual_cash_counted ?? res.summary.cash_sales));
+          setActualCashInput(String(res.latest_closing.actual_cash_counted ?? res.summary?.cash_sales ?? 0));
           setClosedByInput(res.latest_closing.closed_by || 'Cashier');
           setShiftName(res.latest_closing.shift_name || 'Full Day');
           setNotesInput(res.latest_closing.notes || '');
         } else {
-          setActualCashInput(String(res.summary.cash_sales ?? 0));
+          setActualCashInput(String(res.summary?.cash_sales ?? 0));
         }
       } else {
-        setError('Could not load summary');
+        setError(res?.error || 'Could not load summary');
       }
     } catch (err) {
       setError(err.message || 'Failed to fetch summary');
@@ -97,12 +97,38 @@ export default function DayClosingModal({
   };
 
   const expectedCash = Number(summary.cash_sales) || 0;
-  const countedCash = actualCashInput === '' ? expectedCash : (parseFloat(actualCashInput) || 0);
+  const countedCash = actualCashInput === '' ? expectedCash : (parseFloat(String(actualCashInput).replace(/,/g, '')) || 0);
   const discrepancy = Math.round((countedCash - expectedCash) * 100) / 100;
 
   const isMatched = discrepancy === 0;
   const isOver = discrepancy > 0;
   const isShort = discrepancy < 0;
+
+  const fallbackPrintWindow = (htmlContent) => {
+    const printWindow = window.open('', '_blank', 'width=420,height=600');
+    if (!printWindow) {
+      alert('Please allow popups to print closing slips');
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(`
+      ${htmlContent}
+      <script>
+        function doPrint() {
+          window.focus();
+          window.print();
+        }
+        if (document.readyState === 'complete') {
+          setTimeout(doPrint, 250);
+        } else {
+          window.addEventListener('load', function() {
+            setTimeout(doPrint, 250);
+          });
+        }
+      </script>
+    `);
+    printWindow.document.close();
+  };
 
   const handlePrintSlip = () => {
     const paperWidth = settingsForm?.printer_paper_width || '80mm';
@@ -121,29 +147,12 @@ export default function DayClosingModal({
     });
 
     if (typeof onSilentPrint === 'function') {
-      onSilentPrint(htmlContent).catch(() => {
+      onSilentPrint(htmlContent, null, 'day_closing').catch(() => {
         fallbackPrintWindow(htmlContent);
       });
     } else {
       fallbackPrintWindow(htmlContent);
     }
-  };
-
-  const fallbackPrintWindow = (htmlContent) => {
-    const printWindow = window.open('', '_blank', 'width=420,height=600');
-    if (!printWindow) {
-      alert('Please allow popups to print closing slips');
-      return;
-    }
-    printWindow.document.open();
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      try {
-        printWindow.print();
-      } catch (_) {}
-    }, 300);
   };
 
   const handleSendWhatsApp = () => {

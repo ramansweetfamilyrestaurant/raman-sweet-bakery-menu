@@ -354,7 +354,7 @@ export function buildDayClosingSlipHtml({
     : '';
 
   const discStatus = discrepancy === 0
-    ? 'MATCHED (₹0.00)'
+    ? `MATCHED (${formatMoney(0)})`
     : (discrepancy > 0 ? `+${formatMoney(discrepancy)} OVER` : `${formatMoney(discrepancy)} SHORT`);
 
   return `
@@ -384,7 +384,7 @@ export function buildDayClosingSlipHtml({
         </style>
       </head>
       <body>
-        <div class="center bold" style="font-size: ${fontSizeHeader};">${restaurant.name || 'RAMAN SWEET & BAKERY'}</div>
+        <div class="center bold" style="font-size: ${fontSizeHeader};">${(restaurant.name || 'RAMAN SWEET & BAKERY').toUpperCase()}</div>
         <div class="center bold" style="margin: 2px 0;">DAY CLOSING REPORT</div>
         <div class="center" style="font-size: 0.85em;">Date: ${closingData.date || new Date().toISOString().slice(0, 10)} | ${shiftName}</div>
         ${restaurant.phone ? `<div class="center" style="font-size: 0.8em;">Tel: ${restaurant.phone}</div>` : ''}
@@ -494,7 +494,7 @@ export function buildDayClosingWhatsAppMessage({
   msg += `----------------------------------\n`;
   msg += `💰 Actual Cash in Drawer: *${formatMoney(actualCash)}*\n`;
   if (discrepancy === 0) {
-    msg += `✅ Discrepancy: *MATCHED (₹0.00)*\n`;
+    msg += `✅ Discrepancy: *MATCHED (${formatMoney(0)})*\n`;
   } else if (discrepancy > 0) {
     msg += `⚠️ Discrepancy: *+${formatMoney(discrepancy)} (EXCESS)*\n`;
   } else {
