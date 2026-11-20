@@ -205,7 +205,10 @@ export function formatOrderLocation(order = {}, restaurantInfo = {}) {
     return `Takeaway • Token #${order.counter_token}`;
   }
   if (order.order_type === 'takeaway') {
-    return 'Takeaway';
+    return 'Takeaway / Parcel';
+  }
+  if (order.order_type === 'delivery' || /^delivery/i.test(order.table_number || '')) {
+    return 'Home Delivery';
   }
   const raw = String(order.table_number || order.delivery_location || '').trim();
   const spaceType = String(order.space_type || '').toLowerCase();
@@ -240,7 +243,11 @@ export function formatOrderLocation(order = {}, restaurantInfo = {}) {
   }
 
   if (/^(takeaway|parcel|pickup)/i.test(raw)) {
-    return 'Takeaway';
+    return 'Takeaway / Parcel';
+  }
+
+  if (/^delivery/i.test(raw)) {
+    return 'Home Delivery';
   }
 
   if (!raw) return 'Table 1';
@@ -429,6 +436,27 @@ export function buildDayClosingSlipHtml({
           </div>
         ` : ''}
 
+        <div class="divider"></div>
+        <div class="bold" style="margin-bottom: 2px;">SALES BY CHANNEL:</div>
+        <div class="row">
+          <span>• 🍽️ Dine-In (${closingData.dine_in_orders || 0}):</span>
+          <span>${formatMoney(closingData.dine_in_sales || 0)}</span>
+        </div>
+        <div class="row">
+          <span>• 📦 Takeaway (${closingData.takeaway_orders || 0}):</span>
+          <span>${formatMoney(closingData.takeaway_sales || 0)}</span>
+        </div>
+        ${((closingData.delivery_orders || 0) > 0 || (closingData.delivery_sales || 0) > 0) ? `
+        <div class="row">
+          <span>• 🛵 Delivery (${closingData.delivery_orders || 0}):</span>
+          <span>${formatMoney(closingData.delivery_sales || 0)}</span>
+        </div>` : ''}
+        ${((closingData.room_orders || 0) > 0 || (closingData.room_sales || 0) > 0) ? `
+        <div class="row">
+          <span>• 🏨 Room Service (${closingData.room_orders || 0}):</span>
+          <span>${formatMoney(closingData.room_sales || 0)}</span>
+        </div>` : ''}
+
         ${topItemsHtml}
 
         <div class="double-divider"></div>
@@ -490,6 +518,15 @@ export function buildDayClosingWhatsAppMessage({
   }
   if (closingData.tax_amount > 0) {
     msg += `🧾 GST Tax (Incl): ${formatMoney(closingData.tax_amount)}\n`;
+  }
+  msg += `----------------------------------\n`;
+  msg += `🍽️ Dine-In Sales: *${formatMoney(closingData.dine_in_sales || 0)}* (${closingData.dine_in_orders || 0} orders)\n`;
+  msg += `📦 Takeaway / Parcel: *${formatMoney(closingData.takeaway_sales || 0)}* (${closingData.takeaway_orders || 0} orders)\n`;
+  if ((closingData.delivery_orders || 0) > 0 || (closingData.delivery_sales || 0) > 0) {
+    msg += `🛵 Delivery Sales: *${formatMoney(closingData.delivery_sales || 0)}* (${closingData.delivery_orders || 0} orders)\n`;
+  }
+  if ((closingData.room_orders || 0) > 0 || (closingData.room_sales || 0) > 0) {
+    msg += `🏨 Room Service: *${formatMoney(closingData.room_sales || 0)}* (${closingData.room_orders || 0} orders)\n`;
   }
   msg += `----------------------------------\n`;
   msg += `💰 Actual Cash in Drawer: *${formatMoney(actualCash)}*\n`;

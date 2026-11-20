@@ -5316,7 +5316,7 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
 
     // 2. Fetch all valid orders
     const orders = await query(`
-      SELECT id, total_amount, status, payment_method, is_settled, items, created_at, table_number
+      SELECT id, total_amount, status, payment_method, is_settled, items, created_at, table_number, order_type, token_number, token_display
       FROM orders
       WHERE restaurant_id = $1 AND status NOT IN ('cancelled', 'rejected')
       ORDER BY id ASC
@@ -5334,11 +5334,40 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
     let cardSales = 0;
     let otherSales = 0;
 
+    let dineInOrders = 0;
+    let dineInSales = 0;
+    let takeawayOrders = 0;
+    let takeawaySales = 0;
+    let deliveryOrders = 0;
+    let deliverySales = 0;
+    let roomOrders = 0;
+    let roomSales = 0;
+
     const dishTally = new Map();
 
     todayOrders.forEach(o => {
       const amt = Number(o.total_amount) || 0;
       grossSales += amt;
+
+      const rawTable = String(o.table_number || '').trim().toLowerCase();
+      const oType = String(o.order_type || '').toLowerCase();
+      const isDelivery = oType === 'delivery' || /^delivery/i.test(rawTable);
+      const isTakeaway = oType === 'takeaway' || /^(takeaway|parcel|pickup|counter)/i.test(rawTable) || Boolean(o.token_number || o.token_display);
+      const isRoom = oType === 'room' || /^room/i.test(rawTable);
+
+      if (isDelivery) {
+        deliveryOrders++;
+        deliverySales += amt;
+      } else if (isTakeaway) {
+        takeawayOrders++;
+        takeawaySales += amt;
+      } else if (isRoom) {
+        roomOrders++;
+        roomSales += amt;
+      } else {
+        dineInOrders++;
+        dineInSales += amt;
+      }
 
       const method = String(o.payment_method || '').toLowerCase().trim();
       if (method === 'cash') {
@@ -5413,7 +5442,15 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
         other_sales: Math.round(otherSales * 100) / 100,
         tax_amount: taxAmount,
         top_items: topItems,
-        currency_symbol: resto.currency_symbol || '₹'
+        currency_symbol: resto.currency_symbol || '₹',
+        dine_in_orders: dineInOrders,
+        dine_in_sales: Math.round(dineInSales * 100) / 100,
+        takeaway_orders: takeawayOrders,
+        takeaway_sales: Math.round(takeawaySales * 100) / 100,
+        delivery_orders: deliveryOrders,
+        delivery_sales: Math.round(deliverySales * 100) / 100,
+        room_orders: roomOrders,
+        room_sales: Math.round(roomSales * 100) / 100
       },
       latest_closing: latestClosing
     });
@@ -5458,7 +5495,7 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
     const resto = restoRows[0] || {};
 
     const orders = await query(`
-      SELECT id, total_amount, status, payment_method, items, created_at
+      SELECT id, total_amount, status, payment_method, items, created_at, table_number, order_type, token_number, token_display
       FROM orders
       WHERE restaurant_id = $1 AND status NOT IN ('cancelled', 'rejected')
     `, [targetId]);
@@ -5470,11 +5507,42 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
     let upiSales = 0;
     let cardSales = 0;
     let otherSales = 0;
+
+    let dineInOrders = 0;
+    let dineInSales = 0;
+    let takeawayOrders = 0;
+    let takeawaySales = 0;
+    let deliveryOrders = 0;
+    let deliverySales = 0;
+    let roomOrders = 0;
+    let roomSales = 0;
+
     const dishTally = new Map();
 
     matchingOrders.forEach(o => {
       const amt = Number(o.total_amount) || 0;
       grossSales += amt;
+
+      const rawTable = String(o.table_number || '').trim().toLowerCase();
+      const oType = String(o.order_type || '').toLowerCase();
+      const isDelivery = oType === 'delivery' || /^delivery/i.test(rawTable);
+      const isTakeaway = oType === 'takeaway' || /^(takeaway|parcel|pickup|counter)/i.test(rawTable) || Boolean(o.token_number || o.token_display);
+      const isRoom = oType === 'room' || /^room/i.test(rawTable);
+
+      if (isDelivery) {
+        deliveryOrders++;
+        deliverySales += amt;
+      } else if (isTakeaway) {
+        takeawayOrders++;
+        takeawaySales += amt;
+      } else if (isRoom) {
+        roomOrders++;
+        roomSales += amt;
+      } else {
+        dineInOrders++;
+        dineInSales += amt;
+      }
+
       const method = String(o.payment_method || '').toLowerCase().trim();
       if (method === 'cash') cashSales += amt;
       else if (method === 'upi' || method === 'qr') upiSales += amt;
@@ -5514,9 +5582,11 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
         restaurant_id, closing_date, shift_name, closed_by,
         total_orders, gross_sales, cash_sales, upi_sales, card_sales, other_sales,
         tax_amount, discount_amount, actual_cash_counted, cash_discrepancy,
+        dine_in_sales, dine_in_orders, takeaway_sales, takeaway_orders,
+        delivery_sales, delivery_orders, room_sales, room_orders,
         notes, top_items_json
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
       ) RETURNING *
     `, [
       targetId,
@@ -5533,6 +5603,14 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
       0,
       countedCash,
       cashDiscrepancy,
+      Math.round(dineInSales * 100) / 100,
+      dineInOrders,
+      Math.round(takeawaySales * 100) / 100,
+      takeawayOrders,
+      Math.round(deliverySales * 100) / 100,
+      deliveryOrders,
+      Math.round(roomSales * 100) / 100,
+      roomOrders,
       notes || '',
       JSON.stringify(topItems)
     ]);

@@ -26,6 +26,12 @@ const mockClosingData = {
   card_sales: 500.00,
   other_sales: 0.00,
   tax_amount: 878.00,
+  dine_in_orders: 28,
+  dine_in_sales: 11200.00,
+  takeaway_orders: 16,
+  takeaway_sales: 6250.00,
+  delivery_orders: 4,
+  delivery_sales: 1000.00,
   currency_symbol: '₹',
   top_items: [
     { name: 'Samosa', quantity: 60, revenue: 1200 },
@@ -55,6 +61,7 @@ assert.ok(slipMatchedHtml.includes('MATCHED (₹0.00)'), 'Should show matched st
 assert.ok(slipMatchedHtml.includes('Samosa'), 'Should include top items');
 assert.ok(slipMatchedHtml.includes('Cashier Amit'), 'Should include cashier attribution');
 assert.ok(slipMatchedHtml.includes('80mm auto'), 'Should format for 80mm roll width');
+assert.ok(slipMatchedHtml.includes('Dine-In') && slipMatchedHtml.includes('Takeaway'), 'Thermal slip should show service channel breakdown');
 
 // Test 2: 58mm width & Cash shortage discrepancy
 const slipShortHtml = buildDayClosingSlipHtml({
@@ -96,6 +103,7 @@ assert.ok(waMsg.includes('💵 Cash Collected: *₹9200.00*') || waMsg.includes(
 assert.ok(waMsg.includes('📲 UPI / QR Pay  : *₹8750.00*') || waMsg.includes('8750'), 'WhatsApp message should contain UPI sales');
 assert.ok(waMsg.includes('✅ Discrepancy: *MATCHED (₹0.00)*'), 'WhatsApp message should indicate cash match');
 assert.ok(waMsg.includes('👤 Shift Closed By: *Cashier Amit*'), 'WhatsApp message should state cashier name');
+assert.ok(waMsg.includes('Dine-In Sales') && waMsg.includes('Takeaway / Parcel'), 'WhatsApp message should include service channels');
 
 console.log('✅ WhatsApp Closing Message Generation Passed.');
 
@@ -105,24 +113,40 @@ console.log('✅ WhatsApp Closing Message Generation Passed.');
 console.log('Testing: Backend Day Closing Calculation Logic...');
 
 const mockOrders = [
-  { id: 1, total_amount: '500.00', status: 'completed', payment_method: 'cash', items: '[{"name":"Kaju Katli","quantity":1,"price":500}]', created_at: '2026-11-20T10:00:00Z' },
-  { id: 2, total_amount: '350.00', status: 'completed', payment_method: 'upi', items: '[{"name":"Rasgulla","quantity":2,"price":175}]', created_at: '2026-11-20T11:30:00Z' },
-  { id: 3, total_amount: '150.00', status: 'completed', payment_method: 'cash', items: '[{"name":"Samosa","quantity":5,"price":30}]', created_at: '2026-11-20T13:00:00Z' },
-  { id: 4, total_amount: '200.00', status: 'cancelled', payment_method: 'cash', items: '[{"name":"Pastry","quantity":2,"price":100}]', created_at: '2026-11-20T14:00:00Z' }, // Cancelled should be excluded
-  { id: 5, total_amount: '800.00', status: 'completed', payment_method: 'card', items: '[{"name":"Dry Fruit Box","quantity":1,"price":800}]', created_at: '2026-11-20T16:00:00Z' },
-  { id: 6, total_amount: '400.00', status: 'completed', payment_method: 'upi', items: '[{"name":"Rasgulla","quantity":2,"price":200}]', created_at: '2026-11-19T10:00:00Z' } // Yesterday should be excluded
+  { id: 1, total_amount: '500.00', status: 'completed', payment_method: 'cash', order_type: 'dine_in', table_number: 'Table 1', items: '[{"name":"Kaju Katli","quantity":1,"price":500}]', created_at: '2026-11-20T10:00:00Z' },
+  { id: 2, total_amount: '350.00', status: 'completed', payment_method: 'upi', order_type: 'takeaway', table_number: 'Takeaway', items: '[{"name":"Rasgulla","quantity":2,"price":175}]', created_at: '2026-11-20T11:30:00Z' },
+  { id: 3, total_amount: '150.00', status: 'completed', payment_method: 'cash', order_type: 'dine_in', table_number: 'Table 2', items: '[{"name":"Samosa","quantity":5,"price":30}]', created_at: '2026-11-20T13:00:00Z' },
+  { id: 4, total_amount: '200.00', status: 'cancelled', payment_method: 'cash', order_type: 'takeaway', table_number: 'Takeaway', items: '[{"name":"Pastry","quantity":2,"price":100}]', created_at: '2026-11-20T14:00:00Z' }, // Cancelled should be excluded
+  { id: 5, total_amount: '800.00', status: 'completed', payment_method: 'card', order_type: 'delivery', table_number: 'Delivery', items: '[{"name":"Dry Fruit Box","quantity":1,"price":800}]', created_at: '2026-11-20T16:00:00Z' },
+  { id: 6, total_amount: '400.00', status: 'completed', payment_method: 'upi', order_type: 'dine_in', table_number: 'Table 1', items: '[{"name":"Rasgulla","quantity":2,"price":200}]', created_at: '2026-11-19T10:00:00Z' } // Yesterday should be excluded
 ];
 
 const targetDate = '2026-11-20';
 const activeOrders = mockOrders.filter(o => o.status !== 'cancelled' && o.status !== 'rejected' && o.created_at.startsWith(targetDate));
 
 let gross = 0, cash = 0, upi = 0, card = 0;
+let dineInSales = 0, dineInOrders = 0;
+let takeawaySales = 0, takeawayOrders = 0;
+let deliverySales = 0, deliveryOrders = 0;
+
 activeOrders.forEach(o => {
   const amt = Number(o.total_amount);
   gross += amt;
   if (o.payment_method === 'cash') cash += amt;
   else if (o.payment_method === 'upi') upi += amt;
   else if (o.payment_method === 'card') card += amt;
+
+  const oType = String(o.order_type || '').toLowerCase();
+  if (oType === 'takeaway') {
+    takeawaySales += amt;
+    takeawayOrders++;
+  } else if (oType === 'delivery') {
+    deliverySales += amt;
+    deliveryOrders++;
+  } else {
+    dineInSales += amt;
+    dineInOrders++;
+  }
 });
 
 assert.equal(activeOrders.length, 4, 'Should include exactly 4 active orders for target date');
@@ -130,6 +154,13 @@ assert.equal(gross, 1800, 'Gross sales should be 500+350+150+800 = 1800');
 assert.equal(cash, 650, 'Cash sales should be 500+150 = 650');
 assert.equal(upi, 350, 'UPI sales should be 350');
 assert.equal(card, 800, 'Card sales should be 800');
+
+assert.equal(dineInOrders, 2, 'Dine-in orders should be 2');
+assert.equal(dineInSales, 650, 'Dine-in sales should be 500 + 150 = 650');
+assert.equal(takeawayOrders, 1, 'Takeaway orders should be 1');
+assert.equal(takeawaySales, 350, 'Takeaway sales should be 350');
+assert.equal(deliveryOrders, 1, 'Delivery orders should be 1');
+assert.equal(deliverySales, 800, 'Delivery sales should be 800');
 
 // Discrepancy calculation test
 const countedExact = 650;

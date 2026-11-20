@@ -438,6 +438,14 @@ async function createTables(options = {}) {
         discount_amount DECIMAL(10, 2) DEFAULT 0.00,
         actual_cash_counted DECIMAL(10, 2) DEFAULT 0.00,
         cash_discrepancy DECIMAL(10, 2) DEFAULT 0.00,
+        dine_in_sales DECIMAL(10, 2) DEFAULT 0.00,
+        dine_in_orders INT DEFAULT 0,
+        takeaway_sales DECIMAL(10, 2) DEFAULT 0.00,
+        takeaway_orders INT DEFAULT 0,
+        delivery_sales DECIMAL(10, 2) DEFAULT 0.00,
+        delivery_orders INT DEFAULT 0,
+        room_sales DECIMAL(10, 2) DEFAULT 0.00,
+        room_orders INT DEFAULT 0,
         notes TEXT,
         top_items_json TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -911,6 +919,14 @@ async function createTables(options = {}) {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_display VARCHAR(50) DEFAULT NULL;`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_idemp ON orders (restaurant_id, idempotency_key);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash);`,
+      `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS dine_in_sales DECIMAL(10, 2) DEFAULT 0.00;`,
+      `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS dine_in_orders INT DEFAULT 0;`,
+      `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS takeaway_sales DECIMAL(10, 2) DEFAULT 0.00;`,
+      `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS takeaway_orders INT DEFAULT 0;`,
+      `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS delivery_sales DECIMAL(10, 2) DEFAULT 0.00;`,
+      `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS delivery_orders INT DEFAULT 0;`,
+      `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS room_sales DECIMAL(10, 2) DEFAULT 0.00;`,
+      `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS room_orders INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 0;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_id VARCHAR(100) DEFAULT NULL;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(150) DEFAULT NULL;`,
@@ -1359,6 +1375,14 @@ async function createTables(options = {}) {
         discount_amount REAL DEFAULT 0,
         actual_cash_counted REAL DEFAULT 0,
         cash_discrepancy REAL DEFAULT 0,
+        dine_in_sales REAL DEFAULT 0,
+        dine_in_orders INTEGER DEFAULT 0,
+        takeaway_sales REAL DEFAULT 0,
+        takeaway_orders INTEGER DEFAULT 0,
+        delivery_sales REAL DEFAULT 0,
+        delivery_orders INTEGER DEFAULT 0,
+        room_sales REAL DEFAULT 0,
+        room_orders INTEGER DEFAULT 0,
         notes TEXT,
         top_items_json TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -1753,6 +1777,16 @@ async function createTables(options = {}) {
       if (!srvCols.some(c => c.name === 'space_type')) {
         sqliteDb.exec("ALTER TABLE service_requests ADD COLUMN space_type TEXT DEFAULT 'table'");
       }
+
+      const closingCols = sqliteDb.pragma("table_info(day_closings)");
+      if (!closingCols.some(c => c.name === 'dine_in_sales')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN dine_in_sales REAL DEFAULT 0");
+      if (!closingCols.some(c => c.name === 'dine_in_orders')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN dine_in_orders INTEGER DEFAULT 0");
+      if (!closingCols.some(c => c.name === 'takeaway_sales')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN takeaway_sales REAL DEFAULT 0");
+      if (!closingCols.some(c => c.name === 'takeaway_orders')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN takeaway_orders INTEGER DEFAULT 0");
+      if (!closingCols.some(c => c.name === 'delivery_sales')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN delivery_sales REAL DEFAULT 0");
+      if (!closingCols.some(c => c.name === 'delivery_orders')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN delivery_orders INTEGER DEFAULT 0");
+      if (!closingCols.some(c => c.name === 'room_sales')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN room_sales REAL DEFAULT 0");
+      if (!closingCols.some(c => c.name === 'room_orders')) sqliteDb.exec("ALTER TABLE day_closings ADD COLUMN room_orders INTEGER DEFAULT 0");
 
       // Step 3.21 Thermal Printer System SQLite Fallback
       if (!restoCols.some(c => c.name === 'printer_mode')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN printer_mode TEXT DEFAULT 'single'");

@@ -93,7 +93,15 @@ export default function DayClosingModal({
     card_sales: 0,
     other_sales: 0,
     tax_amount: 0,
-    top_items: []
+    top_items: [],
+    dine_in_orders: 0,
+    dine_in_sales: 0,
+    takeaway_orders: 0,
+    takeaway_sales: 0,
+    delivery_orders: 0,
+    delivery_sales: 0,
+    room_orders: 0,
+    room_sales: 0
   };
 
   const expectedCash = Number(summary.cash_sales) || 0;
@@ -420,6 +428,59 @@ export default function DayClosingModal({
                       <div style={{ fontSize: '0.72rem', color: '#059669', marginTop: '4px', fontWeight: 700 }}>
                         {restaurantInfo?.gst_enabled ? '5% Food GST Included' : 'GST Disabled (0%)'}
                       </div>
+                    </div>
+                  </div>
+
+                  {/* SALES BY SERVICE CHANNEL (Dine-In, Takeaway / Parcel, Delivery) */}
+                  <div style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '14px',
+                    padding: '14px'
+                  }}>
+                    <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#334155', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Sales by Service Channel
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+                      <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                          🍽️ Dine-In ({summary.dine_in_orders || 0})
+                        </div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
+                          {currency}{(summary.dine_in_sales || 0).toFixed(2)}
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                          📦 Takeaway ({summary.takeaway_orders || 0})
+                        </div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
+                          {currency}{(summary.takeaway_sales || 0).toFixed(2)}
+                        </div>
+                      </div>
+
+                      {((summary.delivery_orders || 0) > 0 || (summary.delivery_sales || 0) > 0) && (
+                        <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                            🛵 Delivery ({summary.delivery_orders || 0})
+                          </div>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#2563EB', marginTop: '2px' }}>
+                            {currency}{(summary.delivery_sales || 0).toFixed(2)}
+                          </div>
+                        </div>
+                      )}
+
+                      {((summary.room_orders || 0) > 0 || (summary.room_sales || 0) > 0) && (
+                        <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
+                            🏨 Room Srv ({summary.room_orders || 0})
+                          </div>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#7C3AED', marginTop: '2px' }}>
+                            {currency}{(summary.room_sales || 0).toFixed(2)}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

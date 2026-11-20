@@ -144,7 +144,7 @@ export default function OrdersView({
 
   const handleRejectOrder = (order) => {
     if (!order) return;
-    const loc = formatCleanTableLabel(order.table_number, order.space_type) || `Order #${order.id}`;
+    const loc = formatCleanTableLabel(order.table_number, order.space_type, order.token_display, order) || `Order #${order.id}`;
     const isKitchen = order.status === 'kitchen' || order.status === 'preparing' || order.status === 'accepted';
     const actionWord = isKitchen ? 'CANCEL' : 'REJECT';
     const confirmed = window.confirm(`Are you sure you want to ${actionWord} Order #${order.id} (${loc})?`);
@@ -177,9 +177,13 @@ export default function OrdersView({
     if (!order) return { space_type: 'table', space_number: '' };
     const raw = String(order.table_number || '').trim();
     const expType = order.space_type ? String(order.space_type).toLowerCase() : null;
+    const orderType = order.order_type ? String(order.order_type).toLowerCase() : null;
 
-    if (raw.toLowerCase() === 'counter' || expType === 'counter') {
+    if (raw.toLowerCase() === 'counter' || expType === 'counter' || orderType === 'takeaway' || /^(takeaway|parcel|pickup)/i.test(raw) || order.token_display || order.token_number) {
       return { space_type: 'counter', space_number: 'COUNTER' };
+    }
+    if (orderType === 'delivery' || /^delivery/i.test(raw)) {
+      return { space_type: 'delivery', space_number: 'DELIVERY' };
     }
     if (/^cabin\s*#?\s*(\d+)/i.test(raw)) {
       const m = raw.match(/^cabin\s*#?\s*(\d+)/i);
@@ -441,13 +445,19 @@ export default function OrdersView({
     }
   };
 
-  const formatCleanTableLabel = (raw, spaceType, tokenDisplay = null) => {
+  const formatCleanTableLabel = (raw, spaceType, tokenDisplay = null, order = null) => {
     if (tokenDisplay) return `⚡ Takeaway • #${tokenDisplay}`;
+    const orderType = order?.order_type ? String(order.order_type).toLowerCase() : null;
+    if (orderType === 'takeaway') return '⚡ Takeaway / Parcel';
+    if (orderType === 'delivery') return '🛵 Home Delivery';
     if (!raw) return isCinema ? 'Screen 1 • Seat 1' : isHotel ? 'Room 101' : 'Table 1';
     const str = String(raw).trim();
     
     if (spaceType === 'counter' || str.toLowerCase() === 'counter' || str.toLowerCase() === 'counter:counter') {
       return '⚡ Takeaway Counter';
+    }
+    if (/^delivery/i.test(str)) {
+      return '🛵 Home Delivery';
     }
     if (isCinema) {
       return `🎬 ${str.toLowerCase().startsWith('screen') ? str : `Screen 1 • Seat ${str}`}`;
@@ -462,7 +472,7 @@ export default function OrdersView({
       return `👑 ${str.toUpperCase()}`;
     }
     if (/^(takeaway|parcel|pickup)/i.test(str)) {
-      return `🛍️ ${str}`;
+      return `⚡ ${str}`;
     }
     return `🍽️ ${str.toLowerCase().startsWith('table') ? str : `Table ${str}`}`;
   };
@@ -1076,7 +1086,7 @@ export default function OrdersView({
                 {filteredOrders.map(order => {
                   const items = safeParseItems(order.items);
                   const spaceInfo = parseOrderSpaceLocation(order);
-                  const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type, order.token_display);
+                  const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type, order.token_display, order);
                   const isDone = isOrderCompleted(order);
                   const statusInfo = getStatusBadge(order);
                   const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
@@ -1418,7 +1428,7 @@ export default function OrdersView({
             {filteredOrders.map(order => {
               const items = safeParseItems(order.items);
               const spaceInfo = parseOrderSpaceLocation(order);
-              const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type, order.token_display);
+              const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type, order.token_display, order);
               const isDone = isOrderCompleted(order);
               const statusInfo = getStatusBadge(order);
               const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
@@ -2404,7 +2414,7 @@ export default function OrdersView({
                   Order #{selectedOrder.id}
                 </h3>
                 <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                  {new Date(selectedOrder.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} • {formatCleanTableLabel(selectedOrder.table_number, selectedOrder.space_type, selectedOrder.token_display)}
+                  {new Date(selectedOrder.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} • {formatCleanTableLabel(selectedOrder.table_number, selectedOrder.space_type, selectedOrder.token_display, selectedOrder)}
                 </span>
               </div>
               <button
