@@ -203,6 +203,37 @@ async function runTestSuite() {
       assert.strictEqual(data.token_number, null);
     });
 
+    // TEST 6: POS order with combo item
+    await testAsync('6. POS order supports combos and correctly aggregates into settled order with TK-03', async () => {
+      const payload = {
+        order_type: 'takeaway',
+        payment_method: 'cash',
+        items: [
+          { id: 'combo_1', name: '[Combo] Deluxe Thali Feast', price: 350, quantity: 2, variant: 'combo' }
+        ]
+      };
+
+      const res = await fetch(`${baseUrl}/api/admin/pos-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.strictEqual(data.token_number, 3);
+      assert.strictEqual(data.token_display, 'TK-03');
+      // Subtotal 700 + 5% GST (35) = 735
+      assert.strictEqual(Number(data.order.subtotal_amount), 700);
+      assert.strictEqual(Number(data.order.tax_amount), 35);
+      assert.strictEqual(Number(data.order.grand_total_amount), 735);
+      assert.strictEqual(data.order.is_settled, 1);
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

@@ -58,42 +58,60 @@ export default function PosBillingView({
   const totalTables = Math.max(1, Number(settingsForm?.total_tables ?? restaurantInfo?.total_tables ?? 20));
   const tablesList = useMemo(() => Array.from({ length: totalTables }, (_, i) => String(i + 1)), [totalTables]);
 
-  // Keyboard shortcut: Ctrl+K or / to focus search
+  // Keyboard shortcut: Ctrl+K or / to focus search, Esc to close modal
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey && e.key === 'k') || (e.key === '/' && document.activeElement !== searchInputRef.current)) {
         e.preventDefault();
         searchInputRef.current?.focus();
+      } else if (e.key === 'Escape') {
+        setSuccessOrder(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Filter dishes
+  // Filter dishes & combos
   const filteredDishes = useMemo(() => {
-    return (Array.isArray(dishes) ? dishes : []).filter(dish => {
-      if (!dish || dish.is_active === 0 || dish.available === 0 || dish.available === false) {
-        // Still allow admin to add unavailable items if they want, but prioritize available
-      }
-      if (selectedCategory !== 'all' && String(dish.category_id) !== String(selectedCategory)) {
-        return false;
-      }
-      if (dietFilter === 'veg' && dish.food_type !== 'veg' && dish.food_type !== 'pure_veg') {
-        return false;
-      }
-      if (dietFilter === 'nonveg' && dish.food_type !== 'non_veg' && dish.food_type !== 'nonveg') {
-        return false;
-      }
-      if (search.trim()) {
-        const q = search.toLowerCase().trim();
-        const nameMatch = (dish.name || '').toLowerCase().includes(q);
-        const descMatch = (dish.description || '').toLowerCase().includes(q);
-        return nameMatch || descMatch;
-      }
-      return true;
-    });
-  }, [dishes, selectedCategory, dietFilter, search]);
+    const list = [];
+    if (selectedCategory !== 'combos') {
+      (Array.isArray(dishes) ? dishes : []).forEach(dish => {
+        if (!dish) return;
+        if (selectedCategory !== 'all' && String(dish.category_id) !== String(selectedCategory)) return;
+        if (dietFilter === 'veg' && dish.food_type !== 'veg' && dish.food_type !== 'pure_veg') return;
+        if (dietFilter === 'nonveg' && dish.food_type !== 'non_veg' && dish.food_type !== 'nonveg') return;
+        if (search.trim()) {
+          const q = search.toLowerCase().trim();
+          const nameMatch = (dish.name || '').toLowerCase().includes(q);
+          const descMatch = (dish.description || '').toLowerCase().includes(q);
+          if (!nameMatch && !descMatch) return;
+        }
+        list.push(dish);
+      });
+    }
+
+    if (selectedCategory === 'all' || selectedCategory === 'combos') {
+      (Array.isArray(combos) ? combos : []).forEach(combo => {
+        if (!combo) return;
+        if (dietFilter === 'veg' && combo.food_type !== 'veg' && combo.food_type !== 'pure_veg') return;
+        if (dietFilter === 'nonveg' && combo.food_type !== 'non_veg' && combo.food_type !== 'nonveg') return;
+        if (search.trim()) {
+          const q = search.toLowerCase().trim();
+          const nameMatch = (combo.name || '').toLowerCase().includes(q);
+          const descMatch = (combo.description || '').toLowerCase().includes(q);
+          if (!nameMatch && !descMatch) return;
+        }
+        list.push({
+          ...combo,
+          id: `combo_${combo.id}`,
+          isCombo: true,
+          price: combo.price
+        });
+      });
+    }
+    return list;
+  }, [dishes, combos, selectedCategory, dietFilter, search]);
 
   // Cart operations
   const addToCart = (dish, variant = 'full') => {
@@ -197,7 +215,7 @@ export default function PosBillingView({
     try {
       const itemsPayload = cart.map(it => ({
         dish_id: it.dish.id,
-        name: it.selectedVariant === 'half' ? `${it.dish.name} (Half)` : it.dish.name,
+        name: it.selectedVariant === 'half' ? `${it.dish.name} (Half)` : (it.dish.isCombo ? `[Combo] ${it.dish.name}` : it.dish.name),
         price: it.price,
         quantity: it.quantity,
         variant: it.selectedVariant
@@ -541,6 +559,26 @@ export default function PosBillingView({
                 {cat.name}
               </button>
             ))}
+            {Array.isArray(combos) && combos.length > 0 && (
+              <button
+                onClick={() => setSelectedCategory('combos')}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid',
+                  borderColor: selectedCategory === 'combos' ? '#059669' : '#CBD5E1',
+                  background: selectedCategory === 'combos' ? '#059669' : '#FFFFFF',
+                  color: selectedCategory === 'combos' ? '#FFFFFF' : '#334155',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+              >
+                🎁 Combos ({combos.length})
+              </button>
+            )}
           </div>
 
           {/* Dishes Grid */}
@@ -601,11 +639,15 @@ export default function PosBillingView({
                             backgroundColor: dish.food_type === 'non_veg' || dish.food_type === 'nonveg' ? '#DC2626' : '#16A34A'
                           }} />
                         </span>
-                        {dish.available === 0 && (
+                        {dish.isCombo ? (
+                          <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                            🎁 COMBO
+                          </span>
+                        ) : (dish.available === 0 && (
                           <span style={{ fontSize: '0.62rem', background: '#FEE2E2', color: '#B91C1C', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
                             Low Stock
                           </span>
-                        )}
+                        ))}
                       </div>
 
                       {/* Image Preview if available */}
@@ -961,6 +1003,11 @@ export default function PosBillingView({
                           Half
                         </span>
                       )}
+                      {item.dish.isCombo && (
+                        <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                          Combo
+                        </span>
+                      )}
                       <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
                         {currencySymbol}{item.price} each
                       </span>
@@ -1243,28 +1290,53 @@ export default function PosBillingView({
 
             {/* Print and Next Customer Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
-                onClick={() => {
-                  if (onPrintBill) onPrintBill(successOrder.order, successOrder.order.payment_method?.toUpperCase());
-                }}
-                style={{
-                  padding: '10px',
-                  borderRadius: '10px',
-                  border: '1px solid #CBD5E1',
-                  background: '#F8FAFC',
-                  color: '#334155',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
-              >
-                <Printer size={15} />
-                <span>Re-Print Customer Bill</span>
-              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    if (onPrintBill) onPrintBill(successOrder.order, successOrder.order.payment_method?.toUpperCase());
+                  }}
+                  style={{
+                    padding: '10px 8px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#F8FAFC',
+                    color: '#334155',
+                    fontSize: '0.80rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Printer size={15} />
+                  <span>Print Bill</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (onPrintKot) onPrintKot(successOrder.order);
+                  }}
+                  style={{
+                    padding: '10px 8px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#F8FAFC',
+                    color: '#334155',
+                    fontSize: '0.80rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <ChefHat size={15} />
+                  <span>Print KOT</span>
+                </button>
+              </div>
 
               <button
                 onClick={() => setSuccessOrder(null)}
@@ -1279,7 +1351,7 @@ export default function PosBillingView({
                   cursor: 'pointer'
                 }}
               >
-                + Next Customer (Ready)
+                + Next Customer (Esc)
               </button>
             </div>
           </div>

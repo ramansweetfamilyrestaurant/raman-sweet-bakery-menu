@@ -1006,6 +1006,9 @@ export default function AdminDashboard({
       }
       text += "================================" + "\n";
       text += `Bill No: INV-${order.id}\n`;
+      if (order.token_display || order.token_number) {
+        text += `*** TOKEN: ${order.token_display || order.token_number} [TAKEAWAY] ***\n`;
+      }
       text += `Date: ${new Date(order.created_at || Date.now()).toLocaleString('en-IN')}\n`;
       text += `Customer: ${order.customer_name || (order.order_type === 'counter' ? 'Counter Guest' : 'Valued Guest')}\n`;
       if (paymentMode) {
@@ -1400,6 +1403,10 @@ export default function AdminDashboard({
               <strong>${paymentMode === 'CHECK_SLIP' ? 'TABLE CHECK SLIP' : `INVOICE #${order.id}`}</strong>
               <span class="badge" style="${paymentMode === 'CHECK_SLIP' ? 'background:#7E22CE;' : ''}">${paymentMode === 'CHECK_SLIP' ? 'UNSETTLED SLIP' : paymentMode}</span>
             </div>
+            ${(order.token_display || order.token_number)
+              ? `<div style="text-align:center;font-size:20px;font-weight:900;border:2px dashed #000;padding:6px;margin:8px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;">TOKEN ${order.token_display || order.token_number}</div>`
+              : ''
+            }
             <div><strong>Location / Space:</strong> ${resolvedSpace}</div>
             <div><strong>Date:</strong> ${formatDateTimeString(order.created_at)}</div>
             <div><strong>Customer:</strong> ${order.customer_name ? `${order.customer_name} (${resolvedSpace})` : resolvedSpace}</div>
