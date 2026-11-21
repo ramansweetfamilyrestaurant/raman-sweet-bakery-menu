@@ -208,85 +208,132 @@ export default function PresenceVerificationModal({
 
     let hasCompleted = false;
 
-    // Outer 5-second watchdog timer (prevents long freezes on mobile)
+    // Outer 12-second watchdog timer (gives users ample time to grant permission & GPS satellite lock)
     gpsWatchdogRef.current = setTimeout(() => {
       if (!hasCompleted && isMountedRef.current) {
         hasCompleted = true;
         isAcquiringGpsRef.current = false;
         setViewState('GPS_FAILED');
-        setErrorMessage('Getting your GPS signal timed out. Please ensure Location is enabled in browser settings or use Staff Verification.');
+        setErrorMessage('Getting your GPS signal timed out. Please tap retry or use Staff Verification below.');
       }
-    }, 5000);
+    }, 12000);
 
-    const geoOptions = {
-      enableHighAccuracy: true,
-      timeout: 4500,
-      maximumAge: 60000
+    const verifyPositionWithServer = async (pos) => {
+      try {
+        const custLat = pos.coords.latitude;
+        const custLng = pos.coords.longitude;
+        const custAcc = Math.round(pos.coords.accuracy || 999);
+        setAccuracyVal(custAcc);
+
+        const slug = restaurantInfo?.slug || '';
+        const verifyRes = await verifyCustomerLocationApi({
+          slug,
+          table_number: tableNumber || '1',
+          space_type: spaceType || 'table',
+          table_token: cleanToken,
+          latitude: custLat,
+          longitude: custLng,
+          accuracy: custAcc
+        });
+
+        if (!isMountedRef.current) return false;
+
+        if (verifyRes && verifyRes.verified && verifyRes.presence_token) {
+          setDistanceVal(verifyRes.distance_meters);
+          setViewState('VERIFIED');
+          isAcquiringGpsRef.current = false;
+
+          setTimeout(() => {
+            if (isMountedRef.current && onVerified) {
+              onVerified(verifyRes.presence_token, verifyRes.method || 'GPS');
+            }
+          }, 600);
+          return true;
+        } else {
+          return { outside: true, message: verifyRes?.message || 'Location verification was outside the premises boundary.' };
+        }
+      } catch (err) {
+        return { error: true, message: err.message || 'Could not verify location with server.' };
+      }
     };
 
+    // TIER 1: Fast Immediate Network/Cached Fix (enableHighAccuracy: false, 3.5s timeout, 2m cached age)
+    const tier1Options = {
+      enableHighAccuracy: false,
+      timeout: 3500,
+      maximumAge: 120000
+    };
+
+    // TIER 2: High Accuracy Satellite Fix (enableHighAccuracy: true, 8s timeout)
+    const tier2Options = {
+      enableHighAccuracy: true,
+      timeout: 8000,
+      maximumAge: 0
+    };
+
+    const tryTier2HighAccuracy = () => {
+      if (hasCompleted || !isMountedRef.current) return;
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          if (hasCompleted || !isMountedRef.current) return;
+          hasCompleted = true;
+          if (gpsWatchdogRef.current) clearTimeout(gpsWatchdogRef.current);
+
+          const result = await verifyPositionWithServer(pos);
+          if (result === true) return;
+          if (!isMountedRef.current) return;
+
+          isAcquiringGpsRef.current = false;
+          setViewState('GPS_FAILED');
+          setErrorMessage(typeof result === 'object' && result?.message ? result.message : 'Location verification failed.');
+        },
+        (err) => {
+          if (hasCompleted || !isMountedRef.current) return;
+          hasCompleted = true;
+          if (gpsWatchdogRef.current) clearTimeout(gpsWatchdogRef.current);
+          isAcquiringGpsRef.current = false;
+          setViewState('GPS_FAILED');
+
+          if (err.code === 1) {
+            setErrorMessage('Location permission was denied. Please tap the 🔒 lock icon in your browser URL bar to allow Location, or use Staff Verification.');
+          } else if (err.code === 2) {
+            setErrorMessage('Location unavailable. Please ensure device GPS is turned on, or use Staff Verification.');
+          } else {
+            setErrorMessage('GPS signal timed out indoors. Please tap retry or use Staff Verification below.');
+          }
+        },
+        tier2Options
+      );
+    };
+
+    // Step 1: Fire Tier 1 Fast Fix first (resolves in ~200ms on most devices)
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         if (hasCompleted || !isMountedRef.current) return;
-        hasCompleted = true;
-        if (gpsWatchdogRef.current) clearTimeout(gpsWatchdogRef.current);
-
-        try {
-          const custLat = pos.coords.latitude;
-          const custLng = pos.coords.longitude;
-          const custAcc = Math.round(pos.coords.accuracy || 999);
-          setAccuracyVal(custAcc);
-
-          const slug = restaurantInfo?.slug || '';
-          const verifyRes = await verifyCustomerLocationApi({
-            slug,
-            table_number: tableNumber || '1',
-            space_type: spaceType || 'table',
-            table_token: cleanToken,
-            latitude: custLat,
-            longitude: custLng,
-            accuracy: custAcc
-          });
-
-          if (!isMountedRef.current) return;
-
-          if (verifyRes && verifyRes.verified && verifyRes.presence_token) {
-            setDistanceVal(verifyRes.distance_meters);
-            setViewState('VERIFIED');
-            isAcquiringGpsRef.current = false;
-
-            setTimeout(() => {
-              if (isMountedRef.current && onVerified) {
-                onVerified(verifyRes.presence_token, verifyRes.method || 'GPS');
-              }
-            }, 600);
-          } else {
-            isAcquiringGpsRef.current = false;
-            setViewState('GPS_FAILED');
-            setErrorMessage(verifyRes?.message || 'Location verification was outside the premises boundary.');
-          }
-        } catch (err) {
-          if (!isMountedRef.current) return;
-          isAcquiringGpsRef.current = false;
-          setViewState('GPS_FAILED');
-          setErrorMessage(err.message || 'Could not verify location with server.');
+        const result = await verifyPositionWithServer(pos);
+        if (result === true) {
+          hasCompleted = true;
+          if (gpsWatchdogRef.current) clearTimeout(gpsWatchdogRef.current);
+          return;
         }
+        // If outside radius with network accuracy, try Tier 2 for satellite precision
+        tryTier2HighAccuracy();
       },
       (err) => {
         if (hasCompleted || !isMountedRef.current) return;
-        hasCompleted = true;
-        if (gpsWatchdogRef.current) clearTimeout(gpsWatchdogRef.current);
-        isAcquiringGpsRef.current = false;
-        setViewState('GPS_FAILED');
-
         if (err.code === 1) {
-          setErrorMessage('Location permission was denied. Please allow location access in your browser bar or use Staff Verification.');
-        } else if (err.code === 2) {
-          setErrorMessage('Location unavailable. Please ensure device GPS is turned on.');
-        } else {
-          setErrorMessage('Location request timed out. Please tap retry or ask staff for verification.');
+          // Explicit permission denied by user - fail immediately and guide to browser lock icon
+          hasCompleted = true;
+          if (gpsWatchdogRef.current) clearTimeout(gpsWatchdogRef.current);
+          isAcquiringGpsRef.current = false;
+          setViewState('GPS_FAILED');
+          setErrorMessage('Location permission was denied. Please tap the 🔒 lock icon in your browser URL bar to allow Location, or use Staff Verification.');
+          return;
         }
+        // If timeout or unavailable in Tier 1, escalate immediately to Tier 2
+        tryTier2HighAccuracy();
       },
-      geoOptions
+      tier1Options
     );
   };
 

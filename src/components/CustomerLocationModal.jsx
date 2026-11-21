@@ -102,21 +102,27 @@ export default function CustomerLocationModal({
 
     let hasTerminated = false;
 
-    // Guaranteed outer watchdog timeout (10 seconds total)
+    // Guaranteed outer watchdog timeout (12 seconds total)
     watchdogTimerRef.current = setTimeout(() => {
       if (!hasTerminated) {
         hasTerminated = true;
         isAcquiringRef.current = false;
-        console.log('[LOCATION_FLOW] geolocation_timeout', { timeoutMs: 10000 });
+        console.log('[LOCATION_FLOW] geolocation_timeout', { timeoutMs: 12000 });
         setStatus('location_timeout');
         setErrorMsg('Getting your GPS signal took too long. Please ensure Location is turned on and tap retry.');
       }
-    }, 10000);
+    }, 12000);
 
-    const geoOptions = {
+    const tier1Options = {
+      enableHighAccuracy: false,
+      timeout: 3500,
+      maximumAge: 120000
+    };
+
+    const tier2Options = {
       enableHighAccuracy: true,
       timeout: 8000,
-      maximumAge: 30000
+      maximumAge: 0
     };
 
     const processPosition = async (pos) => {
@@ -261,14 +267,33 @@ export default function CustomerLocationModal({
       }
     };
 
+    const tryTier2HighAccuracy = () => {
+      if (hasTerminated) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          processPosition(pos);
+        },
+        (err) => {
+          handleGpsFailure(err);
+        },
+        tier2Options
+      );
+    };
+
+    // Tier 1 Fast Fix first
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         processPosition(pos);
       },
       (err) => {
-        handleGpsFailure(err);
+        if (hasTerminated) return;
+        if (err.code === 1) {
+          handleGpsFailure(err);
+          return;
+        }
+        tryTier2HighAccuracy();
       },
-      geoOptions
+      tier1Options
     );
   };
 
