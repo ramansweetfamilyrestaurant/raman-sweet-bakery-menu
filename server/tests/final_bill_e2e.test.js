@@ -365,7 +365,7 @@ describe('Final Bill Comprehensive E2E Test Suite', () => {
       items: JSON.stringify([{ name: 'Kaju Katli (500g)', price: 450, quantity: 1 }])
     };
     const takeawayLoc = formatOrderLocation(takeawayOrder, dummyResto);
-    assert.ok(takeawayLoc.includes('Token #A12'), 'Formats Takeaway token properly');
+    assert.ok(takeawayLoc.includes('Token A12'), 'Formats Takeaway token properly');
 
     // Hotel Room order
     const hotelOrder = {

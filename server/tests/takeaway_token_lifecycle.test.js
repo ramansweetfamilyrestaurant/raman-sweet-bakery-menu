@@ -145,7 +145,7 @@ async function runTestSuite() {
     });
 
     // --- TEST 2: Hybrid Order (Table 1 with order_type: 'takeaway') ---
-    await testAsync('2. Table Order with order_type="takeaway": Generates Token #TK-01', async () => {
+    await testAsync('2. Table Order with order_type="takeaway": Generates Token TK-01', async () => {
       const res = await fetch(`${baseUrl}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,7 +177,7 @@ async function runTestSuite() {
     });
 
     // --- TEST 3: Counter QR Order ---
-    await testAsync('3. Counter QR Order: Automatically generates sequential Token #TK-02', async () => {
+    await testAsync('3. Counter QR Order: Automatically generates sequential Token TK-02', async () => {
       const res = await fetch(`${baseUrl}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -209,7 +209,7 @@ async function runTestSuite() {
     });
 
     // --- TEST 4: Second Counter QR Order ---
-    await testAsync('4. Second Counter QR Order: Generates sequential Token #TK-03', async () => {
+    await testAsync('4. Second Counter QR Order: Generates sequential Token TK-03', async () => {
       const res = await fetch(`${baseUrl}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

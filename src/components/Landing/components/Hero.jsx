@@ -45,7 +45,7 @@ export default function Hero({ trialDays = 16, onStartTrial, onLiveDemo }) {
       id: 'counter',
       tabLabel: '🧁 Bakery / Sweets',
       badge: 'COUNTER TAKEAWAY',
-      spaceLabel: 'Takeaway Counter • Token #45',
+      spaceLabel: 'Takeaway Counter • Token 45',
       items: 'Kaju Katli (500g) x1, Belgian Pastry x2',
       status: 'Ready at Counter',
       customerTitle: 'Royal Sweets & Confectionery',
