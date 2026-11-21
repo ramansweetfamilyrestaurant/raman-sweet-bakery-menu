@@ -3942,9 +3942,9 @@ export default function App() {
 
                 {cartItems.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
-                    {!isAddon && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {isCinemaVenue ? (
+                    {/* 🛎️ Service Mode / Dining Choice (Available in both Initial & Add-on Rounds) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {isCinemaVenue ? (
                           <div style={{
                             background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(14, 165, 233, 0.18) 100%)',
                             border: '1.5px solid #0284C7',
@@ -4071,8 +4071,12 @@ export default function App() {
                             )}
                           </>
                         )}
+                      </div>
 
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                      {/* Customer Information (Table, Name, Mobile) - Locked for Add-on Rounds */}
+                      {!isAddon && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px' }}>
                           <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
                               {(() => {
@@ -4252,7 +4256,9 @@ export default function App() {
                           {placingOrder
                             ? 'Placing Order...'
                             : isAddon
-                              ? `⚡ Confirm & Place Round ${nextRound} Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
+                              ? (orderTypeChoice === 'takeaway'
+                                  ? `📦 Place Round ${nextRound} Parcel Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
+                                  : `⚡ Confirm & Place Round ${nextRound} Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`)
                               : (() => {
                                   const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
                                   const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
