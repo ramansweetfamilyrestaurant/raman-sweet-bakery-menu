@@ -610,11 +610,12 @@ export async function createDirectOrder(orderData, idempotencyKey = null) {
 }
 
 export async function createAdminPosOrder(token, orderData) {
+  const authToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('touchqr_admin_token') || localStorage.getItem('token') || localStorage.getItem('touchqr_superadmin_token')) : null);
   const res = await fetch(`${API_BASE}/admin/pos-order`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${authToken}`
     },
     body: JSON.stringify(orderData)
   });

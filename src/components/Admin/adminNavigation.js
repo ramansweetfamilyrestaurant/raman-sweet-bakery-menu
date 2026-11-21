@@ -48,7 +48,7 @@ export const ADMIN_NAVIGATION_ITEMS = Object.freeze([
     icon: Receipt,
     showInDesktopSidebar: true,
     showInMobileDrawer: true,
-    showInBottomNav: false,
+    showInBottomNav: true,
     highlight: true,
     matchTabs: ['pos']
   },

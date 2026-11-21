@@ -116,8 +116,8 @@ export default function PosBillingView({
   // Cart operations
   const addToCart = (dish, variant = 'full') => {
     setCart(prev => {
-      const price = variant === 'half' && dish.price_half ? Number(dish.price_half) : Number(dish.price);
-      const existingIdx = prev.findIndex(item => item.dish.id === dish.id && item.selectedVariant === variant);
+      const price = variant === 'half' && dish.price_half ? (Number(dish.price_half) || 0) : (Number(dish.price) || 0);
+      const existingIdx = prev.findIndex(item => String(item.dish.id) === String(dish.id) && item.selectedVariant === variant);
       if (existingIdx >= 0) {
         const next = [...prev];
         next[existingIdx] = {
@@ -141,7 +141,7 @@ export default function PosBillingView({
   const updateQuantity = (dishId, variant, delta) => {
     setCart(prev => {
       return prev.map(item => {
-        if (item.dish.id === dishId && item.selectedVariant === variant) {
+        if (String(item.dish.id) === String(dishId) && item.selectedVariant === variant) {
           const newQty = item.quantity + delta;
           return newQty > 0 ? { ...item, quantity: newQty } : null;
         }
@@ -151,7 +151,7 @@ export default function PosBillingView({
   };
 
   const removeFromCart = (dishId, variant) => {
-    setCart(prev => prev.filter(item => !(item.dish.id === dishId && item.selectedVariant === variant)));
+    setCart(prev => prev.filter(item => !(String(item.dish.id) === String(dishId) && item.selectedVariant === variant)));
   };
 
   const clearCart = () => {
@@ -599,8 +599,8 @@ export default function PosBillingView({
               </div>
             ) : (
               filteredDishes.map(dish => {
-                const fullItemInCart = cart.find(it => it.dish.id === dish.id && it.selectedVariant === 'full');
-                const halfItemInCart = cart.find(it => it.dish.id === dish.id && it.selectedVariant === 'half');
+                const fullItemInCart = cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'full');
+                const halfItemInCart = cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'half');
                 const hasHalfPrice = Boolean(dish.price_half && Number(dish.price_half) > 0);
                 const hasImage = Boolean(dish.image);
 
