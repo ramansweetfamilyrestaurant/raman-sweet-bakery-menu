@@ -182,7 +182,13 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
     service_model: actualResto?.service_model || 'dine_in',
 
     // Features (Option B: constrained to the granted plan tier)
-    direct_ordering_enabled: isBasic ? false : isBoolTrue(perms?.direct_ordering_enabled ?? actualResto?.direct_ordering_enabled, isUnlimitedPlan),
+    direct_ordering_enabled: (() => {
+      const explicitFlag = actualResto?.direct_ordering_enabled ?? actualSettings?.direct_ordering_enabled;
+      if (explicitFlag !== undefined && explicitFlag !== null) {
+        return isBoolTrue(explicitFlag);
+      }
+      return isBasic && !isComplimentary ? false : isBoolTrue(perms?.direct_ordering_enabled, isUnlimitedPlan);
+    })(),
     whatsapp_ordering_enabled: isBoolTrue(actualResto?.whatsapp_ordering_enabled ?? perms?.whatsapp_ordering_enabled, !isBasic),
     kds_enabled: isBasic ? false : isBoolTrue(actualResto?.kds_enabled ?? perms?.kds_enabled, isUnlimitedPlan),
     bluetooth_kot_enabled: isBasic ? false : isBoolTrue(actualResto?.bluetooth_kot_enabled ?? perms?.bluetooth_kot_enabled, isUnlimitedPlan),

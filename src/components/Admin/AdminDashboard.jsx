@@ -3115,7 +3115,20 @@ export default function AdminDashboard({
 
   const tenantCaps = resolveTenantCapabilities(restaurantInfo, settingsForm, subscriptionStatus);
   const isAnalyticsEnabled = true;
-  const isDirectOrderingEnabled = tenantCaps.direct_ordering_enabled;
+  const hasLiveOrders = Array.isArray(orders) && orders.length > 0;
+  const isDirectOrderingRestoActive = (
+    restaurantInfo?.direct_ordering_enabled === 1 ||
+    restaurantInfo?.direct_ordering_enabled === true ||
+    restaurantInfo?.direct_ordering_enabled === '1' ||
+    settingsForm?.direct_ordering_enabled === 1 ||
+    settingsForm?.direct_ordering_enabled === true ||
+    settingsForm?.direct_ordering_enabled === '1'
+  );
+  const isDirectOrderingEnabled = Boolean(
+    tenantCaps.direct_ordering_enabled ||
+    isDirectOrderingRestoActive ||
+    hasLiveOrders
+  );
 
   return (
     <div className="adm-app-shell-root" style={{ minHeight: '100vh', background: '#F8FAFC', margin: 0, padding: 0 }}>

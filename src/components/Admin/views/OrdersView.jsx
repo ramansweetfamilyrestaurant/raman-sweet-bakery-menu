@@ -589,16 +589,17 @@ export default function OrdersView({
     }
   };
 
-  // If online ordering is locked completely
-  if (!ordersEnabled) {
+  // Only show plan locked screen if ordering is genuinely disabled AND there are no live/incoming orders or service requests to manage
+  const hasIncomingActivity = validOrders.length > 0 || safeServiceRequests.length > 0;
+  if (!ordersEnabled && !hasIncomingActivity) {
     return (
       <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
         <PlanLockedCard
           featureKey="direct_ordering_enabled"
-          featureName="Live Orders Operations"
-          featureDescription="Real-time guest QR ordering, kitchen display, and digital POS management."
-          requiredPlanName="Basic Plan or Higher"
-          onUpgradeClick={() => onNavigateToSetup && onNavigateToSetup('subscription')}
+          title="Live Orders Operations"
+          description="Real-time guest QR ordering, kitchen display, and digital POS management."
+          minTier="Basic Plan or Higher"
+          onUpgrade={() => onNavigateToSetup && onNavigateToSetup('subscription')}
         />
       </div>
     );
@@ -2400,10 +2401,10 @@ export default function OrdersView({
         <div style={{ padding: '24px 16px', maxWidth: '800px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <PlanLockedCard
             featureKey="kds_enabled"
-            featureName={isCinema ? "Concession & Seat Dispatch Display (KDS)" : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? "Dispatch & Order Display (KDS)" : "Kitchen Display System (KDS)"}
-            featureDescription={isCinema ? "Dedicated concession terminal with real-time seat dispatch management, ticking timers, PIN security, and loud audio chimes." : "Dedicated chef terminal with real-time kitchen ticket management, ticking timers, PIN security, and loud audio chimes."}
-            requiredPlanName="Pro Plan or Higher"
-            onUpgradeClick={() => onNavigateToSetup && onNavigateToSetup('subscription')}
+            title={isCinema ? "Concession & Seat Dispatch Display (KDS)" : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz) ? "Dispatch & Order Display (KDS)" : "Kitchen Display System (KDS)"}
+            description={isCinema ? "Dedicated concession terminal with real-time seat dispatch management, ticking timers, PIN security, and loud audio chimes." : "Dedicated chef terminal with real-time kitchen ticket management, ticking timers, PIN security, and loud audio chimes."}
+            minTier="Pro Plan or Higher"
+            onUpgrade={() => onNavigateToSetup && onNavigateToSetup('subscription')}
           />
         </div>
       )}

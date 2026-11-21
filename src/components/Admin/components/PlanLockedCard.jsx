@@ -10,15 +10,20 @@ import { FEATURE_METADATA } from '../../../utils/planCapabilities';
 export default function PlanLockedCard({
   featureKey,
   title,
+  featureName,
   description,
+  featureDescription,
   minTier,
+  requiredPlanName,
   onUpgrade,
+  onUpgradeClick,
   compact = false
 }) {
   const meta = FEATURE_METADATA[featureKey] || {};
-  const featureTitle = title || meta.name || 'Premium Feature';
-  const featureDesc = description || meta.benefit || 'This feature is not included in your current plan tier.';
-  const requiredPlan = minTier || meta.minTier || 'Pro';
+  const featureTitle = title || featureName || meta.name || 'Premium Feature';
+  const featureDesc = description || featureDescription || meta.benefit || 'This feature is not included in your current plan tier.';
+  const requiredPlan = minTier || requiredPlanName || meta.minTier || 'Pro';
+  const handleUpgrade = onUpgrade || onUpgradeClick;
 
   if (compact) {
     return (
@@ -58,9 +63,9 @@ export default function PlanLockedCard({
           </div>
         </div>
 
-        {onUpgrade && (
+        {handleUpgrade && (
           <button
-            onClick={onUpgrade}
+            onClick={handleUpgrade}
             style={{
               padding: '7px 14px',
               borderRadius: '10px',
@@ -135,10 +140,10 @@ export default function PlanLockedCard({
         <span>⭐ Included in {requiredPlan} Plan & above</span>
       </div>
 
-      {onUpgrade && (
+      {handleUpgrade && (
         <div>
           <button
-            onClick={onUpgrade}
+            onClick={handleUpgrade}
             style={{
               padding: '12px 24px',
               borderRadius: '12px',
