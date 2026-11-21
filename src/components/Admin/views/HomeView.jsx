@@ -72,25 +72,43 @@ const getRelativeTime = (dateVal) => {
 };
 
 const formatLocation = (raw, spaceType, tokenDisplay = null) => {
-  if (tokenDisplay) return `Takeaway • Token ${tokenDisplay}`;
-  if (!raw) return 'Takeaway';
-  const str = String(raw).trim();
-  const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
-                 str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
-  if (cMatch) return `Screen ${cMatch[1]} Row ${cMatch[2].toUpperCase()} Seat ${cMatch[3]}`;
-  if (spaceType === 'counter' || str.toLowerCase() === 'counter' || str.toLowerCase() === 'counter:counter' || /^counter/i.test(str)) {
+  const str = String(raw || '').trim();
+  const isPureCounter = 
+    spaceType === 'counter' || 
+    str.toLowerCase() === 'counter' || 
+    str.toLowerCase() === 'counter:counter' || 
+    /^counter/i.test(str) || 
+    /^(takeaway|parcel)$/i.test(str) || 
+    (!str && tokenDisplay);
+
+  if (isPureCounter) {
+    if (tokenDisplay) return `Takeaway • Token ${tokenDisplay}`;
     const cleanNum = str.replace(/^counter\s*#?/i, '').trim();
     return cleanNum && cleanNum.toUpperCase() !== 'COUNTER' ? `Counter ${cleanNum}` : 'Billing Counter';
   }
+  if (!raw) return 'Takeaway';
+
+  const cMatch = str.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
+                 str.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
+  if (cMatch) return `Screen ${cMatch[1]} Row ${cMatch[2].toUpperCase()} Seat ${cMatch[3]}`;
   if (spaceType === 'cinema_seat' || spaceType === 'cinema' || /^seat/i.test(str)) {
     return str.toLowerCase().startsWith('screen') ? str : `Seat ${str.replace(/^seat\s*#?/i, '')}`;
   }
-  if (spaceType === 'room' || /^room/i.test(str)) return `Room ${str.replace(/^room\s*#?/i, '')}`;
-  if (spaceType === 'cabin' || /^cabin/i.test(str)) return `Cabin ${str.replace(/^cabin\s*#?/i, '')}`;
-  if (spaceType === 'vip' || /^vip/i.test(str)) return `VIP ${str.replace(/^vip\s*#?/i, '')}`;
-  if (/^(takeaway|parcel)/i.test(str)) return 'Takeaway';
-  if (/^table/i.test(str)) return str;
-  return `Table ${str}`;
+  if (spaceType === 'room' || /^room/i.test(str)) {
+    const rLabel = `Room ${str.replace(/^room\s*#?/i, '')}`;
+    return tokenDisplay ? `${rLabel} • Token ${tokenDisplay}` : rLabel;
+  }
+  if (spaceType === 'cabin' || /^cabin/i.test(str)) {
+    const cLabel = `Cabin ${str.replace(/^cabin\s*#?/i, '')}`;
+    return tokenDisplay ? `${cLabel} • Token ${tokenDisplay}` : cLabel;
+  }
+  if (spaceType === 'vip' || /^vip/i.test(str)) {
+    const vLabel = `VIP ${str.replace(/^vip\s*#?/i, '')}`;
+    return tokenDisplay ? `${vLabel} • Token ${tokenDisplay}` : vLabel;
+  }
+
+  const tLabel = str.toLowerCase().startsWith('table') ? str : `Table ${str}`;
+  return tokenDisplay ? `${tLabel} • Token ${tokenDisplay}` : tLabel;
 };
 
 export default function HomeView({

@@ -2585,9 +2585,13 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         let sessionId = null;
         let roundNumber = 1;
         let parentOrderId = null;
-        let customerName = String(customer_name || (isTakeawayOrder ? `Takeaway Guest (${tokenDisplay})` : (resolvedSpaceType === 'counter' ? 'Counter Customer' : 'Dine-In Customer'))).trim().substring(0, 100);
+        const isPureCounterOrder = resolvedSpaceType === 'counter' || String(cleanTable).toUpperCase() === 'COUNTER';
+        let defaultCustomerName = isPureCounterOrder
+          ? (tokenDisplay ? `Takeaway Guest (${tokenDisplay})` : 'Counter Customer')
+          : (isTakeawayOrder && tokenDisplay ? `Table Customer (${tokenDisplay})` : 'Dine-In Customer');
+        let customerName = String(customer_name || defaultCustomerName).trim().substring(0, 100);
         let customerPhone = String(customer_phone || '').trim().substring(0, 30);
-        const isAddonOrder = !isTakeawayOrder && resolvedSpaceType !== 'counter' && openOrders.length > 0;
+        const isAddonOrder = !isPureCounterOrder && openOrders.length > 0;
 
         if (isAddonOrder) {
           const primaryOrder = openOrders[0];
@@ -2605,7 +2609,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             } catch (e) {}
           }
         } else {
-          sessionId = (isTakeawayOrder || resolvedSpaceType === 'counter')
+          sessionId = isPureCounterOrder
             ? `sess_${targetId}_counter_${crypto.randomBytes(12).toString('hex')}`
             : `sess_${targetId}_${cleanTable}_${Date.now()}`;
           roundNumber = 1;

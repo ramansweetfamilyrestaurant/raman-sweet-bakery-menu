@@ -179,12 +179,22 @@ export default function OrdersView({
     const expType = order.space_type ? String(order.space_type).toLowerCase() : null;
     const orderType = order.order_type ? String(order.order_type).toLowerCase() : null;
 
-    if (raw.toLowerCase() === 'counter' || expType === 'counter' || orderType === 'takeaway' || /^(takeaway|parcel|pickup)/i.test(raw) || order.token_display || order.token_number) {
-      return { space_type: 'counter', space_number: 'COUNTER' };
-    }
     if (orderType === 'delivery' || /^delivery/i.test(raw)) {
       return { space_type: 'delivery', space_number: 'DELIVERY' };
     }
+
+    // Pure Counter check (Standee scan or explicit counter space without table number)
+    const isPureCounter = 
+      raw.toLowerCase() === 'counter' || 
+      raw.toLowerCase() === 'counter:counter' || 
+      expType === 'counter' || 
+      /^(takeaway|parcel|pickup)$/i.test(raw) || 
+      (!raw && (orderType === 'takeaway' || order.token_display || order.token_number));
+
+    if (isPureCounter) {
+      return { space_type: 'counter', space_number: 'COUNTER' };
+    }
+
     if (/^cabin\s*#?\s*(\d+)/i.test(raw)) {
       const m = raw.match(/^cabin\s*#?\s*(\d+)/i);
       return { space_type: 'cabin', space_number: String(m[1]) };
@@ -202,12 +212,29 @@ export default function OrdersView({
       return { space_type: 'table', space_number: String(m[1]) };
     }
 
+    // Cinema seat format (e.g. Screen 1 - Row A - Seat 5, or S1-A-5)
+    const cMatch = raw.match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
+    if (cMatch) {
+      const screen = cMatch[1] || cMatch[4];
+      const row = (cMatch[2] || cMatch[5]).toUpperCase();
+      const seat = cMatch[3] || cMatch[6];
+      return { space_type: 'cinema_seat', space_number: `S${screen}-${row}-${seat}` };
+    }
+
     if (expType === 'cabin' || expType === 'vip' || expType === 'room' || expType === 'table') {
       const numOnly = raw.replace(/\D/g, '') || raw;
       return { space_type: expType, space_number: String(numOnly) };
     }
 
     const numOnly = raw.replace(/\D/g, '') || raw;
+    if (numOnly) {
+      return { space_type: isHotel ? 'room' : 'table', space_number: String(numOnly) };
+    }
+
+    if (orderType === 'takeaway' || order.token_display || order.token_number) {
+      return { space_type: 'counter', space_number: 'COUNTER' };
+    }
+
     return { space_type: isHotel ? 'room' : 'table', space_number: String(numOnly) };
   };
 
@@ -446,35 +473,44 @@ export default function OrdersView({
   };
 
   const formatCleanTableLabel = (raw, spaceType, tokenDisplay = null, order = null) => {
-    if (tokenDisplay) return `⚡ Takeaway • Token ${tokenDisplay}`;
     const orderType = order?.order_type ? String(order.order_type).toLowerCase() : null;
-    if (orderType === 'takeaway') return '⚡ Takeaway / Parcel';
     if (orderType === 'delivery') return '🛵 Home Delivery';
-    if (!raw) return isCinema ? 'Screen 1 • Seat 1' : isHotel ? 'Room 101' : 'Table 1';
-    const str = String(raw).trim();
-    
-    if (spaceType === 'counter' || str.toLowerCase() === 'counter' || str.toLowerCase() === 'counter:counter') {
+
+    const str = String(raw || '').trim();
+    const isPureCounter = 
+      spaceType === 'counter' || 
+      str.toLowerCase() === 'counter' || 
+      str.toLowerCase() === 'counter:counter' || 
+      /^(takeaway|parcel|pickup)$/i.test(str) || 
+      (!str && (tokenDisplay || orderType === 'takeaway'));
+
+    if (isPureCounter) {
+      if (tokenDisplay) return `⚡ Takeaway • Token ${tokenDisplay}`;
       return '⚡ Takeaway Counter';
     }
-    if (/^delivery/i.test(str)) {
-      return '🛵 Home Delivery';
-    }
+
+    if (!str) return isCinema ? 'Screen 1 • Seat 1' : isHotel ? 'Room 101' : 'Table 1';
+
+    let spaceLabel = '';
     if (isCinema) {
-      return `🎬 ${str.toLowerCase().startsWith('screen') ? str : `Screen 1 • Seat ${str}`}`;
+      spaceLabel = `🎬 ${str.toLowerCase().startsWith('screen') ? str : `Screen 1 • Seat ${str}`}`;
+    } else if (spaceType === 'room' || isHotel || /^room\s*#?\d+/i.test(str)) {
+      spaceLabel = `🏨 ${str.toLowerCase().startsWith('room') ? str : `Room ${str}`}`;
+    } else if (spaceType === 'cabin' || /^cabin\s*#?\d+/i.test(str)) {
+      spaceLabel = `🛋️ ${str.toLowerCase().startsWith('cabin') ? str : `Cabin ${str}`}`;
+    } else if (spaceType === 'vip' || /^vip\s*#?\d+/i.test(str)) {
+      spaceLabel = `👑 ${str.toUpperCase()}`;
+    } else {
+      spaceLabel = `🍽️ ${str.toLowerCase().startsWith('table') ? str : `Table ${str}`}`;
     }
-    if (spaceType === 'room' || isHotel || /^room\s*#?\d+/i.test(str)) {
-      return `🏨 ${str.toLowerCase().startsWith('room') ? str : `Room ${str}`}`;
+
+    if (tokenDisplay) {
+      return `${spaceLabel} • Token ${tokenDisplay} (Takeaway)`;
     }
-    if (spaceType === 'cabin' || /^cabin\s*#?\d+/i.test(str)) {
-      return `🛋️ ${str.toLowerCase().startsWith('cabin') ? str : `Cabin ${str}`}`;
+    if (orderType === 'takeaway') {
+      return `${spaceLabel} (Takeaway)`;
     }
-    if (spaceType === 'vip' || /^vip\s*#?\d+/i.test(str)) {
-      return `👑 ${str.toUpperCase()}`;
-    }
-    if (/^(takeaway|parcel|pickup)/i.test(str)) {
-      return `⚡ ${str}`;
-    }
-    return `🍽️ ${str.toLowerCase().startsWith('table') ? str : `Table ${str}`}`;
+    return spaceLabel;
   };
 
   const getTimeAgo = (timestamp) => {

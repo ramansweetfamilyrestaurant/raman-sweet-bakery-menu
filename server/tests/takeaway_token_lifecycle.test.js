@@ -169,11 +169,15 @@ async function runTestSuite() {
       assert.ok(data.message.includes('TK-01'));
       takeawayOrderId = data.order_id;
 
-      // Verify DB row
-      const rows = await query('SELECT order_type, token_number, token_display FROM orders WHERE id = $1', [takeawayOrderId]);
+      // Verify DB row & multi-round session linkage
+      const rows = await query('SELECT order_type, token_number, token_display, round_number, parent_order_id, session_id FROM orders WHERE id = $1', [takeawayOrderId]);
       assert.strictEqual(rows[0].order_type, 'takeaway');
       assert.strictEqual(rows[0].token_number, 1);
       assert.strictEqual(rows[0].token_display, 'TK-01');
+      assert.strictEqual(rows[0].round_number, 2, 'Table takeaway order must be linked as Round 2 of active dining session');
+      assert.strictEqual(rows[0].parent_order_id, dineInOrderId, 'Table takeaway order must link to parent order');
+      const parentRows = await query('SELECT session_id FROM orders WHERE id = $1', [dineInOrderId]);
+      assert.strictEqual(rows[0].session_id, parentRows[0].session_id, 'Table takeaway order must share same session_id as Dine-in Round 1');
     });
 
     // --- TEST 3: Counter QR Order ---
