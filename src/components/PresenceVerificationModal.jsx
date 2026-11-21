@@ -208,7 +208,7 @@ export default function PresenceVerificationModal({
 
     let hasCompleted = false;
 
-    // Outer 12-second watchdog timer (gives users ample time to grant permission & GPS satellite lock)
+    // Outer 15-second watchdog timer (gives users ample time to grant permission & GPS satellite lock)
     gpsWatchdogRef.current = setTimeout(() => {
       if (!hasCompleted && isMountedRef.current) {
         hasCompleted = true;
@@ -216,7 +216,7 @@ export default function PresenceVerificationModal({
         setViewState('GPS_FAILED');
         setErrorMessage('Getting your GPS signal timed out. Please tap retry or use Staff Verification below.');
       }
-    }, 12000);
+    }, 15000);
 
     const verifyPositionWithServer = async (pos) => {
       try {
@@ -257,17 +257,17 @@ export default function PresenceVerificationModal({
       }
     };
 
-    // TIER 1: Fast Immediate Network/Cached Fix (enableHighAccuracy: false, 3.5s timeout, 2m cached age)
+    // TIER 1: Fast Immediate Network/Cached Fix (enableHighAccuracy: false, 6s timeout, 2m cached age)
     const tier1Options = {
       enableHighAccuracy: false,
-      timeout: 3500,
+      timeout: 6000,
       maximumAge: 120000
     };
 
-    // TIER 2: High Accuracy Satellite Fix (enableHighAccuracy: true, 8s timeout)
+    // TIER 2: High Accuracy Satellite Fix (enableHighAccuracy: true, 10s timeout)
     const tier2Options = {
       enableHighAccuracy: true,
-      timeout: 8000,
+      timeout: 10000,
       maximumAge: 0
     };
 

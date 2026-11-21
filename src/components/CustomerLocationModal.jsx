@@ -102,26 +102,26 @@ export default function CustomerLocationModal({
 
     let hasTerminated = false;
 
-    // Guaranteed outer watchdog timeout (12 seconds total)
+    // Guaranteed outer watchdog timeout (15 seconds total)
     watchdogTimerRef.current = setTimeout(() => {
       if (!hasTerminated) {
         hasTerminated = true;
         isAcquiringRef.current = false;
-        console.log('[LOCATION_FLOW] geolocation_timeout', { timeoutMs: 12000 });
+        console.log('[LOCATION_FLOW] geolocation_timeout', { timeoutMs: 15000 });
         setStatus('location_timeout');
         setErrorMsg('Getting your GPS signal took too long. Please ensure Location is turned on and tap retry.');
       }
-    }, 12000);
+    }, 15000);
 
     const tier1Options = {
       enableHighAccuracy: false,
-      timeout: 3500,
+      timeout: 6000,
       maximumAge: 120000
     };
 
     const tier2Options = {
       enableHighAccuracy: true,
-      timeout: 8000,
+      timeout: 10000,
       maximumAge: 0
     };
 
