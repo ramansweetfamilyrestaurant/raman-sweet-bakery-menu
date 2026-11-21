@@ -159,7 +159,14 @@ export default function AdminSidebar({
             let boxShadow = 'none';
 
             if (isActive) {
-              if (item.id === 'dishes') {
+              if (item.id === 'pos') {
+                border = '1px solid rgba(16, 185, 129, 0.4)';
+                background = '#064E3B';
+                color = '#FFFFFF';
+                iconColor = '#34D399';
+                fontWeight = 800;
+                boxShadow = '0 2px 8px rgba(6, 78, 59, 0.4)';
+              } else if (item.id === 'dishes') {
                 border = '1px solid rgba(217, 119, 6, 0.35)';
                 background = '#3D271D';
                 color = '#FFFFFF';
@@ -206,6 +213,18 @@ export default function AdminSidebar({
                   <Icon size={17} color={iconColor} />
                   <span>{getLocalizedNavLabel(item, restaurantInfo, 'desktop')}</span>
                 </div>
+                {item.id === 'pos' && (
+                  <span style={{
+                    background: '#059669',
+                    color: '#FFFFFF',
+                    fontSize: '0.62rem',
+                    fontWeight: 900,
+                    padding: '2px 6px',
+                    borderRadius: '6px'
+                  }}>
+                    ⚡ FAST
+                  </span>
+                )}
                 {item.hasBadge && pendingOrdersCount > 0 && (
                   <span style={{
                     background: '#EA580C',

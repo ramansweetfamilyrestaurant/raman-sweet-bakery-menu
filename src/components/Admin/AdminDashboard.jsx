@@ -32,6 +32,7 @@ import SupportView from './views/SupportView';
 import OffersView from './views/OffersView';
 import CustomersView from './views/CustomersView';
 import BillingView from './views/BillingView';
+import PosBillingView from './views/PosBillingView';
 
 const safeParseItems = (rawItems) => {
   if (!rawItems) return [];
@@ -3818,6 +3819,27 @@ export default function AdminDashboard({
                   }}
                   onOpenDayClosing={() => setShowDayClosingModal(true)}
                   ordersEnabled={isDirectOrderingEnabled}
+                />
+              )}
+
+              {/* COUNTER POS BILLING VIEW */}
+              {activeTab === 'pos' && (
+                <PosBillingView
+                  dishes={safeDishes}
+                  categories={safeCategories}
+                  combos={combos}
+                  restaurantInfo={restaurantInfo}
+                  settingsForm={settingsForm}
+                  token={token}
+                  currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                  onPrintBill={(order, mode) => handlePrintCustomerBill(order, mode || 'CASH')}
+                  onPrintKot={(order) => handlePrintKOT(order)}
+                  onOrderCreated={(newOrder) => {
+                    if (newOrder) {
+                      setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
+                    }
+                  }}
+                  onNavigateToOrders={() => setActiveTab('orders')}
                 />
               )}
 

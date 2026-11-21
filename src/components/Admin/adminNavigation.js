@@ -10,7 +10,8 @@ import {
   Star,
   Bell,
   Settings,
-  MoreHorizontal
+  MoreHorizontal,
+  Receipt
 } from 'lucide-react';
 import { getBusinessTerminology } from '../../utils/businessTaxonomy';
 
@@ -39,6 +40,17 @@ export const ADMIN_NAVIGATION_ITEMS = Object.freeze([
     showInBottomNav: true,
     hasBadge: true,
     matchTabs: ['orders', 'floor-map', 'service-requests', 'kds']
+  },
+  {
+    id: 'pos',
+    label: 'Counter POS',
+    bottomNavLabel: 'POS',
+    icon: Receipt,
+    showInDesktopSidebar: true,
+    showInMobileDrawer: true,
+    showInBottomNav: false,
+    highlight: true,
+    matchTabs: ['pos']
   },
   {
     id: 'dishes',

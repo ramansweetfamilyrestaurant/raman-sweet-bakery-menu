@@ -12,7 +12,7 @@ import { isAuthoritativeComplimentaryTenant } from '../services/subscriptionStat
 import { JWT_SECRET } from '../config/jwt.js';
 import { adminLoginRateLimiter, supportTicketCreateRateLimiter, supportTicketReplyRateLimiter } from '../middleware/rateLimiters.js';
 import { generateTicketReference, validateTicketInput, validateReplyInput, VALID_CATEGORIES, VALID_PRIORITIES, VALID_STATUSES } from '../services/supportTicketService.js';
-import { clearRestoResolveCache, clearMenuBundleCache } from './api.js';
+import { clearRestoResolveCache, clearMenuBundleCache, calculateOrderTax } from './api.js';
 import { normalizeVerificationMode } from '../utils/presenceVerification.js';
 import {
   generateHmacQrToken,
@@ -2924,6 +2924,159 @@ router.post('/change-password', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Change password error:', err);
     res.status(500).json({ error: 'Failed to update password' });
+  }
+});
+
+// POST /api/admin/pos-order (Dedicated Counter POS Quick-Billing Endpoint)
+router.post('/pos-order', authenticateToken, requireActiveSubscription, async (req, res) => {
+  try {
+    const targetId = req.user?.restaurant_id;
+    if (!targetId) {
+      return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+    }
+
+    const {
+      items = [],
+      order_type = 'takeaway',
+      table_number,
+      customer_name,
+      customer_phone,
+      payment_method = 'cash',
+      notes
+    } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'invalid_items', message: 'At least one item is required for POS billing' });
+    }
+
+    // 1. Fetch restaurant info
+    const restoRows = await query('SELECT * FROM restaurants WHERE id = $1', [targetId]);
+    const rRows = restoRows.rows || restoRows;
+    if (!rRows || rRows.length === 0) {
+      return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
+    }
+    const resto = rRows[0];
+
+    const isTakeaway = String(order_type).toLowerCase() === 'takeaway' || !table_number || String(table_number).toLowerCase().includes('counter');
+    const cleanTable = isTakeaway ? 'Counter' : String(table_number).trim();
+    const effectiveOrderType = isTakeaway ? 'takeaway' : 'dine_in';
+
+    // 2. Daily Sequential Token Generation for Takeaway/Counter
+    let tokenNumber = null;
+    let tokenDisplay = null;
+    if (isTakeaway) {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayIso = todayStart.toISOString();
+
+      try {
+        const tokenQueryRes = await query(`
+          SELECT MAX(token_number) as max_token
+          FROM orders
+          WHERE restaurant_id = $1 AND created_at >= $2
+        `, [targetId, todayIso]);
+        const tRows = tokenQueryRes.rows || tokenQueryRes;
+        const maxToken = tRows && tRows[0] && tRows[0].max_token ? Number(tRows[0].max_token) : 0;
+        tokenNumber = maxToken + 1;
+        tokenDisplay = `TK-${String(tokenNumber).padStart(2, '0')}`;
+      } catch (tErr) {
+        tokenNumber = 1;
+        tokenDisplay = 'TK-01';
+      }
+    }
+
+    // 3. Format & sanitize items and compute subtotal
+    let subtotal = 0;
+    const formattedItems = items.map((it, idx) => {
+      const qty = Math.max(1, parseInt(it.quantity || 1, 10));
+      const price = Math.max(0, parseFloat(it.price || 0));
+      subtotal += (price * qty);
+      return {
+        id: it.id || it.dish_id || idx + 1,
+        name: String(it.name || 'Custom Item').trim(),
+        price,
+        quantity: qty,
+        variant: it.variant || null,
+        round: 1,
+        notes: it.notes || ''
+      };
+    });
+
+    const isEffectiveGst = Boolean(resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1');
+    const taxBreakdown = calculateOrderTax(subtotal, isEffectiveGst);
+
+    const defaultCustomerName = isTakeaway
+      ? (tokenDisplay ? `Takeaway Guest (${tokenDisplay})` : 'Counter Customer')
+      : `Table Customer (${cleanTable})`;
+    const cleanCustomerName = String(customer_name || defaultCustomerName).trim().substring(0, 100);
+    const cleanCustomerPhone = String(customer_phone || '').trim().substring(0, 30);
+    const cleanPaymentMethod = ['cash', 'upi', 'card'].includes(String(payment_method).toLowerCase()) ? String(payment_method).toLowerCase() : 'cash';
+    const cleanNotes = String(notes || '').trim().substring(0, 500);
+    const createdAt = new Date().toISOString();
+    const sessionId = isTakeaway
+      ? `sess_${targetId}_counter_${Date.now()}`
+      : `sess_${targetId}_${cleanTable}_${Date.now()}`;
+
+    // 4. Insert POS Order directly as accepted & settled
+    const insertRes = await query(`
+      INSERT INTO orders (
+        restaurant_id, table_number, customer_name, customer_phone, items,
+        total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate,
+        status, sent_to_kds, created_at, session_id, round_number, is_settled,
+        payment_method, notes, order_type, token_number, token_display
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+      RETURNING *
+    `, [
+      targetId,
+      cleanTable,
+      cleanCustomerName,
+      cleanCustomerPhone,
+      JSON.stringify(formattedItems),
+      taxBreakdown.grand_total,
+      taxBreakdown.subtotal,
+      taxBreakdown.cgst,
+      taxBreakdown.sgst,
+      taxBreakdown.tax_total,
+      taxBreakdown.grand_total,
+      taxBreakdown.gst_rate,
+      'accepted',
+      1,
+      createdAt,
+      sessionId,
+      1,
+      1,
+      cleanPaymentMethod,
+      cleanNotes,
+      effectiveOrderType,
+      tokenNumber,
+      tokenDisplay
+    ]);
+
+    const insRows = insertRes.rows || insertRes;
+    let createdOrder = (Array.isArray(insRows) && insRows.length > 0) ? insRows[0] : null;
+    if (!createdOrder) {
+      const lastId = insertRes.lastInsertRowid || insertRes.id;
+      if (lastId) {
+        const fetched = await query('SELECT * FROM orders WHERE id = $1', [lastId]);
+        const fRows = fetched.rows || fetched;
+        createdOrder = fRows[0];
+      }
+    }
+
+    if (createdOrder) {
+      createdOrder.items = formattedItems;
+    }
+
+    res.json({
+      success: true,
+      order: createdOrder,
+      token_display: tokenDisplay,
+      token_number: tokenNumber,
+      message: `🎉 Order #${createdOrder?.id || ''} created successfully! ${tokenDisplay ? `Token: ${tokenDisplay}` : ''}`
+    });
+  } catch (err) {
+    console.error('POS order creation error:', err);
+    res.status(500).json({ error: 'Failed to create POS order', message: err.message });
   }
 });
 

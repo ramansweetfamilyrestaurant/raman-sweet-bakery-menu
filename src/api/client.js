@@ -609,6 +609,18 @@ export async function createDirectOrder(orderData, idempotencyKey = null) {
   return handleResponse(res, 'Failed to place order');
 }
 
+export async function createAdminPosOrder(token, orderData) {
+  const res = await fetch(`${API_BASE}/admin/pos-order`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(orderData)
+  });
+  return handleResponse(res, 'Failed to create POS counter order');
+}
+
 export async function fetchAdminOrders(token, scope = 'live') {
   const res = await fetch(`${API_BASE}/admin/orders?scope=${scope}`, {
     headers: { Authorization: `Bearer ${token}` }

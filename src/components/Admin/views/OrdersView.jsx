@@ -782,6 +782,29 @@ export default function OrdersView({
             <span>Kitchen Display</span>
           </button>
 
+          {/* Quick Counter POS Button */}
+          <button
+            onClick={() => setActiveSubTab && setActiveSubTab('pos')}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '1.5px solid #059669',
+              background: '#ECFDF5',
+              color: '#047857',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+            title="Open Instant Counter POS & Takeaway Billing"
+          >
+            <Receipt size={15} color="#059669" />
+            <span>⚡ Counter POS</span>
+          </button>
+
           {/* Day Closing Button */}
           {onOpenDayClosing && (
             <button
