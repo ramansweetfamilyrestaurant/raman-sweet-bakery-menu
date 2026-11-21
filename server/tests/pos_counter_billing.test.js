@@ -234,6 +234,70 @@ async function runTestSuite() {
       assert.strictEqual(data.order.is_settled, 1);
     });
 
+    // TEST 7: Day Closing API correctly includes all POS counter orders
+    await testAsync('7. Day Closing API accurately aggregates POS Takeaway, Dine-In, Cash, UPI, and Card sales', async () => {
+      const res = await fetch(`${baseUrl}/api/admin/day-closing/summary`, {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.strictEqual(data.summary.total_orders, 4); // 3 takeaway + 1 dine-in
+      assert.strictEqual(data.summary.takeaway_orders, 3);
+      assert.strictEqual(data.summary.dine_in_orders, 1);
+      // Total sales = 336 (Order 1 Cash) + 126 (Order 2 UPI) + 189 (Order 3 Card) + 735 (Order 4 Cash) = 1386
+      assert.ok(data.summary.gross_sales > 1000);
+      assert.ok(data.summary.cash_sales > 0);
+      assert.ok(data.summary.upi_sales > 0);
+      assert.ok(data.summary.card_sales > 0);
+    });
+
+    // TEST 8: Full Cart and Button Simulation Flow (Dishes + Portions + Combos + UPI QR)
+    await testAsync('8. Full Cart & Button Simulation: Portion variants, Steppers, UPI payment, and Token TK-04 generation', async () => {
+      const simulatedCart = [
+        { id: 10, name: 'Paneer Tikka', price: 200, quantity: 2, variant: 'full' },
+        { id: 11, name: 'Dal Makhani (Half)', price: 90, quantity: 1, variant: 'half' },
+        { id: 'combo_1', name: '[Combo] Mini Thali', price: 110, quantity: 1, variant: 'combo' }
+      ];
+
+      // Math: (2 * 200) + (1 * 90) + (1 * 110) = 400 + 90 + 110 = 600
+      // 5% GST: 30
+      // Grand Total: 630
+
+      const payload = {
+        order_type: 'takeaway',
+        customer_name: 'Pooja Verma',
+        customer_phone: '9811223344',
+        payment_method: 'upi',
+        items: simulatedCart
+      };
+
+      const res = await fetch(`${baseUrl}/api/admin/pos-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.strictEqual(data.token_number, 4);
+      assert.strictEqual(data.token_display, 'TK-04');
+      assert.strictEqual(Number(data.order.subtotal_amount), 600);
+      assert.strictEqual(Number(data.order.cgst_amount), 15);
+      assert.strictEqual(Number(data.order.sgst_amount), 15);
+      assert.strictEqual(Number(data.order.tax_amount), 30);
+      assert.strictEqual(Number(data.order.grand_total_amount), 630);
+      assert.strictEqual(data.order.customer_name, 'Pooja Verma');
+      assert.strictEqual(data.order.customer_phone, '9811223344');
+      assert.strictEqual(data.order.payment_method, 'upi');
+      assert.strictEqual(data.order.status, 'accepted');
+      assert.strictEqual(data.order.is_settled, 1);
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

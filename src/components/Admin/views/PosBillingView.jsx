@@ -176,7 +176,9 @@ export default function PosBillingView({
     settingsForm?.gst_enabled === '1'
   );
 
-  const taxAmount = isGstEnabled ? Math.round(subtotal * 0.05 * 100) / 100 : 0;
+  const cgstAmount = isGstEnabled ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
+  const sgstAmount = isGstEnabled ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
+  const taxAmount = Math.round((cgstAmount + sgstAmount) * 100) / 100;
   const grandTotal = Math.round((subtotal + taxAmount) * 100) / 100;
 
   // Generate Dynamic UPI QR when payment method is UPI
@@ -1159,26 +1161,40 @@ export default function PosBillingView({
           </div>
 
           {/* Dynamic UPI QR Display on screen if UPI selected */}
-          {paymentMethod === 'upi' && upiQrDataUrl && (
-            <div style={{
-              background: '#F0FDF4',
-              borderRadius: '12px',
-              border: '1px solid #BBF7D0',
-              padding: '12px',
-              textAlign: 'center'
-            }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#166534', display: 'block', marginBottom: '6px' }}>
-                Customer can scan with PhonePe / GPay / Paytm:
-              </span>
-              <img
-                src={upiQrDataUrl}
-                alt="UPI Payment QR"
-                style={{ width: '130px', height: '130px', margin: '0 auto', display: 'block', borderRadius: '8px' }}
-              />
-              <span style={{ fontSize: '0.70rem', color: '#15803D', fontWeight: 700, marginTop: '4px', display: 'block' }}>
-                Amount: {currencySymbol}{grandTotal.toFixed(2)}
-              </span>
-            </div>
+          {paymentMethod === 'upi' && (
+            upiQrDataUrl ? (
+              <div style={{
+                background: '#F0FDF4',
+                borderRadius: '12px',
+                border: '1px solid #BBF7D0',
+                padding: '12px',
+                textAlign: 'center'
+              }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#166534', display: 'block', marginBottom: '6px' }}>
+                  Customer can scan with PhonePe / GPay / Paytm:
+                </span>
+                <img
+                  src={upiQrDataUrl}
+                  alt="UPI Payment QR"
+                  style={{ width: '130px', height: '130px', margin: '0 auto', display: 'block', borderRadius: '8px' }}
+                />
+                <span style={{ fontSize: '0.70rem', color: '#15803D', fontWeight: 700, marginTop: '4px', display: 'block' }}>
+                  Amount: {currencySymbol}{grandTotal.toFixed(2)}
+                </span>
+              </div>
+            ) : (
+              <div style={{
+                background: '#FEF3C7',
+                borderRadius: '12px',
+                border: '1px solid #FDE68A',
+                padding: '10px 12px',
+                fontSize: '0.74rem',
+                color: '#92400E',
+                textAlign: 'center'
+              }}>
+                UPI ID not configured in Settings. Customer can pay via external soundbox / scanner or Cash.
+              </div>
+            )
           )}
 
           {/* Big Green Action Button: Receive Payment & Print Token */}
@@ -1205,12 +1221,14 @@ export default function PosBillingView({
             {isSubmitting ? (
               <>
                 <RefreshCw size={18} className="animate-spin" />
-                <span>Printing & Creating Token...</span>
+                <span>Processing Order...</span>
               </>
             ) : (
               <>
                 <Printer size={18} />
-                <span>Pay & Print Token ({currencySymbol}{grandTotal.toFixed(2)})</span>
+                <span>
+                  {orderType === 'takeaway' ? 'Pay & Generate Token' : `Pay & Punch Table ${tableNumber}`} ({currencySymbol}{grandTotal.toFixed(2)})
+                </span>
               </>
             )}
           </button>
