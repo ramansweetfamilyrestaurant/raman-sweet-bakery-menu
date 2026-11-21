@@ -1088,19 +1088,15 @@ export default function AdminDashboard({
           }
         }
 
-        let iframe = document.getElementById('khana-silent-printer-frame');
-        if (!iframe) {
-          iframe = document.createElement('iframe');
-          iframe.id = 'khana-silent-printer-frame';
-          iframe.style.position = 'fixed';
-          iframe.style.right = '0';
-          iframe.style.bottom = '0';
-          iframe.style.width = '0px';
-          iframe.style.height = '0px';
-          iframe.style.border = '0';
-          iframe.style.visibility = 'hidden';
-          document.body.appendChild(iframe);
-        }
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0px';
+        iframe.style.height = '0px';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
 
         const iframeDoc = iframe.contentWindow || iframe.contentDocument;
         const targetDoc = iframeDoc.document || iframeDoc;
@@ -1110,14 +1106,22 @@ export default function AdminDashboard({
         targetDoc.close();
 
         let printed = false;
+        const cleanup = () => {
+          setTimeout(() => {
+            try { iframe.remove(); } catch (_) {}
+          }, 3500);
+        };
+
         const triggerPrint = () => {
           if (printed) return;
           printed = true;
           try {
             iframe.contentWindow.focus();
             iframe.contentWindow.print();
+            cleanup();
             resolve(true);
           } catch (err) {
+            cleanup();
             reject(err);
           }
         };
@@ -1184,19 +1188,19 @@ export default function AdminDashboard({
       const portionText = i.portion ? ` [${i.portion}]` : '';
       const mods = safeParseModifiers(i.modifiers);
       const modText = mods.length > 0
-        ? `<div style="font-size:12px;color:#222;font-weight:600;padding-left:28px;margin-top:2px;">👉 ${mods.map(m => m.name).join(', ')}</div>`
+        ? `<div style="font-size:11px;color:#222;font-weight:600;padding-left:14px;margin-top:2px;word-break:break-word;">👉 ${mods.map(m => m.name).join(', ')}</div>`
         : '';
       const comboText = (i.includes || i.comboIncludes)
-        ? `<div style="font-size:11px;color:#444;font-style:italic;padding-left:28px;margin-top:2px;">📦 ${i.includes || i.comboIncludes}</div>`
+        ? `<div style="font-size:11px;color:#444;font-style:italic;padding-left:14px;margin-top:2px;word-break:break-word;">📦 ${i.includes || i.comboIncludes}</div>`
         : '';
 
       itemsHtml += `
         <tr style="border-bottom:1px solid #000;">
-          <td style="padding:8px 0;vertical-align:top;">
+          <td style="padding:6px 0;vertical-align:top;word-break:break-word;">
             <div style="display:flex;align-items:flex-start;">
-              <span style="font-size:18px;font-weight:900;min-width:32px;display:inline-block;">${q}x</span>
-              <div>
-                <span style="font-size:15px;font-weight:900;letter-spacing:-0.2px;">${i.name}${portionText}</span>
+              <span style="font-size:16px;font-weight:900;min-width:28px;flex-shrink:0;">${q}x</span>
+              <div style="flex:1;min-width:0;word-break:break-word;overflow-wrap:break-word;">
+                <span style="font-size:14px;font-weight:900;letter-spacing:-0.2px;word-break:break-word;">${i.name}${portionText}</span>
                 ${comboText}
                 ${modText}
               </div>
@@ -1215,13 +1219,24 @@ export default function AdminDashboard({
           <meta charset="utf-8" />
           <title>KOT ${order.id}</title>
           <style>
-            @page { margin: 0; size: ${selectedWidth} auto; }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            @page {
+              margin: 0;
+              size: ${selectedWidth} auto;
+            }
             body {
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
               width: ${bodyWidth};
+              max-width: ${bodyWidth};
               margin: 0 auto;
-              padding: 10px;
+              padding: ${selectedWidth === '58mm' ? '2mm 1mm' : '4mm 2mm'};
               color: #000;
+              word-break: break-word;
+              overflow-wrap: break-word;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
@@ -1230,37 +1245,39 @@ export default function AdminDashboard({
               color: #FFF;
               text-align: center;
               font-weight: 900;
-              font-size: 13px;
-              padding: 4px 0;
-              margin-bottom: 8px;
+              font-size: 12px;
+              padding: 3px 0;
+              margin-bottom: 6px;
               letter-spacing: 1px;
               border-radius: 4px;
             }
-            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
-            .header h2 { margin: 0; font-size: 19px; font-weight: 900; letter-spacing: 0.5px; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; }
+            .header h2 { margin: 0; font-size: ${selectedWidth === '58mm' ? '15px' : '18px'}; font-weight: 900; letter-spacing: 0.5px; word-break: break-word; }
             .table-badge {
               border: 2px solid #000;
-              padding: 4px 10px;
-              font-size: 18px;
+              padding: 3px 8px;
+              font-size: ${selectedWidth === '58mm' ? '14px' : '17px'};
               font-weight: 900;
               display: inline-block;
-              margin: 6px 0 4px 0;
+              margin: 4px 0;
+              word-break: break-word;
             }
             .round-badge {
               background: #000;
               color: #FFF;
-              padding: 4px 10px;
-              font-size: 13px;
+              padding: 3px 6px;
+              font-size: 11px;
               font-weight: 900;
               display: block;
               margin: 4px auto 0 auto;
               border-radius: 4px;
               border: 1px solid #000;
             }
-            .meta { border-bottom: 1.5px dashed #000; padding-bottom: 6px; margin-bottom: 8px; font-size: 12px; line-height: 1.5; }
-            table { width: 100%; font-size: 14px; border-collapse: collapse; margin-bottom: 8px; }
-            .total-qty { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; font-weight: 900; font-size: 15px; display: flex; justify-content: space-between; margin-top: 4px; }
-            .footer { text-align: center; font-size: 11px; margin-top: 10px; font-weight: bold; border-top: 1px dashed #000; padding-top: 6px; }
+            .meta { border-bottom: 1.5px dashed #000; padding-bottom: 6px; margin-bottom: 6px; font-size: 11px; line-height: 1.4; word-break: break-word; }
+            table { width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 6px; table-layout: fixed; }
+            th, td { word-break: break-word; overflow-wrap: break-word; }
+            .total-qty { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 5px 0; font-weight: 900; font-size: 14px; display: flex; justify-content: space-between; margin-top: 4px; }
+            .footer { text-align: center; font-size: 10px; margin-top: 8px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; word-break: break-word; }
           </style>
         </head>
         <body>
@@ -1269,7 +1286,7 @@ export default function AdminDashboard({
             <h2>${ticketTitle}</h2>
             <div class="table-badge">${spaceLoc.toUpperCase()}</div>
             ${(order.token_display || order.token_number)
-              ? `<div style="font-size:22px;font-weight:900;border:2px dashed #000;padding:6px;margin:6px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;">TOKEN ${order.token_display || order.token_number}</div>`
+              ? `<div style="font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px dashed #000;padding:5px;margin:5px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;word-break:break-word;">TOKEN ${order.token_display || order.token_number}</div>`
               : ''
             }
             <div style="font-size:12px;font-weight:900;margin-top:2px;">KOT #${order.id}</div>
@@ -1287,7 +1304,7 @@ export default function AdminDashboard({
 
           <table>
             <thead>
-              <tr style="border-bottom:2px solid #000;text-align:left;font-size:13px;">
+              <tr style="border-bottom:2px solid #000;text-align:left;font-size:12px;">
                 <th style="padding-bottom:4px;">ITEMS TO PREPARE</th>
               </tr>
             </thead>
@@ -1297,7 +1314,7 @@ export default function AdminDashboard({
           </table>
 
           <div class="total-qty">
-            <span>TOTAL ITEMS IN THIS TICKET:</span>
+            <span>TOTAL ITEMS IN TICKET:</span>
             <span>${totalQty}</span>
           </div>
 
@@ -1342,16 +1359,16 @@ export default function AdminDashboard({
         const portionText = i.portion ? ` (${i.portion})` : '';
         const mods = safeParseModifiers(i.modifiers);
         const modText = mods.length > 0
-          ? `<div style="font-size:11px;color:#555;font-weight:normal;padding-left:6px;margin-top:2px;">+ ${mods.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
+          ? `<div style="font-size:10px;color:#555;font-weight:normal;padding-left:4px;margin-top:2px;word-break:break-word;">+ ${mods.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
           : '';
         const lineTotal = Number(i.price) * Number(i.quantity);
         itemsHtml += `
           <tr>
-            <td style="padding:4px 0;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;">
+            <td style="padding:4px 0;font-weight:bold;font-size:12px;border-bottom:1px dashed #DDD;width:72%;vertical-align:top;word-break:break-word;">
               ${i.quantity}x ${i.name}${portionText}
               ${modText}
             </td>
-            <td style="text-align:right;font-weight:bold;font-size:13px;border-bottom:1px dashed #DDD;vertical-align:top;">${currency}${lineTotal}</td>
+            <td style="text-align:right;font-weight:bold;font-size:12px;border-bottom:1px dashed #DDD;vertical-align:top;width:28%;white-space:nowrap;">${currency}${lineTotal}</td>
           </tr>
         `;
       });
@@ -1364,28 +1381,48 @@ export default function AdminDashboard({
           <meta charset="utf-8" />
           <title>Customer Bill ${order.id}</title>
           <style>
-            @page { margin: 0; size: ${selectedWidth} auto; }
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; width: ${bodyWidth}; margin: 0 auto; padding: 10px; color: #000; }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            @page {
+              margin: 0;
+              size: ${selectedWidth} auto;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              width: ${bodyWidth};
+              max-width: ${bodyWidth};
+              margin: 0 auto;
+              padding: ${selectedWidth === '58mm' ? '2mm 1mm' : '4mm 2mm'};
+              color: #000;
+              word-break: break-word;
+              overflow-wrap: break-word;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
             .reprint-banner {
               background: #000;
               color: #FFF;
               text-align: center;
               font-weight: 900;
-              font-size: 13px;
-              padding: 4px 0;
-              margin-bottom: 8px;
+              font-size: 12px;
+              padding: 3px 0;
+              margin-bottom: 6px;
               letter-spacing: 1px;
               border-radius: 4px;
             }
-            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
-            .header h2 { margin: 0; font-size: 18px; font-weight: 900; }
-            .header p { margin: 2px 0; font-size: 11px; }
-            .meta { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 8px; font-size: 12px; line-height: 1.4; }
-            table { width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 8px; }
-            .totals { border-top: 1px dashed #000; padding-top: 6px; margin-bottom: 8px; }
-            .grand-total { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; font-weight: 900; font-size: 16px; display: flex; justify-content: space-between; margin-top: 4px; }
-            .footer { text-align: center; font-size: 11px; margin-top: 10px; }
-            .badge { display: inline-block; padding: 2px 6px; background: #000; color: #fff; font-size: 11px; font-weight: bold; border-radius: 4px; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; }
+            .header h2 { margin: 0; font-size: ${selectedWidth === '58mm' ? '15px' : '17px'}; font-weight: 900; word-break: break-word; }
+            .header p { margin: 2px 0; font-size: 10px; word-break: break-word; }
+            .meta { border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 6px; font-size: 11px; line-height: 1.4; word-break: break-word; }
+            table { width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 6px; table-layout: fixed; }
+            th, td { word-break: break-word; overflow-wrap: break-word; }
+            .totals { border-top: 1px dashed #000; padding-top: 5px; margin-bottom: 6px; }
+            .grand-total { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 5px 0; font-weight: 900; font-size: 15px; display: flex; justify-content: space-between; margin-top: 4px; }
+            .footer { text-align: center; font-size: 10px; margin-top: 8px; word-break: break-word; }
+            .badge { display: inline-block; padding: 2px 6px; background: #000; color: #fff; font-size: 10px; font-weight: bold; border-radius: 4px; }
           </style>
         </head>
         <body>
@@ -1404,7 +1441,7 @@ export default function AdminDashboard({
               <span class="badge" style="${paymentMode === 'CHECK_SLIP' ? 'background:#7E22CE;' : ''}">${paymentMode === 'CHECK_SLIP' ? 'UNSETTLED SLIP' : paymentMode}</span>
             </div>
             ${(order.token_display || order.token_number)
-              ? `<div style="text-align:center;font-size:20px;font-weight:900;border:2px dashed #000;padding:6px;margin:8px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;">TOKEN ${order.token_display || order.token_number}</div>`
+              ? `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '17px' : '20px'};font-weight:900;border:2px dashed #000;padding:5px;margin:5px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;word-break:break-word;">TOKEN ${order.token_display || order.token_number}</div>`
               : ''
             }
             <div><strong>Location / Space:</strong> ${resolvedSpace}</div>
@@ -1416,8 +1453,8 @@ export default function AdminDashboard({
           <table>
             <thead>
               <tr style="border-bottom:1px solid #000;text-align:left;font-size:11px;">
-                <th>ITEM</th>
-                <th style="text-align:right;">AMOUNT</th>
+                <th style="width:72%;">ITEM</th>
+                <th style="width:28%;text-align:right;">AMOUNT</th>
               </tr>
             </thead>
             <tbody>
@@ -1426,7 +1463,7 @@ export default function AdminDashboard({
           </table>
 
           <div class="totals">
-            <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;">
               <span>Subtotal:</span>
               <span>${currency}${subtotal}</span>
             </div>
@@ -1453,21 +1490,21 @@ export default function AdminDashboard({
           </div>
 
           ${upiQrDataUrl ? `
-            <div style="margin: 10px auto 4px auto; text-align: center; border: 1.5px dashed #000; padding: 8px 6px; border-radius: 6px; background: #FFF;">
-              <div style="font-size: 11px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px;">
+            <div style="margin: 8px auto 4px auto; text-align: center; border: 1.5px dashed #000; padding: 6px 4px; border-radius: 6px; background: #FFF;">
+              <div style="font-size: 10px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px;">
                 ⚡ SCAN TO PAY VIA UPI
               </div>
-              <div style="font-size: 9px; color: #333; margin-bottom: 5px; font-weight: 600;">
+              <div style="font-size: 8.5px; color: #333; margin-bottom: 4px; font-weight: 600;">
                 GPay • PhonePe • Paytm • BHIM • Cred
               </div>
               <div style="display: flex; justify-content: center; align-items: center; margin: 4px 0;">
-                <img src="${upiQrDataUrl}" style="width: 140px; height: 140px; display: block; margin: 0 auto; image-rendering: pixelated;" alt="Scan UPI to Pay" />
+                <img src="${upiQrDataUrl}" style="width: ${selectedWidth === '58mm' ? '110px' : '135px'}; height: ${selectedWidth === '58mm' ? '110px' : '135px'}; display: block; margin: 0 auto; image-rendering: pixelated;" alt="Scan UPI to Pay" />
               </div>
-              <div style="font-size: 13px; font-weight: 900; margin-top: 4px;">
+              <div style="font-size: 12px; font-weight: 900; margin-top: 3px;">
                 EXACT AMOUNT: ${currency}${grandTotal}
               </div>
-              ${upiDetails?.upiId ? `<div style="font-size: 9.5px; color: #444; word-break: break-all; margin-top: 2px;">UPI ID: <strong>${upiDetails.upiId}</strong></div>` : ''}
-              ${upiDetails?.payeeName ? `<div style="font-size: 9px; color: #666; margin-top: 1px;">Payee: ${upiDetails.payeeName}</div>` : ''}
+              ${upiDetails?.upiId ? `<div style="font-size: 9px; color: #444; word-break: break-all; margin-top: 2px;">UPI ID: <strong>${upiDetails.upiId}</strong></div>` : ''}
+              ${upiDetails?.payeeName ? `<div style="font-size: 8.5px; color: #666; margin-top: 1px;">Payee: ${upiDetails.payeeName}</div>` : ''}
             </div>
           ` : ''}
 

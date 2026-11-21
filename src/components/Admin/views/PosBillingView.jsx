@@ -240,24 +240,6 @@ export default function PosBillingView({
           token_display: result.token_display || orderData.token_display
         });
 
-        // Auto Print Bill
-        if (onPrintBill) {
-          try {
-            onPrintBill(orderData, paymentMethod.toUpperCase());
-          } catch (pErr) {
-            console.warn('Auto print bill notice:', pErr);
-          }
-        }
-
-        // Auto Print KOT
-        if (onPrintKot) {
-          try {
-            onPrintKot(orderData);
-          } catch (kErr) {
-            console.warn('Auto print KOT notice:', kErr);
-          }
-        }
-
         // Notify parent state
         if (onOrderCreated) {
           onOrderCreated(orderData);
@@ -1281,7 +1263,7 @@ export default function PosBillingView({
               Order Created & Paid!
             </h2>
             <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 16px 0' }}>
-              Receipt sent to thermal printer. Kitchen KOT dispatched.
+              Order saved. Print Bill or KOT below if needed, or proceed to next customer.
             </p>
 
             {/* Token Highlight Box */}
