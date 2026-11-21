@@ -282,8 +282,27 @@ async function runTestSuite() {
       assert.strictEqual(kdsOrder.order_type, 'takeaway');
     });
 
-    // --- TEST 7: Formatting Helper Verification ---
-    await testAsync('7. formatOrderLocation helper formats Dine-in and Takeaway tokens correctly', () => {
+    // --- TEST 7: Active Table Multi-Round Session Verification ---
+    await testAsync('7. GET /api/orders/active-table: Consolidates Table Dine-In (R1) & Takeaway (R2) in single session', async () => {
+      const res = await fetch(`${baseUrl}/api/orders/active-table?slug=${testSlug}&table_number=1&space_type=table&tkn=${table1Token}`);
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.ok(data, 'Active table data must not be null');
+      assert.strictEqual(data.table_number, '1');
+      assert.strictEqual(data.current_round, 2);
+      assert.strictEqual(data.order_type, 'takeaway');
+      assert.strictEqual(data.token_display, 'TK-01');
+      assert.ok(Array.isArray(data.rounds));
+      assert.strictEqual(data.rounds.length, 2);
+      assert.strictEqual(data.rounds[0].order_type, 'dine_in');
+      assert.strictEqual(data.rounds[0].token_display, null);
+      assert.strictEqual(data.rounds[1].order_type, 'takeaway');
+      assert.strictEqual(data.rounds[1].token_display, 'TK-01');
+      assert.strictEqual(data.rounds[1].round_number, 2);
+    });
+
+    // --- TEST 8: Formatting Helper Verification ---
+    await testAsync('8. formatOrderLocation helper formats Dine-in and Takeaway tokens correctly', () => {
       const dineInOrder = { table_number: '1', order_type: 'dine_in' };
       assert.strictEqual(formatOrderLocation(dineInOrder), 'Table 1');
 

@@ -3027,7 +3027,7 @@ router.get('/orders/active-table', async (req, res) => {
     let orders = [];
     try {
       orders = await query(`
-        SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at
+        SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, order_type, token_number, token_display
         FROM orders
         WHERE restaurant_id = $1 AND (table_number = $2 OR table_number = $3 OR table_number = $4) 
           AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
@@ -3036,7 +3036,7 @@ router.get('/orders/active-table', async (req, res) => {
       `, [targetId, rawTable, queryTable, queryAlt]);
     } catch (e) {
       orders = await query(`
-        SELECT id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at
+        SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, order_type, token_number, token_display
         FROM orders
         WHERE restaurant_id = $1 AND (table_number = $2 OR table_number = $3 OR table_number = $4) 
           AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
@@ -3092,6 +3092,9 @@ router.get('/orders/active-table', async (req, res) => {
         grand_total_amount: rGrand,
         gst_rate: Number(o.gst_rate) || 0,
         items: rItems,
+        order_type: o.order_type || 'dine_in',
+        token_number: o.token_number || null,
+        token_display: o.token_display || null,
         created_at: o.created_at
       };
     });
@@ -3104,6 +3107,9 @@ router.get('/orders/active-table', async (req, res) => {
       customer_name: primaryOrder.customer_name,
       status: latestOrder.status,
       current_round: Number(latestOrder.round_number) || 1,
+      order_type: latestOrder.order_type || 'dine_in',
+      token_number: latestOrder.token_number || null,
+      token_display: latestOrder.token_display || null,
       total_amount: runningGrandTotal,
       subtotal_amount: runningSubtotal,
       cgst_amount: runningCgst,
