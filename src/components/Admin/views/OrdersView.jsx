@@ -115,8 +115,20 @@ export default function OrdersView({
 
   const isOrderCompleted = (order) => {
     if (!order) return false;
+    if (order.status === 'completed') return true;
+
+    // For Takeaway / POS Token orders: payment is upfront, but order is ONLY completed when handed over (status === 'completed')
+    const isTakeawayOrToken = Boolean(
+      order.order_type === 'takeaway' ||
+      order.token_display ||
+      order.token_number ||
+      String(order.table_number || '').toLowerCase().includes('counter')
+    );
+    if (isTakeawayOrToken) {
+      return order.status === 'completed';
+    }
+
     return Boolean(
-      order.status === 'completed' ||
       order.is_settled === 1 ||
       order.is_settled === '1' ||
       order.is_settled === true
@@ -524,10 +536,18 @@ export default function OrdersView({
     return `${diffHr}h ago`;
   };
 
+  const isOrderPrepReady = (o) => Boolean(
+    o.status === 'served' ||
+    o.status === 'ready' ||
+    o.kitchen_prepared === 1 ||
+    o.kitchen_prepared === true ||
+    o.kitchen_prepared === '1'
+  );
+
   // Metrics (Strictly unifies multi-round session settlement)
   const pendingCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'pending' || o.status === 'ordered')).length;
-  const kitchenCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing')).length;
-  const servedCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'served' || o.status === 'ready')).length;
+  const kitchenCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing') && !isOrderPrepReady(o)).length;
+  const servedCount = validOrders.filter(o => !isOrderCompleted(o) && isOrderPrepReady(o)).length;
   const completedCount = validOrders.filter(o => isOrderCompleted(o)).length;
   const completedSales = validOrders.filter(o => isOrderCompleted(o)).reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
 
@@ -543,8 +563,8 @@ export default function OrdersView({
     const isDone = isOrderCompleted(o);
     // Status Filter
     if (kotFilter === 'pending' && (isDone || !(o.status === 'pending' || o.status === 'ordered'))) return false;
-    if (kotFilter === 'kitchen' && (isDone || !(o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing'))) return false;
-    if (kotFilter === 'served' && (isDone || !(o.status === 'served' || o.status === 'ready'))) return false;
+    if (kotFilter === 'kitchen' && (isDone || !(o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing') || isOrderPrepReady(o))) return false;
+    if (kotFilter === 'served' && (isDone || !isOrderPrepReady(o))) return false;
     if (kotFilter === 'completed' && !isDone) return false;
 
     // Source Filter
@@ -567,9 +587,25 @@ export default function OrdersView({
   const getStatusBadge = (orderOrStatus) => {
     const isObj = orderOrStatus && typeof orderOrStatus === 'object';
     const status = isObj ? orderOrStatus.status : orderOrStatus;
+    const isTakeawayOrToken = isObj && Boolean(
+      orderOrStatus.order_type === 'takeaway' ||
+      orderOrStatus.token_display ||
+      orderOrStatus.token_number ||
+      String(orderOrStatus.table_number || '').toLowerCase().includes('counter')
+    );
+    const isPrepared = isObj && Boolean(
+      orderOrStatus.kitchen_prepared === 1 || orderOrStatus.kitchen_prepared === true || orderOrStatus.kitchen_prepared === '1'
+    );
     const isSettled = isObj && Boolean(orderOrStatus.is_settled === 1 || orderOrStatus.is_settled === '1' || orderOrStatus.is_settled === true);
-    if (isSettled || status === 'completed') {
+
+    if (status === 'completed') {
       return { label: 'COMPLETED', bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
+    }
+    if (isSettled && !isTakeawayOrToken) {
+      return { label: 'COMPLETED', bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
+    }
+    if (isPrepared || status === 'served' || status === 'ready') {
+      return { label: isTakeawayOrToken ? 'READY FOR PICKUP' : 'READY', bg: '#DCFCE7', color: '#16A34A', border: '#BBF7D0' };
     }
     switch (status?.toLowerCase()) {
       case 'pending':
@@ -578,10 +614,10 @@ export default function OrdersView({
       case 'kitchen':
       case 'accepted':
       case 'preparing':
-        return { label: 'PREPARING', bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' };
+        return { label: isTakeawayOrToken ? 'PREPARING (PAID)' : 'PREPARING', bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' };
       case 'served':
       case 'ready':
-        return { label: 'READY', bg: '#DCFCE7', color: '#16A34A', border: '#BBF7D0' };
+        return { label: isTakeawayOrToken ? 'READY FOR PICKUP' : 'READY', bg: '#DCFCE7', color: '#16A34A', border: '#BBF7D0' };
       case 'completed':
         return { label: 'COMPLETED', bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
       default:
@@ -1150,8 +1186,8 @@ export default function OrdersView({
                   const isDone = isOrderCompleted(order);
                   const statusInfo = getStatusBadge(order);
                   const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
-                  const isKitchen = !isDone && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
-                  const isReady = !isDone && (order.status === 'served' || order.status === 'ready');
+                  const isReady = !isDone && isOrderPrepReady(order);
+                  const isKitchen = !isDone && !isReady && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
                   const sessionInfo = sessionDetailsMap.get(order.id) || {
                     sessionOrders: [order],
                     totalRoundsCount: 1,
@@ -1375,6 +1411,23 @@ export default function OrdersView({
                                 >
                                   ✓ Done
                                 </button>
+                              ) : order.is_settled ? (
+                                <button
+                                  onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'completed') : null}
+                                  style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '8px',
+                                    background: '#16A34A',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Customer picked up the order - mark complete"
+                                >
+                                  ✓ Handover
+                                </button>
                               ) : (
                                 <>
                                   {/* Quick Table Check Slip Print (Guest bill review before payment) */}
@@ -1492,8 +1545,8 @@ export default function OrdersView({
               const isDone = isOrderCompleted(order);
               const statusInfo = getStatusBadge(order);
               const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
-              const isKitchen = !isDone && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
-              const isReady = !isDone && (order.status === 'served' || order.status === 'ready');
+              const isReady = !isDone && isOrderPrepReady(order);
+              const isKitchen = !isDone && !isReady && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
               const sessionInfo = sessionDetailsMap.get(order.id) || {
                 sessionOrders: [order],
                 totalRoundsCount: 1,
@@ -1729,6 +1782,23 @@ export default function OrdersView({
                               title="Complete Seat Delivery"
                             >
                               ✓ Done
+                            </button>
+                          ) : order.is_settled ? (
+                            <button
+                              onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'completed') : null}
+                              style={{
+                                padding: '8px 14px',
+                                borderRadius: '10px',
+                                background: '#16A34A',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                fontSize: '0.78rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                              title="Customer picked up the order - mark complete"
+                            >
+                              ✓ Handover
                             </button>
                           ) : (
                             <>
@@ -2917,7 +2987,7 @@ export default function OrdersView({
                 </div>
               )}
 
-              {!isOrderCompleted(selectedOrder) && (selectedOrder.status === 'served' || selectedOrder.status === 'ready') && (
+              {!isOrderCompleted(selectedOrder) && (selectedOrder.status === 'served' || selectedOrder.status === 'ready' || isOrderPrepReady(selectedOrder)) && (
                 isCinema ? (
                   <button
                     onClick={() => {
@@ -2938,6 +3008,27 @@ export default function OrdersView({
                     }}
                   >
                     ✓ Complete Seat Delivery
+                  </button>
+                ) : selectedOrder.is_settled ? (
+                  <button
+                    onClick={() => {
+                      if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'completed');
+                      setSelectedOrder(null);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: '#16A34A',
+                      color: '#FFFFFF',
+                      fontSize: '0.84rem',
+                      fontWeight: 900,
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
+                    }}
+                  >
+                    🎉 Handover to Customer & Complete
                   </button>
                 ) : (
                   <button

@@ -3462,7 +3462,10 @@ router.get('/kitchen/orders', async (req, res) => {
           OR (status = 'accepted' AND sent_to_kds = 1)
         )
         AND (kitchen_prepared = 0 OR kitchen_prepared IS NULL)
-        AND (is_settled = 0 OR is_settled IS NULL)
+        AND (
+          (is_settled = 0 OR is_settled IS NULL)
+          OR (order_type = 'takeaway' OR token_number IS NOT NULL OR token_display IS NOT NULL)
+        )
       ORDER BY id ASC LIMIT 50
     `, [targetId]);
 

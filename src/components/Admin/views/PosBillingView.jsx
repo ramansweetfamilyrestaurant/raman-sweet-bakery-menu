@@ -30,6 +30,8 @@ export default function PosBillingView({
   dishes = [],
   categories = [],
   combos = [],
+  orders = [],
+  onUpdateStatus,
   restaurantInfo = {},
   settingsForm = {},
   token,
@@ -53,6 +55,21 @@ export default function PosBillingView({
   const [upiQrDataUrl, setUpiQrDataUrl] = useState(null);
 
   const searchInputRef = useRef(null);
+
+  // Active Counter Tokens Queue (orders currently being prepared or ready for customer pickup)
+  const activeTokensQueue = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    return orders.filter(o => {
+      if (!o || o.status === 'completed' || o.status === 'rejected' || o.status === 'cancelled') return false;
+      const isTakeawayOrToken = Boolean(
+        o.order_type === 'takeaway' ||
+        o.token_display ||
+        o.token_number ||
+        String(o.table_number || '').toLowerCase().includes('counter')
+      );
+      return isTakeawayOrToken;
+    });
+  }, [orders]);
 
   // Total tables list
   const totalTables = Math.max(1, Number(settingsForm?.total_tables ?? restaurantInfo?.total_tables ?? 20));
@@ -381,6 +398,156 @@ export default function PosBillingView({
           </button>
         </div>
       </div>
+
+      {/* ========================================================
+          1.5. LIVE COUNTER PICKUP QUEUE (TOKENS TRACKER)
+         ======================================================== */}
+      {activeTokensQueue.length > 0 && (
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          padding: '14px 18px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.1rem' }}>⚡</span>
+              <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontWeight: 800 }}>
+                Active Tokens in Queue ({activeTokensQueue.length})
+              </strong>
+              <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                • Track kitchen prep & handover food
+              </span>
+            </div>
+            <button
+              onClick={onNavigateToOrders}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#059669',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Open Full Console →
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {activeTokensQueue.map(order => {
+              const isReady = order.status === 'served' || order.status === 'ready' || order.kitchen_prepared === 1 || order.kitchen_prepared === '1' || order.kitchen_prepared === true;
+              const tokenText = order.token_display || (order.token_number ? `TK-${String(order.token_number).padStart(2, '0')}` : `#${order.id}`);
+
+              return (
+                <div
+                  key={order.id}
+                  style={{
+                    flexShrink: 0,
+                    minWidth: '220px',
+                    borderRadius: '12px',
+                    border: isReady ? '1.5px solid #86EFAC' : '1.5px solid #BAE6FD',
+                    background: isReady ? '#F0FDF4' : '#F0F9FF',
+                    padding: '10px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '8px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{
+                      fontWeight: 950,
+                      fontSize: '1.05rem',
+                      color: isReady ? '#166534' : '#0369A1',
+                      letterSpacing: '0.02em'
+                    }}>
+                      {tokenText}
+                    </span>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      background: isReady ? '#DCFCE7' : '#E0F2FE',
+                      color: isReady ? '#15803D' : '#0284C7'
+                    }}>
+                      {isReady ? '🔔 READY FOR PICKUP' : '🍳 PREPARING'}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Order #{order.id}</span>
+                    <span>{currencySymbol}{order.total_amount}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+                    {isReady ? (
+                      <button
+                        onClick={() => {
+                          if (onUpdateStatus) onUpdateStatus(order.id, 'completed');
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: '#16A34A',
+                          color: '#FFFFFF',
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✓ Handover (Done)
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (onUpdateStatus) onUpdateStatus(order.id, 'served');
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: '#0284C7',
+                          color: '#FFFFFF',
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✓ Mark Ready
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (onPrintBill) onPrintBill(order, order.payment_method?.toUpperCase());
+                      }}
+                      title="Print Customer Bill"
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '8px',
+                        border: '1px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <Printer size={13} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ========================================================
           2. MAIN POS WORKSPACE: DISHES (LEFT) + BILLING (RIGHT)

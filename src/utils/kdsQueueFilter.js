@@ -28,15 +28,21 @@ export function isOrderActiveInKitchen(order) {
     return false;
   }
 
-  // Exclude explicitly settled orders
-  const isSettled = order.is_settled === 1 || order.is_settled === true || order.is_settled === '1';
-  if (isSettled) {
-    return false;
-  }
-
   // Exclude explicitly prepared orders
   const isPrepared = order.kitchen_prepared === 1 || order.kitchen_prepared === true || order.kitchen_prepared === '1';
   if (isPrepared) {
+    return false;
+  }
+
+  // Exclude explicitly settled orders UNLESS it is a Takeaway/Token/Counter order awaiting kitchen preparation
+  const isTakeawayOrToken = Boolean(
+    order.order_type === 'takeaway' ||
+    order.token_display ||
+    order.token_number ||
+    String(order.table_number || '').toLowerCase().includes('counter')
+  );
+  const isSettled = order.is_settled === 1 || order.is_settled === true || order.is_settled === '1';
+  if (isSettled && !isTakeawayOrToken) {
     return false;
   }
 

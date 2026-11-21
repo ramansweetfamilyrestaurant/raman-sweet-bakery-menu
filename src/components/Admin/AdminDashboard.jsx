@@ -3872,6 +3872,8 @@ export default function AdminDashboard({
                   dishes={safeDishes}
                   categories={safeCategories}
                   combos={combos}
+                  orders={orders}
+                  onUpdateStatus={handleUpdateStatus}
                   restaurantInfo={restaurantInfo}
                   settingsForm={settingsForm}
                   token={token}
