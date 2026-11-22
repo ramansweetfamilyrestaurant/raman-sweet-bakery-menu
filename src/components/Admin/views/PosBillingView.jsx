@@ -55,6 +55,7 @@ export default function PosBillingView({
   const [successOrder, setSuccessOrder] = useState(null); // { order, token_display }
   const [upiQrDataUrl, setUpiQrDataUrl] = useState(null);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+  const [isTokensQueueCollapsed, setIsTokensQueueCollapsed] = useState(false);
 
   const searchInputRef = useRef(null);
 
@@ -276,13 +277,7 @@ export default function PosBillingView({
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '16px',
-      width: '100%',
-      minHeight: 'calc(100vh - 120px)',
-      boxSizing: 'border-box',
+    <div className="pos-view-root" style={{
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
       <style>{`
@@ -292,7 +287,7 @@ export default function PosBillingView({
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
         }
         .pos-grid-container {
           display: grid;
@@ -372,7 +367,8 @@ export default function PosBillingView({
             height: 100% !important;
             max-height: 100% !important;
             min-height: 0 !important;
-            overflow: hidden !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
             display: flex !important;
             flex-direction: column !important;
           }
@@ -406,6 +402,21 @@ export default function PosBillingView({
           border-radius: 4px;
         }
         .pos-cart-items-scroll::-webkit-scrollbar-thumb:hover {
+          background: #94A3B8;
+        }
+
+        .pos-cart-panel::-webkit-scrollbar {
+          width: 5px;
+        }
+        .pos-cart-panel::-webkit-scrollbar-track {
+          background: #F8FAFC;
+          border-radius: 4px;
+        }
+        .pos-cart-panel::-webkit-scrollbar-thumb {
+          background: #CBD5E1;
+          border-radius: 4px;
+        }
+        .pos-cart-panel::-webkit-scrollbar-thumb:hover {
           background: #94A3B8;
         }
 
@@ -506,9 +517,9 @@ export default function PosBillingView({
          ======================================================== */}
       <div className="pos-header-wrap" style={{
         background: '#FFFFFF',
-        borderRadius: '16px',
+        borderRadius: '14px',
         border: '1px solid #E2E8F0',
-        padding: '14px 18px',
+        padding: '10px 16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -516,37 +527,37 @@ export default function PosBillingView({
         gap: '10px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
             background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#FFFFFF'
           }}>
-            <Receipt size={22} />
+            <Receipt size={19} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+              <h1 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
                 Counter Quick POS
               </h1>
               <span style={{
                 background: '#ECFDF5',
                 color: '#059669',
-                fontSize: '0.68rem',
+                fontSize: '0.66rem',
                 fontWeight: 800,
-                padding: '2px 8px',
-                borderRadius: '8px',
+                padding: '2px 7px',
+                borderRadius: '6px',
                 border: '1px solid #A7F3D0'
               }}>
                 ⚡ FAST BILLING
               </span>
             </div>
-            <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '2px 0 0 0' }}>
+            <p style={{ fontSize: '0.74rem', color: '#64748B', margin: '1px 0 0 0' }}>
               Direct counter orders, instant takeaway tokens, and thermal printing.
             </p>
           </div>
@@ -557,12 +568,12 @@ export default function PosBillingView({
           <button
             onClick={onNavigateToOrders}
             style={{
-              padding: '8px 14px',
-              borderRadius: '10px',
+              padding: '7px 12px',
+              borderRadius: '8px',
               border: '1px solid #CBD5E1',
               background: '#FFFFFF',
               color: '#334155',
-              fontSize: '0.78rem',
+              fontSize: '0.76rem',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'inline-flex',
@@ -570,7 +581,7 @@ export default function PosBillingView({
               gap: '6px'
             }}
           >
-            <ShoppingBag size={15} />
+            <ShoppingBag size={14} />
             <span>View Live Orders</span>
           </button>
         </div>
@@ -583,37 +594,55 @@ export default function PosBillingView({
         <div className="pos-tokens-wrap" style={{
           flexShrink: 0,
           background: '#FFFFFF',
-          borderRadius: '16px',
+          borderRadius: '14px',
           border: '1px solid #E2E8F0',
-          padding: '12px 18px',
+          padding: '10px 14px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isTokensQueueCollapsed ? '0' : '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.1rem' }}>⚡</span>
-              <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontWeight: 800 }}>
+              <span style={{ fontSize: '1rem' }}>⚡</span>
+              <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>
                 Active Tokens in Queue ({activeTokensQueue.length})
               </strong>
-              <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
                 • Track kitchen prep & handover food
               </span>
             </div>
-            <button
-              onClick={onNavigateToOrders}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#059669',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              Open Full Console →
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => setIsTokensQueueCollapsed(prev => !prev)}
+                style={{
+                  background: '#F1F5F9',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  color: '#475569',
+                  fontSize: '0.70rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {isTokensQueueCollapsed ? '▼ Expand Queue' : '▲ Collapse'}
+              </button>
+              <button
+                onClick={onNavigateToOrders}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#059669',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Open Full Console →
+              </button>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+          {!isTokensQueueCollapsed && (
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
             {activeTokensQueue.map(order => {
               const isReady = order.status === 'served' || order.status === 'ready' || order.kitchen_prepared === 1 || order.kitchen_prepared === '1' || order.kitchen_prepared === true;
               const tokenText = order.token_display || (order.token_number ? `TK-${String(order.token_number).padStart(2, '0')}` : `#${order.id}`);
@@ -724,6 +753,7 @@ export default function PosBillingView({
               );
             })}
           </div>
+        )}
         </div>
       )}
 
@@ -742,10 +772,11 @@ export default function PosBillingView({
             zIndex: 10,
             background: '#F8FAFC',
             paddingTop: '2px',
-            paddingBottom: '4px',
+            paddingBottom: '8px',
+            borderBottom: '1px solid #E2E8F0',
             display: 'flex',
             flexDirection: 'column',
-            gap: '10px'
+            gap: '8px'
           }}>
             {/* Search & Diet Toggle Bar */}
             <div style={{
@@ -1154,8 +1185,8 @@ export default function PosBillingView({
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          padding: '18px',
-          gap: '12px',
+          padding: '14px 16px',
+          gap: '10px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
           boxSizing: 'border-box'
         }}>
@@ -1529,18 +1560,18 @@ export default function PosBillingView({
                 background: '#F0FDF4',
                 borderRadius: '12px',
                 border: '1px solid #BBF7D0',
-                padding: '12px',
+                padding: '8px 10px',
                 textAlign: 'center'
               }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#166534', display: 'block', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#166534', display: 'block', marginBottom: '4px' }}>
                   Customer can scan with PhonePe / GPay / Paytm:
                 </span>
                 <img
                   src={upiQrDataUrl}
                   alt="UPI Payment QR"
-                  style={{ width: '130px', height: '130px', margin: '0 auto', display: 'block', borderRadius: '8px' }}
+                  style={{ width: '100px', height: '100px', margin: '0 auto', display: 'block', borderRadius: '8px' }}
                 />
-                <span style={{ fontSize: '0.70rem', color: '#15803D', fontWeight: 700, marginTop: '4px', display: 'block' }}>
+                <span style={{ fontSize: '0.68rem', color: '#15803D', fontWeight: 700, marginTop: '3px', display: 'block' }}>
                   Amount: {currencySymbol}{grandTotal.toFixed(2)}
                 </span>
               </div>
