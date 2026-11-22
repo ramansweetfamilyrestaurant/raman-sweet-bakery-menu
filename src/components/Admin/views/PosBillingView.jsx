@@ -26,7 +26,7 @@ import {
 import QRCode from 'qrcode';
 import { createAdminPosOrder } from '../../../api/client';
 import { buildUpiPaymentUri, calculateBillDetails } from '../../../utils/billingHelper';
-import { resolveImageUrl } from '../../../utils/imageHelper';
+import { resolveImageUrl, getDishImageUrl, getComboImageUrl } from '../../../utils/imageHelper';
 
 export default function PosBillingView({
   dishes = [],
@@ -1016,7 +1016,6 @@ export default function PosBillingView({
                 const fullItemInCart = cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'full');
                 const halfItemInCart = cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'half');
                 const hasHalfPrice = Boolean(dish.price_half && Number(dish.price_half) > 0);
-                const hasImage = Boolean(dish.image);
 
                 return (
                   <div
@@ -1065,8 +1064,8 @@ export default function PosBillingView({
                         ))}
                       </div>
 
-                      {/* Image Preview if available and enabled */}
-                      {showDishImages && hasImage && (
+                      {/* Image Preview if enabled */}
+                      {showDishImages && (
                         <div style={{
                           width: '100%',
                           height: '85px',
@@ -1076,15 +1075,13 @@ export default function PosBillingView({
                           background: '#F1F5F9'
                         }}>
                           <img
-                            src={resolveImageUrl(dish.image)}
+                            src={dish.isCombo ? getComboImageUrl(dish.image) : getDishImageUrl(dish.image)}
                             alt={dish.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            loading="lazy"
                             onError={(e) => {
-                              if (e.currentTarget.parentElement) {
-                                e.currentTarget.parentElement.style.display = 'none';
-                              } else {
-                                e.currentTarget.style.display = 'none';
-                              }
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = dish.isCombo ? '/images/default-combo.webp?v=3' : '/images/default-dish.webp';
                             }}
                           />
                         </div>
