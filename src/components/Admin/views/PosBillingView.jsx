@@ -1079,7 +1079,13 @@ export default function PosBillingView({
                             src={resolveImageUrl(dish.image)}
                             alt={dish.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            onError={(e) => {
+                              if (e.currentTarget.parentElement) {
+                                e.currentTarget.parentElement.style.display = 'none';
+                              } else {
+                                e.currentTarget.style.display = 'none';
+                              }
+                            }}
                           />
                         </div>
                       )}
