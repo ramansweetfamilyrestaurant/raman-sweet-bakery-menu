@@ -2,10 +2,10 @@ import React from 'react';
 import { 
   Headphones,
   LogOut,
-  QrCode,
   ArrowRight
 } from 'lucide-react';
 import { resolveImageUrl } from '../../../utils/imageHelper';
+import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 import { DESKTOP_SIDEBAR_ITEMS, isNavItemActive, getLocalizedNavLabel } from '../adminNavigation';
 
 export default function AdminSidebar({
@@ -20,9 +20,11 @@ export default function AdminSidebar({
   capabilities = {}
 }) {
   const restoName = restaurantInfo?.name || 'Restaurant Admin';
-  const truncatedName = restoName.length > 22 ? `${restoName.substring(0, 20)}...` : restoName;
+  const truncatedName = restoName.length > 24 ? `${restoName.substring(0, 22)}...` : restoName;
   const logoUrl = restaurantInfo?.logo;
   const resolvedLogo = resolveImageUrl(logoUrl);
+  const terms = getBusinessTerminology(restaurantInfo || {});
+  const categoryLabel = terms?.venueName || 'Restaurant';
 
   return (
     <aside style={{
@@ -62,53 +64,27 @@ export default function AdminSidebar({
         zIndex: 2
       }}>
         
-        {/* 1. MASTER BRAND LOGO */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 4px' }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
-            background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF',
-            flexShrink: 0,
-            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.25)'
-          }}>
-            <QrCode size={18} strokeWidth={2.5} />
-          </div>
-          <div>
-            <div style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.1 }}>
-              TouchQR
-            </div>
-            <div style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 500, marginTop: '2px' }}>
-              Smart Menu. Simple Orders.
-            </div>
-          </div>
-        </div>
-
-        {/* 2. BUSINESS PROFILE CARD */}
+        {/* 👑 BUSINESS HERO HEADER */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          padding: '6px 4px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-          paddingBottom: '14px'
+          gap: '12px',
+          padding: '6px 4px 14px 4px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
+          {/* Logo / Brand Initial */}
           <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            border: '1.5px solid #D4AF37',
-            background: '#8B0000',
+            width: '42px',
+            height: '42px',
+            borderRadius: '11px',
+            border: '1.5px solid rgba(212, 175, 55, 0.45)',
+            background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
             flexShrink: 0,
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+            boxShadow: '0 3px 10px rgba(0,0,0,0.45)'
           }}>
             {resolvedLogo ? (
               <img
@@ -118,28 +94,47 @@ export default function AdminSidebar({
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
             ) : (
-              <span style={{ color: '#D4AF37', fontWeight: 900, fontSize: '0.90rem' }}>
+              <span style={{ color: '#D4AF37', fontWeight: 900, fontSize: '1.1rem', letterSpacing: '0.02em' }}>
                 {(restoName || 'R').charAt(0).toUpperCase()}
               </span>
             )}
           </div>
 
+          {/* Business Info */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <strong style={{
-              fontSize: '0.82rem',
+              fontSize: '0.94rem',
               color: '#FFFFFF',
               display: 'block',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               lineHeight: 1.25,
-              fontWeight: 700
+              fontWeight: 800,
+              letterSpacing: '-0.01em'
             }} title={restoName}>
-              {truncatedName}
+              {restoName}
             </strong>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
-              <span style={{ fontSize: '0.66rem', color: '#22C55E', fontWeight: 700 }}>Online</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '3px' }}>
+              <span style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: '#22C55E',
+                boxShadow: '0 0 6px #22C55E'
+              }} />
+              <span style={{ fontSize: '0.68rem', color: '#22C55E', fontWeight: 700 }}>Online</span>
+              <span style={{ fontSize: '0.65rem', color: '#475569' }}>•</span>
+              <span style={{
+                fontSize: '0.68rem',
+                color: '#94A3B8',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
+                {categoryLabel}
+              </span>
             </div>
           </div>
         </div>
