@@ -440,16 +440,9 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
           ? isValTrue(saasPlan.counter_ordering_enabled, tierKey !== 'basic' || isUnlimitedPlan)
           : (tierKey !== 'basic' || isUnlimitedPlan);
 
-        // If the SaaS Plan does not allow POS, it is strictly locked by Super Admin!
-        if (!isPlanAllowed) return false;
-
-        // If the SaaS Plan allows it, check if restaurant-level explicit override turned it off
-        if (r.counter_ordering_enabled !== undefined && r.counter_ordering_enabled !== null) {
-          if (r.counter_ordering_enabled === 0 || r.counter_ordering_enabled === false || r.counter_ordering_enabled === '0' || r.counter_ordering_enabled === 'false') {
-            return false;
-          }
-        }
-        return true;
+        // Super Admin SaaS Plan strictly controls whether POS is available:
+        // If SaaS Plan has it ON, it's allowed! If OFF, it's blocked!
+        return Boolean(isPlanAllowed);
       })(),
       audio_alarm_enabled: isValTrue(saasPlan.audio_alarm_enabled, true),
       order_status_whatsapp_enabled: isValTrue(saasPlan.order_status_whatsapp_enabled, true),
@@ -2990,12 +2983,8 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
       ? (planRow.counter_ordering_enabled === 1 || planRow.counter_ordering_enabled === true || planRow.counter_ordering_enabled === '1' || planRow.counter_ordering_enabled === 'true')
       : (planTierKey !== 'basic');
 
-    const isRestoExplicitlyDisabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
-      (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false');
-
-    // SaaS Plan is supreme: If plan disallows POS, POS order is forbidden!
-    // If restaurant has an explicit Super Admin override of 0, it is also forbidden!
-    const isPosAllowed = isPlanPosEnabled && !isRestoExplicitlyDisabled;
+    // SaaS Plan is supreme: Super Admin controls whether POS ordering is allowed for this plan!
+    const isPosAllowed = Boolean(isPlanPosEnabled);
 
     if (!isPosAllowed) {
       return res.status(403).json({

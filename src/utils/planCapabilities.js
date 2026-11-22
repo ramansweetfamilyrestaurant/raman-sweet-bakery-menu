@@ -211,7 +211,7 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
         return isBoolTrue(actualResto.permissions.counter_ordering_enabled, false);
       }
 
-      // 2. If no SaaS plan permissions provided, check restaurant-level explicit flag
+      // 2. If no SaaS plan permissions provided, check fallback restaurant-level flag
       if (actualResto?.counter_ordering_enabled !== undefined && actualResto?.counter_ordering_enabled !== null) {
         if (actualResto.counter_ordering_enabled === 0 || actualResto.counter_ordering_enabled === false || actualResto.counter_ordering_enabled === '0' || actualResto.counter_ordering_enabled === 'false') {
           return false;

@@ -148,19 +148,19 @@ test('👑 360° Super Admin POS Control & Gating Invariant Test Suite', async (
       assert.strictEqual(posData.token_display, 'TK-01');
     });
 
-    // TEST 5: Super Admin PUT /api/superadmin/restaurants/:id disables POS specifically for Restaurant A
-    await t.test('5. Super Admin overrides POS = 0 on specific restaurant via PUT /api/superadmin/restaurants/:id', async () => {
-      const restoUpdateRes = await fetch(`${baseUrl}/api/superadmin/restaurants/${restoAId}`, {
+    // TEST 5: Super Admin disables POS on test_basic plan via PUT /api/superadmin/plans/:key
+    await t.test('5. Super Admin disables POS on test_basic plan via PUT /api/superadmin/plans/:key', async () => {
+      const planUpdateRes = await fetch(`${baseUrl}/api/superadmin/plans/test_basic`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${superToken}` },
         body: JSON.stringify({
           counter_ordering_enabled: 0
         })
       });
-      assert.strictEqual(restoUpdateRes.status, 200);
+      assert.strictEqual(planUpdateRes.status, 200);
 
-      // Even though test_basic plan currently has counter_ordering_enabled = 1,
-      // the restaurant-specific override of 0 must strictly block it!
+      // When test_basic plan has counter_ordering_enabled = 0,
+      // it must strictly block pos-order!
       const blockedRes = await fetch(`${baseUrl}/api/admin/pos-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },

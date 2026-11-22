@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query, runAutoDataSummarization, logAudit, saveR2ImageToDb, saveImageToDb, purgeLocalR2DiskCache, withTransaction, getDbType } from '../db.js';
 import { authenticateToken, clearSubStatusCache } from '../middleware/auth.js';
+import { clearRestoResolveCache } from './api.js';
 import { isR2Active, uploadImageToR2, deleteImageFromR2 } from '../services/r2ImageService.js';
 import { createCashfreeSubscriptionSession, getCashfreeConfigAsync } from '../services/cashfree.js';
 import { JWT_SECRET } from '../config/jwt.js';
@@ -1836,6 +1837,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
     ]).catch(() => {});
 
     clearSubStatusCache();
+    clearRestoResolveCache();
     await logAudit(null, 'superadmin', 'Update SaaS Plan Matrix', `Updated 24-point plan matrix for '${key}'`);
     res.json({ success: true, message: `SaaS Plan '${name || key}' matrix updated successfully!` });
   } catch (err) {

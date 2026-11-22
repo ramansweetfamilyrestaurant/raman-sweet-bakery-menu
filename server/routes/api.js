@@ -798,13 +798,7 @@ router.get('/menu-bundle', async (req, res) => {
         const isPlanPos = (saasP.counter_ordering_enabled !== undefined && saasP.counter_ordering_enabled !== null)
           ? (saasP.counter_ordering_enabled === 1 || saasP.counter_ordering_enabled === true || saasP.counter_ordering_enabled === '1' || saasP.counter_ordering_enabled === 'true')
           : (planTierKey !== 'basic');
-        if (!isPlanPos) return false;
-        if (resto.counter_ordering_enabled !== undefined && resto.counter_ordering_enabled !== null) {
-          if (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false') {
-            return false;
-          }
-        }
-        return true;
+        return Boolean(isPlanPos);
       })(),
       active: true
     };
@@ -930,13 +924,8 @@ router.get('/info', async (req, res) => {
       ? (saasPlan.counter_ordering_enabled === 1 || saasPlan.counter_ordering_enabled === true || saasPlan.counter_ordering_enabled === '1' || saasPlan.counter_ordering_enabled === 'true')
       : (planTierKey !== 'basic');
 
-    const isRestoExplicitCounterDisabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
-      (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false');
-
     // SaaS Plan is supreme: Super Admin controls whether POS ordering is allowed for this plan!
-    const effectiveCounterOrdering = Boolean(
-      isPlanCounterOrdering && !isRestoExplicitCounterDisabled
-    );
+    const effectiveCounterOrdering = Boolean(isPlanCounterOrdering);
     const effectiveGstActive = (saasPlan.gst_invoice_enabled !== 0 && saasPlan.gst_invoice_enabled !== false && saasPlan.gst_invoice_enabled !== '0' && saasPlan.gst_invoice_enabled !== 'false') && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true');
     const businessProfile = resolveBusinessProfile(resto);
     const badgeText = resolveBannerBadge(resto);
