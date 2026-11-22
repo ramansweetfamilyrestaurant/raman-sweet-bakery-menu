@@ -317,13 +317,20 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   };
 
   useEffect(() => {
+    // 1. Critical primary data for immediate screen rendering (Overview, Shops, Plans)
     loadData();
     loadSaaSPlans();
     loadSystemSettings();
-    loadAuditData();
-    loadOperationsTelemetry();
-    loadSuperAnnouncements();
     loadTicketCount();
+
+    // 2. Non-blocking deferred secondary telemetry (prevents DB connection pool starvation)
+    const timer = setTimeout(() => {
+      loadAuditData();
+      loadOperationsTelemetry();
+      loadSuperAnnouncements();
+    }, 120);
+
+    return () => clearTimeout(timer);
   }, [token]);
 
   useEffect(() => {
@@ -2797,7 +2804,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           {/* VIEW 4: SAAS PLANS & FEATURE MATRIX                                       */}
           {/* ========================================================================= */}
           {activeView === 'plans' && (
-            <SaaSPlansView token={token} restaurants={restaurants} />
+            <SaaSPlansView 
+              token={token} 
+              restaurants={restaurants} 
+              initialPlans={plansList} 
+            />
           )}
 
           {/* ========================================================================= */}

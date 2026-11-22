@@ -86,15 +86,23 @@ const INITIAL_CREATE_FORM = {
   interval_rush_mode_enabled: 1
 };
 
-export default function SaaSPlansView({ token, restaurants = [] }) {
+export default function SaaSPlansView({ token, restaurants = [], initialPlans = [] }) {
   const authToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('saas_super_token') || localStorage.getItem('touchqr_superadmin_token') || localStorage.getItem('token')) : null);
-  const [plans, setPlans] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [plans, setPlans] = useState(Array.isArray(initialPlans) && initialPlans.length > 0 ? initialPlans : []);
+  const [loading, setLoading] = useState(!Array.isArray(initialPlans) || initialPlans.length === 0);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('restaurant'); // 'restaurant' | 'hotel' | 'cinema' | 'all'
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Sync initial plans when supplied by parent
+  useEffect(() => {
+    if (Array.isArray(initialPlans) && initialPlans.length > 0 && plans.length === 0) {
+      setPlans(initialPlans);
+      setLoading(false);
+    }
+  }, [initialPlans]);
 
   // Create Plan Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -126,7 +134,10 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
   };
 
   useEffect(() => {
-    if (authToken) fetchPlans();
+    if (authToken) {
+      const isSilent = Array.isArray(initialPlans) && initialPlans.length > 0;
+      fetchPlans(isSilent);
+    }
   }, [authToken]);
 
   const handlePlanValueChange = async (planKey, field, val) => {

@@ -1541,9 +1541,36 @@ router.delete('/announcements', authenticateToken, requireSuperAdmin, async (req
   }
 });
 
+// High-Speed In-Memory Cache for Super Admin Read-Heavy Endpoints
+let plansCache = null;
+let plansCacheTime = 0;
+const PLANS_CACHE_TTL = 30 * 1000; // 30 seconds
+
+let settingsCache = null;
+let settingsCacheTime = 0;
+const SETTINGS_CACHE_TTL = 60 * 1000; // 60 seconds
+
+let operationsStatsCache = null;
+let operationsStatsCacheTime = 0;
+const OPERATIONS_CACHE_TTL = 45 * 1000; // 45 seconds
+
+function invalidatePlansCache() {
+  plansCache = null;
+  plansCacheTime = 0;
+}
+
+function invalidateSettingsCache() {
+  settingsCache = null;
+  settingsCacheTime = 0;
+}
+
 // GET All SaaS Plans (with restaurant count per plan)
 router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
+    if (plansCache && (Date.now() - plansCacheTime < PLANS_CACHE_TTL) && !req.query.force) {
+      return res.json(plansCache);
+    }
+
     const [plans, restaurants] = await Promise.all([
       query('SELECT * FROM saas_plans ORDER BY price ASC'),
       query('SELECT id, business_type, service_model, business_category, plan_tier FROM restaurants')
@@ -1578,6 +1605,8 @@ router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
       allowed_themes: p.allowed_themes || 'ALL',
       enrolled_count: (restaurants || []).filter(r => matchesPlanSubscriber(r, p)).length
     }));
+    plansCache = result;
+    plansCacheTime = Date.now();
     res.json(result);
   } catch (err) {
     console.error('Fetch SaaS plans error:', err);
@@ -1683,6 +1712,7 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
       toBoolInt(interval_rush_mode_enabled, 1)
     ]);
 
+    invalidatePlansCache();
     await logAudit(null, 'superadmin', 'Create SaaS Plan', `Created plan '${name}' (${cleanKey}) with theme '${theme_color || 'gold'}'`);
     res.json({ success: true, message: `SaaS Plan '${name}' created successfully!` });
   } catch (err) {
@@ -1796,6 +1826,7 @@ router.put('/plans/batch', authenticateToken, requireSuperAdmin, async (req, res
 
     clearSubStatusCache();
     clearRestoResolveCache();
+    invalidatePlansCache();
     logAudit(null, 'superadmin', 'Batch Update SaaS Plans', `Batch saved matrix permissions for ${plans.length} plans`).catch(() => {});
     res.json({ success: true, message: `All ${plans.length} SaaS plans updated successfully!` });
   } catch (err) {
@@ -1955,6 +1986,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
 
     clearSubStatusCache();
     clearRestoResolveCache();
+    invalidatePlansCache();
     logAudit(null, 'superadmin', 'Update SaaS Plan Matrix', `Updated 24-point plan matrix for '${key}'`).catch(() => {});
     res.json({ success: true, message: `SaaS Plan '${name || key}' matrix updated successfully!` });
   } catch (err) {
@@ -1979,6 +2011,7 @@ router.delete('/plans/:key', authenticateToken, requireSuperAdmin, async (req, r
     // Safely migrate any business on this custom plan back to the industry-appropriate Pro plan
     await query("UPDATE restaurants SET plan_tier = $1 WHERE LOWER(plan_tier) = LOWER($2)", [fallbackTier, key]);
     await query('DELETE FROM saas_plans WHERE LOWER(key) = LOWER($1)', [key]);
+    invalidatePlansCache();
     await logAudit(null, 'superadmin', 'Delete SaaS Plan', `Deleted SaaS Plan '${key}' (businesses migrated to '${fallbackTier}')`);
     res.json({ success: true, message: `Plan '${key}' deleted successfully. Assigned businesses safely migrated to ${fallbackTier} plan.` });
   } catch (err) {
@@ -2008,6 +2041,9 @@ router.use('/audit-logs/archives', auditArchivesRouter);
 
 // GET Comprehensive Real-Time Database Health & System Telemetry
 router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req, res) => {
+  if (operationsStatsCache && (Date.now() - operationsStatsCacheTime < OPERATIONS_CACHE_TTL) && !req.query.force) {
+    return res.json(operationsStatsCache);
+  }
   const startPing = Date.now();
   try {
     const isPg = getDbType() === 'postgres';
@@ -2177,42 +2213,38 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
       }
     }
 
-    // 4. Detailed Table Breakdown
+    // 4. Detailed Table Breakdown (Executed Concurrently via Promise.all)
     const targetTables = [
       'restaurants', 'dishes', 'categories', 'orders', 'order_items', 
       'payments', 'audit_logs', 'admins', 'saas_plans', 'support_tickets', 
       'ticket_messages', 'stored_images', 'system_settings'
     ];
-    const tableStats = [];
 
-    for (const t of targetTables) {
+    const tableStats = await Promise.all(targetTables.map(async (t) => {
       try {
         const countSql = isPg ? `SELECT count(*)::int AS total FROM ${t}` : `SELECT count(*) AS total FROM ${t}`;
-        const countRes = await query(countSql);
+        const [countRes, tSizeRes] = await Promise.all([
+          query(countSql),
+          isPg ? query(`SELECT pg_size_pretty(pg_total_relation_size('${t}')) AS size`).catch(() => []) : Promise.resolve([])
+        ]);
         const totalRows = countRes && countRes[0] ? countRes[0].total : 0;
-        let sizePretty = '< 1 MB';
-        if (isPg) {
-          try {
-            const tSizeRes = await query(`SELECT pg_size_pretty(pg_total_relation_size('${t}')) AS size`);
-            if (tSizeRes && tSizeRes[0]) sizePretty = tSizeRes[0].size;
-          } catch {}
-        }
+        let sizePretty = (tSizeRes && tSizeRes[0] && tSizeRes[0].size) || '< 1 MB';
 
-        tableStats.push({
+        return {
           table_name: t,
           row_count: totalRows,
           size_pretty: sizePretty,
           status: 'HEALTHY'
-        });
+        };
       } catch (err) {
-        tableStats.push({
+        return {
           table_name: t,
           row_count: 0,
           size_pretty: 'N/A',
           status: 'UNAVAILABLE'
-        });
+        };
       }
-    }
+    }));
 
     // 5. System Memory & Process Stats
     const mem = process.memoryUsage();
@@ -2231,7 +2263,7 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
       console.warn('System settings query notice:', e.message);
     }
 
-    res.json({
+    const payload = {
       success: true,
       timestamp: new Date().toISOString(),
       database: {
@@ -2306,7 +2338,11 @@ router.get('/operations/stats', authenticateToken, requireSuperAdmin, async (req
           interval: 'Every 60 Minutes (Automated)'
         }
       }
-    });
+    };
+
+    operationsStatsCache = payload;
+    operationsStatsCacheTime = Date.now();
+    res.json(payload);
   } catch (err) {
     console.error('Operations stats fetch error:', err);
     res.status(500).json({ error: 'Failed to retrieve operations telemetry', details: err.message });
@@ -2461,6 +2497,9 @@ function isSensitiveSettingKey(key) {
 // GET System Settings for Super Admin (Server-side Secret Masking & Live Security Telemetry)
 router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
+    if (settingsCache && (Date.now() - settingsCacheTime < SETTINGS_CACHE_TTL) && !req.query.force) {
+      return res.json(settingsCache);
+    }
     const rows = await query('SELECT * FROM system_settings');
     const settings = {};
     (rows || []).forEach(r => {
@@ -2518,6 +2557,8 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
     settings.db_status = 'connected';
     settings.r2_status = isR2Active() ? 'active' : 'fallback';
 
+    settingsCache = settings;
+    settingsCacheTime = Date.now();
     res.json(settings);
   } catch (err) {
     console.error('Fetch system settings error:', err);
@@ -2528,6 +2569,7 @@ router.get('/settings', authenticateToken, requireSuperAdmin, async (req, res) =
 // POST Update System Settings for Super Admin (Safe Secret & Protected Production Switch)
 router.post('/settings', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
+    invalidateSettingsCache();
     const payload = req.body || {};
 
     // 1. Protected Operation: Check if switching Cashfree environment to PRODUCTION
