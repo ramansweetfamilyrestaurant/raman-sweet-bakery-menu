@@ -20,11 +20,16 @@ export default function AdminSidebar({
   capabilities = {}
 }) {
   const restoName = restaurantInfo?.name || 'Restaurant Admin';
-  const truncatedName = restoName.length > 24 ? `${restoName.substring(0, 22)}...` : restoName;
   const logoUrl = restaurantInfo?.logo;
   const resolvedLogo = resolveImageUrl(logoUrl);
   const terms = getBusinessTerminology(restaurantInfo || {});
   const categoryLabel = terms?.venueName || 'Restaurant';
+
+  const [logoFailed, setLogoFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setLogoFailed(false);
+  }, [logoUrl]);
 
   return (
     <aside style={{
@@ -50,6 +55,14 @@ export default function AdminSidebar({
         .sidebar-nav-item:hover {
           background-color: rgba(255, 255, 255, 0.05) !important;
           color: #FFFFFF !important;
+        }
+        .sidebar-support-card:hover {
+          background: rgba(255, 255, 255, 0.08) !important;
+          border-color: rgba(255, 255, 255, 0.16) !important;
+        }
+        .sidebar-logout-btn:hover {
+          color: #EF4444 !important;
+          background: rgba(239, 68, 68, 0.1) !important;
         }
       `}</style>
 
@@ -86,12 +99,12 @@ export default function AdminSidebar({
             justifyContent: 'center',
             boxShadow: '0 3px 10px rgba(0,0,0,0.45)'
           }}>
-            {resolvedLogo ? (
+            {!logoFailed && resolvedLogo ? (
               <img
                 src={resolvedLogo}
                 alt={restoName}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={(e) => { e.target.style.display = 'none'; }}
+                onError={() => setLogoFailed(true)}
               />
             ) : (
               <span style={{ color: '#D4AF37', fontWeight: 900, fontSize: '1.1rem', letterSpacing: '0.02em' }}>
@@ -264,6 +277,7 @@ export default function AdminSidebar({
         {/* Support Card (Warm Terracotta Tone) */}
         <div
           onClick={onOpenHelp}
+          className="sidebar-support-card"
           style={{
             background: 'rgba(255, 255, 255, 0.04)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -317,6 +331,7 @@ export default function AdminSidebar({
         {/* Logout */}
         <button
           onClick={onLogout}
+          className="sidebar-logout-btn"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -330,7 +345,7 @@ export default function AdminSidebar({
             color: '#94A3B8',
             fontSize: '0.78rem',
             fontWeight: 600,
-            transition: 'color 0.15s ease'
+            transition: 'all 0.15s ease'
           }}
         >
           <LogOut size={14} />

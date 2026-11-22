@@ -32,6 +32,9 @@ export default function AdminHeader({
   const terms = getBusinessTerminology(restaurantInfo || {});
   const isCinema = terms?.serviceModel === 'cinema';
   const isHotel = terms?.serviceModel === 'hotel';
+  const restoMobileName = restaurantInfo?.name || 'Restaurant Admin';
+  const resolvedMobileLogo = resolveImageUrl(restaurantInfo?.logo);
+  const categoryMobileLabel = terms?.venueName || 'Restaurant';
 
   useEffect(() => {
     if (!showUserMenu) return;
@@ -454,30 +457,62 @@ export default function AdminHeader({
               overflowY: 'auto'
             }}>
               <div>
-                {/* Header */}
+                {/* Header: Business-First */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '14px', borderBottom: '1px solid #1E293B' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
                     <div style={{
                       width: '38px',
                       height: '38px',
                       borderRadius: '10px',
-                      background: '#D97706',
+                      border: '1.5px solid rgba(212, 175, 55, 0.45)',
+                      background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontWeight: 900,
-                      color: '#FFF',
-                      fontSize: '1.1rem'
+                      flexShrink: 0,
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
                     }}>
-                      ⚡
+                      {resolvedMobileLogo ? (
+                        <img
+                          src={resolvedMobileLogo}
+                          alt={restoMobileName}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <span style={{ color: '#D4AF37', fontWeight: 900, fontSize: '1.05rem' }}>
+                          {(restoMobileName || 'R').charAt(0).toUpperCase()}
+                        </span>
+                      )}
                     </div>
-                    <div>
-                      <strong style={{ fontSize: '0.95rem', color: '#F8FAFC', display: 'block', fontWeight: 900 }}>
-                        TouchQR
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <strong style={{
+                        fontSize: '0.90rem',
+                        color: '#F8FAFC',
+                        display: 'block',
+                        fontWeight: 800,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }} title={restoMobileName}>
+                        {restoMobileName}
                       </strong>
-                      <span style={{ fontSize: '0.70rem', color: '#94A3B8' }}>
-                        {restaurantInfo?.name || 'Restaurant Admin'}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
+                        <span style={{ fontSize: '0.65rem', color: '#22C55E', fontWeight: 700 }}>Online</span>
+                        <span style={{ fontSize: '0.62rem', color: '#64748B' }}>•</span>
+                        <span style={{
+                          fontSize: '0.65rem',
+                          color: '#94A3B8',
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {categoryMobileLabel}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -493,7 +528,9 @@ export default function AdminHeader({
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      marginLeft: '8px'
                     }}
                   >
                     <X size={16} />
