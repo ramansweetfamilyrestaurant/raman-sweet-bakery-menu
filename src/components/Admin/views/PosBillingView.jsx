@@ -19,7 +19,8 @@ import {
   Phone,
   ChefHat,
   UtensilsCrossed,
-  Receipt
+  Receipt,
+  ChevronDown
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { createAdminPosOrder } from '../../../api/client';
@@ -53,6 +54,7 @@ export default function PosBillingView({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successOrder, setSuccessOrder] = useState(null); // { order, token_display }
   const [upiQrDataUrl, setUpiQrDataUrl] = useState(null);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
 
   const searchInputRef = useRef(null);
 
@@ -262,8 +264,9 @@ export default function PosBillingView({
           onOrderCreated(orderData);
         }
 
-        // Reset cart
+        // Reset cart & close mobile sheet
         clearCart();
+        setIsMobileCartOpen(false);
       }
     } catch (err) {
       alert(`Error creating order: ${err.message || 'Please check network and try again'}`);
@@ -308,9 +311,21 @@ export default function PosBillingView({
           box-sizing: border-box;
         }
         .pos-cart-panel {
+          display: flex;
+          position: sticky;
+          top: 20px;
           width: 100%;
           max-width: 380px;
           box-sizing: border-box;
+        }
+        .pos-mobile-cart-bar {
+          display: none;
+        }
+        .pos-mobile-cart-backdrop {
+          display: none;
+        }
+        .pos-mobile-close-btn {
+          display: none;
         }
         @media (max-width: 1150px) {
           .pos-grid-container {
@@ -320,22 +335,67 @@ export default function PosBillingView({
             max-width: 340px;
           }
         }
-        @media (max-width: 850px) {
+        @media (max-width: 900px) {
           .pos-grid-container {
             grid-template-columns: 1fr;
           }
           .pos-cart-panel {
+            display: none;
             position: fixed !important;
-            bottom: 0 !important;
+            bottom: calc(64px + env(safe-area-inset-bottom)) !important;
+            top: auto !important;
             left: 0 !important;
             right: 0 !important;
             max-width: 100% !important;
-            z-index: 50 !important;
+            z-index: 1050 !important;
             max-height: 80vh !important;
             overflow-y: auto !important;
             border-radius: 20px 20px 0 0 !important;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.15) !important;
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.25) !important;
           }
+          .pos-cart-panel.mobile-open {
+            display: flex !important;
+            animation: posSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          }
+          .pos-mobile-cart-bar {
+            display: flex !important;
+            position: fixed;
+            bottom: calc(64px + env(safe-area-inset-bottom) + 8px);
+            left: 12px;
+            right: 12px;
+            z-index: 990;
+            background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+            color: #FFFFFF;
+            padding: 12px 18px;
+            border-radius: 14px;
+            box-shadow: 0 6px 22px rgba(5, 150, 105, 0.5);
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            transition: transform 0.15s ease;
+          }
+          .pos-mobile-cart-bar:active {
+            transform: scale(0.98);
+          }
+          .pos-mobile-cart-backdrop {
+            display: block !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 1040;
+            backdrop-filter: blur(2px);
+          }
+          .pos-mobile-close-btn {
+            display: inline-flex !important;
+          }
+        }
+        @keyframes posSlideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
         .pos-dish-card {
           transition: all 0.15s ease;
@@ -980,7 +1040,7 @@ export default function PosBillingView({
         {/* ========================================================
             RIGHT COLUMN: STICKY BILLING & PAYMENT DRAWER
            ======================================================== */}
-        <div className="pos-cart-panel" style={{
+        <div className={`pos-cart-panel ${isMobileCartOpen ? 'mobile-open' : ''}`} style={{
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
@@ -989,11 +1049,9 @@ export default function PosBillingView({
           flexDirection: 'column',
           gap: '14px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
-          position: 'sticky',
-          top: '20px',
           boxSizing: 'border-box'
         }}>
-          {/* Panel Header & Clear Button */}
+          {/* Panel Header & Clear / Close Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Receipt size={17} color="#059669" />
@@ -1009,25 +1067,46 @@ export default function PosBillingView({
                 {cart.reduce((s, it) => s + it.quantity, 0)} items
               </span>
             </div>
-            {cart.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {cart.length > 0 && (
+                <button
+                  onClick={clearCart}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#EF4444',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}
+                >
+                  <Trash2 size={13} />
+                  <span>Clear</span>
+                </button>
+              )}
               <button
-                onClick={clearCart}
+                className="pos-mobile-close-btn"
+                onClick={() => setIsMobileCartOpen(false)}
                 style={{
-                  background: 'none',
+                  background: '#F1F5F9',
                   border: 'none',
-                  color: '#EF4444',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
+                  borderRadius: '8px',
+                  padding: '4px 8px',
+                  color: '#475569',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
                   cursor: 'pointer',
-                  display: 'flex',
                   alignItems: 'center',
-                  gap: '3px'
+                  gap: '4px'
                 }}
               >
-                <Trash2 size={13} />
-                <span>Clear</span>
+                <ChevronDown size={15} />
+                <span>Close</span>
               </button>
-            )}
+            </div>
           </div>
 
           {/* Order Type Toggle: Takeaway vs Dine-In Table */}
@@ -1406,6 +1485,51 @@ export default function PosBillingView({
           </button>
         </div>
       </div>
+
+      {/* ========================================================
+          MOBILE FLOATING ACTION BAR (< 900px)
+         ======================================================== */}
+      <div
+        className="pos-mobile-cart-bar"
+        onClick={() => setIsMobileCartOpen(true)}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            background: 'rgba(255, 255, 255, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 900,
+            fontSize: '0.85rem'
+          }}>
+            {cart.reduce((s, it) => s + it.quantity, 0)}
+          </div>
+          <div>
+            <div style={{ fontSize: '0.74rem', opacity: 0.9, fontWeight: 700 }}>
+              {cart.length === 0 ? 'Active Bill (Empty)' : `${cart.reduce((s, it) => s + it.quantity, 0)} Items Added`}
+            </div>
+            <div style={{ fontSize: '1rem', fontWeight: 950, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+              {currencySymbol}{grandTotal.toFixed(2)}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.86rem' }}>
+          <span>{cart.length === 0 ? 'Open Cart' : 'View Bill & Pay'}</span>
+          <ArrowRight size={17} />
+        </div>
+      </div>
+
+      {/* MOBILE BACKDROP OVERLAY */}
+      {isMobileCartOpen && (
+        <div
+          className="pos-mobile-cart-backdrop"
+          onClick={() => setIsMobileCartOpen(false)}
+        />
+      )}
 
       {/* ========================================================
           3. CELEBRATORY ORDER SUCCESS & TOKEN MODAL
