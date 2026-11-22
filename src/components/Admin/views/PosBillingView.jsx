@@ -20,7 +20,8 @@ import {
   ChefHat,
   UtensilsCrossed,
   Receipt,
-  ChevronDown
+  ChevronDown,
+  Image as ImageIcon
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { createAdminPosOrder } from '../../../api/client';
@@ -56,6 +57,13 @@ export default function PosBillingView({
   const [upiQrDataUrl, setUpiQrDataUrl] = useState(null);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [isTokensQueueCollapsed, setIsTokensQueueCollapsed] = useState(false);
+  const [showDishImages, setShowDishImages] = useState(() => {
+    try {
+      return localStorage.getItem('pos_show_dish_images') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
 
   const searchInputRef = useRef(null);
 
@@ -882,6 +890,38 @@ export default function PosBillingView({
                 >
                   🔴 Non-Veg
                 </button>
+
+                {/* Photos ON / OFF Toggle Button (Ultra-Fast Compact POS Mode) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !showDishImages;
+                    setShowDishImages(next);
+                    try {
+                      localStorage.setItem('pos_show_dish_images', String(next));
+                    } catch (e) {}
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: showDishImages ? '#059669' : '#CBD5E1',
+                    background: showDishImages ? '#ECFDF5' : '#FFFFFF',
+                    color: showDishImages ? '#065F46' : '#475569',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title={showDishImages ? 'Photos are ON (Click to hide photos for compact speed billing)' : 'Photos are OFF (Click to show photos)'}
+                >
+                  <ImageIcon size={14} color={showDishImages ? '#059669' : '#64748B'} />
+                  <span>{showDishImages ? 'Photos ON' : 'Photos OFF'}</span>
+                </button>
               </div>
             </div>
 
@@ -1024,8 +1064,8 @@ export default function PosBillingView({
                         ))}
                       </div>
 
-                      {/* Image Preview if available */}
-                      {hasImage && (
+                      {/* Image Preview if available and enabled */}
+                      {showDishImages && hasImage && (
                         <div style={{
                           width: '100%',
                           height: '85px',
