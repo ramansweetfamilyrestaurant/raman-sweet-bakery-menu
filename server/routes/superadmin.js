@@ -1710,10 +1710,11 @@ router.put('/plans/batch', authenticateToken, requireSuperAdmin, async (req, res
       if (p.key) planMap.set(p.key.toLowerCase(), p);
     });
 
-    for (const p of plans) {
-      if (!p || !p.key) continue;
+    // Execute all plan updates concurrently in parallel
+    await Promise.all(plans.map(async (p) => {
+      if (!p || !p.key) return;
       const existingPlan = planMap.get(p.key.toLowerCase());
-      if (!existingPlan) continue;
+      if (!existingPlan) return;
 
       const queryParams = [
         p.name || existingPlan.name || p.key,
@@ -1783,15 +1784,19 @@ router.put('/plans/batch', authenticateToken, requireSuperAdmin, async (req, res
         WHERE id = $48
       `, queryParams);
 
-      await query('UPDATE restaurants SET counter_ordering_enabled = $1 WHERE LOWER(plan_tier) = LOWER($2)', [
-        toBoolInt(p.counter_ordering_enabled, existingPlan.counter_ordering_enabled ?? 0),
-        existingPlan.key
-      ]).catch(() => {});
-    }
+      const oldCounterVal = existingPlan.counter_ordering_enabled ?? 0;
+      const newCounterVal = toBoolInt(p.counter_ordering_enabled, oldCounterVal);
+      if (p.counter_ordering_enabled !== undefined && newCounterVal !== oldCounterVal) {
+        await query('UPDATE restaurants SET counter_ordering_enabled = $1 WHERE LOWER(plan_tier) = LOWER($2)', [
+          newCounterVal,
+          existingPlan.key
+        ]).catch(() => {});
+      }
+    }));
 
     clearSubStatusCache();
     clearRestoResolveCache();
-    await logAudit(null, 'superadmin', 'Batch Update SaaS Plans', `Batch saved matrix permissions for ${plans.length} plans`);
+    logAudit(null, 'superadmin', 'Batch Update SaaS Plans', `Batch saved matrix permissions for ${plans.length} plans`).catch(() => {});
     res.json({ success: true, message: `All ${plans.length} SaaS plans updated successfully!` });
   } catch (err) {
     console.error('Batch update SaaS plans error:', err);
@@ -1938,15 +1943,19 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       `, queryParams);
     }
 
-    // Keep tenant restaurants in exact sync with Super Admin plan setting
-    await query('UPDATE restaurants SET counter_ordering_enabled = $1 WHERE LOWER(plan_tier) = LOWER($2)', [
-      toBoolInt(counter_ordering_enabled, existingPlan.counter_ordering_enabled ?? 0),
-      existingPlan.key
-    ]).catch(() => {});
+    // Keep tenant restaurants in exact sync with Super Admin plan setting if counter ordering flag changed
+    const oldCounterVal = existingPlan.counter_ordering_enabled ?? 0;
+    const newCounterVal = toBoolInt(counter_ordering_enabled, oldCounterVal);
+    if (counter_ordering_enabled !== undefined && newCounterVal !== oldCounterVal) {
+      await query('UPDATE restaurants SET counter_ordering_enabled = $1 WHERE LOWER(plan_tier) = LOWER($2)', [
+        newCounterVal,
+        existingPlan.key
+      ]).catch(() => {});
+    }
 
     clearSubStatusCache();
     clearRestoResolveCache();
-    await logAudit(null, 'superadmin', 'Update SaaS Plan Matrix', `Updated 24-point plan matrix for '${key}'`);
+    logAudit(null, 'superadmin', 'Update SaaS Plan Matrix', `Updated 24-point plan matrix for '${key}'`).catch(() => {});
     res.json({ success: true, message: `SaaS Plan '${name || key}' matrix updated successfully!` });
   } catch (err) {
     console.error('Update SaaS plan matrix error:', err);

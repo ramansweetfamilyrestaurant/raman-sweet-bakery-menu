@@ -104,8 +104,8 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
   // Edit Single Plan Modal State
   const [editingPlan, setEditingPlan] = useState(null);
 
-  const fetchPlans = async () => {
-    setLoading(true);
+  const fetchPlans = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     setErrorMsg('');
     try {
       const res = await fetch('/api/superadmin/plans', {
@@ -121,7 +121,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
       console.error('Error fetching plans:', err);
       setErrorMsg('Network error loading SaaS plans.');
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -263,10 +263,12 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         }));
       }
 
+      setSaving(false);
       setHasUnsavedChanges(false);
       setMsg('⚡ All Industry Limits, Permissions & Features Saved Successfully!');
       setTimeout(() => setMsg(''), 4000);
-      await fetchPlans();
+      // Silent background sync without locking UI or unmounting matrix
+      fetchPlans(true);
     } catch (err) {
       console.error('Error saving plans:', err);
       setErrorMsg(err.message || 'Failed to save plan permissions.');
@@ -341,7 +343,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
       setShowCreateModal(false);
       setCreateForm(INITIAL_CREATE_FORM);
       setTimeout(() => setMsg(''), 4000);
-      await fetchPlans();
+      await fetchPlans(true);
     } catch (err) {
       alert(err.message || 'Error creating plan');
     } finally {
@@ -398,7 +400,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
       setMsg(`⚡ Plan '${editingPlan.name}' updated successfully!`);
       setEditingPlan(null);
       setTimeout(() => setMsg(''), 4000);
-      await fetchPlans();
+      await fetchPlans(true);
     } catch (err) {
       alert(err.message || 'Failed to update plan');
     } finally {
@@ -427,7 +429,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
       if (!res.ok) throw new Error(data.error || 'Failed to delete plan');
       setMsg(data.message || `Plan "${planName}" deleted successfully!`);
       setTimeout(() => setMsg(''), 4000);
-      await fetchPlans();
+      await fetchPlans(true);
     } catch (err) {
       alert(err.message || 'Failed to delete plan');
     }
