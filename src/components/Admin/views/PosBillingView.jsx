@@ -328,14 +328,22 @@ export default function PosBillingView({
         .pos-mobile-close-btn {
           display: none;
         }
-        @media (max-width: 1150px) {
+        /* TABLET LANDSCAPE & COMPACT DESKTOPS (901px - 1180px) */
+        @media (min-width: 901px) and (max-width: 1180px) {
           .pos-grid-container {
-            grid-template-columns: minmax(0, 1fr) 340px;
+            grid-template-columns: minmax(0, 1fr) 330px;
+            gap: 12px;
           }
           .pos-cart-panel {
-            max-width: 340px;
+            max-width: 330px;
+            padding: 14px !important;
+          }
+          .pos-dishes-grid {
+            grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+            gap: 10px;
           }
         }
+        /* TABLET PORTRAIT & MOBILE SCREENS (<= 900px) */
         @media (max-width: 900px) {
           .pos-grid-container {
             grid-template-columns: 1fr;
@@ -347,7 +355,8 @@ export default function PosBillingView({
             top: auto !important;
             left: 0 !important;
             right: 0 !important;
-            max-width: 100% !important;
+            max-width: 520px !important;
+            margin: 0 auto !important;
             z-index: 1050 !important;
             max-height: 85vh !important;
             overflow-y: auto !important;
@@ -366,6 +375,8 @@ export default function PosBillingView({
             bottom: calc(64px + env(safe-area-inset-bottom) + 8px);
             left: 12px;
             right: 12px;
+            max-width: 520px;
+            margin: 0 auto;
             z-index: 990;
             background: linear-gradient(135deg, #059669 0%, #10B981 100%);
             color: #FFFFFF;
