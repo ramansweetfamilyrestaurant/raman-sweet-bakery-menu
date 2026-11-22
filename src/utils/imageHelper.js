@@ -43,13 +43,28 @@ export function resolveImageUrl(url) {
   return `/${cleanUrl}`;
 }
 
+const DEMO_IMAGE_DOMAINS = [
+  'vecteezy.com', 'pikpng.com', 'pngitem.com', 'freepik.com', 'pngtree.com',
+  'hiclipart.com', 'graficsea.com', 'vhv.rs', 'boombay.in', 'rosepng.com',
+  'mysorecafe.com.au', 'rawpixel.com', 'grofers.com', 'ambermenu.com.ph',
+  'bing.com', 'bing.net', 'vectorjungal.com', 'cakesncakesshop.com',
+  'shortpixel.ai', 'blogspot.com', 'eatfit.in', 'tnfoodie.in', 'pinimg.com',
+  'industhanfood.ie', 'vegrecipesofindia.com', 'flatskitchen.com',
+  'stackeatfoods.com', 'favpng.com', 'sankrantirestaurant.com', 'pnggallery.com'
+];
+
+export function isDemoImageUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return DEMO_IMAGE_DOMAINS.some(domain => url.includes(domain));
+}
+
 /**
  * Dish Image Fallback Helper
  */
 export function getDishImageUrl(url) {
   if (!url || typeof url !== 'string') return '/images/default-dish.webp';
   const cleanUrl = url.trim();
-  if (!cleanUrl || cleanUrl === 'null' || cleanUrl === 'undefined' || cleanUrl === '/uploads/logo.jpg') {
+  if (!cleanUrl || cleanUrl === 'null' || cleanUrl === 'undefined' || cleanUrl === '/uploads/logo.jpg' || isDemoImageUrl(cleanUrl)) {
     return '/images/default-dish.webp';
   }
   return resolveImageUrl(cleanUrl);
@@ -61,7 +76,7 @@ export function getDishImageUrl(url) {
 export function getComboImageUrl(url) {
   if (!url || typeof url !== 'string') return '/images/default-combo.webp?v=3';
   const cleanUrl = url.trim();
-  if (!cleanUrl || cleanUrl === 'null' || cleanUrl === 'undefined' || cleanUrl === '/uploads/logo.jpg') {
+  if (!cleanUrl || cleanUrl === 'null' || cleanUrl === 'undefined' || cleanUrl === '/uploads/logo.jpg' || isDemoImageUrl(cleanUrl)) {
     return '/images/default-combo.webp?v=3';
   }
   return resolveImageUrl(cleanUrl);
@@ -85,7 +100,7 @@ export function getCategoryImageUrl(url) {
 export function hasCustomDishImage(image) {
   if (!image || typeof image !== 'string') return false;
   const clean = image.trim();
-  if (!clean || clean === 'null' || clean === 'undefined' || clean === '/uploads/logo.jpg' || clean === '/images/default-dish.webp') return false;
+  if (!clean || clean === 'null' || clean === 'undefined' || clean === '/uploads/logo.jpg' || clean === '/images/default-dish.webp' || isDemoImageUrl(clean)) return false;
   return true;
 }
 
