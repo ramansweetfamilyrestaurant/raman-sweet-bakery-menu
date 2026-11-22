@@ -286,11 +286,19 @@ export default function PosBillingView({
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>
       <style>{`
+        .pos-view-root {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
         .pos-grid-container {
           display: grid;
           grid-template-columns: minmax(0, 1fr) 380px;
-          gap: 18px;
-          align-items: start;
+          gap: 16px;
+          align-items: stretch;
           width: 100%;
           box-sizing: border-box;
         }
@@ -300,7 +308,7 @@ export default function PosBillingView({
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 12px;
         }
         .pos-dishes-grid {
           display: grid;
@@ -328,6 +336,79 @@ export default function PosBillingView({
         .pos-mobile-close-btn {
           display: none;
         }
+
+        /* DESKTOP & TABLET LANDSCAPE: VIEWPORT LOCK (CART FIXED, ONLY MENU SCROLLS) */
+        @media (min-width: 901px) {
+          .pos-view-root {
+            flex: 1;
+            height: 100%;
+            max-height: 100%;
+            min-height: 0;
+            overflow: hidden;
+            gap: 10px;
+          }
+          .pos-header-wrap {
+            flex-shrink: 0;
+          }
+          .pos-tokens-wrap {
+            flex-shrink: 0;
+          }
+          .pos-grid-container {
+            flex: 1;
+            min-height: 0;
+            height: 100%;
+            overflow: hidden;
+          }
+          .pos-left-column {
+            height: 100% !important;
+            min-height: 0 !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            padding-right: 6px;
+          }
+          .pos-cart-panel {
+            position: static !important;
+            top: auto !important;
+            height: 100% !important;
+            max-height: 100% !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+        }
+
+        /* Custom Sleek Scrollbars */
+        .pos-left-column::-webkit-scrollbar {
+          width: 6px;
+        }
+        .pos-left-column::-webkit-scrollbar-track {
+          background: #F1F5F9;
+          border-radius: 4px;
+        }
+        .pos-left-column::-webkit-scrollbar-thumb {
+          background: #CBD5E1;
+          border-radius: 4px;
+        }
+        .pos-left-column::-webkit-scrollbar-thumb:hover {
+          background: #94A3B8;
+        }
+
+        .pos-cart-items-scroll::-webkit-scrollbar {
+          width: 5px;
+        }
+        .pos-cart-items-scroll::-webkit-scrollbar-track {
+          background: #F8FAFC;
+          border-radius: 4px;
+        }
+        .pos-cart-items-scroll::-webkit-scrollbar-thumb {
+          background: #CBD5E1;
+          border-radius: 4px;
+        }
+        .pos-cart-items-scroll::-webkit-scrollbar-thumb:hover {
+          background: #94A3B8;
+        }
+
         /* TABLET LANDSCAPE & COMPACT DESKTOPS (901px - 1180px) */
         @media (min-width: 901px) and (max-width: 1180px) {
           .pos-grid-container {
@@ -423,16 +504,16 @@ export default function PosBillingView({
       {/* ========================================================
           1. HEADER & CONTROLS
          ======================================================== */}
-      <div style={{
+      <div className="pos-header-wrap" style={{
         background: '#FFFFFF',
         borderRadius: '16px',
         border: '1px solid #E2E8F0',
-        padding: '16px 20px',
+        padding: '14px 18px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '12px',
+        gap: '10px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -499,11 +580,12 @@ export default function PosBillingView({
           1.5. LIVE COUNTER PICKUP QUEUE (TOKENS TRACKER)
          ======================================================== */}
       {activeTokensQueue.length > 0 && (
-        <div style={{
+        <div className="pos-tokens-wrap" style={{
+          flexShrink: 0,
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          padding: '14px 18px',
+          padding: '12px 18px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
@@ -651,181 +733,195 @@ export default function PosBillingView({
       <div className="pos-grid-container">
         
         {/* LEFT COLUMN: FILTERS & DISH GRID */}
-        <div className="pos-left-column" style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+        <div className="pos-left-column">
           
-          {/* Search & Diet Toggle Bar */}
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: '14px',
-            border: '1px solid #E2E8F0',
-            padding: '12px 16px',
+          {/* Sticky Filters Header inside Left Menu Column */}
+          <div className="pos-filters-sticky-wrap" style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            background: '#F8FAFC',
+            paddingTop: '2px',
+            paddingBottom: '4px',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            flexWrap: 'wrap'
+            flexDirection: 'column',
+            gap: '10px'
           }}>
-            {/* Search Input */}
-            <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
-              <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search dishes or sweets... (Press Ctrl+K)"
-                style={{
-                  width: '100%',
-                  padding: '9px 34px 9px 36px',
-                  borderRadius: '10px',
-                  border: '1px solid #E2E8F0',
-                  fontSize: '0.84rem',
-                  outline: 'none',
-                  background: '#F8FAFC',
-                  color: '#0F172A',
-                  boxSizing: 'border-box'
-                }}
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
+            {/* Search & Diet Toggle Bar */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '14px',
+              border: '1px solid #E2E8F0',
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }}>
+              {/* Search Input */}
+              <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+                <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search dishes or sweets... (Press Ctrl+K)"
                   style={{
-                    position: 'absolute',
-                    right: '10px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#94A3B8',
-                    padding: 0
+                    width: '100%',
+                    padding: '9px 34px 9px 36px',
+                    borderRadius: '10px',
+                    border: '1px solid #E2E8F0',
+                    fontSize: '0.84rem',
+                    outline: 'none',
+                    background: '#F8FAFC',
+                    color: '#0F172A',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#94A3B8',
+                      padding: 0
+                    }}
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+
+              {/* Diet Filter Pills */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  onClick={() => setDietFilter('all')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: dietFilter === 'all' ? '#0F172A' : '#E2E8F0',
+                    background: dietFilter === 'all' ? '#0F172A' : '#FFFFFF',
+                    color: dietFilter === 'all' ? '#FFFFFF' : '#475569',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
                   }}
                 >
-                  <X size={15} />
+                  All
+                </button>
+                <button
+                  onClick={() => setDietFilter('veg')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: dietFilter === 'veg' ? '#16A34A' : '#E2E8F0',
+                    background: dietFilter === 'veg' ? '#DCFCE7' : '#FFFFFF',
+                    color: '#15803D',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  🟢 Pure Veg
+                </button>
+                <button
+                  onClick={() => setDietFilter('nonveg')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: dietFilter === 'nonveg' ? '#DC2626' : '#E2E8F0',
+                    background: dietFilter === 'nonveg' ? '#FEE2E2' : '#FFFFFF',
+                    color: '#B91C1C',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  🔴 Non-Veg
+                </button>
+              </div>
+            </div>
+
+            {/* Category Filter Horizontal Scroll */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              overflowX: 'auto',
+              paddingBottom: '4px'
+            }}>
+              <button
+                onClick={() => setSelectedCategory('all')}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid',
+                  borderColor: selectedCategory === 'all' ? '#059669' : '#CBD5E1',
+                  background: selectedCategory === 'all' ? '#059669' : '#FFFFFF',
+                  color: selectedCategory === 'all' ? '#FFFFFF' : '#334155',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+              >
+                All Categories ({dishes.length})
+              </button>
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid',
+                    borderColor: selectedCategory === cat.id ? '#059669' : '#CBD5E1',
+                    background: selectedCategory === cat.id ? '#059669' : '#FFFFFF',
+                    color: selectedCategory === cat.id ? '#FFFFFF' : '#334155',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
+                  }}
+                >
+                  {cat.name}
+                </button>
+              ))}
+              {Array.isArray(combos) && combos.length > 0 && (
+                <button
+                  onClick={() => setSelectedCategory('combos')}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid',
+                    borderColor: selectedCategory === 'combos' ? '#059669' : '#CBD5E1',
+                    background: selectedCategory === 'combos' ? '#059669' : '#FFFFFF',
+                    color: selectedCategory === 'combos' ? '#FFFFFF' : '#334155',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
+                  }}
+                >
+                  🎁 Combos ({combos.length})
                 </button>
               )}
             </div>
-
-            {/* Diet Filter Pills */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <button
-                onClick={() => setDietFilter('all')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid',
-                  borderColor: dietFilter === 'all' ? '#0F172A' : '#E2E8F0',
-                  background: dietFilter === 'all' ? '#0F172A' : '#FFFFFF',
-                  color: dietFilter === 'all' ? '#FFFFFF' : '#475569',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setDietFilter('veg')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid',
-                  borderColor: dietFilter === 'veg' ? '#16A34A' : '#E2E8F0',
-                  background: dietFilter === 'veg' ? '#DCFCE7' : '#FFFFFF',
-                  color: '#15803D',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                🟢 Pure Veg
-              </button>
-              <button
-                onClick={() => setDietFilter('nonveg')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid',
-                  borderColor: dietFilter === 'nonveg' ? '#DC2626' : '#E2E8F0',
-                  background: dietFilter === 'nonveg' ? '#FEE2E2' : '#FFFFFF',
-                  color: '#B91C1C',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                🔴 Non-Veg
-              </button>
-            </div>
-          </div>
-
-          {/* Category Filter Horizontal Scroll */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            overflowX: 'auto',
-            paddingBottom: '4px'
-          }}>
-            <button
-              onClick={() => setSelectedCategory('all')}
-              style={{
-                padding: '7px 14px',
-                borderRadius: '10px',
-                border: '1px solid',
-                borderColor: selectedCategory === 'all' ? '#059669' : '#CBD5E1',
-                background: selectedCategory === 'all' ? '#059669' : '#FFFFFF',
-                color: selectedCategory === 'all' ? '#FFFFFF' : '#334155',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                flexShrink: 0
-              }}
-            >
-              All Categories ({dishes.length})
-            </button>
-            {categories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: '10px',
-                  border: '1px solid',
-                  borderColor: selectedCategory === cat.id ? '#059669' : '#CBD5E1',
-                  background: selectedCategory === cat.id ? '#059669' : '#FFFFFF',
-                  color: selectedCategory === cat.id ? '#FFFFFF' : '#334155',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0
-                }}
-              >
-                {cat.name}
-              </button>
-            ))}
-            {Array.isArray(combos) && combos.length > 0 && (
-              <button
-                onClick={() => setSelectedCategory('combos')}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: '10px',
-                  border: '1px solid',
-                  borderColor: selectedCategory === 'combos' ? '#059669' : '#CBD5E1',
-                  background: selectedCategory === 'combos' ? '#059669' : '#FFFFFF',
-                  color: selectedCategory === 'combos' ? '#FFFFFF' : '#334155',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0
-                }}
-              >
-                🎁 Combos ({combos.length})
-              </button>
-            )}
           </div>
 
           {/* Dishes Grid */}
@@ -1059,12 +1155,12 @@ export default function PosBillingView({
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
           padding: '18px',
-          gap: '14px',
+          gap: '12px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
           boxSizing: 'border-box'
         }}>
           {/* Panel Header & Clear / Close Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Receipt size={17} color="#059669" />
               <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800 }}>Active Bill / Cart</strong>
@@ -1122,7 +1218,7 @@ export default function PosBillingView({
           </div>
 
           {/* Order Type Toggle: Takeaway vs Dine-In Table */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', background: '#F8FAFC', padding: '4px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+          <div style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', background: '#F8FAFC', padding: '4px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
             <button
               onClick={() => setOrderType('takeaway')}
               style={{
@@ -1165,7 +1261,7 @@ export default function PosBillingView({
 
           {/* If Dine-In selected, Table Selector */}
           {orderType === 'dine_in' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F0FDF4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', background: '#F0FDF4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
               <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#166534' }}>Select Table:</span>
               <select
                 value={tableNumber}
@@ -1190,7 +1286,7 @@ export default function PosBillingView({
           )}
 
           {/* Optional Customer Name / Phone Inputs */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <div style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <div style={{ position: 'relative' }}>
               <User size={13} color="#94A3B8" style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)' }} />
               <input
@@ -1229,17 +1325,18 @@ export default function PosBillingView({
             </div>
           </div>
 
-          {/* Cart Items List */}
-          <div style={{
+          {/* Cart Items List (Independent Scrollable Container) */}
+          <div className="pos-cart-items-scroll" style={{
             display: 'flex',
             flexDirection: 'column',
             gap: '8px',
-            maxHeight: '260px',
+            flex: 1,
+            minHeight: '70px',
             overflowY: 'auto',
             paddingRight: '4px'
           }}>
             {cart.length === 0 ? (
-              <div style={{ padding: '24px 12px', textAlign: 'center', color: '#94A3B8' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 12px', textAlign: 'center', color: '#94A3B8' }}>
                 <ShoppingBag size={28} color="#CBD5E1" style={{ marginBottom: '6px' }} />
                 <p style={{ margin: 0, fontSize: '0.80rem', fontWeight: 600 }}>Cart is empty</p>
                 <span style={{ fontSize: '0.70rem' }}>Tap any item from menu to add</span>
@@ -1316,6 +1413,7 @@ export default function PosBillingView({
 
           {/* Financial Breakdown */}
           <div style={{
+            flexShrink: 0,
             background: '#F8FAFC',
             borderRadius: '12px',
             padding: '12px',
@@ -1350,7 +1448,7 @@ export default function PosBillingView({
           </div>
 
           {/* Payment Method Selector */}
-          <div>
+          <div style={{ flexShrink: 0 }}>
             <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748B', display: 'block', marginBottom: '6px' }}>
               Select Upfront Payment Mode:
             </label>
@@ -1427,6 +1525,7 @@ export default function PosBillingView({
           {paymentMethod === 'upi' && (
             upiQrDataUrl ? (
               <div style={{
+                flexShrink: 0,
                 background: '#F0FDF4',
                 borderRadius: '12px',
                 border: '1px solid #BBF7D0',
@@ -1447,6 +1546,7 @@ export default function PosBillingView({
               </div>
             ) : (
               <div style={{
+                flexShrink: 0,
                 background: '#FEF3C7',
                 borderRadius: '12px',
                 border: '1px solid #FDE68A',
@@ -1465,6 +1565,7 @@ export default function PosBillingView({
             onClick={handleSubmitOrder}
             disabled={cart.length === 0 || isSubmitting}
             style={{
+              flexShrink: 0,
               padding: '14px',
               borderRadius: '12px',
               border: 'none',

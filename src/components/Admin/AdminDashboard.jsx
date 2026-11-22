@@ -3355,7 +3355,7 @@ export default function AdminDashboard({
         </div>
 
         {/* Right Main Dashboard Area */}
-        <div className="adm-dashboard-container" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className={`adm-dashboard-container ${activeTab === 'pos' ? 'pos-active-dashboard' : ''}`} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           {/* 📢 Global System Announcement Banner (Theme-Aware & Persistent Dismissal) */}
           {(() => {
             const currentNotice = announcements.find(a => {
@@ -3701,8 +3701,8 @@ export default function AdminDashboard({
             ordersEnabled={isDirectOrderingEnabled}
           />
 
-          <main className="adm-main-canvas">
-            <div className="adm-content-body">
+          <main className={`adm-main-canvas ${activeTab === 'pos' ? 'pos-active-main' : ''}`}>
+            <div className={`adm-content-body ${activeTab === 'pos' ? 'pos-active-body' : ''}`}>
               {/* 🛡️ Real-Time Instant Presence Verification Action Banner */}
               {Array.isArray(serviceRequests) && serviceRequests.some(r => r.request_type === 'presence_verification' && r.status === 'pending') && (
                 <div style={{

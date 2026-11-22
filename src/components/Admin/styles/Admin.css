@@ -151,6 +151,28 @@
   }
 }
 
+/* POS Viewport Lock Mode for Desktop & Tablet Landscape */
+@media (min-width: 901px) {
+  .adm-dashboard-container.pos-active-dashboard {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+  }
+  .adm-main-canvas.pos-active-main {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  .adm-content-body.pos-active-body {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 12px 20px 14px 20px !important;
+  }
+}
+
 /* Header Bar */
 .adm-header {
   height: 64px;
