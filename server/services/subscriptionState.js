@@ -575,8 +575,8 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
   const rawPrice = (resto?.plan_price !== undefined && resto?.plan_price !== null && resto?.plan_price !== '')
     ? Number(resto.plan_price)
     : (sub && sub.amount !== undefined && sub.amount !== null && sub.amount !== ''
-        ? Number(sub.amount)
-        : (plan.price !== undefined && plan.price !== null ? Number(plan.price) : 999));
+      ? Number(sub.amount)
+      : (plan.price !== undefined && plan.price !== null ? Number(plan.price) : 999));
   const effectivePlanPrice = isComplimentary ? 0 : (isNaN(rawPrice) ? 999 : rawPrice);
 
   return {
