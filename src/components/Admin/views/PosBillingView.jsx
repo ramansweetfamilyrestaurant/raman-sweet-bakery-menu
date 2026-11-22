@@ -304,7 +304,7 @@ export default function PosBillingView({
         }
         .pos-dishes-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
           gap: 12px;
           min-width: 0;
           width: 100%;
@@ -339,7 +339,7 @@ export default function PosBillingView({
             padding: 14px !important;
           }
           .pos-dishes-grid {
-            grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 10px;
           }
         }
