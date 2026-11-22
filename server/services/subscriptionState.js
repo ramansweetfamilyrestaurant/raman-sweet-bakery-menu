@@ -416,11 +416,14 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
         if (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false') {
           return false;
         }
+        if (resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1' || resto.counter_ordering_enabled === 'true') {
+          return true;
+        }
       }
       if (plan.counter_ordering_enabled !== undefined && plan.counter_ordering_enabled !== null) {
-        return isValTrue(plan.counter_ordering_enabled, !isBasicPlan || isUnlimitedPlan);
+        return isValTrue(plan.counter_ordering_enabled, false);
       }
-      return isComplimentary ? true : (!isBasicPlan || isUnlimitedPlan);
+      return !isBasicPlan;
     })(),
     whatsapp_ordering_enabled: isValTrue(plan.whatsapp_ordering_enabled ?? plan.whatsapp_enabled, !isBasicPlan),
     kds_enabled: (isBasicPlan || !isKdsApplicable) ? false : isValTrue(plan.kds_enabled, isUnlimitedPlan),

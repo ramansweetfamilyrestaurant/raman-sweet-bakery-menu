@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { SectionHeader } from '../components';
 
-const toBoolInt = (val) => {
-  if (val === undefined || val === null) return 1;
+const toBoolInt = (val, fallback = 1) => {
+  if (val === undefined || val === null) return fallback;
   return (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
 };
 
@@ -129,9 +129,62 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     if (authToken) fetchPlans();
   }, [authToken]);
 
-  const handlePlanValueChange = (planKey, field, val) => {
+  const handlePlanValueChange = async (planKey, field, val) => {
     setHasUnsavedChanges(true);
     setPlans(prev => prev.map(p => p.key === planKey ? { ...p, [field]: val } : p));
+
+    // Instant auto-save to backend so the toggle takes immediate effect
+    try {
+      const currentPlan = plans.find(p => p.key === planKey);
+      if (currentPlan && authToken) {
+        const updated = { ...currentPlan, [field]: val };
+        const directOrderingVal = toBoolInt(updated.direct_ordering_enabled);
+        const planInd = updated.industry || (updated.key.startsWith('hotel') ? 'hotel' : updated.key.startsWith('cinema') ? 'cinema' : 'restaurant');
+        const payload = {
+          ...updated,
+          industry: planInd,
+          max_tables: updated.max_tables !== undefined ? parseInt(updated.max_tables, 10) : 9999,
+          tables_enabled: toBoolInt(updated.tables_enabled, 1),
+          cabins_enabled: toBoolInt(updated.cabins_enabled, 0),
+          max_cabins: updated.max_cabins !== undefined ? parseInt(updated.max_cabins, 10) : 0,
+          vip_enabled: toBoolInt(updated.vip_enabled, 0),
+          max_vip: updated.max_vip !== undefined ? parseInt(updated.max_vip, 10) : 0,
+          rooms_enabled: toBoolInt(updated.rooms_enabled, 1),
+          max_rooms: updated.max_rooms !== undefined ? parseInt(updated.max_rooms, 10) : 9999,
+          screens_enabled: toBoolInt(updated.screens_enabled, 1),
+          max_screens: updated.max_screens !== undefined ? parseInt(updated.max_screens, 10) : 9999,
+          seats_enabled: toBoolInt(updated.seats_enabled, 1),
+          max_seats: updated.max_seats !== undefined ? parseInt(updated.max_seats, 10) : 9999,
+          direct_ordering_enabled: directOrderingVal,
+          counter_ordering_enabled: toBoolInt(updated.counter_ordering_enabled, 1),
+          presence_verification_enabled: directOrderingVal,
+          amenities_booking_enabled: toBoolInt(updated.amenities_booking_enabled),
+          seat_runner_dispatch_enabled: toBoolInt(updated.seat_runner_dispatch_enabled),
+          interval_rush_mode_enabled: toBoolInt(updated.interval_rush_mode_enabled),
+          allowed_verification_modes: 'GPS_WITH_STAFF_FALLBACK',
+          theme_color: updated.theme_color || 'gold',
+          allowed_themes: updated.allowed_themes || 'ALL'
+        };
+
+        const res = await fetch(`/api/superadmin/plans/${planKey}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          setHasUnsavedChanges(false);
+          const fieldLabel = field === 'counter_ordering_enabled' ? 'Counter POS' : field.replace(/_/g, ' ');
+          setMsg(`⚡ Saved: '${updated.name}' ${fieldLabel} ${val ? 'Enabled' : 'Disabled'}!`);
+          setTimeout(() => setMsg(''), 3000);
+        }
+      }
+    } catch (e) {
+      console.warn('Auto-save plan error:', e);
+    }
   };
 
   const handleSaveAllPlans = async () => {
@@ -2065,6 +2118,38 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* 💾 Sticky Bottom Bar for Unsaved Changes */}
+      {hasUnsavedChanges && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 9999,
+          background: '#0F172A',
+          color: '#FFFFFF',
+          padding: '12px 20px',
+          borderRadius: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          border: '1px solid #334155',
+          animation: 'fadeIn 0.2s ease-in'
+        }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>⚠️ Unsaved plan changes pending</span>
+          <button
+            type="button"
+            onClick={handleSaveAllPlans}
+            disabled={saving}
+            className="sa-btn sa-btn-accent sa-btn-sm"
+            style={{ fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Save size={14} />
+            {saving ? 'Saving...' : '💾 Save All Plans Now'}
+          </button>
         </div>
       )}
     </div>

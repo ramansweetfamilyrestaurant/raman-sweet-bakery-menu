@@ -2993,7 +2993,7 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
     const isRestoExplicitlyEnabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
       (resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1' || resto.counter_ordering_enabled === 'true');
 
-    const isPosAllowed = isComplimentary || isRestoExplicitlyEnabled || (!isRestoExplicitlyDisabled && isPlanPosEnabled);
+    const isPosAllowed = isRestoExplicitlyEnabled || (!isRestoExplicitlyDisabled && isPlanPosEnabled);
 
     if (!isPosAllowed) {
       return res.status(403).json({

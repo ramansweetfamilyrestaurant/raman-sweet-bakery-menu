@@ -200,13 +200,16 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
       if (explicitFlag !== undefined && explicitFlag !== null && (explicitFlag === 0 || explicitFlag === false || explicitFlag === '0' || explicitFlag === 'false')) {
         return false;
       }
-      if (perms?.counter_ordering_enabled !== undefined && perms?.counter_ordering_enabled !== null) {
-        if (!isBoolTrue(perms.counter_ordering_enabled)) {
-          return isComplimentary;
-        }
+      if (explicitFlag !== undefined && explicitFlag !== null && (explicitFlag === 1 || explicitFlag === true || explicitFlag === '1' || explicitFlag === 'true')) {
         return true;
       }
-      if (isBasic && !isComplimentary) return false;
+      if (perms?.counter_ordering_enabled !== undefined && perms?.counter_ordering_enabled !== null) {
+        return isBoolTrue(perms.counter_ordering_enabled, false);
+      }
+      if (actualResto?.counter_ordering_enabled !== undefined && actualResto?.counter_ordering_enabled !== null) {
+        return isBoolTrue(actualResto.counter_ordering_enabled, false);
+      }
+      if (isBasic) return false;
       return true;
     })(),
     whatsapp_ordering_enabled: isBoolTrue(actualResto?.whatsapp_ordering_enabled ?? perms?.whatsapp_ordering_enabled, !isBasic),

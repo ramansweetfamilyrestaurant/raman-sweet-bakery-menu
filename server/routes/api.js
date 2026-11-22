@@ -921,6 +921,20 @@ router.get('/info', async (req, res) => {
     const bluetoothKotEnabled = (saasPlan.bluetooth_kot_enabled !== undefined ? (saasPlan.bluetooth_kot_enabled === 1 || saasPlan.bluetooth_kot_enabled === true || saasPlan.bluetooth_kot_enabled === '1') : isUnlimited);
     const dualPrinterEnabled = (saasPlan.dual_printer_enabled !== undefined ? (saasPlan.dual_printer_enabled === 1 || saasPlan.dual_printer_enabled === true || saasPlan.dual_printer_enabled === '1') : isUnlimited);
     const modifiersEnabled = saasPlan.modifiers_enabled !== undefined ? (saasPlan.modifiers_enabled === 1 || saasPlan.modifiers_enabled === true || saasPlan.modifiers_enabled === '1') : true;
+    const isPlanCounterOrdering = (saasPlan.counter_ordering_enabled !== undefined && saasPlan.counter_ordering_enabled !== null)
+      ? (saasPlan.counter_ordering_enabled === 1 || saasPlan.counter_ordering_enabled === true || saasPlan.counter_ordering_enabled === '1' || saasPlan.counter_ordering_enabled === 'true')
+      : (planTierKey !== 'basic');
+
+    const isRestoExplicitCounterDisabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
+      (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false');
+
+    const isRestoExplicitCounterEnabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
+      (resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1' || resto.counter_ordering_enabled === 'true');
+
+    const effectiveCounterOrdering = Boolean(
+      isRestoExplicitCounterEnabled ||
+      (!isRestoExplicitCounterDisabled && isPlanCounterOrdering)
+    );
     const effectiveGstActive = (saasPlan.gst_invoice_enabled !== 0 && saasPlan.gst_invoice_enabled !== false && saasPlan.gst_invoice_enabled !== '0' && saasPlan.gst_invoice_enabled !== 'false') && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true');
     const businessProfile = resolveBusinessProfile(resto);
     const badgeText = resolveBannerBadge(resto);
@@ -998,13 +1012,7 @@ router.get('/info', async (req, res) => {
       max_screens: (saasPlan.max_screens !== undefined && saasPlan.max_screens !== null) ? Number(saasPlan.max_screens) : 9999,
       max_seats: (saasPlan.max_seats !== undefined && saasPlan.max_seats !== null) ? Number(saasPlan.max_seats) : 9999,
       table_prefix: resto.table_prefix || 'table',
-      counter_ordering_enabled: Boolean(
-        resto.counter_ordering_enabled === 1 ||
-        resto.counter_ordering_enabled === true ||
-        resto.counter_ordering_enabled === '1' ||
-        ((resto.counter_ordering_enabled === undefined || resto.counter_ordering_enabled === null) &&
-         !['cinema_theatre'].includes(resto.business_type) && !['cinema'].includes(resto.service_model))
-      ),
+      counter_ordering_enabled: effectiveCounterOrdering,
       order_retention_days: resto.order_retention_days || 7,
       custom_domain: resto.custom_domain || '',
       table_verification_mode: resto.table_verification_mode || 'GPS_WITH_STAFF_FALLBACK',
@@ -1017,7 +1025,22 @@ router.get('/info', async (req, res) => {
       upi_payee_name: resto.upi_payee_name || '',
       print_upi_qr: resto.print_upi_qr !== undefined && resto.print_upi_qr !== null ? Number(resto.print_upi_qr) : 1,
       active: Boolean(isActive),
-      suspended: Boolean(!isActive)
+      suspended: Boolean(!isActive),
+      permissions: {
+        counter_ordering_enabled: effectiveCounterOrdering,
+        direct_ordering_enabled: directOrderingEnabled,
+        whatsapp_enabled: whatsappEnabled,
+        google_reviews_enabled: googleReviewsEnabled,
+        kds_enabled: kdsEnabled,
+        bluetooth_kot_enabled: bluetoothKotEnabled,
+        dual_printer_enabled: dualPrinterEnabled,
+        gst_invoice_enabled: gstInvoiceEnabled,
+        analytics_export_enabled: analyticsExportEnabled,
+        modifiers_enabled: modifiersEnabled,
+        multi_language_enabled: multiLanguageEnabled,
+        watermark_removal_enabled: watermarkRemovalEnabled,
+        custom_domain_enabled: customDomainEnabled
+      }
     });
   } catch (err) {
     console.error('[INFO ERROR]', err);
