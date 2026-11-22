@@ -4130,7 +4130,7 @@ export default function AdminDashboard({
               )}
 
               {/* SAFE FALLBACK FOR UNRECOGNIZED / INVALID TABS */}
-              {!['home', 'orders', 'floor-map', 'service-requests', 'kds', 'analytics', 'dishes', 'categories', 'combos', 'qr-generator', 'offers', 'customers', 'billing', 'subscription', 'review', 'notifications', 'support', 'settings'].includes(activeTab) && (
+              {!['home', 'orders', 'floor-map', 'service-requests', 'kds', 'analytics', 'dishes', 'categories', 'combos', 'qr-generator', 'offers', 'customers', 'billing', 'subscription', 'review', 'notifications', 'support', 'settings', 'pos'].includes(activeTab) && (
                 <HomeView
                   restaurantInfo={restaurantInfo}
                   analyticsData={analyticsData}

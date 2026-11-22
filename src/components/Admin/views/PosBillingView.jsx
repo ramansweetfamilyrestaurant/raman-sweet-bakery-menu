@@ -285,18 +285,39 @@ export default function PosBillingView({
       <style>{`
         .pos-grid-container {
           display: grid;
-          grid-template-columns: 1fr 380px;
+          grid-template-columns: minmax(0, 1fr) 380px;
           gap: 18px;
           align-items: start;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .pos-left-column {
+          min-width: 0;
+          width: 100%;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
         }
         .pos-dishes-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
           gap: 12px;
+          min-width: 0;
+          width: 100%;
+          box-sizing: border-box;
         }
-        @media (max-width: 1024px) {
+        .pos-cart-panel {
+          width: 100%;
+          max-width: 380px;
+          box-sizing: border-box;
+        }
+        @media (max-width: 1150px) {
           .pos-grid-container {
-            grid-template-columns: 1fr 340px;
+            grid-template-columns: minmax(0, 1fr) 340px;
+          }
+          .pos-cart-panel {
+            max-width: 340px;
           }
         }
         @media (max-width: 850px) {
@@ -308,6 +329,7 @@ export default function PosBillingView({
             bottom: 0 !important;
             left: 0 !important;
             right: 0 !important;
+            max-width: 100% !important;
             z-index: 50 !important;
             max-height: 80vh !important;
             overflow-y: auto !important;
@@ -555,7 +577,7 @@ export default function PosBillingView({
       <div className="pos-grid-container">
         
         {/* LEFT COLUMN: FILTERS & DISH GRID */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div className="pos-left-column" style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
           
           {/* Search & Diet Toggle Bar */}
           <div style={{
@@ -968,7 +990,8 @@ export default function PosBillingView({
           gap: '14px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
           position: 'sticky',
-          top: '20px'
+          top: '20px',
+          boxSizing: 'border-box'
         }}>
           {/* Panel Header & Clear Button */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
