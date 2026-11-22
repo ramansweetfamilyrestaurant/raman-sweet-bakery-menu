@@ -443,7 +443,7 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
         // If the SaaS Plan does not allow POS, it is strictly locked by Super Admin!
         if (!isPlanAllowed) return false;
 
-        // If the SaaS Plan allows it, check if restaurant-level settings explicitly turned it off
+        // If the SaaS Plan allows it, check if restaurant-level explicit override turned it off
         if (r.counter_ordering_enabled !== undefined && r.counter_ordering_enabled !== null) {
           if (r.counter_ordering_enabled === 0 || r.counter_ordering_enabled === false || r.counter_ordering_enabled === '0' || r.counter_ordering_enabled === 'false') {
             return false;
@@ -2102,7 +2102,7 @@ const handleUpdateSettings = async (req, res) => {
             await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS service_model VARCHAR(50)");
             await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_email VARCHAR(255) DEFAULT NULL");
             await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS business_category VARCHAR(50) DEFAULT 'dine_in'");
-            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 0");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 1");
             await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_id VARCHAR(100) DEFAULT NULL");
             await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(150) DEFAULT NULL");
             await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS print_upi_qr INT DEFAULT 1");
@@ -2994,6 +2994,7 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
       (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false');
 
     // SaaS Plan is supreme: If plan disallows POS, POS order is forbidden!
+    // If restaurant has an explicit Super Admin override of 0, it is also forbidden!
     const isPosAllowed = isPlanPosEnabled && !isRestoExplicitlyDisabled;
 
     if (!isPosAllowed) {

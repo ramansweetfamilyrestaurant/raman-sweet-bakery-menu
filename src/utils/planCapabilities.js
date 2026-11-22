@@ -202,20 +202,24 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
     counter_ordering_enabled: (() => {
       // 1. Authoritative SaaS plan permission from Super Admin (via permissions or matrixPermissions)
       if (perms?.counter_ordering_enabled !== undefined && perms?.counter_ordering_enabled !== null) {
-        const planAllowed = isBoolTrue(perms.counter_ordering_enabled, false);
-        if (!planAllowed) return false;
-      } else if (actualSub?.counter_ordering_enabled !== undefined && actualSub?.counter_ordering_enabled !== null) {
-        const planAllowed = isBoolTrue(actualSub.counter_ordering_enabled, false);
-        if (!planAllowed) return false;
-      } else if (isBasic) {
-        return false;
+        return isBoolTrue(perms.counter_ordering_enabled, false);
+      }
+      if (actualSub?.counter_ordering_enabled !== undefined && actualSub?.counter_ordering_enabled !== null) {
+        return isBoolTrue(actualSub.counter_ordering_enabled, false);
+      }
+      if (actualResto?.permissions?.counter_ordering_enabled !== undefined && actualResto?.permissions?.counter_ordering_enabled !== null) {
+        return isBoolTrue(actualResto.permissions.counter_ordering_enabled, false);
       }
 
-      // 2. If SaaS plan allows it, check if restaurant-level settings explicitly disabled it
+      // 2. If no SaaS plan permissions provided, check restaurant-level explicit flag
       if (actualResto?.counter_ordering_enabled !== undefined && actualResto?.counter_ordering_enabled !== null) {
         if (actualResto.counter_ordering_enabled === 0 || actualResto.counter_ordering_enabled === false || actualResto.counter_ordering_enabled === '0' || actualResto.counter_ordering_enabled === 'false') {
           return false;
         }
+      }
+
+      if (isBasic) {
+        return false;
       }
       return true;
     })(),

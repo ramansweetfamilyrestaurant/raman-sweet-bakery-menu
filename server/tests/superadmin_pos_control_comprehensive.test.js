@@ -3,6 +3,11 @@ import assert from 'node:assert';
 import http from 'node:http';
 import express from 'express';
 import jwt from 'jsonwebtoken';
+
+if (!process.env.TEST_DATABASE_URL) {
+  process.env.TEST_DATABASE_URL = 'sqlite:test_superadmin_pos.db';
+}
+
 import { query } from '../db.js';
 import adminRouter from '../routes/admin.js';
 import superadminRouter from '../routes/superadmin.js';
@@ -29,9 +34,12 @@ test('👑 360° Super Admin POS Control & Gating Invariant Test Suite', async (
   );
 
   try {
-    // 1. Seed SaaS Plans
+    // 1. Seed SaaS Plans safely
+    await query(`DELETE FROM subscriptions WHERE restaurant_id IN (SELECT id FROM restaurants WHERE slug IN ('test-basic-diner', 'test-pro-cafe'))`).catch(() => {});
+    await query(`DELETE FROM restaurants WHERE slug IN ('test-basic-diner', 'test-pro-cafe')`).catch(() => {});
+    await query(`DELETE FROM saas_plans WHERE key IN ('test_basic', 'test_pro', 'test_enterprise', 'test_kiosk')`).catch(() => {});
     await query(`
-      INSERT OR REPLACE INTO saas_plans (key, name, price, counter_ordering_enabled)
+      INSERT INTO saas_plans (key, name, price, counter_ordering_enabled)
       VALUES 
         ('test_basic', 'Test Basic Plan', 499, 0),
         ('test_pro', 'Test Pro Plan', 999, 1),
@@ -40,7 +48,7 @@ test('👑 360° Super Admin POS Control & Gating Invariant Test Suite', async (
 
     // 2. Seed Test Restaurants
     const futureExpiry = new Date(Date.now() + 60 * 86400000).toISOString();
-    
+
     // Restaurant A on test_basic (Paid, active, counter_ordering_enabled = 0 by default)
     const restoARes = await query(`
       INSERT INTO restaurants (name, slug, gst_enabled, plan_tier, subscription_type, mandate_status, active, plan_expires_at)
@@ -326,6 +334,57 @@ test('👑 360° Super Admin POS Control & Gating Invariant Test Suite', async (
       assert.strictEqual(orderRes.status, 403, 'pos-order must return 403');
       const orderErr = await orderRes.json();
       assert.strictEqual(orderErr.error, 'feature_locked');
+    });
+
+    // TEST 12: When Super Admin re-enables POS on test_pro, it unlocks Tenant B across API & frontend capabilities
+    await t.test('12. Re-enabling POS on test_pro plan unlocks Tenant B end-to-end', async () => {
+      // Re-enable POS on test_pro plan in Super Admin
+      const putRes = await fetch(`${baseUrl}/api/superadmin/plans/test_pro`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${superToken}` },
+        body: JSON.stringify({
+          counter_ordering_enabled: 1
+        })
+      });
+      assert.strictEqual(putRes.status, 200);
+
+      // 1. Check /api/admin/subscription-status
+      const subRes = await fetch(`${baseUrl}/api/admin/subscription-status`, {
+        headers: { Authorization: `Bearer ${tokenB}` }
+      });
+      assert.strictEqual(subRes.status, 200);
+      const subData = await subRes.json();
+      assert.strictEqual(subData.counter_ordering_enabled, true, 'subscription-status must return true when plan enables POS');
+      assert.strictEqual(subData.permissions.counter_ordering_enabled, true);
+
+      // 2. Check /api/info
+      const infoRes = await fetch(`${baseUrl}/api/info?slug=test-pro-cafe`, {
+        headers: { Authorization: `Bearer ${tokenB}` }
+      });
+      assert.strictEqual(infoRes.status, 200);
+      const infoData = await infoRes.json();
+      assert.strictEqual(infoData.counter_ordering_enabled, true, '/api/info must return true when plan enables POS');
+
+      // 3. Check resolveTenantCapabilities
+      const caps = resolveTenantCapabilities(
+        { restaurant: { id: restoBId, plan_tier: 'test_pro', counter_ordering_enabled: 1 } },
+        { counter_ordering_enabled: true },
+        subData
+      );
+      assert.strictEqual(caps.counter_ordering_enabled, true, 'resolveTenantCapabilities must return true when plan enables POS');
+
+      // 4. Check pos-order succeeds with 201
+      const orderRes = await fetch(`${baseUrl}/api/admin/pos-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenB}` },
+        body: JSON.stringify({
+          order_type: 'takeaway',
+          customer_name: 'Test Customer',
+          customer_phone: '9876543210',
+          items: [{ id: 1, name: 'Samosa', price: 20, quantity: 2 }]
+        })
+      });
+      assert.strictEqual(orderRes.status, 200, 'pos-order must succeed with 200 when plan enables POS');
     });
 
   } finally {

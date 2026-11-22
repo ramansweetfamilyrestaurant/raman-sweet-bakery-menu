@@ -1829,6 +1829,12 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       `, queryParams);
     }
 
+    // Keep tenant restaurants in exact sync with Super Admin plan setting
+    await query('UPDATE restaurants SET counter_ordering_enabled = $1 WHERE LOWER(plan_tier) = LOWER($2)', [
+      toBoolInt(counter_ordering_enabled, existingPlan.counter_ordering_enabled ?? 0),
+      existingPlan.key
+    ]).catch(() => {});
+
     clearSubStatusCache();
     await logAudit(null, 'superadmin', 'Update SaaS Plan Matrix', `Updated 24-point plan matrix for '${key}'`);
     res.json({ success: true, message: `SaaS Plan '${name || key}' matrix updated successfully!` });

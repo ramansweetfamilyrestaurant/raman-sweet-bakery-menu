@@ -933,7 +933,7 @@ router.get('/info', async (req, res) => {
     const isRestoExplicitCounterDisabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
       (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false');
 
-    // SaaS Plan is supreme: If plan disallows POS, POS is strictly disabled
+    // SaaS Plan is supreme: Super Admin controls whether POS ordering is allowed for this plan!
     const effectiveCounterOrdering = Boolean(
       isPlanCounterOrdering && !isRestoExplicitCounterDisabled
     );

@@ -2122,6 +2122,12 @@ async function seedData(options = {}) {
       await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 9999, vip_enabled = 1, max_vip = 9999 WHERE key = 'enterprise'").catch(() => {});
       await query("UPDATE saas_plans SET rooms_enabled = 1 WHERE industry = 'hotel' OR key LIKE 'hotel_%'").catch(() => {});
       await query("UPDATE saas_plans SET screens_enabled = 1, seats_enabled = 1 WHERE industry = 'cinema' OR key LIKE 'cinema_%'").catch(() => {});
+      await query(`
+        UPDATE restaurants 
+        SET counter_ordering_enabled = 1 
+        WHERE (counter_ordering_enabled = 0 OR counter_ordering_enabled IS NULL) 
+        AND plan_tier IN (SELECT key FROM saas_plans WHERE counter_ordering_enabled = 1)
+      `).catch(() => {});
     } catch {}
 
     try {
