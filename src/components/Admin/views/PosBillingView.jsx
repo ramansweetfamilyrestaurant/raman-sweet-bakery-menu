@@ -20,8 +20,7 @@ import {
   ChefHat,
   UtensilsCrossed,
   Receipt,
-  ChevronDown,
-  Image as ImageIcon
+  ChevronDown
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { createAdminPosOrder } from '../../../api/client';
@@ -57,15 +56,6 @@ export default function PosBillingView({
   const [upiQrDataUrl, setUpiQrDataUrl] = useState(null);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [isTokensQueueCollapsed, setIsTokensQueueCollapsed] = useState(false);
-  const [showDishImages, setShowDishImages] = useState(() => {
-    try {
-      const saved = localStorage.getItem('pos_show_dish_images');
-      if (saved !== null) return saved === 'true';
-      return true;
-    } catch (e) {
-      return true;
-    }
-  });
 
   const searchInputRef = useRef(null);
 
@@ -892,38 +882,6 @@ export default function PosBillingView({
                 >
                   🔴 Non-Veg
                 </button>
-
-                {/* Photos ON / OFF Toggle Button (Ultra-Fast Compact POS Mode) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !showDishImages;
-                    setShowDishImages(next);
-                    try {
-                      localStorage.setItem('pos_show_dish_images', String(next));
-                    } catch (e) {}
-                  }}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid',
-                    borderColor: showDishImages ? '#059669' : '#CBD5E1',
-                    background: showDishImages ? '#ECFDF5' : '#FFFFFF',
-                    color: showDishImages ? '#065F46' : '#475569',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease'
-                  }}
-                  title={showDishImages ? 'Photos are ON (Click to hide photos for compact speed billing)' : 'Photos are OFF (Click to show photos)'}
-                >
-                  <ImageIcon size={14} color={showDishImages ? '#059669' : '#64748B'} />
-                  <span>{showDishImages ? 'Photos ON' : 'Photos OFF'}</span>
-                </button>
               </div>
             </div>
 
@@ -1019,6 +977,8 @@ export default function PosBillingView({
                 const halfItemInCart = cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'half');
                 const hasHalfPrice = Boolean(dish.price_half && Number(dish.price_half) > 0);
 
+                const isNonVeg = dish.type === 'nonveg' || dish.type === 'non_veg' || dish.food_type === 'non_veg' || dish.food_type === 'nonveg';
+
                 return (
                   <div
                     key={dish.id}
@@ -1027,67 +987,76 @@ export default function PosBillingView({
                       background: '#FFFFFF',
                       borderRadius: '14px',
                       border: '1px solid #E2E8F0',
-                      padding: '12px',
+                      padding: '10px',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      boxSizing: 'border-box',
-                      minHeight: showDishImages ? 'auto' : '110px'
+                      boxSizing: 'border-box'
                     }}
                   >
                     <div>
-                      {/* Top: Veg indicator + Image/Placeholder */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '14px',
-                          height: '14px',
-                          borderRadius: '3px',
-                          border: `1.5px solid ${dish.food_type === 'non_veg' || dish.food_type === 'nonveg' ? '#DC2626' : '#16A34A'}`,
-                          padding: '2px'
-                        }}>
-                          <span style={{
-                            width: '6px',
-                            height: '6px',
-                            borderRadius: '50%',
-                            backgroundColor: dish.food_type === 'non_veg' || dish.food_type === 'nonveg' ? '#DC2626' : '#16A34A'
-                          }} />
-                        </span>
-                        {dish.isCombo ? (
-                          <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                            🎁 COMBO
-                          </span>
-                        ) : (dish.available === 0 && (
-                          <span style={{ fontSize: '0.62rem', background: '#FEE2E2', color: '#B91C1C', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                            Low Stock
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Image Preview if enabled */}
-                      {showDishImages && (
+                      {/* Food Image Container with Floating Badges (Identical to Menu Page) */}
+                      <div style={{
+                        position: 'relative',
+                        width: '100%',
+                        height: '110px',
+                        marginBottom: '8px'
+                      }}>
                         <div style={{
                           width: '100%',
-                          height: '85px',
-                          borderRadius: '8px',
+                          height: '100%',
+                          borderRadius: '10px',
+                          background: '#F8FAFC',
                           overflow: 'hidden',
-                          marginBottom: '8px',
-                          background: '#F1F5F9'
+                          border: '1px solid #F1F5F9'
                         }}>
                           <img
-                            src={dish.isCombo ? getComboImageUrl(dish.image) : getDishImageUrl(dish.image)}
+                            src={dish.isCombo ? getComboImageUrl(dish.image) : getDishImageUrl(dish.image || dish.image_url)}
                             alt={dish.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             loading="lazy"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => {
                               e.currentTarget.onerror = null;
                               e.currentTarget.src = dish.isCombo ? '/images/default-combo.webp?v=3' : '/images/default-dish.webp';
                             }}
                           />
                         </div>
-                      )}
+
+                        {/* Dietary Indicator (Floating Top-Left on Image) */}
+                        <div style={{ position: 'absolute', top: '6px', left: '6px', zIndex: 2 }}>
+                          <span style={{
+                            width: '15px',
+                            height: '15px',
+                            background: '#FFFFFF',
+                            border: `1.5px solid ${isNonVeg ? '#DC2626' : '#16A34A'}`,
+                            borderRadius: '3px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.18)'
+                          }}>
+                            <span style={{
+                              width: '5px',
+                              height: '5px',
+                              borderRadius: '50%',
+                              backgroundColor: isNonVeg ? '#DC2626' : '#16A34A'
+                            }} />
+                          </span>
+                        </div>
+
+                        {/* Low stock / Combo Badge (Floating Top-Right on Image) */}
+                        <div style={{ position: 'absolute', top: '6px', right: '6px', zIndex: 2 }}>
+                          {dish.isCombo ? (
+                            <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                              🎁 COMBO
+                            </span>
+                          ) : (dish.available === 0 && (
+                            <span style={{ fontSize: '0.62rem', background: '#FEE2E2', color: '#B91C1C', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                              Low Stock
+                            </span>
+                          ))}
+                        </div>
+                      </div>
 
                       {/* Title */}
                       <strong style={{
