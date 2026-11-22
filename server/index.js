@@ -365,6 +365,7 @@ app.get('/uploads/:filename', async (req, res) => {
 
 // Secondary static folder middleware
 app.use('/uploads', express.static(uploadsDir));
+app.use('/images', express.static(path.resolve('public/images')));
 
 // Production Health Check Endpoint (Safe: No secret exposure)
 app.get('/health', (req, res) => {

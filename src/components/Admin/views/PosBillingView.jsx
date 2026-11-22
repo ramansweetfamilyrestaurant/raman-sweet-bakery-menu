@@ -59,9 +59,11 @@ export default function PosBillingView({
   const [isTokensQueueCollapsed, setIsTokensQueueCollapsed] = useState(false);
   const [showDishImages, setShowDishImages] = useState(() => {
     try {
-      return localStorage.getItem('pos_show_dish_images') === 'true';
+      const saved = localStorage.getItem('pos_show_dish_images');
+      if (saved !== null) return saved === 'true';
+      return true;
     } catch (e) {
-      return false;
+      return true;
     }
   });
 
