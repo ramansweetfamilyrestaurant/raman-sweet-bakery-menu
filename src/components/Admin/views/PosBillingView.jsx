@@ -840,8 +840,8 @@ export default function PosBillingView({
                 )}
               </div>
 
-              {/* Diet Filter Pills */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {/* Diet Filter Pills & Photos Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => setDietFilter('all')}
                   style={{
@@ -1030,7 +1030,8 @@ export default function PosBillingView({
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      minHeight: showDishImages ? 'auto' : '110px'
                     }}
                   >
                     <div>
