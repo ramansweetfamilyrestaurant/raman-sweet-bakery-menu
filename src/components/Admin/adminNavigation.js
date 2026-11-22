@@ -13,7 +13,7 @@ import {
   MoreHorizontal,
   Receipt
 } from 'lucide-react';
-import { getBusinessTerminology } from '../../utils/businessTaxonomy';
+import { getBusinessTerminology } from '../../utils/businessTaxonomy.js';
 
 /**
  * TouchQR Centralized Admin Navigation Configuration
