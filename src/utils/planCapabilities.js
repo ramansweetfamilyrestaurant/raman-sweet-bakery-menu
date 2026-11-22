@@ -105,7 +105,7 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
 
   const rawTier = actualResto?.plan_tier || actualSub?.plan_tier || actualSettings?.plan_tier || '';
   const planTier = (rawTier || 'pro').toLowerCase();
-  const perms = actualResto?.permissions || actualSub?.permissions || {};
+  const perms = actualResto?.permissions || actualSub?.permissions || actualSub?.matrixPermissions || {};
   const rawPrice = actualResto?.plan_price !== undefined && actualResto?.plan_price !== null && actualResto?.plan_price !== ''
     ? actualResto.plan_price
     : (actualSub?.plan_price !== undefined && actualSub?.plan_price !== null && actualSub?.plan_price !== ''
@@ -189,25 +189,32 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
 
     // Features (Option B: constrained to the granted plan tier)
     direct_ordering_enabled: (() => {
-      const explicitFlag = actualResto?.direct_ordering_enabled ?? actualSettings?.direct_ordering_enabled;
-      if (explicitFlag !== undefined && explicitFlag !== null) {
-        return isBoolTrue(explicitFlag);
+      if (actualResto?.direct_ordering_enabled !== undefined && actualResto?.direct_ordering_enabled !== null) {
+        if (actualResto.direct_ordering_enabled === 0 || actualResto.direct_ordering_enabled === false || actualResto.direct_ordering_enabled === '0' || actualResto.direct_ordering_enabled === 'false') {
+          return false;
+        }
+        if (actualResto.direct_ordering_enabled === 1 || actualResto.direct_ordering_enabled === true || actualResto.direct_ordering_enabled === '1' || actualResto.direct_ordering_enabled === 'true') {
+          return true;
+        }
       }
       return isBasic && !isComplimentary ? false : isBoolTrue(perms?.direct_ordering_enabled, isUnlimitedPlan);
     })(),
     counter_ordering_enabled: (() => {
-      const explicitFlag = actualResto?.counter_ordering_enabled ?? actualSettings?.counter_ordering_enabled;
-      if (explicitFlag !== undefined && explicitFlag !== null && (explicitFlag === 0 || explicitFlag === false || explicitFlag === '0' || explicitFlag === 'false')) {
-        return false;
+      // 1. Explicit restaurant-level database override (if set by Super Admin on the specific shop)
+      if (actualResto?.counter_ordering_enabled !== undefined && actualResto?.counter_ordering_enabled !== null) {
+        if (actualResto.counter_ordering_enabled === 0 || actualResto.counter_ordering_enabled === false || actualResto.counter_ordering_enabled === '0' || actualResto.counter_ordering_enabled === 'false') {
+          return false;
+        }
+        if (actualResto.counter_ordering_enabled === 1 || actualResto.counter_ordering_enabled === true || actualResto.counter_ordering_enabled === '1' || actualResto.counter_ordering_enabled === 'true') {
+          return true;
+        }
       }
-      if (explicitFlag !== undefined && explicitFlag !== null && (explicitFlag === 1 || explicitFlag === true || explicitFlag === '1' || explicitFlag === 'true')) {
-        return true;
-      }
+      // 2. Authoritative SaaS plan permission from Super Admin (via permissions or matrixPermissions)
       if (perms?.counter_ordering_enabled !== undefined && perms?.counter_ordering_enabled !== null) {
         return isBoolTrue(perms.counter_ordering_enabled, false);
       }
-      if (actualResto?.counter_ordering_enabled !== undefined && actualResto?.counter_ordering_enabled !== null) {
-        return isBoolTrue(actualResto.counter_ordering_enabled, false);
+      if (actualSub?.counter_ordering_enabled !== undefined && actualSub?.counter_ordering_enabled !== null) {
+        return isBoolTrue(actualSub.counter_ordering_enabled, false);
       }
       if (isBasic) return false;
       return true;

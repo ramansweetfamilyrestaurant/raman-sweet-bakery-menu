@@ -203,7 +203,84 @@ test('👑 360° Super Admin POS Control & Gating Invariant Test Suite', async (
       assert.strictEqual(createdPlan.counter_ordering_enabled, true);
     });
 
+    // TEST 8: Super Admin UNTICKS POS on test_pro -> Tenant B is instantly locked across API & resolveTenantCapabilities
+    await t.test('8. Unticking POS on test_pro instantly locks Tenant B across API & frontend capabilities', async () => {
+      const untickRes = await fetch(`${baseUrl}/api/superadmin/plans/test_pro`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${superToken}` },
+        body: JSON.stringify({
+          counter_ordering_enabled: 0
+        })
+      });
+      assert.strictEqual(untickRes.status, 200);
+
+      // Verify subscription status endpoint
+      const subRes = await fetch(`${baseUrl}/api/admin/subscription-status`, {
+        headers: { Authorization: `Bearer ${tokenB}` }
+      });
+      assert.strictEqual(subRes.status, 200);
+      const subData = await subRes.json();
+      assert.strictEqual(subData.counter_ordering_enabled, false);
+      assert.strictEqual(subData.permissions.counter_ordering_enabled, false);
+
+      // Verify resolveTenantCapabilities returns false EVEN with stale settingsForm: true
+      const caps = resolveTenantCapabilities(
+        { restaurant: { id: restoBId, plan_tier: 'test_pro', counter_ordering_enabled: null } },
+        { counter_ordering_enabled: true },
+        subData
+      );
+      assert.strictEqual(caps.counter_ordering_enabled, false);
+
+      // Verify pos-order returns 403 feature_locked
+      const orderRes = await fetch(`${baseUrl}/api/admin/pos-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenB}` },
+        body: JSON.stringify({
+          order_type: 'takeaway',
+          items: [{ id: 1, name: 'Coffee', price: 50, quantity: 1 }]
+        })
+      });
+      assert.strictEqual(orderRes.status, 403);
+      const orderErr = await orderRes.json();
+      assert.strictEqual(orderErr.error, 'feature_locked');
+    });
+
+    // TEST 9: Tenant B attempting to enable counter_ordering_enabled via PUT /api/admin/settings is constrained
+    await t.test('9. Tenant cannot re-enable counter_ordering_enabled via settings when plan forbids it', async () => {
+      const updateSettingsRes = await fetch(`${baseUrl}/api/admin/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenB}` },
+        body: JSON.stringify({
+          counter_ordering_enabled: true
+        })
+      });
+      assert.strictEqual(updateSettingsRes.status, 200);
+
+      // Ensure restaurants table has not been set to 1
+      const checkResto = await query('SELECT counter_ordering_enabled FROM restaurants WHERE id = $1', [restoBId]);
+      const val = (checkResto.rows || checkResto)[0].counter_ordering_enabled;
+      assert.ok(val === 0 || val === null, `Expected counter_ordering_enabled to be 0 or null, got ${val}`);
+    });
+
+    // TEST 10: Generating counter QR token does not set restaurants.counter_ordering_enabled = 1
+    await t.test('10. Generating counter QR token does not mutate restaurants.counter_ordering_enabled', async () => {
+      const qrTokenRes = await fetch(`${baseUrl}/api/admin/qr/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenB}` },
+        body: JSON.stringify({
+          space_type: 'counter',
+          space_number: 'COUNTER'
+        })
+      });
+      assert.strictEqual(qrTokenRes.status, 200);
+
+      const checkResto = await query('SELECT counter_ordering_enabled FROM restaurants WHERE id = $1', [restoBId]);
+      const val = (checkResto.rows || checkResto)[0].counter_ordering_enabled;
+      assert.ok(val === 0 || val === null, `Expected counter_ordering_enabled to remain 0 or null, got ${val}`);
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
+    process.exit(0);
   }
 });

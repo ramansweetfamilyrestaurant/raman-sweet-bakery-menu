@@ -12111,24 +12111,39 @@ export default function SetupView({
       </div>
 
       {/* Card 3C: Takeaway & Billing Counter QR Ordering */}
-      <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div style={{ padding: '16px 18px', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', opacity: resolvedCaps?.counter_ordering_enabled === false ? 0.75 : 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
               ⚡
             </div>
             <div>
-              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Takeaway & Billing Counter QR Ordering</strong>
-              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Enables customers to scan the counter standee QR to view menu and order takeaway / counter pickup</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>Takeaway & Billing Counter QR Ordering</strong>
+                {resolvedCaps?.counter_ordering_enabled === false && (
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: '#FEE2E2', color: '#DC2626', border: '1px solid rgba(220, 38, 38, 0.2)' }}>
+                    🔒 Locked by SaaS Plan
+                  </span>
+                )}
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                {resolvedCaps?.counter_ordering_enabled === false 
+                  ? 'Counter POS & Takeaway Ordering is disabled in your SaaS subscription plan. Managed centrally by Super Admin.'
+                  : 'Enables customers to scan the counter standee QR to view menu and order takeaway / counter pickup'}
+              </span>
             </div>
           </div>
 
           <button
             type="button"
             role="switch"
-            aria-checked={Boolean(settingsForm.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== 0)}
+            disabled={resolvedCaps?.counter_ordering_enabled === false}
+            aria-checked={Boolean(resolvedCaps?.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== 0)}
             aria-label="Toggle Counter QR Ordering"
-            onClick={() => setSettingsForm({ ...settingsForm, counter_ordering_enabled: !(settingsForm.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== 0) })}
+            onClick={() => {
+              if (resolvedCaps?.counter_ordering_enabled === false) return;
+              setSettingsForm({ ...settingsForm, counter_ordering_enabled: !(settingsForm.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== 0) });
+            }}
             style={{
               width: '48px',
               height: '28px',
@@ -12137,8 +12152,8 @@ export default function SetupView({
               padding: '2px',
               borderRadius: '14px',
               border: 'none',
-              background: (settingsForm.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== 0) ? '#059669' : '#CBD5E1',
-              cursor: 'pointer',
+              background: (resolvedCaps?.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== 0) ? '#059669' : '#CBD5E1',
+              cursor: resolvedCaps?.counter_ordering_enabled === false ? 'not-allowed' : 'pointer',
               position: 'relative',
               transition: 'background-color 0.2s ease',
               display: 'inline-flex',
@@ -12153,7 +12168,7 @@ export default function SetupView({
                 borderRadius: '50%',
                 background: '#FFFFFF',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                transform: (settingsForm.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== 0) ? 'translateX(20px)' : 'translateX(0px)',
+                transform: (resolvedCaps?.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== false && settingsForm.counter_ordering_enabled !== 0) ? 'translateX(20px)' : 'translateX(0px)',
                 transition: 'transform 0.2s ease',
                 display: 'block'
               }}

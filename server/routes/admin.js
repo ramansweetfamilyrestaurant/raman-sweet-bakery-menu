@@ -1680,6 +1680,18 @@ const handleUpdateSettings = async (req, res) => {
       ? (counter_ordering_enabled === true || counter_ordering_enabled === 1 || counter_ordering_enabled === '1' || counter_ordering_enabled === 'true' ? 1 : 0)
       : null;
 
+    let finalCounterOrdering = cleanCounterOrdering;
+    if (finalCounterOrdering === 1 && req.user?.role !== 'superadmin') {
+      const restoPlanCheck = await query('SELECT plan_tier FROM restaurants WHERE id = $1', [targetId]);
+      const currentTier = String(restoPlanCheck?.[0]?.plan_tier || 'pro').toLowerCase();
+      const planCheck = await query('SELECT counter_ordering_enabled FROM saas_plans WHERE LOWER(key) = $1', [currentTier]);
+      const planPos = planCheck?.[0]?.counter_ordering_enabled;
+      const isPlanAllowed = planPos === 1 || planPos === true || planPos === '1' || planPos === 'true' || (planPos === null && currentTier !== 'basic');
+      if (!isPlanAllowed) {
+        finalCounterOrdering = 0;
+      }
+    }
+
     let cleanBusinessType = null;
     if (business_type !== undefined && business_type !== null && String(business_type).trim() !== '') {
       const norm = String(business_type).trim().toLowerCase();
@@ -2057,7 +2069,7 @@ const handleUpdateSettings = async (req, res) => {
         cleanOwnerEmail !== undefined,
         cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
         cleanBusinessCategory,
-        cleanCounterOrdering,
+        finalCounterOrdering,
         total_screens !== undefined && total_screens !== null ? Number(total_screens) : null,
         total_seats !== undefined && total_seats !== null ? Number(total_seats) : null,
         cleanInactiveSpaces !== undefined,
@@ -2149,7 +2161,7 @@ const handleUpdateSettings = async (req, res) => {
             cleanOwnerEmail !== undefined,
             cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
             cleanBusinessCategory,
-            cleanCounterOrdering,
+            finalCounterOrdering,
             cleanUpiId !== undefined,
             cleanUpiId !== undefined ? cleanUpiId : null,
             cleanUpiPayeeName !== undefined,
@@ -2271,18 +2283,7 @@ router.post('/qr/generate', authenticateToken, async (req, res) => {
       if (!canonicalNum) {
         return { error: 'Invalid space identifier' };
       }
-      if (canonicalType === 'counter') {
-        const isCounterEnabled = Boolean(
-          resto.counter_ordering_enabled === 1 ||
-          resto.counter_ordering_enabled === true ||
-          resto.counter_ordering_enabled === '1'
-        );
-        if (!isCounterEnabled) {
-          // Auto-enable counter ordering capability for tenant when generating counter QR
-          query('UPDATE restaurants SET counter_ordering_enabled = 1 WHERE id = $1', [resto.id]).catch(() => {});
-          resto.counter_ordering_enabled = 1;
-        }
-      }
+      // Canonical token generation for space (counter, table, room, cabin, etc.)
       const token = generateHmacQrToken(resto.slug, canonicalType, canonicalNum, resto.qr_secret);
       const urlParam = canonicalType === 'counter' ? 'counter' : (canonicalType === 'cinema_seat' ? 'cinema' : (canonicalType === 'cabin' ? 'cabin' : canonicalType === 'room' ? 'room' : canonicalType === 'vip' ? 'vip' : 'table'));
       const relativeUrl = `/${resto.slug}?${urlParam}=${encodeURIComponent(canonicalNum)}&tkn=${token}`;

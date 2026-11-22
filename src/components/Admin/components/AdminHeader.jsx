@@ -23,7 +23,8 @@ export default function AdminHeader({
   setActiveTab,
   pendingOrdersCount = 0,
   analyticsEnabled = true,
-  ordersEnabled = true
+  ordersEnabled = true,
+  capabilities = {}
 }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -536,6 +537,21 @@ export default function AdminHeader({
                             {getLocalizedNavLabel(item, restaurantInfo, 'mobileDrawer')}
                           </span>
                         </div>
+
+                        {item.id === 'pos' && capabilities?.counter_ordering_enabled === false && (
+                          <span style={{
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            color: '#F87171',
+                            fontSize: '0.62rem',
+                            fontWeight: 800,
+                            padding: '1px 6px',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            letterSpacing: '0.02em'
+                          }}>
+                            🔒 PRO
+                          </span>
+                        )}
 
                         {showBadge && (
                           <span style={{

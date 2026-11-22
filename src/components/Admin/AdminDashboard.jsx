@@ -3700,6 +3700,7 @@ export default function AdminDashboard({
             pendingOrdersCount={orders.filter(o => o.status === 'pending' || o.status === 'ordered').length}
             analyticsEnabled={isAnalyticsEnabled}
             ordersEnabled={isDirectOrderingEnabled}
+            capabilities={tenantCaps}
           />
 
           <main className={`adm-main-canvas ${activeTab === 'pos' ? 'pos-active-main' : ''}`}>

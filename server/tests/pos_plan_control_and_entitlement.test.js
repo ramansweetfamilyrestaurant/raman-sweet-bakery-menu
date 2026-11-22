@@ -42,10 +42,10 @@ test('🛡️ Super Admin POS Plan Control & Entitlement Resolver Suite', async 
     assert.strictEqual(caps.counter_ordering_enabled, false, 'Super Admin toggled perms = 0 must disable POS on Pro');
   });
 
-  await t.test('7. VIP / Complimentary access unlocks counter_ordering_enabled on Basic plan', () => {
+  await t.test('7. Super Admin plan authority: Basic plan keeps counter_ordering_enabled = false even if complimentary', () => {
     const resto = { plan_tier: 'basic', subscription_type: 'ADMIN_GRANTED', mandate_status: 'admin_granted' };
     const caps = resolveTenantCapabilities(resto, {}, {});
-    assert.strictEqual(caps.counter_ordering_enabled, true, 'VIP access should grant POS');
+    assert.strictEqual(caps.counter_ordering_enabled, false, 'Super Admin plan toggle must be authoritative over complimentary status');
   });
 
   await t.test('8. Explicit restaurant flag counter_ordering_enabled = 0 strictly blocks POS', () => {
