@@ -26,6 +26,7 @@ import QRCode from 'qrcode';
 import { createAdminPosOrder } from '../../../api/client';
 import { buildUpiPaymentUri, calculateBillDetails } from '../../../utils/billingHelper';
 import { resolveImageUrl, getDishImageUrl, getComboImageUrl } from '../../../utils/imageHelper';
+import { formatPriceNumber } from '../../../utils/currencyHelper.js';
 
 export default function PosBillingView({
   dishes = [],
@@ -307,7 +308,7 @@ export default function PosBillingView({
         }
         .pos-dishes-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
           gap: 12px;
           min-width: 0;
           width: 100%;
@@ -431,12 +432,16 @@ export default function PosBillingView({
             padding: 14px !important;
           }
           .pos-dishes-grid {
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 10px;
           }
         }
         /* TABLET PORTRAIT & MOBILE SCREENS (<= 900px) */
         @media (max-width: 900px) {
+          .pos-dishes-grid {
+            grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+            gap: 10px;
+          }
           .pos-grid-container {
             grid-template-columns: 1fr;
           }
@@ -686,7 +691,7 @@ export default function PosBillingView({
 
                   <div style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
                     <span>Order #{order.id}</span>
-                    <span>{currencySymbol}{order.total_amount}</span>
+                    <span>{currencySymbol}{formatPriceNumber(order.total_amount)}</span>
                   </div>
 
                   <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
@@ -1075,16 +1080,16 @@ export default function PosBillingView({
                     </div>
 
                     {/* Price & Action Buttons */}
-                    <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
+                    <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #F1F5F9', minWidth: 0 }}>
                       {hasHalfPrice ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                           {/* Half Portion Option */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                              Half: <strong>{currencySymbol}{dish.price_half}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', minWidth: 0 }}>
+                            <span style={{ fontSize: '0.72rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              Half: <strong style={{ color: '#0F172A' }}>{currencySymbol}{formatPriceNumber(dish.price_half)}</strong>
                             </span>
                             {halfItemInCart ? (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
                                 <button
                                   onClick={() => updateQuantity(dish.id, 'half', -1)}
                                   style={{ width: '22px', height: '22px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -1102,7 +1107,7 @@ export default function PosBillingView({
                             ) : (
                               <button
                                 onClick={() => addToCart(dish, 'half')}
-                                style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.70rem', fontWeight: 700, cursor: 'pointer' }}
+                                style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.70rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
                               >
                                 + Half
                               </button>
@@ -1110,12 +1115,12 @@ export default function PosBillingView({
                           </div>
 
                           {/* Full Portion Option */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                              Full: <strong>{currencySymbol}{dish.price}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', minWidth: 0 }}>
+                            <span style={{ fontSize: '0.72rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              Full: <strong style={{ color: '#0F172A' }}>{currencySymbol}{formatPriceNumber(dish.price)}</strong>
                             </span>
                             {fullItemInCart ? (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
                                 <button
                                   onClick={() => updateQuantity(dish.id, 'full', -1)}
                                   style={{ width: '22px', height: '22px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -1133,7 +1138,7 @@ export default function PosBillingView({
                             ) : (
                               <button
                                 onClick={() => addToCart(dish, 'full')}
-                                style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #059669', background: '#ECFDF5', color: '#065F46', fontSize: '0.70rem', fontWeight: 800, cursor: 'pointer' }}
+                                style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #059669', background: '#ECFDF5', color: '#065F46', fontSize: '0.70rem', fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
                               >
                                 + Full
                               </button>
@@ -1142,44 +1147,62 @@ export default function PosBillingView({
                         </div>
                       ) : (
                         /* Standard Single Portion */
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A' }}>
-                            {currencySymbol}{dish.price}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '6px',
+                          minWidth: 0
+                        }}>
+                          <span style={{
+                            fontSize: '0.90rem',
+                            fontWeight: 900,
+                            color: '#0F172A',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            minWidth: 0
+                          }}>
+                            {currencySymbol}{formatPriceNumber(dish.price)}
                           </span>
                           {fullItemInCart ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                               <button
                                 onClick={() => updateQuantity(dish.id, 'full', -1)}
-                                style={{ width: '26px', height: '26px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                               >
-                                <Minus size={13} />
+                                <Minus size={12} />
                               </button>
-                              <span style={{ fontSize: '0.82rem', fontWeight: 900, minWidth: '16px', textAlign: 'center' }}>{fullItemInCart.quantity}</span>
+                              <span style={{ fontSize: '0.80rem', fontWeight: 900, minWidth: '14px', textAlign: 'center' }}>{fullItemInCart.quantity}</span>
                               <button
                                 onClick={() => updateQuantity(dish.id, 'full', 1)}
-                                style={{ width: '26px', height: '26px', borderRadius: '6px', border: 'none', background: '#059669', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: '#059669', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                               >
-                                <Plus size={13} />
+                                <Plus size={12} />
                               </button>
                             </div>
                           ) : (
                             <button
                               onClick={() => addToCart(dish, 'full')}
                               style={{
-                                padding: '5px 12px',
+                                padding: '5px 11px',
                                 borderRadius: '8px',
                                 border: 'none',
                                 background: '#059669',
                                 color: '#FFFFFF',
-                                fontSize: '0.76rem',
+                                fontSize: '0.75rem',
                                 fontWeight: 800,
                                 cursor: 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px'
+                                justifyContent: 'center',
+                                gap: '3px',
+                                flexShrink: 0,
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.15s ease'
                               }}
                             >
-                              <Plus size={13} />
+                              <Plus size={12} strokeWidth={2.5} />
                               <span>Add</span>
                             </button>
                           )}
@@ -1417,7 +1440,7 @@ export default function PosBillingView({
                         </span>
                       )}
                       <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                        {currencySymbol}{item.price} each
+                        {currencySymbol}{formatPriceNumber(item.price)} each
                       </span>
                     </div>
                   </div>
@@ -1441,7 +1464,7 @@ export default function PosBillingView({
                     </div>
 
                     <strong style={{ fontSize: '0.82rem', color: '#0F172A', minWidth: '55px', textAlign: 'right' }}>
-                      {currencySymbol}{(item.price * item.quantity).toFixed(2)}
+                      {currencySymbol}{formatPriceNumber(item.price * item.quantity)}
                     </strong>
 
                     <button
@@ -1470,12 +1493,12 @@ export default function PosBillingView({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748B' }}>
               <span>Items Subtotal:</span>
-              <span>{currencySymbol}{subtotal.toFixed(2)}</span>
+              <span>{currencySymbol}{formatPriceNumber(subtotal)}</span>
             </div>
             {isGstEnabled && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748B' }}>
                 <span>GST (5% CGST+SGST):</span>
-                <span>{currencySymbol}{taxAmount.toFixed(2)}</span>
+                <span>{currencySymbol}{formatPriceNumber(taxAmount)}</span>
               </div>
             )}
             <div style={{
@@ -1489,7 +1512,7 @@ export default function PosBillingView({
               color: '#0F172A'
             }}>
               <span>Total Payable:</span>
-              <span style={{ color: '#059669' }}>{currencySymbol}{grandTotal.toFixed(2)}</span>
+              <span style={{ color: '#059669' }}>{currencySymbol}{formatPriceNumber(grandTotal)}</span>
             </div>
           </div>
 
@@ -1587,7 +1610,7 @@ export default function PosBillingView({
                   style={{ width: '100px', height: '100px', margin: '0 auto', display: 'block', borderRadius: '8px' }}
                 />
                 <span style={{ fontSize: '0.68rem', color: '#15803D', fontWeight: 700, marginTop: '3px', display: 'block' }}>
-                  Amount: {currencySymbol}{grandTotal.toFixed(2)}
+                  Amount: {currencySymbol}{formatPriceNumber(grandTotal)}
                 </span>
               </div>
             ) : (
@@ -1637,7 +1660,7 @@ export default function PosBillingView({
               <>
                 <Printer size={18} />
                 <span>
-                  {orderType === 'takeaway' ? 'Pay & Generate Token' : `Pay & Punch Table ${tableNumber}`} ({currencySymbol}{grandTotal.toFixed(2)})
+                  {orderType === 'takeaway' ? 'Pay & Generate Token' : `Pay & Punch Table ${tableNumber}`} ({currencySymbol}{formatPriceNumber(grandTotal)})
                 </span>
               </>
             )}
@@ -1675,7 +1698,7 @@ export default function PosBillingView({
                 {cart.length === 0 ? 'Active Bill (Empty)' : `${cart.reduce((s, it) => s + it.quantity, 0)} Items Added`}
               </div>
               <div style={{ fontSize: '1rem', fontWeight: 950, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                {currencySymbol}{grandTotal.toFixed(2)}
+                {currencySymbol}{formatPriceNumber(grandTotal)}
               </div>
             </div>
           </div>
@@ -1763,7 +1786,7 @@ export default function PosBillingView({
             )}
 
             <div style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '20px' }}>
-              Order <strong>#{successOrder.order.id}</strong> • Total Paid: <strong>{currencySymbol}{successOrder.order.total_amount}</strong> ({successOrder.order.payment_method?.toUpperCase()})
+              Order <strong>#{successOrder.order.id}</strong> • Total Paid: <strong>{currencySymbol}{formatPriceNumber(successOrder.order.total_amount)}</strong> ({successOrder.order.payment_method?.toUpperCase()})
             </div>
 
             {/* Print and Next Customer Buttons */}
