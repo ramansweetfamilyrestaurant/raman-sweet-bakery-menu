@@ -197,10 +197,10 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     setMsg('');
     setErrorMsg('');
     try {
-      for (const p of plans) {
+      const preparedPlans = plans.map(p => {
         const directOrderingVal = toBoolInt(p.direct_ordering_enabled);
         const planInd = p.industry || (p.key.startsWith('hotel') ? 'hotel' : p.key.startsWith('cinema') ? 'cinema' : 'restaurant');
-        const payload = {
+        return {
           ...p,
           industry: planInd,
           max_tables: p.max_tables !== undefined ? parseInt(p.max_tables, 10) : 9999,
@@ -225,20 +225,44 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
           theme_color: p.theme_color || 'gold',
           allowed_themes: p.allowed_themes || 'ALL'
         };
+      });
 
-        const res = await fetch(`/api/superadmin/plans/${p.key}`, {
+      // 1. Try high-speed batch endpoint first
+      let savedViaBatch = false;
+      try {
+        const batchRes = await fetch('/api/superadmin/plans/batch', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${authToken}`
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ plans: preparedPlans })
         });
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.error || `Failed to update plan '${p.name}'`);
+        if (batchRes.ok) {
+          savedViaBatch = true;
         }
+      } catch (batchErr) {
+        console.warn('Batch endpoint failed, falling back to parallel save:', batchErr);
       }
+
+      // 2. Resilient Fallback: If batch endpoint wasn't reached, execute concurrently with Promise.all
+      if (!savedViaBatch) {
+        await Promise.all(preparedPlans.map(async (payload) => {
+          const res = await fetch(`/api/superadmin/plans/${payload.key}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${authToken}`
+            },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Failed to update plan '${payload.name}'`);
+          }
+        }));
+      }
+
       setHasUnsavedChanges(false);
       setMsg('⚡ All Industry Limits, Permissions & Features Saved Successfully!');
       setTimeout(() => setMsg(''), 4000);
@@ -870,7 +894,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                 boxShadow: hasUnsavedChanges ? '0 0 0 2px #F59E0B, 0 4px 12px rgba(245, 158, 11, 0.4)' : 'none'
               }}
             >
-              <Save size={14} />
+              <Save size={14} className={saving ? "animate-spin" : ""} />
               {saving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes (Unsaved)*' : 'Save All Plan Permissions'}
             </button>
           </div>
@@ -2123,38 +2147,6 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
               </div>
             </form>
           </div>
-        </div>
-      )}
-
-      {/* 💾 Sticky Bottom Bar for Unsaved Changes */}
-      {hasUnsavedChanges && (
-        <div style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 9999,
-          background: '#0F172A',
-          color: '#FFFFFF',
-          padding: '12px 20px',
-          borderRadius: '14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-          border: '1px solid #334155',
-          animation: 'fadeIn 0.2s ease-in'
-        }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>⚠️ Unsaved plan changes pending</span>
-          <button
-            type="button"
-            onClick={handleSaveAllPlans}
-            disabled={saving}
-            className="sa-btn sa-btn-accent sa-btn-sm"
-            style={{ fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Save size={14} />
-            {saving ? 'Saving...' : '💾 Save All Plans Now'}
-          </button>
         </div>
       )}
     </div>

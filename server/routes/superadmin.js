@@ -1691,6 +1691,114 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
   }
 });
 
+// PUT Batch Update Multiple SaaS Plans (High-Speed Concurrent Update)
+router.put('/plans/batch', authenticateToken, requireSuperAdmin, async (req, res) => {
+  try {
+    const { plans } = req.body;
+    if (!Array.isArray(plans) || plans.length === 0) {
+      return res.status(400).json({ error: 'Array of plans is required' });
+    }
+
+    const toBoolInt = (val, fallback = 0) => {
+      if (val === undefined || val === null) return (fallback === 1 || fallback === true || fallback === '1' || fallback === 'true') ? 1 : 0;
+      return (val === 1 || val === true || val === '1' || val === 'true') ? 1 : 0;
+    };
+
+    const allExistingPlans = await query('SELECT * FROM saas_plans');
+    const planMap = new Map();
+    (allExistingPlans || []).forEach(p => {
+      if (p.key) planMap.set(p.key.toLowerCase(), p);
+    });
+
+    for (const p of plans) {
+      if (!p || !p.key) continue;
+      const existingPlan = planMap.get(p.key.toLowerCase());
+      if (!existingPlan) continue;
+
+      const queryParams = [
+        p.name || existingPlan.name || p.key,
+        p.price !== undefined ? parseFloat(p.price) : (existingPlan.price ?? 999),
+        p.badge || existingPlan.badge || '👑 PRO',
+        p.description !== undefined ? p.description : (existingPlan.description || ''),
+        p.max_dishes !== undefined ? parseInt(p.max_dishes, 10) : (existingPlan.max_dishes ?? 9999),
+        p.max_categories !== undefined ? parseInt(p.max_categories, 10) : (existingPlan.max_categories ?? 9999),
+        p.max_combos !== undefined ? parseInt(p.max_combos, 10) : (existingPlan.max_combos ?? 9999),
+        p.max_tables !== undefined ? parseInt(p.max_tables, 10) : (existingPlan.max_tables ?? 9999),
+        p.max_staff_accounts !== undefined ? parseInt(p.max_staff_accounts, 10) : (existingPlan.max_staff_accounts ?? 9999),
+        p.order_retention_days !== undefined ? parseInt(p.order_retention_days, 10) : (existingPlan.order_retention_days ?? 365),
+        toBoolInt(p.modifiers_enabled, existingPlan.modifiers_enabled),
+        toBoolInt(p.staff_roles_enabled, existingPlan.staff_roles_enabled),
+        toBoolInt(p.whatsapp_ordering_enabled !== undefined ? p.whatsapp_ordering_enabled : p.whatsapp_enabled, existingPlan.whatsapp_ordering_enabled ?? existingPlan.whatsapp_enabled),
+        toBoolInt(p.direct_ordering_enabled, existingPlan.direct_ordering_enabled),
+        toBoolInt(p.audio_alarm_enabled, existingPlan.audio_alarm_enabled),
+        toBoolInt(p.order_status_whatsapp_enabled, existingPlan.order_status_whatsapp_enabled),
+        toBoolInt(p.kds_enabled, existingPlan.kds_enabled),
+        toBoolInt(p.bluetooth_kot_enabled, existingPlan.bluetooth_kot_enabled),
+        toBoolInt(p.google_reviews_enabled, existingPlan.google_reviews_enabled),
+        toBoolInt(p.ai_review_enabled, existingPlan.ai_review_enabled),
+        toBoolInt(p.stories_enabled, existingPlan.stories_enabled),
+        toBoolInt(p.gst_invoice_enabled, existingPlan.gst_invoice_enabled),
+        toBoolInt(p.analytics_export_enabled, existingPlan.analytics_export_enabled),
+        toBoolInt(p.multi_language_enabled, existingPlan.multi_language_enabled),
+        toBoolInt(p.watermark_removal_enabled, existingPlan.watermark_removal_enabled),
+        toBoolInt(p.custom_domain_enabled, existingPlan.custom_domain_enabled),
+        toBoolInt(p.dual_printer_enabled, existingPlan.dual_printer_enabled),
+        p.presence_verification_enabled !== undefined ? toBoolInt(p.presence_verification_enabled, 1) : (existingPlan.presence_verification_enabled ?? 1),
+        p.allowed_verification_modes !== undefined ? String(p.allowed_verification_modes) : (existingPlan.allowed_verification_modes || 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY'),
+        p.theme_color || existingPlan.theme_color || 'gold',
+        p.allowed_themes || existingPlan.allowed_themes || 'ALL',
+        p.industry !== undefined ? p.industry : (existingPlan.industry || 'restaurant'),
+        p.max_rooms !== undefined ? parseInt(p.max_rooms, 10) : (existingPlan.max_rooms ?? 9999),
+        p.max_screens !== undefined ? parseInt(p.max_screens, 10) : (existingPlan.max_screens ?? 9999),
+        p.max_seats !== undefined ? parseInt(p.max_seats, 10) : (existingPlan.max_seats ?? 9999),
+        toBoolInt(p.tables_enabled, existingPlan.tables_enabled ?? 1),
+        toBoolInt(p.cabins_enabled, existingPlan.cabins_enabled ?? 0),
+        p.max_cabins !== undefined ? parseInt(p.max_cabins, 10) : (existingPlan.max_cabins ?? 0),
+        toBoolInt(p.vip_enabled, existingPlan.vip_enabled ?? 0),
+        p.max_vip !== undefined ? parseInt(p.max_vip, 10) : (existingPlan.max_vip ?? 0),
+        toBoolInt(p.rooms_enabled, existingPlan.rooms_enabled ?? 1),
+        toBoolInt(p.screens_enabled, existingPlan.screens_enabled ?? 1),
+        toBoolInt(p.seats_enabled, existingPlan.seats_enabled ?? 1),
+        toBoolInt(p.amenities_booking_enabled, existingPlan.amenities_booking_enabled ?? 1),
+        toBoolInt(p.seat_runner_dispatch_enabled, existingPlan.seat_runner_dispatch_enabled ?? 1),
+        toBoolInt(p.interval_rush_mode_enabled, existingPlan.interval_rush_mode_enabled ?? 1),
+        toBoolInt(p.counter_ordering_enabled, existingPlan.counter_ordering_enabled ?? 0),
+        existingPlan.id
+      ];
+
+      await query(`
+        UPDATE saas_plans
+        SET name = $1, price = $2, badge = $3, description = $4,
+            max_dishes = $5, max_categories = $6, max_combos = $7, max_tables = $8, max_staff_accounts = $9, order_retention_days = $10,
+            modifiers_enabled = $11, staff_roles_enabled = $12, whatsapp_ordering_enabled = $13, whatsapp_enabled = $13, direct_ordering_enabled = $14,
+            audio_alarm_enabled = $15, order_status_whatsapp_enabled = $16, kds_enabled = $17, bluetooth_kot_enabled = $18,
+            google_reviews_enabled = $19, ai_review_enabled = $20, stories_enabled = $21, gst_invoice_enabled = $22,
+            analytics_export_enabled = $23, multi_language_enabled = $24, watermark_removal_enabled = $25, custom_domain_enabled = $26,
+            dual_printer_enabled = $27, presence_verification_enabled = $28, allowed_verification_modes = $29,
+            theme_color = $30, allowed_themes = $31, industry = $32, max_rooms = $33, max_screens = $34, max_seats = $35,
+            tables_enabled = $36, cabins_enabled = $37, max_cabins = $38, vip_enabled = $39, max_vip = $40,
+            rooms_enabled = $41, screens_enabled = $42, seats_enabled = $43,
+            amenities_booking_enabled = $44, seat_runner_dispatch_enabled = $45, interval_rush_mode_enabled = $46,
+            counter_ordering_enabled = $47
+        WHERE id = $48
+      `, queryParams);
+
+      await query('UPDATE restaurants SET counter_ordering_enabled = $1 WHERE LOWER(plan_tier) = LOWER($2)', [
+        toBoolInt(p.counter_ordering_enabled, existingPlan.counter_ordering_enabled ?? 0),
+        existingPlan.key
+      ]).catch(() => {});
+    }
+
+    clearSubStatusCache();
+    clearRestoResolveCache();
+    await logAudit(null, 'superadmin', 'Batch Update SaaS Plans', `Batch saved matrix permissions for ${plans.length} plans`);
+    res.json({ success: true, message: `All ${plans.length} SaaS plans updated successfully!` });
+  } catch (err) {
+    console.error('Batch update SaaS plans error:', err);
+    res.status(500).json({ error: err.message || 'Failed to batch update SaaS plans' });
+  }
+});
+
 // PUT Update SaaS Plan Details & 24-Point Feature Matrix
 router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
