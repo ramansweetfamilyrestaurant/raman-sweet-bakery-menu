@@ -1051,7 +1051,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       plan_tier, plan_price, plan_expires_at, trial_ends_at, trial_days, whatsapp_number, whatsapp_enabled, 
       direct_ordering_enabled, google_reviews_enabled, theme_color, order_retention_days, 
       custom_domain, owner_name, owner_email, business_type, service_model, business_category,
-      total_tables, total_rooms, total_seats, total_screens
+      total_tables, total_rooms, total_seats, total_screens, counter_ordering_enabled
     } = req.body;
 
     // Fetch existing restaurant FIRST for audit comparison & avoid TDZ ReferenceError
@@ -1119,8 +1119,9 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
           total_rooms = COALESCE($23, total_rooms),
           total_seats = COALESCE($24, total_seats),
           total_screens = COALESCE($25, total_screens),
-          trial_ends_at = COALESCE($26, trial_ends_at)
-      WHERE id = $27
+          trial_ends_at = COALESCE($26, trial_ends_at),
+          counter_ordering_enabled = COALESCE($27, counter_ordering_enabled)
+      WHERE id = $28
     `, [
       name || currentResto.name,
       tagline !== undefined ? tagline : (currentResto.tagline || ''),
@@ -1148,6 +1149,7 @@ router.put('/restaurants/:id', authenticateToken, requireSuperAdmin, async (req,
       total_seats !== undefined ? Number(total_seats) : null,
       total_screens !== undefined ? Number(total_screens) : null,
       effectiveTrialEndsAt,
+      counter_ordering_enabled !== undefined ? (counter_ordering_enabled !== false && counter_ordering_enabled !== 0 && counter_ordering_enabled !== 'false' ? 1 : 0) : null,
       id
     ]);
 
@@ -1553,6 +1555,7 @@ router.get('/plans', authenticateToken, requireSuperAdmin, async (req, res) => {
       whatsapp_enabled: isTrue(p.whatsapp_ordering_enabled ?? p.whatsapp_enabled, true),
       whatsapp_ordering_enabled: isTrue(p.whatsapp_ordering_enabled ?? p.whatsapp_enabled, true),
       direct_ordering_enabled: isTrue(p.direct_ordering_enabled, false),
+      counter_ordering_enabled: isTrue(p.counter_ordering_enabled, true),
       google_reviews_enabled: isTrue(p.google_reviews_enabled, true),
       modifiers_enabled: isTrue(p.modifiers_enabled, true),
       staff_roles_enabled: isTrue(p.staff_roles_enabled, true),
@@ -1586,7 +1589,7 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
   try {
     const { 
       key, name, price, original_price, badge, description, 
-      whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, google_reviews_enabled, 
+      whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, counter_ordering_enabled, google_reviews_enabled, 
       presence_verification_enabled, allowed_verification_modes,
       theme_color, allowed_themes, industry, max_tables, max_rooms, max_screens, max_seats,
       tables_enabled, cabins_enabled, max_cabins, vip_enabled, max_vip, rooms_enabled, screens_enabled, seats_enabled,
@@ -1609,7 +1612,7 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
     await query(`
       INSERT INTO saas_plans (
         key, name, price, original_price, badge, description, 
-        whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, 
+        whatsapp_enabled, whatsapp_ordering_enabled, direct_ordering_enabled, counter_ordering_enabled,
         google_reviews_enabled, presence_verification_enabled, allowed_verification_modes,
         theme_color, allowed_themes, industry, max_tables, max_rooms, max_screens, max_seats,
         tables_enabled, cabins_enabled, max_cabins, vip_enabled, max_vip, rooms_enabled, screens_enabled, seats_enabled,
@@ -1624,7 +1627,7 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
         $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
         $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
         $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41,
-        $42, $43, $44, $45, $46, $47, $48, $49
+        $42, $43, $44, $45, $46, $47, $48, $49, $50
       )
     `, [
       cleanKey,
@@ -1636,6 +1639,7 @@ router.post('/plans', authenticateToken, requireSuperAdmin, async (req, res) => 
       wVal,
       wVal,
       toBoolInt(direct_ordering_enabled, 0),
+      toBoolInt(counter_ordering_enabled, 1),
       toBoolInt(google_reviews_enabled, 1),
       toBoolInt(presence_verification_enabled, 1),
       allowed_verification_modes || 'QR_ONLY,GPS_ONLY,GPS_WITH_STAFF_FALLBACK,STAFF_ONLY',
@@ -1706,7 +1710,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       presence_verification_enabled, allowed_verification_modes, theme_color, allowed_themes,
       industry, max_rooms, max_screens, max_seats,
       tables_enabled, cabins_enabled, max_cabins, vip_enabled, max_vip, rooms_enabled, screens_enabled, seats_enabled,
-      amenities_booking_enabled, seat_runner_dispatch_enabled, interval_rush_mode_enabled
+      amenities_booking_enabled, seat_runner_dispatch_enabled, interval_rush_mode_enabled, counter_ordering_enabled
     } = req.body;
 
     const toBoolInt = (val, fallback = 0) => {
@@ -1761,6 +1765,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       toBoolInt(amenities_booking_enabled, existingPlan.amenities_booking_enabled ?? 1),
       toBoolInt(seat_runner_dispatch_enabled, existingPlan.seat_runner_dispatch_enabled ?? 1),
       toBoolInt(interval_rush_mode_enabled, existingPlan.interval_rush_mode_enabled ?? 1),
+      toBoolInt(counter_ordering_enabled, existingPlan.counter_ordering_enabled ?? 1),
       key
     ];
 
@@ -1777,8 +1782,9 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
             theme_color = $30, allowed_themes = $31, industry = $32, max_rooms = $33, max_screens = $34, max_seats = $35,
             tables_enabled = $36, cabins_enabled = $37, max_cabins = $38, vip_enabled = $39, max_vip = $40,
             rooms_enabled = $41, screens_enabled = $42, seats_enabled = $43,
-            amenities_booking_enabled = $44, seat_runner_dispatch_enabled = $45, interval_rush_mode_enabled = $46
-        WHERE key = $47
+            amenities_booking_enabled = $44, seat_runner_dispatch_enabled = $45, interval_rush_mode_enabled = $46,
+            counter_ordering_enabled = $47
+        WHERE key = $48
       `, queryParams);
     } catch (dbErr) {
       console.warn('[SAAS PLAN MATRIX] Auto-healing table schema for missing columns...', dbErr.message);
@@ -1803,6 +1809,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS rooms_enabled INT DEFAULT 1;").catch(() => {});
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS screens_enabled INT DEFAULT 1;").catch(() => {});
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS seats_enabled INT DEFAULT 1;").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 1;").catch(() => {});
       
       await query(`
         UPDATE saas_plans
@@ -1816,8 +1823,9 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
             theme_color = $30, allowed_themes = $31, industry = $32, max_rooms = $33, max_screens = $34, max_seats = $35,
             tables_enabled = $36, cabins_enabled = $37, max_cabins = $38, vip_enabled = $39, max_vip = $40,
             rooms_enabled = $41, screens_enabled = $42, seats_enabled = $43,
-            amenities_booking_enabled = $44, seat_runner_dispatch_enabled = $45, interval_rush_mode_enabled = $46
-        WHERE key = $47
+            amenities_booking_enabled = $44, seat_runner_dispatch_enabled = $45, interval_rush_mode_enabled = $46,
+            counter_ordering_enabled = $47
+        WHERE key = $48
       `, queryParams);
     }
 

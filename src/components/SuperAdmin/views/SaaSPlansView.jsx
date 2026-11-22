@@ -69,6 +69,7 @@ const INITIAL_CREATE_FORM = {
   order_retention_days: 365,
   whatsapp_enabled: 1,
   direct_ordering_enabled: 1,
+  counter_ordering_enabled: 1,
   kds_enabled: 1,
   bluetooth_kot_enabled: 1,
   dual_printer_enabled: 0,
@@ -157,6 +158,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
           seats_enabled: toBoolInt(p.seats_enabled, 1),
           max_seats: p.max_seats !== undefined ? parseInt(p.max_seats, 10) : 9999,
           direct_ordering_enabled: directOrderingVal,
+          counter_ordering_enabled: toBoolInt(p.counter_ordering_enabled, 1),
           presence_verification_enabled: directOrderingVal,
           amenities_booking_enabled: toBoolInt(p.amenities_booking_enabled),
           seat_runner_dispatch_enabled: toBoolInt(p.seat_runner_dispatch_enabled),
@@ -233,6 +235,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         seats_enabled: toBoolInt(createForm.seats_enabled, 1),
         max_seats: parseInt(createForm.max_seats, 10) || 800,
         direct_ordering_enabled: directOrderingVal,
+        counter_ordering_enabled: toBoolInt(createForm.counter_ordering_enabled, 1),
         presence_verification_enabled: directOrderingVal,
         amenities_booking_enabled: toBoolInt(createForm.amenities_booking_enabled),
         seat_runner_dispatch_enabled: toBoolInt(createForm.seat_runner_dispatch_enabled),
@@ -288,6 +291,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         seats_enabled: toBoolInt(editingPlan.seats_enabled, 1),
         max_seats: editingPlan.max_seats !== undefined ? parseInt(editingPlan.max_seats, 10) : 9999,
         direct_ordering_enabled: directOrderingVal,
+        counter_ordering_enabled: toBoolInt(editingPlan.counter_ordering_enabled, 1),
         presence_verification_enabled: directOrderingVal,
         amenities_booking_enabled: toBoolInt(editingPlan.amenities_booking_enabled),
         seat_runner_dispatch_enabled: toBoolInt(editingPlan.seat_runner_dispatch_enabled),
@@ -639,6 +643,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         { key: 'tables_enabled', label: '🍽️ Allow Dining Tables (Dine-In Tables)' },
         { key: 'cabins_enabled', label: '🛋️ Allow Private Cabins (Exclusive Dining Suites)' },
         { key: 'vip_enabled', label: '👑 Allow VIP Lounges (Premium Lounges)' },
+        { key: 'counter_ordering_enabled', label: '⚡ Counter Quick POS & Instant Token Billing' },
         { key: 'direct_ordering_enabled', label: '📋 Customer Dining Table QR Ordering & Live Orders Page' },
         { key: 'modifiers_enabled', label: '🌶️ Dish Modifiers & Half/Full Variants' },
         { key: 'whatsapp_ordering_enabled', label: '💬 WhatsApp Customer Food Ordering' },
@@ -659,6 +664,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     if (selectedIndustry === 'hotel') {
       return [
         { key: 'rooms_enabled', label: '🏨 Allow Guest Rooms (In-Room QR Dining Operations)' },
+        { key: 'counter_ordering_enabled', label: '⚡ Front Desk / Counter Quick POS & Billing' },
         { key: 'direct_ordering_enabled', label: '🚪 Guest In-Room QR Food & Beverage Dining (Room Scan)' },
         { key: 'amenities_booking_enabled', label: '🛎️ Hotel Amenities & Guest Services Booking (Spa, Laundry, Towels, Cab)' },
         { key: 'whatsapp_ordering_enabled', label: '💬 WhatsApp Guest Concierge & Butler Chat' },
@@ -680,6 +686,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
       return [
         { key: 'screens_enabled', label: '🎬 Allow Cinema Audi Screens' },
         { key: 'seats_enabled', label: '💺 Allow In-Seat Ordering' },
+        { key: 'counter_ordering_enabled', label: '⚡ Concessions Counter Quick POS & Token Billing' },
         { key: 'direct_ordering_enabled', label: '💺 In-Seat QR Delivery (Customer orders from Audi Seat)' },
         { key: 'interval_rush_mode_enabled', label: '⚡ Interval Express Rush Mode (15-min interval fast-pass order queue)' },
         { key: 'seat_runner_dispatch_enabled', label: '🏃 Seat Runner Dispatch Routing (Auto-tags Audi, Row & Seat #)' },
@@ -700,6 +707,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
 
     // Unified All Plans Table: Universal Master Permissions
     return [
+      { key: 'counter_ordering_enabled', label: '⚡ Counter Quick POS & Token Billing' },
       { key: 'direct_ordering_enabled', label: '📋 Direct Space QR Ordering (Table / Room / Seat)' },
       { key: 'whatsapp_ordering_enabled', label: '💬 WhatsApp Ordering & Concierge' },
       { key: 'kds_enabled', label: '🍳 Kitchen / Pantry / Concessions KDS Screen' },
@@ -1081,6 +1089,15 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {p.counter_ordering_enabled ? (
+                          <span style={{ fontSize: '0.66rem', fontWeight: 800, background: '#ECFDF5', color: '#047857', padding: '2px 6px', borderRadius: '4px', border: '1px solid #A7F3D0' }}>
+                            ⚡ Quick POS
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.66rem', fontWeight: 800, background: '#FEF2F2', color: '#991B1B', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FECACA' }}>
+                            🔒 POS Locked
+                          </span>
+                        )}
                         {p.direct_ordering_enabled ? (
                           <span style={{ fontSize: '0.66rem', fontWeight: 800, background: '#ECFDF5', color: '#047857', padding: '2px 6px', borderRadius: '4px', border: '1px solid #A7F3D0' }}>
                             ⚡ Direct QR
@@ -1563,6 +1580,16 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.80rem', fontWeight: 700 }}>
                   <input
                     type="checkbox"
+                    checked={editingPlan.counter_ordering_enabled !== 0 && editingPlan.counter_ordering_enabled !== false}
+                    onChange={e => setEditingPlan({ ...editingPlan, counter_ordering_enabled: e.target.checked ? 1 : 0 })}
+                    style={{ accentColor: 'var(--sa-primary)' }}
+                  />
+                  <span>⚡ Counter Quick POS & Instant Token Billing</span>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.80rem', fontWeight: 700 }}>
+                  <input
+                    type="checkbox"
                     checked={editingPlan.direct_ordering_enabled !== 0 && editingPlan.direct_ordering_enabled !== false}
                     onChange={e => setEditingPlan({ ...editingPlan, direct_ordering_enabled: e.target.checked ? 1 : 0 })}
                     style={{ accentColor: 'var(--sa-primary)' }}
@@ -1908,6 +1935,16 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
                   Key Feature Permissions:
                 </span>
                 
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.80rem', fontWeight: 700 }}>
+                  <input
+                    type="checkbox"
+                    checked={createForm.counter_ordering_enabled !== 0 && createForm.counter_ordering_enabled !== false}
+                    onChange={e => setCreateForm({ ...createForm, counter_ordering_enabled: e.target.checked ? 1 : 0 })}
+                    style={{ accentColor: 'var(--sa-primary)' }}
+                  />
+                  <span>⚡ Counter Quick POS & Instant Token Billing</span>
+                </label>
+
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.80rem', fontWeight: 700 }}>
                   <input
                     type="checkbox"

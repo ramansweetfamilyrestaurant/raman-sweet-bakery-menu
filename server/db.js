@@ -375,11 +375,13 @@ async function createTables(options = {}) {
         key VARCHAR(50) UNIQUE NOT NULL,
         name VARCHAR(100) NOT NULL,
         price NUMERIC DEFAULT 999,
+        original_price NUMERIC DEFAULT 1999,
         badge VARCHAR(50) DEFAULT '👑 PRO',
         description TEXT,
         whatsapp_enabled INT DEFAULT 1,
         direct_ordering_enabled INT DEFAULT 0,
         google_reviews_enabled INT DEFAULT 1,
+        counter_ordering_enabled INT DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
 
@@ -893,6 +895,8 @@ async function createTables(options = {}) {
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS rooms_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS screens_enabled INT DEFAULT 1;`,
       `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS seats_enabled INT DEFAULT 1;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS original_price NUMERIC DEFAULT 1999;`,
+      `ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 1;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(50);`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'cash';`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS sent_to_kds INT DEFAULT 0;`,
@@ -931,7 +935,7 @@ async function createTables(options = {}) {
       `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS room_orders INT DEFAULT 0;`,
       `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS cinema_sales DECIMAL(10, 2) DEFAULT 0.00;`,
       `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS cinema_orders INT DEFAULT 0;`,
-      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 0;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT NULL;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_id VARCHAR(100) DEFAULT NULL;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(150) DEFAULT NULL;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS print_upi_qr INT DEFAULT 1;`,
@@ -1213,11 +1217,13 @@ async function createTables(options = {}) {
         key TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
         price REAL DEFAULT 999,
+        original_price REAL DEFAULT 1999,
         badge TEXT DEFAULT '👑 PRO',
         description TEXT,
         whatsapp_enabled INTEGER DEFAULT 1,
         direct_ordering_enabled INTEGER DEFAULT 0,
         google_reviews_enabled INTEGER DEFAULT 1,
+        counter_ordering_enabled INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -1736,7 +1742,7 @@ async function createTables(options = {}) {
       }
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash)");
 
-      if (!restoCols.some(c => c.name === 'counter_ordering_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN counter_ordering_enabled INTEGER DEFAULT 0");
+      if (!restoCols.some(c => c.name === 'counter_ordering_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN counter_ordering_enabled INTEGER DEFAULT NULL");
       if (!restoCols.some(c => c.name === 'upi_id')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN upi_id TEXT DEFAULT NULL");
       if (!restoCols.some(c => c.name === 'upi_payee_name')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN upi_payee_name TEXT DEFAULT NULL");
       if (!restoCols.some(c => c.name === 'print_upi_qr')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN print_upi_qr INTEGER DEFAULT 1");
@@ -1767,6 +1773,8 @@ async function createTables(options = {}) {
       if (!planCols.some(c => c.name === 'rooms_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN rooms_enabled INTEGER DEFAULT 1");
       if (!planCols.some(c => c.name === 'screens_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN screens_enabled INTEGER DEFAULT 1");
       if (!planCols.some(c => c.name === 'seats_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN seats_enabled INTEGER DEFAULT 1");
+      if (!planCols.some(c => c.name === 'original_price')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN original_price REAL DEFAULT 1999");
+      if (!planCols.some(c => c.name === 'counter_ordering_enabled')) sqliteDb.exec("ALTER TABLE saas_plans ADD COLUMN counter_ordering_enabled INTEGER DEFAULT 1");
 
       const locCols = sqliteDb.pragma("table_info(table_location_verifications)");
       if (!locCols.some(c => c.name === 'space_type')) sqliteDb.exec("ALTER TABLE table_location_verifications ADD COLUMN space_type TEXT DEFAULT 'table'");
@@ -2106,7 +2114,10 @@ async function seedData(options = {}) {
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS rooms_enabled INT DEFAULT 1").catch(() => {});
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS screens_enabled INT DEFAULT 1").catch(() => {});
       await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS seats_enabled INT DEFAULT 1").catch(() => {});
-      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 0, max_cabins = 0, vip_enabled = 0, max_vip = 0 WHERE key = 'basic'").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 1").catch(() => {});
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 0, max_cabins = 0, vip_enabled = 0, max_vip = 0, counter_ordering_enabled = 0 WHERE key = 'basic'").catch(() => {});
+      await query("UPDATE saas_plans SET counter_ordering_enabled = 0 WHERE key IN ('hotel_basic', 'cinema_basic')").catch(() => {});
+      await query("UPDATE saas_plans SET counter_ordering_enabled = 1 WHERE key NOT IN ('basic', 'hotel_basic', 'cinema_basic') AND (counter_ordering_enabled IS NULL)").catch(() => {});
       await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 4, vip_enabled = 1, max_vip = 2 WHERE key = 'pro'").catch(() => {});
       await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 9999, vip_enabled = 1, max_vip = 9999 WHERE key = 'enterprise'").catch(() => {});
       await query("UPDATE saas_plans SET rooms_enabled = 1 WHERE industry = 'hotel' OR key LIKE 'hotel_%'").catch(() => {});

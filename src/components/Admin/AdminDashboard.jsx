@@ -19,6 +19,7 @@ import { calculateBillDetails, formatOrderLocation, buildUpiPaymentUri } from '.
 import './styles/Admin.css';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
+import PlanLockedCard from './components/PlanLockedCard';
 import AdminBottomNavigation from './components/AdminBottomNavigation';
 import OrdersView from './views/OrdersView';
 import HomeView from './views/HomeView';
@@ -3868,25 +3869,37 @@ export default function AdminDashboard({
 
               {/* COUNTER POS BILLING VIEW */}
               {activeTab === 'pos' && (
-                <PosBillingView
-                  dishes={safeDishes}
-                  categories={safeCategories}
-                  combos={combos}
-                  orders={orders}
-                  onUpdateStatus={handleUpdateStatus}
-                  restaurantInfo={restaurantInfo}
-                  settingsForm={settingsForm}
-                  token={token}
-                  currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-                  onPrintBill={(order, mode) => handlePrintCustomerBill(order, mode || 'CASH')}
-                  onPrintKot={(order) => handlePrintKOT(order)}
-                  onOrderCreated={(newOrder) => {
-                    if (newOrder) {
-                      setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
-                    }
-                  }}
-                  onNavigateToOrders={() => setActiveTab('orders')}
-                />
+                tenantCaps.counter_ordering_enabled === false ? (
+                  <div style={{ maxWidth: '720px', margin: '40px auto', padding: '0 16px' }}>
+                    <PlanLockedCard
+                      featureKey="counter_ordering_enabled"
+                      title="Counter Quick POS & Token Billing"
+                      description="Fast cashier counter ordering, instant takeaway token generation (TK-01), and thermal bill printing."
+                      minTier="Pro"
+                      onUpgrade={() => setActiveTab('billing')}
+                    />
+                  </div>
+                ) : (
+                  <PosBillingView
+                    dishes={safeDishes}
+                    categories={safeCategories}
+                    combos={combos}
+                    orders={orders}
+                    onUpdateStatus={handleUpdateStatus}
+                    restaurantInfo={restaurantInfo}
+                    settingsForm={settingsForm}
+                    token={token}
+                    currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
+                    onPrintBill={(order, mode) => handlePrintCustomerBill(order, mode || 'CASH')}
+                    onPrintKot={(order) => handlePrintKOT(order)}
+                    onOrderCreated={(newOrder) => {
+                      if (newOrder) {
+                        setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
+                      }
+                    }}
+                    onNavigateToOrders={() => setActiveTab('orders')}
+                  />
+                )
               )}
 
               {/* ANALYTICS VIEW */}
@@ -4165,6 +4178,7 @@ export default function AdminDashboard({
             analyticsEnabled={isAnalyticsEnabled}
             ordersEnabled={isDirectOrderingEnabled}
             restaurantInfo={restaurantInfo}
+            capabilities={tenantCaps}
           />
         </div>
       </div>

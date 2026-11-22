@@ -1,7 +1,7 @@
 import React from 'react';
 import { BOTTOM_NAV_ITEMS, isNavItemActive, getLocalizedNavLabel } from '../adminNavigation';
 
-export default function AdminBottomNavigation({ activeTab, setActiveTab, pendingOrdersCount = 0, restaurantInfo = {} }) {
+export default function AdminBottomNavigation({ activeTab, setActiveTab, pendingOrdersCount = 0, restaurantInfo = {}, capabilities = {} }) {
   return (
     <>
       <style>{`
@@ -81,6 +81,22 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
                     lineHeight: 1.2
                   }}>
                     {pendingOrdersCount}
+                  </span>
+                )}
+                {item.id === 'pos' && capabilities?.counter_ordering_enabled === false && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-8px',
+                    background: '#EF4444',
+                    color: '#FFFFFF',
+                    fontSize: '0.50rem',
+                    fontWeight: 900,
+                    borderRadius: '6px',
+                    padding: '0 3px',
+                    lineHeight: 1.2
+                  }}>
+                    🔒
                   </span>
                 )}
               </div>

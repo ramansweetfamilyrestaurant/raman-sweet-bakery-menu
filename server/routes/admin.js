@@ -435,6 +435,20 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       staff_roles_enabled: isValTrue(saasPlan.staff_roles_enabled, true),
       whatsapp_enabled: isValTrue(saasPlan.whatsapp_ordering_enabled ?? saasPlan.whatsapp_enabled, tierKey !== 'basic'),
       direct_ordering_enabled: isValTrue(saasPlan.direct_ordering_enabled, isUnlimitedPlan),
+      counter_ordering_enabled: (() => {
+        if (r.counter_ordering_enabled !== undefined && r.counter_ordering_enabled !== null) {
+          if (r.counter_ordering_enabled === 0 || r.counter_ordering_enabled === false || r.counter_ordering_enabled === '0' || r.counter_ordering_enabled === 'false') {
+            return false;
+          }
+          if (r.counter_ordering_enabled === 1 || r.counter_ordering_enabled === true || r.counter_ordering_enabled === '1' || r.counter_ordering_enabled === 'true') {
+            return true;
+          }
+        }
+        if (saasPlan.counter_ordering_enabled !== undefined && saasPlan.counter_ordering_enabled !== null) {
+          return isValTrue(saasPlan.counter_ordering_enabled, tierKey !== 'basic' || isUnlimitedPlan);
+        }
+        return tierKey !== 'basic' || isUnlimitedPlan;
+      })(),
       audio_alarm_enabled: isValTrue(saasPlan.audio_alarm_enabled, true),
       order_status_whatsapp_enabled: isValTrue(saasPlan.order_status_whatsapp_enabled, true),
       kds_enabled: isValTrue(saasPlan.kds_enabled, isUnlimitedPlan),
@@ -527,6 +541,7 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       is_vip: Boolean(isComplimentary),
       whatsapp_enabled: matrixPermissions.whatsapp_enabled,
       direct_ordering_enabled: matrixPermissions.direct_ordering_enabled,
+      counter_ordering_enabled: matrixPermissions.counter_ordering_enabled,
       google_reviews_enabled: matrixPermissions.google_reviews_enabled,
       kds_enabled: matrixPermissions.kds_enabled,
       dual_printer_enabled: matrixPermissions.dual_printer_enabled,
@@ -2956,6 +2971,38 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
       return res.status(404).json({ error: 'restaurant_not_found', message: 'Restaurant not found' });
     }
     const resto = rRows[0];
+
+    // Verify SaaS Plan & Feature Entitlement for Counter Quick POS
+    const isComplimentary = isAuthoritativeComplimentaryTenant(resto);
+    const planTierKey = String(resto.plan_tier || 'pro').toLowerCase();
+
+    let planRow = null;
+    try {
+      const pRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = LOWER($1)', [planTierKey]);
+      const pr = pRows?.rows || pRows;
+      if (pr && pr.length > 0) planRow = pr[0];
+    } catch (pErr) {}
+
+    const isPlanPosEnabled = planRow
+      ? (planRow.counter_ordering_enabled === 1 || planRow.counter_ordering_enabled === true || planRow.counter_ordering_enabled === '1' || planRow.counter_ordering_enabled === 'true')
+      : (planTierKey !== 'basic');
+
+    const isRestoExplicitlyDisabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
+      (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false');
+
+    const isRestoExplicitlyEnabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
+      (resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1' || resto.counter_ordering_enabled === 'true');
+
+    const isPosAllowed = isComplimentary || isRestoExplicitlyEnabled || (!isRestoExplicitlyDisabled && isPlanPosEnabled);
+
+    if (!isPosAllowed) {
+      return res.status(403).json({
+        success: false,
+        error: 'feature_locked',
+        feature: 'counter_ordering_enabled',
+        message: 'Counter Quick POS is disabled in your current SaaS plan. Please upgrade your plan to unlock Counter POS billing.'
+      });
+    }
 
     const isTakeaway = String(order_type).toLowerCase() === 'takeaway' || !table_number || String(table_number).toLowerCase().includes('counter');
     const cleanTable = isTakeaway ? 'Counter' : String(table_number).trim();

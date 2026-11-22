@@ -4121,6 +4121,24 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 />
               </div>
 
+              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', marginTop: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', margin: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1rem' }}>⚡</span>
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', color: '#1E293B', display: 'block' }}>Counter Quick POS & Instant Token Billing</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Enable or disable counter billing and takeaway tokens for this shop</span>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={editModalData.counter_ordering_enabled !== 0 && editModalData.counter_ordering_enabled !== false && editModalData.counter_ordering_enabled !== '0'}
+                    onChange={(e) => setEditModalData({ ...editModalData, counter_ordering_enabled: e.target.checked ? 1 : 0 })}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary-emerald)', cursor: 'pointer' }}
+                  />
+                </label>
+              </div>
+
               <div style={{ display: 'flex', gap: '12px', marginTop: '14px' }}>
                 <button type="button" onClick={() => setEditModalData(null)} className="sa-btn sa-btn-secondary" style={{ flex: 1 }}>Cancel</button>
                 <button type="submit" className="sa-btn sa-btn-accent" style={{ flex: 1 }}>💾 Save Changes</button>

@@ -411,6 +411,17 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
   // Option B: Capabilities strictly respect the granted plan tier
   const capabilities = {
     direct_ordering_enabled: isBasicPlan ? false : isValTrue(plan.direct_ordering_enabled, isUnlimitedPlan),
+    counter_ordering_enabled: (() => {
+      if (resto?.counter_ordering_enabled !== undefined && resto?.counter_ordering_enabled !== null) {
+        if (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false') {
+          return false;
+        }
+      }
+      if (plan.counter_ordering_enabled !== undefined && plan.counter_ordering_enabled !== null) {
+        return isValTrue(plan.counter_ordering_enabled, !isBasicPlan || isUnlimitedPlan);
+      }
+      return isComplimentary ? true : (!isBasicPlan || isUnlimitedPlan);
+    })(),
     whatsapp_ordering_enabled: isValTrue(plan.whatsapp_ordering_enabled ?? plan.whatsapp_enabled, !isBasicPlan),
     kds_enabled: (isBasicPlan || !isKdsApplicable) ? false : isValTrue(plan.kds_enabled, isUnlimitedPlan),
     bluetooth_kot_enabled: (isBasicPlan || !isKotApplicable) ? false : isValTrue(plan.bluetooth_kot_enabled, isUnlimitedPlan),
@@ -432,6 +443,12 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
   };
 
   const feature_matrix = {
+    counter_ordering_enabled: {
+      label: 'Counter Quick POS & Token Billing',
+      enabled: capabilities.counter_ordering_enabled,
+      applicable: true,
+      status: capabilities.counter_ordering_enabled ? 'AVAILABLE' : 'LOCKED'
+    },
     direct_ordering_enabled: {
       label: isHotel ? 'In-Room QR Dining' : isCinema ? 'Cinema Seat QR Ordering' : 'Direct Table / Space Ordering',
       enabled: capabilities.direct_ordering_enabled,

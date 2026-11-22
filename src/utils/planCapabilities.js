@@ -21,6 +21,12 @@ export const FEATURE_METADATA = Object.freeze({
     icon: '🧾',
     minTier: 'Enterprise'
   },
+  counter_ordering_enabled: {
+    name: 'Counter Quick POS & Token Billing',
+    benefit: 'Fast cashier counter ordering, instant takeaway token generation (TK-01), and thermal bill printing.',
+    icon: '⚡',
+    minTier: 'Pro'
+  },
   whatsapp_ordering_enabled: {
     name: 'WhatsApp Direct Ordering',
     benefit: 'Customers can place food orders directly via structured WhatsApp chat messages.',
@@ -188,6 +194,20 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
         return isBoolTrue(explicitFlag);
       }
       return isBasic && !isComplimentary ? false : isBoolTrue(perms?.direct_ordering_enabled, isUnlimitedPlan);
+    })(),
+    counter_ordering_enabled: (() => {
+      const explicitFlag = actualResto?.counter_ordering_enabled ?? actualSettings?.counter_ordering_enabled;
+      if (explicitFlag !== undefined && explicitFlag !== null && (explicitFlag === 0 || explicitFlag === false || explicitFlag === '0' || explicitFlag === 'false')) {
+        return false;
+      }
+      if (perms?.counter_ordering_enabled !== undefined && perms?.counter_ordering_enabled !== null) {
+        if (!isBoolTrue(perms.counter_ordering_enabled)) {
+          return isComplimentary;
+        }
+        return true;
+      }
+      if (isBasic && !isComplimentary) return false;
+      return true;
     })(),
     whatsapp_ordering_enabled: isBoolTrue(actualResto?.whatsapp_ordering_enabled ?? perms?.whatsapp_ordering_enabled, !isBasic),
     kds_enabled: isBasic ? false : isBoolTrue(actualResto?.kds_enabled ?? perms?.kds_enabled, isUnlimitedPlan),

@@ -298,6 +298,87 @@ async function runTestSuite() {
       assert.strictEqual(data.order.is_settled, 1);
     });
 
+    // TEST 9: Super Admin Plan Control - Restaurant on plan with counter_ordering_enabled = 0 is rejected with 403
+    await testAsync('9. POS order is blocked (403 feature_locked) when plan disables counter_ordering_enabled', async () => {
+      // Create a basic-plan restaurant with paid subscription (non-complimentary)
+      const futureExpiry = new Date(Date.now() + 30 * 86400000).toISOString();
+      const basicRestoRes = await query(`
+        INSERT INTO restaurants (name, slug, gst_enabled, plan_tier, subscription_type, mandate_status, active, counter_ordering_enabled, plan_expires_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING id
+      `, ['Basic Dhaba', 'basic-dhaba', 1, 'basic', 'PAID', 'active', 1, 0, futureExpiry]);
+      const basicId = (basicRestoRes.rows || basicRestoRes)[0].id;
+
+      // Seed saas_plans with counter_ordering_enabled = 0 for basic
+      await query(`
+        INSERT OR REPLACE INTO saas_plans (key, name, price, counter_ordering_enabled)
+        VALUES ('basic', 'Basic Plan', 499, 0)
+      `);
+
+      const basicToken = jwt.sign(
+        { id: 998, username: 'basic_admin', role: 'admin', restaurant_id: basicId },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+
+      const res = await fetch(`${baseUrl}/api/admin/pos-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${basicToken}`
+        },
+        body: JSON.stringify({
+          order_type: 'takeaway',
+          items: [{ id: 1, name: 'Chai', price: 15, quantity: 2 }]
+        })
+      });
+
+      assert.strictEqual(res.status, 403, 'Must return 403 Forbidden when POS is locked by plan');
+      const body = await res.json();
+      assert.strictEqual(body.error, 'feature_locked');
+      assert.strictEqual(body.feature, 'counter_ordering_enabled');
+    });
+
+    // TEST 10: Super Admin Unlocks POS for Plan - Order immediately succeeds with 200
+    await testAsync('10. Super Admin enabling counter_ordering_enabled immediately unlocks POS order creation', async () => {
+      // Super Admin updates plan in saas_plans: counter_ordering_enabled = 1
+      await query(`
+        UPDATE saas_plans SET counter_ordering_enabled = 1 WHERE key = 'basic'
+      `);
+
+      // Also ensure restaurant has no blocking flag
+      await query(`
+        UPDATE restaurants SET counter_ordering_enabled = 1 WHERE slug = 'basic-dhaba'
+      `);
+
+      const basicRestoRes = await query(`SELECT id FROM restaurants WHERE slug = 'basic-dhaba'`);
+      const basicId = (basicRestoRes.rows || basicRestoRes)[0].id;
+
+      const basicToken = jwt.sign(
+        { id: 998, username: 'basic_admin', role: 'admin', restaurant_id: basicId },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+
+      const res = await fetch(`${baseUrl}/api/admin/pos-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${basicToken}`
+        },
+        body: JSON.stringify({
+          order_type: 'takeaway',
+          customer_name: 'Dhaba Customer',
+          items: [{ id: 1, name: 'Special Masala Chai', price: 20, quantity: 2 }]
+        })
+      });
+
+      assert.strictEqual(res.status, 200, 'Must return 200 OK after Super Admin unlocks POS');
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      assert.strictEqual(data.token_display, 'TK-01');
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

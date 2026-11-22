@@ -214,16 +214,30 @@ export default function AdminSidebar({
                   <span>{getLocalizedNavLabel(item, restaurantInfo, 'desktop')}</span>
                 </div>
                 {item.id === 'pos' && (
-                  <span style={{
-                    background: '#059669',
-                    color: '#FFFFFF',
-                    fontSize: '0.62rem',
-                    fontWeight: 900,
-                    padding: '2px 6px',
-                    borderRadius: '6px'
-                  }}>
-                    ⚡ FAST
-                  </span>
+                  capabilities?.counter_ordering_enabled === false ? (
+                    <span style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      color: '#F87171',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      fontSize: '0.62rem',
+                      fontWeight: 800,
+                      padding: '2px 6px',
+                      borderRadius: '6px'
+                    }}>
+                      🔒 PRO
+                    </span>
+                  ) : (
+                    <span style={{
+                      background: '#059669',
+                      color: '#FFFFFF',
+                      fontSize: '0.62rem',
+                      fontWeight: 900,
+                      padding: '2px 6px',
+                      borderRadius: '6px'
+                    }}>
+                      ⚡ FAST
+                    </span>
+                  )
                 )}
                 {item.hasBadge && pendingOrdersCount > 0 && (
                   <span style={{
