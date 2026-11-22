@@ -1765,8 +1765,8 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
       toBoolInt(amenities_booking_enabled, existingPlan.amenities_booking_enabled ?? 1),
       toBoolInt(seat_runner_dispatch_enabled, existingPlan.seat_runner_dispatch_enabled ?? 1),
       toBoolInt(interval_rush_mode_enabled, existingPlan.interval_rush_mode_enabled ?? 1),
-      toBoolInt(counter_ordering_enabled, existingPlan.counter_ordering_enabled ?? 1),
-      key
+      toBoolInt(counter_ordering_enabled, existingPlan.counter_ordering_enabled ?? 0),
+      existingPlan.id
     ];
 
     try {
@@ -1784,7 +1784,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
             rooms_enabled = $41, screens_enabled = $42, seats_enabled = $43,
             amenities_booking_enabled = $44, seat_runner_dispatch_enabled = $45, interval_rush_mode_enabled = $46,
             counter_ordering_enabled = $47
-        WHERE key = $48
+        WHERE id = $48
       `, queryParams);
     } catch (dbErr) {
       console.warn('[SAAS PLAN MATRIX] Auto-healing table schema for missing columns...', dbErr.message);
@@ -1825,7 +1825,7 @@ router.put('/plans/:key', authenticateToken, requireSuperAdmin, async (req, res)
             rooms_enabled = $41, screens_enabled = $42, seats_enabled = $43,
             amenities_booking_enabled = $44, seat_runner_dispatch_enabled = $45, interval_rush_mode_enabled = $46,
             counter_ordering_enabled = $47
-        WHERE key = $48
+        WHERE id = $48
       `, queryParams);
     }
 

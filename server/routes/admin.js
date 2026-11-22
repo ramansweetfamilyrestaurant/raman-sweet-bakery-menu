@@ -436,18 +436,20 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       whatsapp_enabled: isValTrue(saasPlan.whatsapp_ordering_enabled ?? saasPlan.whatsapp_enabled, tierKey !== 'basic'),
       direct_ordering_enabled: isValTrue(saasPlan.direct_ordering_enabled, isUnlimitedPlan),
       counter_ordering_enabled: (() => {
+        const isPlanAllowed = (saasPlan.counter_ordering_enabled !== undefined && saasPlan.counter_ordering_enabled !== null)
+          ? isValTrue(saasPlan.counter_ordering_enabled, tierKey !== 'basic' || isUnlimitedPlan)
+          : (tierKey !== 'basic' || isUnlimitedPlan);
+
+        // If the SaaS Plan does not allow POS, it is strictly locked by Super Admin!
+        if (!isPlanAllowed) return false;
+
+        // If the SaaS Plan allows it, check if restaurant-level settings explicitly turned it off
         if (r.counter_ordering_enabled !== undefined && r.counter_ordering_enabled !== null) {
           if (r.counter_ordering_enabled === 0 || r.counter_ordering_enabled === false || r.counter_ordering_enabled === '0' || r.counter_ordering_enabled === 'false') {
             return false;
           }
-          if (r.counter_ordering_enabled === 1 || r.counter_ordering_enabled === true || r.counter_ordering_enabled === '1' || r.counter_ordering_enabled === 'true') {
-            return true;
-          }
         }
-        if (saasPlan.counter_ordering_enabled !== undefined && saasPlan.counter_ordering_enabled !== null) {
-          return isValTrue(saasPlan.counter_ordering_enabled, tierKey !== 'basic' || isUnlimitedPlan);
-        }
-        return tierKey !== 'basic' || isUnlimitedPlan;
+        return true;
       })(),
       audio_alarm_enabled: isValTrue(saasPlan.audio_alarm_enabled, true),
       order_status_whatsapp_enabled: isValTrue(saasPlan.order_status_whatsapp_enabled, true),
@@ -2991,10 +2993,8 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
     const isRestoExplicitlyDisabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
       (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false');
 
-    const isRestoExplicitlyEnabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
-      (resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1' || resto.counter_ordering_enabled === 'true');
-
-    const isPosAllowed = isRestoExplicitlyEnabled || (!isRestoExplicitlyDisabled && isPlanPosEnabled);
+    // SaaS Plan is supreme: If plan disallows POS, POS order is forbidden!
+    const isPosAllowed = isPlanPosEnabled && !isRestoExplicitlyDisabled;
 
     if (!isPosAllowed) {
       return res.status(403).json({

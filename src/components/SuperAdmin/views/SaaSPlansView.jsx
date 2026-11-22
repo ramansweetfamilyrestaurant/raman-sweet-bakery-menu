@@ -87,7 +87,7 @@ const INITIAL_CREATE_FORM = {
 };
 
 export default function SaaSPlansView({ token, restaurants = [] }) {
-  const authToken = token || localStorage.getItem('touchqr_superadmin_token') || localStorage.getItem('token');
+  const authToken = token || (typeof window !== 'undefined' ? (localStorage.getItem('saas_super_token') || localStorage.getItem('touchqr_superadmin_token') || localStorage.getItem('token')) : null);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -136,7 +136,8 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
     // Instant auto-save to backend so the toggle takes immediate effect
     try {
       const currentPlan = plans.find(p => p.key === planKey);
-      if (currentPlan && authToken) {
+      const effectiveToken = authToken || (typeof window !== 'undefined' ? (localStorage.getItem('saas_super_token') || localStorage.getItem('touchqr_superadmin_token') || localStorage.getItem('token')) : null);
+      if (currentPlan && effectiveToken) {
         const updated = { ...currentPlan, [field]: val };
         const directOrderingVal = toBoolInt(updated.direct_ordering_enabled);
         const planInd = updated.industry || (updated.key.startsWith('hotel') ? 'hotel' : updated.key.startsWith('cinema') ? 'cinema' : 'restaurant');
@@ -156,7 +157,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
           seats_enabled: toBoolInt(updated.seats_enabled, 1),
           max_seats: updated.max_seats !== undefined ? parseInt(updated.max_seats, 10) : 9999,
           direct_ordering_enabled: directOrderingVal,
-          counter_ordering_enabled: toBoolInt(updated.counter_ordering_enabled, 1),
+          counter_ordering_enabled: field === 'counter_ordering_enabled' ? (val ? 1 : 0) : toBoolInt(updated.counter_ordering_enabled, 0),
           presence_verification_enabled: directOrderingVal,
           amenities_booking_enabled: toBoolInt(updated.amenities_booking_enabled),
           seat_runner_dispatch_enabled: toBoolInt(updated.seat_runner_dispatch_enabled),
@@ -170,7 +171,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`
+            Authorization: `Bearer ${effectiveToken}`
           },
           body: JSON.stringify(payload)
         });
@@ -180,10 +181,14 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
           const fieldLabel = field === 'counter_ordering_enabled' ? 'Counter POS' : field.replace(/_/g, ' ');
           setMsg(`⚡ Saved: '${updated.name}' ${fieldLabel} ${val ? 'Enabled' : 'Disabled'}!`);
           setTimeout(() => setMsg(''), 3000);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          setErrorMsg(errData.error || `Failed to update '${updated.name}'`);
         }
       }
     } catch (e) {
       console.warn('Auto-save plan error:', e);
+      setErrorMsg(e.message || 'Auto-save failed');
     }
   };
 
@@ -211,7 +216,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
           seats_enabled: toBoolInt(p.seats_enabled, 1),
           max_seats: p.max_seats !== undefined ? parseInt(p.max_seats, 10) : 9999,
           direct_ordering_enabled: directOrderingVal,
-          counter_ordering_enabled: toBoolInt(p.counter_ordering_enabled, 1),
+          counter_ordering_enabled: toBoolInt(p.counter_ordering_enabled, 0),
           presence_verification_enabled: directOrderingVal,
           amenities_booking_enabled: toBoolInt(p.amenities_booking_enabled),
           seat_runner_dispatch_enabled: toBoolInt(p.seat_runner_dispatch_enabled),
@@ -344,7 +349,7 @@ export default function SaaSPlansView({ token, restaurants = [] }) {
         seats_enabled: toBoolInt(editingPlan.seats_enabled, 1),
         max_seats: editingPlan.max_seats !== undefined ? parseInt(editingPlan.max_seats, 10) : 9999,
         direct_ordering_enabled: directOrderingVal,
-        counter_ordering_enabled: toBoolInt(editingPlan.counter_ordering_enabled, 1),
+        counter_ordering_enabled: toBoolInt(editingPlan.counter_ordering_enabled, 0),
         presence_verification_enabled: directOrderingVal,
         amenities_booking_enabled: toBoolInt(editingPlan.amenities_booking_enabled),
         seat_runner_dispatch_enabled: toBoolInt(editingPlan.seat_runner_dispatch_enabled),

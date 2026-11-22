@@ -332,6 +332,7 @@ export default function BillingView({
   const planFeaturesList = useMemo(() => {
     return [
       { name: 'Digital QR Code Menu', enabled: true, benefit: 'Browse items & photos on customer smartphones' },
+      { name: 'Counter Quick POS & Instant Token Billing', enabled: Boolean(resolvedCaps?.counter_ordering_enabled), benefit: 'Cashier quick-billing, takeaway token generation (TK-01), and thermal bill printing' },
       { name: 'Direct Digital QR Ordering', enabled: Boolean(resolvedCaps?.direct_ordering_enabled), benefit: 'Customers place live orders directly from tables, rooms, or counters' },
       { name: 'WhatsApp Direct Ordering', enabled: Boolean(resolvedCaps?.whatsapp_ordering_enabled), benefit: 'Receive structured orders directly on WhatsApp' },
       { name: 'Kitchen / Dispatch Display (KDS)', enabled: Boolean(resolvedCaps?.kds_enabled), benefit: 'Live preparation & packing screen with sound alerts' },
@@ -1261,6 +1262,10 @@ export default function BillingView({
                             <span>In-Room QR Directory & Amenities</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.counter_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.counter_ordering_enabled ? '#334155' : '#94A3B8' }}>Front Desk / Counter Quick POS</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                             {plan.direct_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
                             <span style={{ color: plan.direct_ordering_enabled ? '#334155' : '#94A3B8' }}>In-Room Guest Food Ordering</span>
                           </div>
@@ -1282,6 +1287,10 @@ export default function BillingView({
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                             <Check size={14} color="#059669" strokeWidth={2.5} />
                             <span>Concessions & Canteen QR Menu</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.counter_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.counter_ordering_enabled ? '#334155' : '#94A3B8' }}>Concessions Quick POS & Token Billing</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                             {plan.direct_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
@@ -1309,6 +1318,10 @@ export default function BillingView({
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                             {plan.whatsapp_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
                             <span style={{ color: plan.whatsapp_ordering_enabled ? '#334155' : '#94A3B8' }}>WhatsApp Direct Ordering</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
+                            {plan.counter_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}
+                            <span style={{ color: plan.counter_ordering_enabled ? '#334155' : '#94A3B8' }}>Counter Quick POS & Token Billing</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                             {plan.direct_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}

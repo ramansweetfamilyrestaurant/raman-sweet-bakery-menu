@@ -15,6 +15,7 @@ export const SAAS_PLANS = {
     features: {
       whatsapp_enabled: false,
       direct_ordering_enabled: false,
+      counter_ordering_enabled: false,
       google_reviews_enabled: false,
       kds_enabled: false,
       bluetooth_kot_enabled: false,
@@ -35,6 +36,7 @@ export const SAAS_PLANS = {
     features: {
       whatsapp_enabled: true,
       direct_ordering_enabled: false,
+      counter_ordering_enabled: true,
       google_reviews_enabled: true,
       kds_enabled: true,
       bluetooth_kot_enabled: true,
@@ -55,6 +57,7 @@ export const SAAS_PLANS = {
     features: {
       whatsapp_enabled: true,
       direct_ordering_enabled: true,
+      counter_ordering_enabled: true,
       google_reviews_enabled: true,
       kds_enabled: true,
       bluetooth_kot_enabled: true,
@@ -77,6 +80,7 @@ export const SAAS_PLANS = {
     features: {
       whatsapp_enabled: true,
       direct_ordering_enabled: false,
+      counter_ordering_enabled: false,
       google_reviews_enabled: true,
       amenities_booking_enabled: true,
       kds_enabled: false,
@@ -98,6 +102,7 @@ export const SAAS_PLANS = {
     features: {
       whatsapp_enabled: true,
       direct_ordering_enabled: true,
+      counter_ordering_enabled: true,
       google_reviews_enabled: true,
       amenities_booking_enabled: true,
       kds_enabled: true,
@@ -119,6 +124,7 @@ export const SAAS_PLANS = {
     features: {
       whatsapp_enabled: true,
       direct_ordering_enabled: true,
+      counter_ordering_enabled: true,
       google_reviews_enabled: true,
       amenities_booking_enabled: true,
       kds_enabled: true,
@@ -143,6 +149,7 @@ export const SAAS_PLANS = {
     features: {
       whatsapp_enabled: true,
       direct_ordering_enabled: false,
+      counter_ordering_enabled: false,
       google_reviews_enabled: true,
       seat_runner_dispatch_enabled: true,
       interval_rush_mode_enabled: true,
@@ -166,6 +173,7 @@ export const SAAS_PLANS = {
     features: {
       whatsapp_enabled: true,
       direct_ordering_enabled: true,
+      counter_ordering_enabled: true,
       google_reviews_enabled: true,
       seat_runner_dispatch_enabled: true,
       interval_rush_mode_enabled: true,
@@ -189,6 +197,7 @@ export const SAAS_PLANS = {
     features: {
       whatsapp_enabled: true,
       direct_ordering_enabled: true,
+      counter_ordering_enabled: true,
       google_reviews_enabled: true,
       seat_runner_dispatch_enabled: true,
       interval_rush_mode_enabled: true,

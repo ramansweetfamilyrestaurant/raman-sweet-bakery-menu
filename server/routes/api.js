@@ -794,13 +794,18 @@ router.get('/menu-bundle', async (req, res) => {
       total_screens: resto.total_screens !== undefined && resto.total_screens !== null ? Number(resto.total_screens) : 0,
       total_seats: resto.total_seats !== undefined && resto.total_seats !== null ? Number(resto.total_seats) : 0,
       table_prefix: resto.table_prefix || 'table',
-      counter_ordering_enabled: Boolean(
-        resto.counter_ordering_enabled === 1 ||
-        resto.counter_ordering_enabled === true ||
-        resto.counter_ordering_enabled === '1' ||
-        ((resto.counter_ordering_enabled === undefined || resto.counter_ordering_enabled === null) &&
-         !['cinema_theatre'].includes(resto.business_type) && !['cinema'].includes(resto.service_model))
-      ),
+      counter_ordering_enabled: (() => {
+        const isPlanPos = (saasP.counter_ordering_enabled !== undefined && saasP.counter_ordering_enabled !== null)
+          ? (saasP.counter_ordering_enabled === 1 || saasP.counter_ordering_enabled === true || saasP.counter_ordering_enabled === '1' || saasP.counter_ordering_enabled === 'true')
+          : (planTierKey !== 'basic');
+        if (!isPlanPos) return false;
+        if (resto.counter_ordering_enabled !== undefined && resto.counter_ordering_enabled !== null) {
+          if (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false') {
+            return false;
+          }
+        }
+        return true;
+      })(),
       active: true
     };
 
@@ -928,12 +933,9 @@ router.get('/info', async (req, res) => {
     const isRestoExplicitCounterDisabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
       (resto.counter_ordering_enabled === 0 || resto.counter_ordering_enabled === false || resto.counter_ordering_enabled === '0' || resto.counter_ordering_enabled === 'false');
 
-    const isRestoExplicitCounterEnabled = (resto.counter_ordering_enabled !== null && resto.counter_ordering_enabled !== undefined) &&
-      (resto.counter_ordering_enabled === 1 || resto.counter_ordering_enabled === true || resto.counter_ordering_enabled === '1' || resto.counter_ordering_enabled === 'true');
-
+    // SaaS Plan is supreme: If plan disallows POS, POS is strictly disabled
     const effectiveCounterOrdering = Boolean(
-      isRestoExplicitCounterEnabled ||
-      (!isRestoExplicitCounterDisabled && isPlanCounterOrdering)
+      isPlanCounterOrdering && !isRestoExplicitCounterDisabled
     );
     const effectiveGstActive = (saasPlan.gst_invoice_enabled !== 0 && saasPlan.gst_invoice_enabled !== false && saasPlan.gst_invoice_enabled !== '0' && saasPlan.gst_invoice_enabled !== 'false') && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1' || resto.gst_enabled === 'true');
     const businessProfile = resolveBusinessProfile(resto);

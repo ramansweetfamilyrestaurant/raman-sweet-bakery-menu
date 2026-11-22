@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
 import adminRouter from '../routes/admin.js';
 import superadminRouter from '../routes/superadmin.js';
+import apiRouter from '../routes/api.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import { resolveTenantCapabilities, FEATURE_METADATA } from '../../src/utils/planCapabilities.js';
 
@@ -14,6 +15,7 @@ test('👑 360° Super Admin POS Control & Gating Invariant Test Suite', async (
   app.use(express.json());
   app.use('/api/admin', adminRouter);
   app.use('/api/superadmin', superadminRouter);
+  app.use('/api', apiRouter);
 
   const server = http.createServer(app);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -279,8 +281,55 @@ test('👑 360° Super Admin POS Control & Gating Invariant Test Suite', async (
       assert.ok(val === 0 || val === null, `Expected counter_ordering_enabled to remain 0 or null, got ${val}`);
     });
 
+    // TEST 11: Even if restaurants.counter_ordering_enabled is forcibly set to 1 in DB, plan untick strictly overrides and locks it
+    await t.test('11. Restaurant row with counter_ordering_enabled = 1 is strictly overridden when plan unticks POS', async () => {
+      // Forcibly set counter_ordering_enabled = 1 in DB for Tenant B
+      await query('UPDATE restaurants SET counter_ordering_enabled = 1 WHERE id = $1', [restoBId]);
+
+      // 1. Check /api/admin/subscription-status
+      const subRes = await fetch(`${baseUrl}/api/admin/subscription-status`, {
+        headers: { Authorization: `Bearer ${tokenB}` }
+      });
+      assert.strictEqual(subRes.status, 200);
+      const subData = await subRes.json();
+      assert.strictEqual(subData.counter_ordering_enabled, false, 'subscription-status must return false when plan disables POS');
+      assert.strictEqual(subData.permissions.counter_ordering_enabled, false);
+
+      // 2. Check /api/info
+      const infoRes = await fetch(`${baseUrl}/api/info?slug=test-pro-cafe`, {
+        headers: { Authorization: `Bearer ${tokenB}` }
+      });
+      if (infoRes.status !== 200) {
+        console.error('infoRes status:', infoRes.status, await infoRes.text());
+      }
+      assert.strictEqual(infoRes.status, 200);
+      const infoData = await infoRes.json();
+      assert.strictEqual(infoData.counter_ordering_enabled, false, '/api/info must return false when plan disables POS');
+
+      // 3. Check resolveTenantCapabilities
+      const caps = resolveTenantCapabilities(
+        { restaurant: { id: restoBId, plan_tier: 'test_pro', counter_ordering_enabled: 1 } },
+        { counter_ordering_enabled: true },
+        subData
+      );
+      assert.strictEqual(caps.counter_ordering_enabled, false, 'resolveTenantCapabilities must return false even if restaurant has 1');
+
+      // 4. Check pos-order is blocked with 403
+      const orderRes = await fetch(`${baseUrl}/api/admin/pos-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenB}` },
+        body: JSON.stringify({
+          order_type: 'takeaway',
+          items: [{ id: 1, name: 'Samosa', price: 20, quantity: 2 }]
+        })
+      });
+      assert.strictEqual(orderRes.status, 403, 'pos-order must return 403');
+      const orderErr = await orderRes.json();
+      assert.strictEqual(orderErr.error, 'feature_locked');
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
-    process.exit(0);
+    setTimeout(() => process.exit(0), 100);
   }
 });

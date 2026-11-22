@@ -200,23 +200,23 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
       return isBasic && !isComplimentary ? false : isBoolTrue(perms?.direct_ordering_enabled, isUnlimitedPlan);
     })(),
     counter_ordering_enabled: (() => {
-      // 1. Explicit restaurant-level database override (if set by Super Admin on the specific shop)
+      // 1. Authoritative SaaS plan permission from Super Admin (via permissions or matrixPermissions)
+      if (perms?.counter_ordering_enabled !== undefined && perms?.counter_ordering_enabled !== null) {
+        const planAllowed = isBoolTrue(perms.counter_ordering_enabled, false);
+        if (!planAllowed) return false;
+      } else if (actualSub?.counter_ordering_enabled !== undefined && actualSub?.counter_ordering_enabled !== null) {
+        const planAllowed = isBoolTrue(actualSub.counter_ordering_enabled, false);
+        if (!planAllowed) return false;
+      } else if (isBasic) {
+        return false;
+      }
+
+      // 2. If SaaS plan allows it, check if restaurant-level settings explicitly disabled it
       if (actualResto?.counter_ordering_enabled !== undefined && actualResto?.counter_ordering_enabled !== null) {
         if (actualResto.counter_ordering_enabled === 0 || actualResto.counter_ordering_enabled === false || actualResto.counter_ordering_enabled === '0' || actualResto.counter_ordering_enabled === 'false') {
           return false;
         }
-        if (actualResto.counter_ordering_enabled === 1 || actualResto.counter_ordering_enabled === true || actualResto.counter_ordering_enabled === '1' || actualResto.counter_ordering_enabled === 'true') {
-          return true;
-        }
       }
-      // 2. Authoritative SaaS plan permission from Super Admin (via permissions or matrixPermissions)
-      if (perms?.counter_ordering_enabled !== undefined && perms?.counter_ordering_enabled !== null) {
-        return isBoolTrue(perms.counter_ordering_enabled, false);
-      }
-      if (actualSub?.counter_ordering_enabled !== undefined && actualSub?.counter_ordering_enabled !== null) {
-        return isBoolTrue(actualSub.counter_ordering_enabled, false);
-      }
-      if (isBasic) return false;
       return true;
     })(),
     whatsapp_ordering_enabled: isBoolTrue(actualResto?.whatsapp_ordering_enabled ?? perms?.whatsapp_ordering_enabled, !isBasic),
