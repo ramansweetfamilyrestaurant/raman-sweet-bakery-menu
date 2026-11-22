@@ -304,7 +304,7 @@ export default function PosBillingView({
         }
         .pos-dishes-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
           gap: 12px;
           min-width: 0;
           width: 100%;
@@ -312,6 +312,7 @@ export default function PosBillingView({
         }
         .pos-cart-panel {
           display: flex;
+          flex-direction: column;
           position: sticky;
           top: 20px;
           width: 100%;
@@ -340,21 +341,23 @@ export default function PosBillingView({
             grid-template-columns: 1fr;
           }
           .pos-cart-panel {
-            display: none;
+            display: none !important;
             position: fixed !important;
-            bottom: calc(64px + env(safe-area-inset-bottom)) !important;
+            bottom: 0 !important;
             top: auto !important;
             left: 0 !important;
             right: 0 !important;
             max-width: 100% !important;
             z-index: 1050 !important;
-            max-height: 80vh !important;
+            max-height: 85vh !important;
             overflow-y: auto !important;
             border-radius: 20px 20px 0 0 !important;
-            box-shadow: 0 -8px 30px rgba(0,0,0,0.25) !important;
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.3) !important;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
           }
           .pos-cart-panel.mobile-open {
             display: flex !important;
+            flex-direction: column !important;
             animation: posSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
           }
           .pos-mobile-cart-bar {
@@ -1045,8 +1048,6 @@ export default function PosBillingView({
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
           padding: '18px',
-          display: 'flex',
-          flexDirection: 'column',
           gap: '14px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
           boxSizing: 'border-box'
@@ -1489,39 +1490,44 @@ export default function PosBillingView({
       {/* ========================================================
           MOBILE FLOATING ACTION BAR (< 900px)
          ======================================================== */}
-      <div
-        className="pos-mobile-cart-bar"
-        onClick={() => setIsMobileCartOpen(true)}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
-            background: 'rgba(255, 255, 255, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 900,
-            fontSize: '0.85rem'
-          }}>
-            {cart.reduce((s, it) => s + it.quantity, 0)}
-          </div>
-          <div>
-            <div style={{ fontSize: '0.74rem', opacity: 0.9, fontWeight: 700 }}>
-              {cart.length === 0 ? 'Active Bill (Empty)' : `${cart.reduce((s, it) => s + it.quantity, 0)} Items Added`}
+      {!isMobileCartOpen && (
+        <div
+          className="pos-mobile-cart-bar"
+          onClick={() => setIsMobileCartOpen(true)}
+          style={{
+            background: cart.length > 0 ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)' : '#0F172A'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 900,
+              fontSize: '0.85rem'
+            }}>
+              {cart.reduce((s, it) => s + it.quantity, 0)}
             </div>
-            <div style={{ fontSize: '1rem', fontWeight: 950, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-              {currencySymbol}{grandTotal.toFixed(2)}
+            <div>
+              <div style={{ fontSize: '0.74rem', opacity: 0.9, fontWeight: 700 }}>
+                {cart.length === 0 ? 'Active Bill (Empty)' : `${cart.reduce((s, it) => s + it.quantity, 0)} Items Added`}
+              </div>
+              <div style={{ fontSize: '1rem', fontWeight: 950, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                {currencySymbol}{grandTotal.toFixed(2)}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.86rem' }}>
-          <span>{cart.length === 0 ? 'Open Cart' : 'View Bill & Pay'}</span>
-          <ArrowRight size={17} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.86rem' }}>
+            <span>{cart.length === 0 ? 'Open Cart' : 'View Bill & Pay'}</span>
+            <ArrowRight size={17} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* MOBILE BACKDROP OVERLAY */}
       {isMobileCartOpen && (
