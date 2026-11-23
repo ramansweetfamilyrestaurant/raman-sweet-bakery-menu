@@ -1549,7 +1549,17 @@ const handleUpdateSettings = async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
 
-    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, business_category, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, total_screens, total_seats, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds, counter_ordering_enabled, inactive_spaces, upi_id, upi_payee_name, print_upi_qr } = req.body;
+    const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, business_category, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, total_screens, total_seats, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds, counter_ordering_enabled, inactive_spaces, upi_id, upi_payee_name, print_upi_qr, ai_review_tone, ai_review_language, ai_brand_instructions, ai_auto_replies, ai_require_approval } = req.body;
+
+    const cleanAiTone = ai_review_tone !== undefined && ai_review_tone !== null ? String(ai_review_tone).trim() : null;
+    const cleanAiLanguage = ai_review_language !== undefined && ai_review_language !== null ? String(ai_review_language).trim() : null;
+    const cleanAiBrandInstructions = ai_brand_instructions !== undefined ? (ai_brand_instructions === null ? '' : String(ai_brand_instructions).trim()) : null;
+    const cleanAiAutoReplies = ai_auto_replies !== undefined && ai_auto_replies !== null
+      ? (ai_auto_replies === true || ai_auto_replies === 1 || ai_auto_replies === '1' || ai_auto_replies === 'true' ? 1 : 0)
+      : null;
+    const cleanAiRequireApproval = ai_require_approval !== undefined && ai_require_approval !== null
+      ? (ai_require_approval === true || ai_require_approval === 1 || ai_require_approval === '1' || ai_require_approval === 'true' ? 1 : 0)
+      : null;
 
     const resolvedGstEnabled = gst_enabled !== undefined
       ? (gst_enabled === true || gst_enabled === 1 || gst_enabled === 'true' || gst_enabled === '1' ? 1 : 0)
@@ -2025,8 +2035,13 @@ const handleUpdateSettings = async (req, res) => {
             inactive_spaces = CASE WHEN $48::boolean THEN $49 ELSE inactive_spaces END,
             upi_id = CASE WHEN $50::boolean THEN $51 ELSE upi_id END,
             upi_payee_name = CASE WHEN $52::boolean THEN $53 ELSE upi_payee_name END,
-            print_upi_qr = COALESCE($54, print_upi_qr)
-        WHERE id = $55
+            print_upi_qr = COALESCE($54, print_upi_qr),
+            ai_review_tone = COALESCE($55, ai_review_tone),
+            ai_review_language = COALESCE($56, ai_review_language),
+            ai_brand_instructions = CASE WHEN $57::boolean THEN $58 ELSE ai_brand_instructions END,
+            ai_auto_replies = COALESCE($59, ai_auto_replies),
+            ai_require_approval = COALESCE($60, ai_require_approval)
+        WHERE id = $61
       `, [
         name !== undefined ? name : null,
         tagline !== undefined ? tagline : null,
@@ -2082,10 +2097,16 @@ const handleUpdateSettings = async (req, res) => {
         cleanUpiPayeeName !== undefined,
         cleanUpiPayeeName !== undefined ? cleanUpiPayeeName : null,
         cleanPrintUpiQr !== undefined ? cleanPrintUpiQr : null,
+        cleanAiTone,
+        cleanAiLanguage,
+        ai_brand_instructions !== undefined,
+        cleanAiBrandInstructions,
+        cleanAiAutoReplies,
+        cleanAiRequireApproval,
         targetId
       ]);
     } catch (sqlErr) {
-      if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column') || sqlErr.message.includes('verification') || sqlErr.message.includes('print') || sqlErr.message.includes('business_type') || sqlErr.message.includes('food_type') || sqlErr.message.includes('service_model') || sqlErr.message.includes('owner_email') || sqlErr.message.includes('business_category') || sqlErr.message.includes('upi_'))) {
+      if (sqlErr.message && (sqlErr.message.includes('total_') || sqlErr.message.includes('table_prefix') || sqlErr.message.includes('column') || sqlErr.message.includes('verification') || sqlErr.message.includes('print') || sqlErr.message.includes('business_type') || sqlErr.message.includes('food_type') || sqlErr.message.includes('service_model') || sqlErr.message.includes('owner_email') || sqlErr.message.includes('business_category') || sqlErr.message.includes('upi_') || sqlErr.message.includes('ai_'))) {
         if (getDbType() === 'postgres') {
           try {
             await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS total_cabins INT DEFAULT 0");
@@ -2107,6 +2128,11 @@ const handleUpdateSettings = async (req, res) => {
             await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_id VARCHAR(100) DEFAULT NULL");
             await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS upi_payee_name VARCHAR(150) DEFAULT NULL");
             await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS print_upi_qr INT DEFAULT 1");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ai_review_tone VARCHAR(50) DEFAULT 'warm'");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ai_review_language VARCHAR(50) DEFAULT 'English'");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ai_brand_instructions TEXT DEFAULT NULL");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ai_auto_replies INT DEFAULT 1");
+            await query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ai_require_approval INT DEFAULT 1");
             await query(`
               UPDATE restaurants 
               SET name = COALESCE($1, name), tagline = COALESCE($2, tagline), logo = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE logo END, phone = COALESCE($4, phone), address = COALESCE($5, address), opening_hours = COALESCE($6, opening_hours), google_review_url = COALESCE($7, google_review_url), filters_visibility = COALESCE($8, filters_visibility), currency_symbol = COALESCE($9, currency_symbol), fssai_lic_no = COALESCE($10, fssai_lic_no), resto_type = COALESCE($11, resto_type), whatsapp_number = COALESCE($12, whatsapp_number), whatsapp_enabled = COALESCE($13, whatsapp_enabled), theme_color = COALESCE($14, theme_color), latitude = COALESCE($15, latitude), longitude = COALESCE($16, longitude), max_distance_meters = COALESCE($17, max_distance_meters), gst_enabled = COALESCE($18, gst_enabled), gstin_number = COALESCE($19, gstin_number), total_tables = COALESCE($20, total_tables), total_cabins = COALESCE($21, total_cabins), total_rooms = COALESCE($22, total_rooms), total_vip = COALESCE($23, total_vip), table_prefix = COALESCE($24, table_prefix), order_retention_days = COALESCE($25, order_retention_days), google_reviews_enabled = COALESCE($26, google_reviews_enabled), custom_domain = CASE WHEN $27::text IS NOT NULL THEN $27 ELSE custom_domain END, location_initialized = COALESCE($28, location_initialized), owner_name = COALESCE($29, owner_name), city = COALESCE($30, city), state = COALESCE($31, state), pincode = COALESCE($32, pincode), table_verification_mode = COALESCE($33, table_verification_mode), staff_verification_timeout_seconds = COALESCE($34, staff_verification_timeout_seconds),
@@ -2117,8 +2143,13 @@ const handleUpdateSettings = async (req, res) => {
                   counter_ordering_enabled = COALESCE($45, counter_ordering_enabled),
                   upi_id = CASE WHEN $46::boolean THEN $47 ELSE upi_id END,
                   upi_payee_name = CASE WHEN $48::boolean THEN $49 ELSE upi_payee_name END,
-                  print_upi_qr = COALESCE($50, print_upi_qr)
-              WHERE id = $51
+                  print_upi_qr = COALESCE($50, print_upi_qr),
+                  ai_review_tone = COALESCE($51, ai_review_tone),
+                  ai_review_language = COALESCE($52, ai_review_language),
+                  ai_brand_instructions = CASE WHEN $53::boolean THEN $54 ELSE ai_brand_instructions END,
+                  ai_auto_replies = COALESCE($55, ai_auto_replies),
+                  ai_require_approval = COALESCE($56, ai_require_approval)
+              WHERE id = $57
             `, [
             name !== undefined ? name : null,
             tagline !== undefined ? tagline : null,
@@ -2170,10 +2201,16 @@ const handleUpdateSettings = async (req, res) => {
             cleanUpiPayeeName !== undefined,
             cleanUpiPayeeName !== undefined ? cleanUpiPayeeName : null,
             cleanPrintUpiQr !== undefined ? cleanPrintUpiQr : null,
+            cleanAiTone,
+            cleanAiLanguage,
+            ai_brand_instructions !== undefined,
+            cleanAiBrandInstructions,
+            cleanAiAutoReplies,
+            cleanAiRequireApproval,
             targetId
           ]);
         } catch (innerErr) {
-          console.error('Failed auto-adding presence/printer/upi columns:', innerErr);
+          console.error('Failed auto-adding presence/printer/upi/ai columns:', innerErr);
           throw sqlErr;
         }
       } else {
@@ -2202,7 +2239,8 @@ const handleUpdateSettings = async (req, res) => {
       'owner_name', 'owner_email', 'city', 'state', 'pincode',
       'table_verification_mode', 'staff_verification_timeout_seconds',
       'printer_mode', 'auto_print_kot', 'auto_print_bill', 'printer_paper_width',
-      'kds_pin', 'counter_ordering_enabled', 'upi_id', 'upi_payee_name', 'print_upi_qr'
+      'kds_pin', 'counter_ordering_enabled', 'upi_id', 'upi_payee_name', 'print_upi_qr',
+      'ai_review_tone', 'ai_review_language', 'ai_brand_instructions', 'ai_auto_replies', 'ai_require_approval'
     ];
     const updatedKeys = Object.keys(req.body).filter(k => ALLOWED_SETTING_FIELDS.includes(k) && req.body[k] !== undefined);
 
@@ -6126,24 +6164,58 @@ router.delete('/combos/:id', authenticateToken, requireActiveSubscription, async
 // POST generate Google Review AI Auto-Reply using Google Gemini 1.5 Flash (with fallback smart engine)
 router.post('/generate-ai-review-reply', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
-    const { reviewText, starRating = 5, selectedTone = 'warm', restaurantName } = req.body;
-    const targetRestoName = restaurantName || 'our restaurant';
+    const {
+      reviewText,
+      starRating = 5,
+      selectedTone = 'warm',
+      selectedLanguage = 'English',
+      brandVoice,
+      restaurantName,
+      businessType,
+      industry
+    } = req.body;
+
+    const targetRestoName = restaurantName || 'our business';
+    const cleanTone = String(selectedTone || 'warm').toLowerCase();
+    const cleanLang = String(selectedLanguage || 'English').toLowerCase();
+    const rating = Math.max(1, Math.min(5, Number(starRating) || 5));
+
+    // Determine business vertical
+    const typeLower = String(businessType || industry || '').toLowerCase();
+    const isHotel = typeLower.includes('hotel') || typeLower.includes('resort') || typeLower.includes('stay') || typeLower.includes('room');
+    const isCinema = typeLower.includes('cinema') || typeLower.includes('theatre') || typeLower.includes('theater') || typeLower.includes('movie');
+    const isBakery = typeLower.includes('bakery') || typeLower.includes('sweet') || typeLower.includes('mithai') || typeLower.includes('cake');
+    const isCafe = typeLower.includes('cafe') || typeLower.includes('coffee');
+    const isDhaba = typeLower.includes('dhaba');
+
+    const businessLabel = isHotel ? 'Hotel & Hospitality'
+      : isCinema ? 'Cinema & Theatre'
+      : isBakery ? 'Bakery & Sweet Shop'
+      : isCafe ? 'Cafe & Coffee Shop'
+      : isDhaba ? 'Dhaba & Casual Dining'
+      : 'Restaurant & Dining';
 
     // 1. Check if GEMINI_API_KEY is available in process.env
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.VITE_GEMINI_API_KEY;
 
     if (apiKey) {
       try {
-        const prompt = `You are a polite, professional restaurant customer relationship assistant for '${targetRestoName}'. 
-Generate a personalized, gracious, customer-friendly reply to the following ${starRating}-star customer review.
-Tone: ${selectedTone} (e.g. warm, professional, apologetic, short).
-Customer Review: "${reviewText || 'Great food and service!'}"
-Instructions:
-- Keep the reply concise (under 60 words).
-- If dishes or specific experiences are mentioned in the review, acknowledge them nicely.
-- If it's a 1-3 star review, be humble, express sincere regret, and invite them to contact management.
-- Do not use hashtags or excessive emojis.
-- Output ONLY the reply text, no extra commentary or quotes.`;
+        const prompt = `You are a professional customer relationship manager for '${targetRestoName}' (${businessLabel}).
+Generate a personalized, gracious, human, and authentic reply to the following ${rating}-star customer review.
+Desired Tone: ${cleanTone} (options: warm & friendly, professional, concise, appreciative, or apologetic).
+Target Language: ${selectedLanguage || 'English'} (e.g. English, Hindi, Hinglish, Spanish).
+${brandVoice ? `Brand Voice Instructions: ${brandVoice}` : ''}
+Customer Review: "${reviewText || 'Great experience.'}"
+
+Strict Instructions:
+1. Write in natural human voice suitable for ${businessLabel}.
+2. ABSOLUTELY DO NOT use any exclamation marks (!). Use calm, respectful periods (.) only.
+3. Keep the reply concise (under 60 words).
+4. If it is a 1-3 star review: be humble, apologize gracefully for falling short, assure corrective action, and invite them to reach out directly to management.
+5. If it is a 4-5 star review: thank them sincerely for their appreciation and invite them back.
+6. If dishes, rooms, seats, or specific experiences are mentioned in the review, acknowledge them naturally.
+7. Do NOT use hashtags or excessive emojis (at most 0 to 1 subtle emoji if warm, none if professional or concise).
+8. Output ONLY the reply text, no extra commentary, quotes, or markdown formatting.`;
 
         const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
           method: 'POST',
@@ -6155,8 +6227,9 @@ Instructions:
 
         if (geminiRes.ok) {
           const data = await geminiRes.json();
-          const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          let replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
           if (replyText) {
+            replyText = replyText.replace(/!+/g, '.').replace(/\.{2,}/g, '.').trim();
             return res.json({ success: true, reply: replyText, provider: 'gemini_ai' });
           }
         }
@@ -6165,34 +6238,133 @@ Instructions:
       }
     }
 
-    // 2. Smart Natural Language Engine Fallback (Dual Resilience)
-    const textLower = (reviewText || '').toLowerCase();
-    const mentionsPaneer = textLower.includes('paneer');
-    const mentionsNaan = textLower.includes('naan');
-    const mentionsSweet = textLower.includes('sweet') || textLower.includes('mithai');
-    const dishMention = mentionsPaneer ? 'Paneer dishes' : mentionsSweet ? 'sweet delicacies' : mentionsNaan ? 'freshly baked Naans' : 'dishes';
-
+    // 2. Multi-Vertical, Multi-Language Smart Natural Language Engine Fallback (Dual Resilience)
     let reply = '';
-    const rating = Number(starRating);
-    if (rating >= 4) {
-      if (selectedTone === 'warm') {
-        reply = `Thank you so much for the glowing ${rating}-star review! 🌟 We are absolutely thrilled to hear that you enjoyed ${reviewText ? `our ${dishMention}` : 'your dining experience'} at ${targetRestoName}. Serving you fresh, flavorful meals is our top priority. We look forward to welcoming you back again soon for another delicious feast! 🙏😊`;
-      } else if (selectedTone === 'professional') {
-        reply = `Dear Guest, thank you for sharing your positive feedback and ${rating}-star rating for ${targetRestoName}. We take immense pride in maintaining high standards of quality and service. Your appreciation motivates our entire team. We look forward to serving you again soon. Best regards, Management Team.`;
-      } else if (selectedTone === 'short') {
-        reply = `Thank you for the fantastic ${rating}-star review! 🙏 We are delighted you loved your meal at ${targetRestoName}. Hope to see you again soon!`;
+    const isHindi = cleanLang.includes('hindi');
+    const isHinglish = cleanLang.includes('hinglish');
+
+    if (isHindi) {
+      if (rating >= 4) {
+        if (cleanTone === 'professional') {
+          reply = `${targetRestoName} के प्रति आपकी सकारात्मक समीक्षा और ${rating}-स्टार रेटिंग के लिए धन्यवाद। उत्कृष्ट सेवा और उच्च गुणवत्ता हमारी प्राथमिकता है। हम आपके अगले आगमन का स्वागत करते हैं। प्रबंधन टीम।`;
+        } else if (cleanTone === 'concise') {
+          reply = `${rating}-स्टार रेटिंग और सुंदर समीक्षा के लिए धन्यवाद। ${targetRestoName} में आपका पुनः स्वागत है।`;
+        } else if (cleanTone === 'appreciative') {
+          reply = `आपकी इस मूल्यवान ${rating}-स्टार रेटिंग के लिए हम हृदय से आभारी हैं। आपके शब्दों से हमारी पूरी टीम का उत्साहवर्धन हुआ है। धन्यवाद।`;
+        } else {
+          reply = `${targetRestoName} को ${rating}-स्टार रेटिंग और सुंदर समीक्षा देने के लिए आपका बहुत-बहुत धन्यवाद। हमें खुशी है कि आपको हमारी सेवा और गुणवत्ता पसंद आई। हम आपके पुनः आगमन की प्रतीक्षा करेंगे।`;
+        }
       } else {
-        reply = `Thank you for choosing ${targetRestoName}! We truly appreciate your feedback and hope your next visit is even more memorable. ✨`;
+        if (cleanTone === 'professional') {
+          reply = `आपकी प्रतिक्रिया के लिए धन्यवाद। हुई असुविधा के लिए हम क्षमाप्रार्थी हैं। आपकी समीक्षा को संबंधित टीम के साथ साझा कर सुधारात्मक कदम उठाए जा रहे हैं। प्रबंधन टीम।`;
+        } else {
+          reply = `आपके अनुभव में आई कमी के लिए हमें गहरा खेद है। सभी ग्राहकों को त्वरित और सुखद अनुभव देना हमारा संकल्प है। कृपया हमारे प्रबंधन से संपर्क करें ताकि हम इसे आपके लिए बेहतर बना सकें।`;
+        }
+      }
+    } else if (isHinglish) {
+      if (rating >= 4) {
+        if (cleanTone === 'professional') {
+          reply = `Dear Guest, ${targetRestoName} ke liye valuable ${rating}-star review share karne ke liye thank you. High quality aur acchi hospitality hamari top priority hai. Warm regards, Management Team.`;
+        } else if (cleanTone === 'concise') {
+          reply = `Thank you fantastic ${rating}-star review ke liye. ${targetRestoName} mein phir milte hain.`;
+        } else if (cleanTone === 'appreciative') {
+          reply = `Aapke is generous ${rating}-star review ke liye dil se shukriya. Aapka feedback hamari team ko bohot motivate karta hai. Thank you for choosing ${targetRestoName}.`;
+        } else {
+          reply = `Thank you so much ${targetRestoName} ko ${rating}-star review dene ke liye. Hamein bahut khushi hui ki aapko hamari service aur quality pasand aayi. Agli baar aapka phir se swagat karne ke liye hum eager hain.`;
+        }
+      } else {
+        if (cleanTone === 'professional') {
+          reply = `Dear Guest, feedback ke liye shukriya. Huye inconvenience ke liye hum sincerely apologize karte hain. Kitchen aur service team ko immediate improvement ke instructions de diye gaye hain.`;
+        } else {
+          reply = `Dear Guest, visit ke dauran huye delay aur inconvenience ke liye hum dil se maafi maangte hain. Aapka experience smooth aur timely banana hamari priority hai. Please humse contact karein taaki hum ise theek kar sakein.`;
+        }
       }
     } else {
-      if (selectedTone === 'apologetic') {
-        reply = `Dear Guest, thank you for bringing your concern to our attention. We sincerely apologize for not meeting your expectations during your recent visit to ${targetRestoName}. Providing prompt and high-quality food is our commitment, and we regret the issue you experienced. Please reach out directly to us so we can make this right for you. We hope to serve you better next time.`;
-      } else if (selectedTone === 'professional') {
-        reply = `Dear Valued Customer, thank you for providing your constructive feedback regarding ${targetRestoName}. We apologize for the inconvenience caused. We have shared your comments with our kitchen & service staff for immediate corrective action. Please give us another opportunity to serve you a better experience.`;
+      // English Fallbacks tailored to Business Vertical
+      if (isHotel) {
+        if (rating >= 4) {
+          if (cleanTone === 'professional') {
+            reply = `Dear Guest, thank you for taking the time to share your review and ${rating}-star rating for ${targetRestoName}. We take pride in delivering exceptional accommodations and courteous service. We look forward to your next visit. Warm regards, Management Team.`;
+          } else if (cleanTone === 'concise') {
+            reply = `Thank you for the fantastic ${rating}-star review. We are glad you enjoyed your stay at ${targetRestoName}. Looking forward to seeing you again soon.`;
+          } else if (cleanTone === 'appreciative') {
+            reply = `We are truly grateful for your generous ${rating}-star review. Your feedback brings a smile to our front desk and housekeeping teams. Thank you for choosing ${targetRestoName}.`;
+          } else {
+            reply = `Thank you so much for the wonderful ${rating}-star review. We are delighted you had a relaxing stay and enjoyed our hospitality. Ensuring your comfort is our greatest priority. We look forward to welcoming you back to ${targetRestoName}.`;
+          }
+        } else {
+          if (cleanTone === 'professional') {
+            reply = `Dear Guest, thank you for your candid feedback regarding ${targetRestoName}. We regret the inconvenience you faced during your stay. Your comments have been shared with our guest relations team for prompt corrective measures.`;
+          } else {
+            reply = `Dear Guest, we sincerely apologize for falling short during your stay. Providing a peaceful, flawless guest experience is our priority. Please reach out directly to our management team so we can make this right for you.`;
+          }
+        }
+      } else if (isCinema) {
+        if (rating >= 4) {
+          if (cleanTone === 'professional') {
+            reply = `Dear Patron, thank you for rating ${targetRestoName}. We strive to provide premium audiovisual standards and comfort for all our moviegoers. Warm regards, Management Team.`;
+          } else if (cleanTone === 'concise') {
+            reply = `Thank you for the great ${rating}-star review. Glad you enjoyed the show at ${targetRestoName}. See you at the movies soon.`;
+          } else if (cleanTone === 'appreciative') {
+            reply = `Thank you for your generous feedback. Your support means a lot to our entire theatre crew. Looking forward to your next visit at ${targetRestoName}.`;
+          } else {
+            reply = `Thank you for the wonderful ${rating}-star review. We are delighted you enjoyed the movie experience and concession snacks at ${targetRestoName}. We look forward to welcoming you for your next show.`;
+          }
+        } else {
+          reply = `Dear Patron, thank you for sharing your feedback. We apologize for the wait time during the interval rush. We are working on optimizing our concession queues to serve you faster on your next visit.`;
+        }
+      } else if (isBakery) {
+        if (rating >= 4) {
+          if (cleanTone === 'professional') {
+            reply = `Dear Customer, thank you for your kind feedback and ${rating}-star rating for ${targetRestoName}. We take pride in maintaining strict hygiene, freshness, and authentic recipes. We look forward to your next visit.`;
+          } else if (cleanTone === 'concise') {
+            reply = `Thank you for the wonderful ${rating}-star review. We are thrilled you enjoyed our fresh bakes and treats at ${targetRestoName}. See you again soon.`;
+          } else if (cleanTone === 'appreciative') {
+            reply = `We are truly grateful for your generous ${rating}-star rating. Your words motivate our sweet masters and baking staff. Thank you for choosing ${targetRestoName}.`;
+          } else {
+            reply = `Thank you so much for the wonderful ${rating}-star review. We are delighted you loved our fresh bakes and authentic sweets. Baking fresh quality delicacies every day is our passion. We look forward to serving you again at ${targetRestoName}.`;
+          }
+        } else {
+          reply = `Dear Customer, thank you for your candid feedback. We apologize for falling short during your visit. Freshness and quick service are our highest priorities. Please contact our counter team so we can assist and make this right.`;
+        }
+      } else if (isCafe) {
+        if (rating >= 4) {
+          if (cleanTone === 'professional') {
+            reply = `Dear Guest, thank you for sharing your feedback and ${rating}-star rating for ${targetRestoName}. We appreciate your support and look forward to serving you again. Warm regards, Management Team.`;
+          } else if (cleanTone === 'concise') {
+            reply = `Thank you for the great ${rating}-star review. Glad you enjoyed your cafe time at ${targetRestoName}. See you soon.`;
+          } else if (cleanTone === 'appreciative') {
+            reply = `Thank you for your generous review. Your feedback encourages our barista and service team. See you again at ${targetRestoName}.`;
+          } else {
+            reply = `Thank you so much for the wonderful ${rating}-star review. We are thrilled you enjoyed our beverages, snacks, and cafe ambiance. We look forward to welcoming you back to ${targetRestoName} soon.`;
+          }
+        } else {
+          reply = `Dear Guest, we sincerely apologize for the delay you experienced. Providing freshly brewed beverages and quick service is our commitment. Please reach out to us directly so we can make this right on your next visit.`;
+        }
       } else {
-        reply = `We sincerely apologize for your experience at ${targetRestoName}. We take all customer feedback seriously and are taking immediate steps to resolve this. Kindly contact our team so we can assist you personally.`;
+        // General Restaurant & Food Dining
+        if (rating >= 4) {
+          if (cleanTone === 'professional') {
+            reply = `Dear Guest, thank you for sharing your positive feedback and ${rating}-star rating for ${targetRestoName}. We take pride in delivering consistent quality and culinary standards. We look forward to welcoming you back. Best regards, Management Team.`;
+          } else if (cleanTone === 'concise') {
+            reply = `Thank you for the fantastic ${rating}-star review. We are thrilled you enjoyed your meal at ${targetRestoName}. Hope to see you again soon.`;
+          } else if (cleanTone === 'appreciative') {
+            reply = `We are truly grateful for your generous ${rating}-star review. Your appreciation brings a smile to our kitchen and service staff. Thank you for choosing ${targetRestoName}.`;
+          } else {
+            reply = `Thank you so much for the wonderful ${rating}-star review. We are delighted you enjoyed our food and hospitality at ${targetRestoName}. Serving you fresh, memorable meals is our greatest pleasure. We can't wait to serve you again.`;
+          }
+        } else {
+          if (cleanTone === 'professional') {
+            reply = `Dear Valued Customer, thank you for providing your constructive feedback regarding ${targetRestoName}. We apologize for the inconvenience. We have taken immediate note with our operations team to prevent delays in the future.`;
+          } else {
+            reply = `Dear Guest, we sincerely apologize for the wait time you experienced. Providing prompt, hot meals is our commitment, and we regret falling short during your visit. We have briefed our kitchen team to speed up service. Please reach out directly so we can make this right.`;
+          }
+        }
       }
     }
+
+    // Strict post-processing: remove any exclamation mark
+    reply = reply.replace(/!+/g, '.').replace(/\.{2,}/g, '.').trim();
 
     return res.json({ success: true, reply, provider: 'smart_engine' });
   } catch (err) {

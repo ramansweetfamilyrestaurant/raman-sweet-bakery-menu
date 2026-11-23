@@ -808,6 +808,11 @@ async function createTables(options = {}) {
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS table_prefix VARCHAR(50) DEFAULT 'table';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS qr_secret VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS order_retention_days INT DEFAULT 90;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ai_review_tone VARCHAR(50) DEFAULT 'warm';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ai_review_language VARCHAR(50) DEFAULT 'English';`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ai_brand_instructions TEXT;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ai_auto_replies INT DEFAULT 1;`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ai_require_approval INT DEFAULT 1;`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS mandate_id VARCHAR(255);`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS mandate_status VARCHAR(50) DEFAULT 'pending';`,
       `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS trial_ends_at VARCHAR(100);`,
@@ -1811,6 +1816,13 @@ async function createTables(options = {}) {
       if (!restoCols.some(c => c.name === 'auto_print_kot')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_print_kot INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'auto_print_bill')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN auto_print_bill INTEGER DEFAULT 0");
       if (!restoCols.some(c => c.name === 'printer_paper_width')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN printer_paper_width TEXT DEFAULT '80mm'");
+
+      // Step 3.22 AI Review Auto-Reply Settings SQLite Fallback
+      if (!restoCols.some(c => c.name === 'ai_review_tone')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN ai_review_tone TEXT DEFAULT 'warm'");
+      if (!restoCols.some(c => c.name === 'ai_review_language')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN ai_review_language TEXT DEFAULT 'English'");
+      if (!restoCols.some(c => c.name === 'ai_brand_instructions')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN ai_brand_instructions TEXT DEFAULT NULL");
+      if (!restoCols.some(c => c.name === 'ai_auto_replies')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN ai_auto_replies INTEGER DEFAULT 1");
+      if (!restoCols.some(c => c.name === 'ai_require_approval')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN ai_require_approval INTEGER DEFAULT 1");
 
       sqliteDb.exec(`
         CREATE TABLE IF NOT EXISTS restaurant_printers (

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Star, 
   MessageSquare, 
@@ -50,6 +50,7 @@ export default function ReviewView({
   const isGoogleReviewsPlanEnabled = resolvedCaps.google_reviews_enabled !== false;
 
   const [saving, setSaving] = useState(false);
+  const [savingAiSettings, setSavingAiSettings] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'newest' | 'lowest' | 'unanswered'
   const [showConnectModal, setShowConnectModal] = useState(false);
@@ -57,14 +58,48 @@ export default function ReviewView({
 
   // AI Configuration State
   const [aiEnabled, setAiEnabled] = useState(settingsForm?.ai_review_enabled !== false);
-  const [autoGenReplies, setAutoGenReplies] = useState(true);
-  const [requireApproval, setRequireApproval] = useState(true);
+  const [autoGenReplies, setAutoGenReplies] = useState(
+    settingsForm?.ai_auto_replies !== undefined && settingsForm?.ai_auto_replies !== null
+      ? Boolean(settingsForm.ai_auto_replies === 1 || settingsForm.ai_auto_replies === true)
+      : true
+  );
+  const [requireApproval, setRequireApproval] = useState(
+    settingsForm?.ai_require_approval !== undefined && settingsForm?.ai_require_approval !== null
+      ? Boolean(settingsForm.ai_require_approval === 1 || settingsForm.ai_require_approval === true)
+      : true
+  );
   const [selectedTone, setSelectedTone] = useState(settingsForm?.ai_review_tone || 'warm'); // 'warm' | 'professional' | 'concise' | 'appreciative'
   const [selectedLanguage, setSelectedLanguage] = useState(settingsForm?.ai_review_language || 'English');
   const [brandVoice, setBrandVoice] = useState(
-    settingsForm?.ai_brand_instructions || 
-    'Thank customers warmly, highlight our fresh ingredients and hospitality, stay polite and professional, and invite them back.'
+    settingsForm?.ai_brand_instructions !== undefined && settingsForm?.ai_brand_instructions !== null
+      ? settingsForm.ai_brand_instructions
+      : 'Thank customers warmly, highlight our fresh ingredients and hospitality, stay polite and professional, and invite them back.'
   );
+
+  // Sync state if settingsForm updates from backend
+  useEffect(() => {
+    if (settingsForm?.ai_review_tone) setSelectedTone(settingsForm.ai_review_tone);
+    if (settingsForm?.ai_review_language) setSelectedLanguage(settingsForm.ai_review_language);
+    if (settingsForm?.ai_brand_instructions !== undefined && settingsForm?.ai_brand_instructions !== null) {
+      setBrandVoice(settingsForm.ai_brand_instructions);
+    }
+    if (settingsForm?.ai_auto_replies !== undefined && settingsForm?.ai_auto_replies !== null) {
+      setAutoGenReplies(Boolean(settingsForm.ai_auto_replies === 1 || settingsForm.ai_auto_replies === true));
+    }
+    if (settingsForm?.ai_require_approval !== undefined && settingsForm?.ai_require_approval !== null) {
+      setRequireApproval(Boolean(settingsForm.ai_require_approval === 1 || settingsForm.ai_require_approval === true));
+    }
+    if (settingsForm?.google_review_url) {
+      setGoogleUrlInput(settingsForm.google_review_url);
+    }
+  }, [
+    settingsForm?.ai_review_tone,
+    settingsForm?.ai_review_language,
+    settingsForm?.ai_brand_instructions,
+    settingsForm?.ai_auto_replies,
+    settingsForm?.ai_require_approval,
+    settingsForm?.google_review_url
+  ]);
 
   // Active Review Preview & AI Generator State
   const [activeReviewIndex, setActiveReviewIndex] = useState(0);
@@ -89,12 +124,12 @@ export default function ReviewView({
       timestamp: '28 May 2026',
       platform: 'Google',
       text: terms.isHotel
-        ? 'Exceptional stay and prompt room service! The room was spotless, peaceful, and the amenities were top quality. Definitely our preferred place to stay.'
+        ? 'Exceptional stay and prompt room service. The room was spotless, peaceful, and the amenities were top quality. Definitely our preferred place to stay.'
         : terms.isCinema
-        ? 'Fantastic movie experience! Crisp sound, ultra-clear screen, and delicious snacks ordered right to our seat.'
+        ? 'Fantastic movie experience. Crisp sound, ultra-clear screen, and delicious snacks ordered right to our seat.'
         : terms.isBakery || terms.isSweetShop
-        ? 'Mouth-watering sweets and freshly baked pastries! Excellent quality, authentic taste, and very clean counter.'
-        : 'Amazing food and top-notch hospitality! The Paneer Butter Masala and Garlic Naan were exceptionally delicious, freshly made and piping hot. Definitely our new favorite family dining spot in town.',
+        ? 'Mouth-watering sweets and freshly baked pastries. Excellent quality, authentic taste, and very clean counter.'
+        : 'Amazing food and top-notch hospitality. The Paneer Butter Masala and Garlic Naan were exceptionally delicious, freshly made and piping hot. Definitely our new favorite family dining spot in town.',
       status: 'needs_reply', // 'replied' | 'needs_reply'
       reply: null,
       tags: terms.isHotel ? ['Clean Room', 'Room Service', 'Hospitality'] : terms.isCinema ? ['Dolby Atmos', 'Seat Snacks', 'Comfort'] : terms.isBakery || terms.isSweetShop ? ['Fresh Sweets', 'Bakery', 'Hygiene'] : ['Food Quality', 'Paneer', 'Family Dining']
@@ -107,9 +142,9 @@ export default function ReviewView({
       date: '3 days ago',
       timestamp: '26 May 2026',
       platform: 'Google',
-      text: `Loved the digital QR ordering system! We placed our order directly in seconds, and it arrived in under 12 minutes. Smooth and seamless experience.`,
+      text: `Loved the digital QR ordering system. We placed our order directly in seconds, and it arrived in under 12 minutes. Smooth and seamless experience.`,
       status: 'replied',
-      reply: `Dear Priya, thank you so much for the glowing 5-star review! 🌟 We're thrilled that you enjoyed our fast QR ordering. Looking forward to welcoming you again soon! 🙏`,
+      reply: `Dear Priya, thank you so much for the glowing 5-star review. We are thrilled that you enjoyed our fast QR ordering. Looking forward to welcoming you again soon.`,
       tags: ['QR Ordering', 'Fast Service', 'Hospitality']
     },
     {
@@ -152,79 +187,127 @@ export default function ReviewView({
 
   const activeReview = reviewsList[activeReviewIndex] || reviewsList[0];
 
-  // Helper to generate AI response tailored to business profile
+  // Helper to generate AI response tailored to business profile & language
   const generateAiResponseText = (review, tone, lang) => {
+    const targetTone = tone || selectedTone || 'warm';
+    const targetLang = String(lang || selectedLanguage || 'English').toLowerCase();
+    const isHindi = targetLang.includes('hindi');
+    const isHinglish = targetLang.includes('hinglish');
     const dish = review.tags?.find(t => t.toLowerCase().includes('paneer') || t.toLowerCase().includes('dal') || t.toLowerCase().includes('sweet') || t.toLowerCase().includes('room') || t.toLowerCase().includes('snack') || t.toLowerCase().includes('dessert')) || '';
-    
-    // HOTEL / RESORT PROFILE
-    if (terms.isHotel) {
+
+    let text = '';
+
+    if (isHindi) {
       if (review.rating >= 4) {
-        if (tone === 'warm') {
-          return `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}! 🌟 We're delighted you had a relaxing stay and enjoyed our hospitality${dish ? `, especially our ${dish}` : ''}. Ensuring your comfort and seamless service is our greatest pleasure. We can't wait to welcome you back to ${restoName}! 🙏✨`;
-        } else if (tone === 'professional') {
-          return `Dear ${review.author}, thank you for taking the time to share your feedback and ${review.rating}-star rating for ${restoName}. We take pride in delivering exceptional accommodations and warm hospitality. We look forward to your next visit. Warm regards, Management Team.`;
-        } else if (tone === 'concise') {
-          return `Thank you for the fantastic ${review.rating}-star review, ${review.author}! We're thrilled you enjoyed your stay at ${restoName}. See you again soon!`;
+        if (targetTone === 'professional') {
+          text = `${restoName} के प्रति आपकी सकारात्मक समीक्षा और ${review.rating}-स्टार रेटिंग के लिए धन्यवाद। उत्कृष्ट सेवा और उच्च गुणवत्ता हमारी प्राथमिकता है। हम आपके अगले आगमन का स्वागत करते हैं। प्रबंधन टीम।`;
+        } else if (targetTone === 'concise') {
+          text = `${review.author} जी, ${review.rating}-स्टार रेटिंग और सुंदर समीक्षा के लिए धन्यवाद। ${restoName} में आपका पुनः स्वागत है।`;
+        } else if (targetTone === 'appreciative') {
+          text = `${review.author} जी, आपकी इस मूल्यवान ${review.rating}-स्टार रेटिंग के लिए हम हृदय से आभारी हैं। आपके शब्दों से हमारी पूरी टीम का उत्साहवर्धन हुआ है। धन्यवाद।`;
         } else {
-          return `We are deeply grateful for your generous ${review.rating}-star rating, ${review.author}! Your appreciation brings huge smiles to our front desk and housekeeping staff. Thank you for choosing ${restoName}! ❤️`;
+          text = `${review.author} जी, ${restoName} को ${review.rating}-स्टार रेटिंग और सुंदर समीक्षा देने के लिए आपका बहुत-बहुत धन्यवाद। हमें खुशी है कि आपको हमारी सेवा और गुणवत्ता पसंद आई। हम आपके पुनः आगमन की प्रतीक्षा करेंगे।`;
         }
       } else {
-        return `Dear ${review.author}, we sincerely apologize for falling short during your stay. Providing a peaceful, flawless guest experience is our top priority. Please reach out to our front desk at ${settingsForm?.phone || 'our reception'} so we can assist and make this right on your next visit. 🙏`;
-      }
-    }
-
-    // CINEMA / THEATRE PROFILE
-    if (terms.isCinema) {
-      if (review.rating >= 4) {
-        if (tone === 'warm') {
-          return `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}! 🌟 We're thrilled you had an amazing movie experience and enjoyed our concession snacks. Bringing you great entertainment is our joy. See you at the movies soon at ${restoName}! 🎬🍿`;
-        } else if (tone === 'professional') {
-          return `Dear ${review.author}, thank you for sharing your feedback and ${review.rating}-star rating for ${restoName}. We strive to provide premium audiovisuals and comfort for all our moviegoers. Warm regards, Management Team.`;
-        } else if (tone === 'concise') {
-          return `Thank you for the fantastic ${review.rating}-star review, ${review.author}! We're glad you enjoyed your show at ${restoName}. See you next time! 🎬`;
+        if (targetTone === 'professional') {
+          text = `आदरणीय ${review.author} जी, आपकी प्रतिक्रिया के लिए धन्यवाद। हुई असुविधा के लिए हम क्षमाप्रार्थी हैं। आपकी समीक्षा को संबंधित टीम के साथ साझा कर सुधारात्मक कदम उठाए जा रहे हैं।`;
         } else {
-          return `Thank you for your generous ${review.rating}-star review, ${review.author}! Your support means the world to our cinema team. Enjoy the movies at ${restoName}! ❤️`;
+          text = `आदरणीय ${review.author} जी, आपके अनुभव में आई कमी के लिए हमें गहरा खेद है। सभी ग्राहकों को त्वरित और सुखद अनुभव देना हमारा संकल्प है। कृपया हमारे प्रबंधन (${settingsForm?.phone || 'हमारे संपर्क'}) से संपर्क करें ताकि हम इसे आपके लिए बेहतर बना सकें।`;
+        }
+      }
+    } else if (isHinglish) {
+      if (review.rating >= 4) {
+        if (targetTone === 'professional') {
+          text = `Dear ${review.author} ji, ${restoName} ke liye valuable ${review.rating}-star review share karne ke liye thank you. High quality aur acchi hospitality hamari top priority hai. Warm regards, Management Team.`;
+        } else if (targetTone === 'concise') {
+          text = `Thank you ${review.author} ji fantastic ${review.rating}-star review ke liye. ${restoName} mein phir milte hain.`;
+        } else if (targetTone === 'appreciative') {
+          text = `${review.author} ji, aapke is generous ${review.rating}-star review ke liye dil se shukriya. Aapka feedback hamari team ko bohot motivate karta hai. Thank you for choosing ${restoName}.`;
+        } else {
+          text = `Thank you so much ${review.author} ji ${restoName} ko ${review.rating}-star review dene ke liye. Hamein bahut khushi hui ki aapko hamari service aur quality pasand aayi. Agli baar aapka phir se swagat karne ke liye hum eager hain.`;
         }
       } else {
-        return `Dear ${review.author}, thank you for your candid feedback. We apologize for the wait time during the interval rush. We are streamlining our concession counters for faster service. We hope to see you again soon at ${restoName}.`;
-      }
-    }
-
-    // BAKERY / SWEET SHOP PROFILE
-    if (terms.isBakery || terms.isSweetShop) {
-      if (review.rating >= 4) {
-        if (tone === 'warm') {
-          return `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}! 🌟 We're delighted you loved our fresh bakes and sweets${dish ? `, especially our ${dish}` : ''}. Baking fresh happiness for you every day is our passion. We can't wait to serve you again soon at ${restoName}! 🍰✨`;
-        } else if (tone === 'professional') {
-          return `Dear ${review.author}, thank you for taking the time to share your feedback and ${review.rating}-star rating for ${restoName}. We take pride in delivering authentic taste, freshness, and high hygiene standards. We look forward to your next visit. Warm regards, Management Team.`;
-        } else if (tone === 'concise') {
-          return `Thank you for the fantastic ${review.rating}-star review, ${review.author}! We're thrilled you enjoyed our treats at ${restoName}. See you again soon!`;
+        if (targetTone === 'professional') {
+          text = `Dear ${review.author} ji, feedback ke liye shukriya. Huye inconvenience ke liye hum sincerely apologize karte hain. Kitchen aur service team ko immediate improvement ke instructions de diye gaye hain.`;
         } else {
-          return `We are deeply grateful for your generous ${review.rating}-star rating, ${review.author}! Your appreciation brings huge smiles to our bakery and sweet master team. Thank you for choosing ${restoName}! ❤️`;
+          text = `Dear ${review.author} ji, visit ke dauran huye delay aur inconvenience ke liye hum dil se maafi maangte hain. Aapka experience smooth aur timely banana hamari priority hai. Please humse ${settingsForm?.phone || 'contact'} karein taaki hum ise theek kar sakein.`;
         }
-      } else {
-        return `Dear ${review.author}, thank you for your candid feedback. We apologize for falling short during your visit. Freshness and quick service are our top priorities. Please contact us at ${settingsForm?.phone || 'our counter'} so we can make this right on your next visit. 🙏`;
-      }
-    }
-
-    // RESTAURANT / CAFE / DEFAULT PROFILE
-    if (review.rating >= 4) {
-      if (tone === 'warm') {
-        return `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}! 🌟 We're delighted you loved our food and service${dish ? `, especially our ${dish}` : ''}. Serving you fresh, memorable meals is our greatest pleasure. We can't wait to serve you again soon at ${restoName}! 🙏✨`;
-      } else if (tone === 'professional') {
-        return `Dear ${review.author}, thank you for taking the time to share your feedback and ${review.rating}-star rating for ${restoName}. We take pride in delivering exceptional dining experiences and high culinary standards. We look forward to your next visit. Warm regards, Management Team.`;
-      } else if (tone === 'concise') {
-        return `Thank you for the fantastic ${review.rating}-star review, ${review.author}! We're thrilled you enjoyed your experience at ${restoName}. See you again soon!`;
-      } else {
-        return `We are deeply grateful for your generous ${review.rating}-star rating, ${review.author}! Your appreciation brings huge smiles to our kitchen and service staff. Thank you for choosing ${restoName}! ❤️`;
       }
     } else {
-      if (tone === 'warm' || tone === 'appreciative') {
-        return `Dear ${review.author}, we sincerely apologize for the delay you experienced. Providing prompt, hot meals is our top commitment, and we regret falling short during your visit. We have briefed our kitchen team to improve service speed during peak hours. Please reach out to us at ${settingsForm?.phone || 'our front desk'} so we can make this right on your next visit. 🙏`;
-      } else {
-        return `Dear ${review.author}, thank you for your candid feedback. We apologize for the wait time during your meal. We are actively refining our kitchen scheduling during weekend rushes to ensure faster turnaround. We appreciate your patience and hope for another opportunity to serve you better.`;
+      // HOTEL / RESORT PROFILE
+      if (terms.isHotel) {
+        if (review.rating >= 4) {
+          if (targetTone === 'warm') {
+            text = `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}. We are delighted you had a relaxing stay and enjoyed our hospitality${dish ? `, especially our ${dish}` : ''}. Ensuring your comfort and seamless service is our greatest pleasure. We look forward to welcoming you back to ${restoName}.`;
+          } else if (targetTone === 'professional') {
+            text = `Dear ${review.author}, thank you for taking the time to share your feedback and ${review.rating}-star rating for ${restoName}. We take pride in delivering exceptional accommodations and warm hospitality. We look forward to your next visit. Warm regards, Management Team.`;
+          } else if (targetTone === 'concise') {
+            text = `Thank you for the fantastic ${review.rating}-star review, ${review.author}. We are thrilled you enjoyed your stay at ${restoName}. See you again soon.`;
+          } else {
+            text = `We are deeply grateful for your generous ${review.rating}-star rating, ${review.author}. Your appreciation brings huge smiles to our front desk and housekeeping staff. Thank you for choosing ${restoName}.`;
+          }
+        } else {
+          text = `Dear ${review.author}, we sincerely apologize for falling short during your stay. Providing a peaceful, flawless guest experience is our top priority. Please reach out to our front desk at ${settingsForm?.phone || 'our reception'} so we can assist and make this right on your next visit.`;
+        }
+      }
+
+      // CINEMA / THEATRE PROFILE
+      else if (terms.isCinema) {
+        if (review.rating >= 4) {
+          if (targetTone === 'warm') {
+            text = `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}. We are thrilled you had an amazing movie experience and enjoyed our concession snacks. Bringing you great entertainment is our joy. See you at the movies soon at ${restoName}.`;
+          } else if (targetTone === 'professional') {
+            text = `Dear ${review.author}, thank you for sharing your feedback and ${review.rating}-star rating for ${restoName}. We strive to provide premium audiovisuals and comfort for all our moviegoers. Warm regards, Management Team.`;
+          } else if (targetTone === 'concise') {
+            text = `Thank you for the fantastic ${review.rating}-star review, ${review.author}. We are glad you enjoyed your show at ${restoName}. See you next time.`;
+          } else {
+            text = `Thank you for your generous ${review.rating}-star review, ${review.author}. Your support means the world to our cinema team. Enjoy the movies at ${restoName}.`;
+          }
+        } else {
+          text = `Dear ${review.author}, thank you for your candid feedback. We apologize for the wait time during the interval rush. We are streamlining our concession counters for faster service. We hope to see you again soon at ${restoName}.`;
+        }
+      }
+
+      // BAKERY / SWEET SHOP PROFILE
+      else if (terms.isBakery || terms.isSweetShop) {
+        if (review.rating >= 4) {
+          if (targetTone === 'warm') {
+            text = `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}. We are delighted you loved our fresh bakes and sweets${dish ? `, especially our ${dish}` : ''}. Baking fresh happiness for you every day is our passion. We look forward to serving you again soon at ${restoName}.`;
+          } else if (targetTone === 'professional') {
+            text = `Dear ${review.author}, thank you for taking the time to share your feedback and ${review.rating}-star rating for ${restoName}. We take pride in delivering authentic taste, freshness, and high hygiene standards. We look forward to your next visit. Warm regards, Management Team.`;
+          } else if (targetTone === 'concise') {
+            text = `Thank you for the fantastic ${review.rating}-star review, ${review.author}. We are thrilled you enjoyed our treats at ${restoName}. See you again soon.`;
+          } else {
+            text = `We are deeply grateful for your generous ${review.rating}-star rating, ${review.author}. Your appreciation brings huge smiles to our bakery and sweet master team. Thank you for choosing ${restoName}.`;
+          }
+        } else {
+          text = `Dear ${review.author}, thank you for your candid feedback. We apologize for falling short during your visit. Freshness and quick service are our top priorities. Please contact us at ${settingsForm?.phone || 'our counter'} so we can make this right on your next visit.`;
+        }
+      }
+
+      // RESTAURANT / CAFE / DEFAULT PROFILE
+      else {
+        if (review.rating >= 4) {
+          if (targetTone === 'warm') {
+            text = `Thank you so much for the wonderful ${review.rating}-star review, ${review.author}. We are delighted you loved our food and service${dish ? `, especially our ${dish}` : ''}. Serving you fresh, memorable meals is our greatest pleasure. We look forward to serving you again soon at ${restoName}.`;
+          } else if (targetTone === 'professional') {
+            text = `Dear ${review.author}, thank you for taking the time to share your feedback and ${review.rating}-star rating for ${restoName}. We take pride in delivering exceptional dining experiences and high culinary standards. We look forward to your next visit. Warm regards, Management Team.`;
+          } else if (targetTone === 'concise') {
+            text = `Thank you for the fantastic ${review.rating}-star review, ${review.author}. We are thrilled you enjoyed your experience at ${restoName}. See you again soon.`;
+          } else {
+            text = `We are deeply grateful for your generous ${review.rating}-star rating, ${review.author}. Your appreciation brings huge smiles to our kitchen and service staff. Thank you for choosing ${restoName}.`;
+          }
+        } else {
+          if (targetTone === 'warm' || targetTone === 'appreciative') {
+            text = `Dear ${review.author}, we sincerely apologize for the delay you experienced. Providing prompt, hot meals is our top commitment, and we regret falling short during your visit. We have briefed our kitchen team to improve service speed during peak hours. Please reach out to us at ${settingsForm?.phone || 'our front desk'} so we can make this right on your next visit.`;
+          } else {
+            text = `Dear ${review.author}, thank you for your candid feedback. We apologize for the wait time during your meal. We are actively refining our kitchen scheduling during weekend rushes to ensure faster turnaround. We appreciate your patience and hope for another opportunity to serve you better.`;
+          }
+        }
       }
     }
+
+    return text.replace(/!+/g, '.').replace(/\.{2,}/g, '.').trim();
   };
 
   const [currentAiReply, setCurrentAiReply] = useState(() => {
@@ -254,13 +337,18 @@ export default function ReviewView({
             reviewText: activeReview.text,
             starRating: activeReview.rating,
             selectedTone,
-            restaurantName: restoName
+            selectedLanguage,
+            brandVoice,
+            restaurantName: restoName,
+            businessType: restaurantInfo?.business_type || settingsForm?.business_type,
+            industry: restaurantInfo?.industry || settingsForm?.industry || (terms.isHotel ? 'hotel' : terms.isCinema ? 'cinema' : terms.isBakery || terms.isSweetShop ? 'bakery' : 'restaurant')
           })
         });
         const data = await res.json();
         if (res.ok && data?.reply) {
-          setCurrentAiReply(data.reply);
-          setCustomReplyText(data.reply);
+          const clean = String(data.reply).replace(/!+/g, '.').replace(/\.{2,}/g, '.').trim();
+          setCurrentAiReply(clean);
+          setCustomReplyText(clean);
           setGeneratingAi(false);
           return;
         }
@@ -276,6 +364,30 @@ export default function ReviewView({
     }, 400);
   };
 
+  const handleSaveAiSettings = async () => {
+    setSavingAiSettings(true);
+    try {
+      const updatedForm = {
+        ...settingsForm,
+        ai_review_tone: selectedTone,
+        ai_review_language: selectedLanguage,
+        ai_brand_instructions: brandVoice.trim(),
+        ai_auto_replies: autoGenReplies ? 1 : 0,
+        ai_require_approval: requireApproval ? 1 : 0
+      };
+      setSettingsForm(updatedForm);
+      if (handleSaveSettings) {
+        await handleSaveSettings(updatedForm);
+      }
+      setSuccessMsg('✓ AI Auto-Reply configuration saved successfully');
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err) {
+      alert('Failed to save AI configuration: ' + err.message);
+    } finally {
+      setSavingAiSettings(false);
+    }
+  };
+
   const handleApproveAndPost = () => {
     const finalReply = isEditingReply ? customReplyText : currentAiReply;
     
@@ -287,9 +399,13 @@ export default function ReviewView({
       return r;
     }));
 
-    // Copy to clipboard
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(finalReply);
+    // Copy to clipboard with fallback
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(finalReply).catch(() => {
+        fallbackCopy(finalReply);
+      });
+    } else {
+      fallbackCopy(finalReply);
     }
     setCopiedToast(true);
     setTimeout(() => setCopiedToast(false), 3000);
@@ -298,6 +414,19 @@ export default function ReviewView({
     if (settingsForm?.google_review_url) {
       window.open(settingsForm.google_review_url, '_blank');
     }
+  };
+
+  const fallbackCopy = (text) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch (e) {}
   };
 
   const handleSaveGoogleUrl = async (e) => {
@@ -309,7 +438,7 @@ export default function ReviewView({
       if (handleSaveSettings) {
         await handleSaveSettings(updatedForm);
       }
-      setSuccessMsg('✓ Google Reviews link connected successfully!');
+      setSuccessMsg('✓ Google Reviews link connected successfully.');
       setTimeout(() => setSuccessMsg(''), 4000);
       setShowConnectModal(false);
     } catch (err) {
@@ -1208,7 +1337,10 @@ export default function ReviewView({
                   <select
                     value={selectedLanguage}
                     disabled={!isAiPlanEnabled}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedLanguage(e.target.value);
+                      setCurrentAiReply(generateAiResponseText(activeReview, selectedTone, e.target.value));
+                    }}
                     style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}
                   >
                     <option value="English">English</option>
@@ -1232,6 +1364,36 @@ export default function ReviewView({
                   placeholder="e.g. Thank customers warmly, stay polite and professional..."
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.76rem', lineHeight: 1.4, boxSizing: 'border-box', color: '#0F172A' }}
                 />
+              </div>
+
+              {/* Save AI Settings Action Button */}
+              <div style={{ marginTop: '4px' }}>
+                <button
+                  type="button"
+                  disabled={savingAiSettings || !isAiPlanEnabled}
+                  onClick={handleSaveAiSettings}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#064E3B',
+                    color: '#FFFFFF',
+                    fontSize: '0.78rem',
+                    fontWeight: 900,
+                    cursor: (savingAiSettings || !isAiPlanEnabled) ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(6, 78, 59, 0.20)',
+                    transition: 'all 0.2s ease',
+                    opacity: savingAiSettings ? 0.7 : 1
+                  }}
+                >
+                  <Save size={14} />
+                  <span>{savingAiSettings ? 'Saving Settings...' : 'Save AI Settings'}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1355,7 +1517,7 @@ export default function ReviewView({
                 }}
               >
                 <Check size={14} />
-                <span>{copiedToast ? '✓ Copied & Ready!' : 'Approve & Post'}</span>
+                <span>{copiedToast ? '✓ Copied & Ready' : 'Approve & Post'}</span>
               </button>
             </div>
           </div>
