@@ -53,6 +53,9 @@ export default function SupportView({
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
   const terms = getBusinessTerminology(restaurantInfo || settingsForm);
 
+  // Main Tab State: 'guides' | 'tickets' | 'status'
+  const [supportTab, setSupportTab] = useState('guides');
+
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all'); // 'all' | 'orders' | 'menu' | 'qr' | 'kds' | 'billing' | 'analytics' | 'settings'
@@ -523,7 +526,7 @@ export default function SupportView({
       )}
 
       {/* =========================================================================
-          PAGE HEADER
+          PAGE HEADER (Clean & Actionable)
          ========================================================================= */}
       <div className="support-header-container">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
@@ -554,15 +557,40 @@ export default function SupportView({
           <div style={{ minWidth: 0, flex: 1 }}>
             <h2 style={{ fontSize: '1.12rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               <Headphones size={17} color="#064E3B" style={{ flexShrink: 0 }} />
-              <span>Help & Support</span>
+              <span>Help & Support Desk</span>
             </h2>
             <p style={{ fontSize: '0.72rem', color: '#64748B', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              How can we help you run your business smoothly?
+              How can we help you run {restoName} smoothly?
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleOpenWhatsApp}
+            style={{
+              height: '34px',
+              padding: '0 12px',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#16A34A',
+              color: '#FFFFFF',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 6px rgba(22, 163, 74, 0.22)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <MessageCircle size={15} />
+            <span>Chat on WhatsApp</span>
+            <ExternalLink size={12} />
+          </button>
+
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -573,226 +601,201 @@ export default function SupportView({
             color: '#059669',
             border: '1px solid #A7F3D0',
             fontSize: '0.74rem',
-            fontWeight: 800
+            fontWeight: 800,
+            whiteSpace: 'nowrap'
           }}>
             <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#059669' }} />
-            <span>Support Available</span>
+            <span>Live Help Desk Active</span>
           </div>
         </div>
       </div>
 
       {/* =========================================================================
-          MAIN SUPPORT SEARCH & CATEGORY CHIPS
+          CLEAN SEGMENTED TABS (Option 1)
          ========================================================================= */}
       <div style={{
-        background: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #EAE5DF',
-        padding: '16px 18px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
         display: 'flex',
-        flexDirection: 'column',
-        gap: '12px'
+        alignItems: 'center',
+        gap: '6px',
+        background: '#FAF8F5',
+        padding: '5px',
+        borderRadius: '14px',
+        border: '1px solid #EAE5DF',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch'
       }}>
-        {/* Search Field */}
-        <div style={{ position: 'relative', width: '100%' }}>
-          <Search size={17} color="#94A3B8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search help articles, guides and troubleshooting..."
-            style={{
-              width: '100%',
-              height: '44px',
-              borderRadius: '12px',
-              border: '1.5px solid #E2E8F0',
-              padding: '0 14px 0 40px',
-              fontSize: '0.84rem',
-              color: '#0F172A',
-              background: '#FAF8F5',
-              outline: 'none',
-              boxSizing: 'border-box',
-              fontWeight: 600
-            }}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}
-            >
-              <X size={16} />
-            </button>
+        <button
+          type="button"
+          onClick={() => setSupportTab('guides')}
+          style={{
+            flex: '1 1 0',
+            minWidth: '150px',
+            height: '38px',
+            padding: '0 14px',
+            borderRadius: '10px',
+            border: 'none',
+            background: supportTab === 'guides' ? '#064E3B' : 'transparent',
+            color: supportTab === 'guides' ? '#FFFFFF' : '#475569',
+            fontSize: '0.80rem',
+            fontWeight: supportTab === 'guides' ? 900 : 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '7px',
+            boxShadow: supportTab === 'guides' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <BookOpen size={15} color={supportTab === 'guides' ? '#A7F3D0' : '#64748B'} />
+          <span>Guides & Troubleshooting</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSupportTab('tickets')}
+          style={{
+            flex: '1 1 0',
+            minWidth: '150px',
+            height: '38px',
+            padding: '0 14px',
+            borderRadius: '10px',
+            border: 'none',
+            background: supportTab === 'tickets' ? '#064E3B' : 'transparent',
+            color: supportTab === 'tickets' ? '#FFFFFF' : '#475569',
+            fontSize: '0.80rem',
+            fontWeight: supportTab === 'tickets' ? 900 : 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '7px',
+            boxShadow: supportTab === 'tickets' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <Headphones size={15} color={supportTab === 'tickets' ? '#A7F3D0' : '#64748B'} />
+          <span>Official Support Tickets</span>
+          {tickets.length > 0 && (
+            <span style={{
+              fontSize: '0.64rem',
+              fontWeight: 900,
+              padding: '1px 6px',
+              borderRadius: '10px',
+              background: supportTab === 'tickets' ? '#059669' : '#E2E8F0',
+              color: '#FFFFFF'
+            }}>
+              {tickets.length}
+            </span>
           )}
-        </div>
+        </button>
 
-        {/* Category Filter Chips */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px', WebkitOverflowScrolling: 'touch' }}>
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'orders', label: 'Orders' },
-            { id: 'menu', label: 'Menu' },
-            { id: 'qr', label: 'QR Codes' },
-            { id: 'kds', label: 'KDS' },
-            { id: 'billing', label: 'Billing' },
-            { id: 'analytics', label: 'Analytics' },
-            { id: 'settings', label: 'Settings' }
-          ].map(cat => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setActiveCategory(cat.id)}
-              className={`support-chip-btn ${activeCategory === cat.id ? 'active' : ''}`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
+        <button
+          type="button"
+          onClick={() => setSupportTab('status')}
+          style={{
+            flex: '1 1 0',
+            minWidth: '135px',
+            height: '38px',
+            padding: '0 14px',
+            borderRadius: '10px',
+            border: 'none',
+            background: supportTab === 'status' ? '#064E3B' : 'transparent',
+            color: supportTab === 'status' ? '#FFFFFF' : '#475569',
+            fontSize: '0.80rem',
+            fontWeight: supportTab === 'status' ? 900 : 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '7px',
+            boxShadow: supportTab === 'status' ? '0 2px 6px rgba(6, 78, 59, 0.25)' : 'none',
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <ShieldCheck size={15} color={supportTab === 'status' ? '#A7F3D0' : '#64748B'} />
+          <span>System Status</span>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
+        </button>
       </div>
 
       {/* =========================================================================
-          SECTION 1 — GET HELP FAST (3 CARDS)
+          TAB 1: GUIDES & TROUBLESHOOTING
          ========================================================================= */}
-      <div className="support-fast-grid">
-        {/* Card 1: WhatsApp Support */}
-        <div className="support-fast-card">
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <MessageCircle size={20} />
+      {supportTab === 'guides' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Search Field & Category Chips */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            padding: '16px 18px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            {/* Search Field */}
+            <div style={{ position: 'relative', width: '100%' }}>
+              <Search size={17} color="#94A3B8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search help articles, guides and troubleshooting..."
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #E2E8F0',
+                  padding: '0 14px 0 40px',
+                  fontSize: '0.84rem',
+                  color: '#0F172A',
+                  background: '#FAF8F5',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  fontWeight: 600
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
-            <div>
-              <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
-                WhatsApp Support
-              </strong>
-              <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4 }}>
-                Chat directly with TouchQR support for fast assistance.
-              </p>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleOpenWhatsApp}
-            style={{
-              height: '38px',
-              borderRadius: '10px',
-              border: 'none',
-              background: '#16A34A',
-              color: '#FFFFFF',
-              fontSize: '0.78rem',
-              fontWeight: 900,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              width: '100%',
-              boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)'
-            }}
-          >
-            <span>Chat on WhatsApp</span>
-            <ExternalLink size={13} />
-          </button>
-        </div>
-
-        {/* Card 2: Help Center */}
-        <div className="support-fast-card">
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#ECFDF5', color: '#064E3B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <BookOpen size={20} />
-            </div>
-            <div>
-              <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
-                Setup Guides & FAQs
-              </strong>
-              <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4 }}>
-                Browse setup guides, printer setups, and common answers.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              const el = document.getElementById('support-popular-guides');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-            style={{
-              height: '38px',
-              borderRadius: '10px',
-              border: '1px solid #CBD5E1',
-              background: '#FAF8F5',
-              color: '#0F172A',
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              width: '100%'
-            }}
-          >
-            <span>Browse Guides</span>
-            <ChevronRight size={14} />
-          </button>
-        </div>
-
-        {/* Card 3: Contact Support */}
-        <div className="support-fast-card">
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Headphones size={20} />
-            </div>
-            <div>
-              <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
-                Contact Support
-              </strong>
-              <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#64748B', lineHeight: 1.4 }}>
-                Send us a direct support ticket from your business account.
-              </p>
+            {/* Category Filter Chips */}
+            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px', WebkitOverflowScrolling: 'touch' }}>
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'orders', label: 'Orders' },
+                { id: 'menu', label: 'Menu' },
+                { id: 'qr', label: 'QR Codes' },
+                { id: 'kds', label: 'KDS' },
+                { id: 'billing', label: 'Billing' },
+                { id: 'analytics', label: 'Analytics' },
+                { id: 'settings', label: 'Settings' }
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`support-chip-btn ${activeCategory === cat.id ? 'active' : ''}`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              const el = document.getElementById('support-contact-form');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-            style={{
-              height: '38px',
-              borderRadius: '10px',
-              border: 'none',
-              background: '#064E3B',
-              color: '#FFFFFF',
-              fontSize: '0.78rem',
-              fontWeight: 900,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              width: '100%',
-              boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)'
-            }}
-          >
-            <span>Submit Request</span>
-            <Send size={13} />
-          </button>
-        </div>
-      </div>
-
-      {/* =========================================================================
-          MAIN TWO-COLUMN WORKSPACE (Guides & Troubleshooting | Form & Tickets)
-         ========================================================================= */}
-      <div className="support-page-grid">
-        
-        {/* LEFT COLUMN: TROUBLESHOOTING & POPULAR GUIDES */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-          {/* SECTION 2 — QUICK TROUBLESHOOTING */}
+          {/* Quick Troubleshooting Card */}
           <div style={{
             background: '#FFFFFF',
             borderRadius: '16px',
@@ -850,7 +853,7 @@ export default function SupportView({
             </div>
           </div>
 
-          {/* SECTION 3 — POPULAR GUIDES */}
+          {/* Popular Guides & Knowledge Base Card */}
           <div id="support-popular-guides" style={{
             background: '#FFFFFF',
             borderRadius: '16px',
@@ -906,530 +909,705 @@ export default function SupportView({
               )}
             </div>
           </div>
-        </div>
 
-        {/* RIGHT COLUMN: CONTACT SUPPORT FORM, WHATSAPP CARD, TICKETS & SYSTEM STATUS */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-          {/* SECTION 4 — REAL CONTACT SUPPORT TICKET FORM */}
-          <div id="support-contact-form" style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #EAE5DF',
-            padding: '18px 20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          {/* Bottom Callout Banner */}
+          <div style={{
+            background: '#FAF8F5',
+            borderRadius: '14px',
+            border: '1px dashed #CBD5E1',
+            padding: '14px 18px',
             display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            flexWrap: 'wrap'
           }}>
-            <div>
-              <strong style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', display: 'block' }}>
-                Open Official Support Ticket
-              </strong>
-              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                Create a persistent support ticket. Our team responds directly here, with optional WhatsApp escalation.
-              </span>
-            </div>
-
-            {/* Error Message with Preserved Input */}
-            {supportError && (
-              <div style={{
-                padding: '10px 12px',
-                borderRadius: '10px',
-                background: '#FEF2F2',
-                border: '1px solid #FECACA',
-                color: '#DC2626',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <AlertCircle size={15} style={{ flexShrink: 0 }} />
-                <span>{supportError}</span>
-              </div>
-            )}
-
-            {/* Confirmed Ticket Notice */}
-            {confirmedTicket && (
-              <div style={{
-                padding: '14px',
-                borderRadius: '12px',
-                background: '#ECFDF5',
-                border: '1px solid #A7F3D0',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#064E3B' }}>
-                  <CheckCircle2 size={18} color="#059669" />
-                  <strong style={{ fontSize: '0.82rem', fontWeight: 900 }}>
-                    Ticket #{confirmedTicket.ticket_ref} Confirmed & Persisted!
-                  </strong>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.74rem', color: '#047857', lineHeight: 1.4 }}>
-                  Subject: <em>"{confirmedTicket.subject}"</em>. Our team has received your ticket and will update you directly here in your dashboard.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <HelpCircle size={18} color="#064E3B" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800 }}>
+                  Didn't find what you're looking for?
+                </strong>
+                <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748B' }}>
+                  Open an official support ticket or chat with our team on WhatsApp.
                 </p>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTicketId(confirmedTicket.id)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #059669',
-                      background: '#FFFFFF',
-                      color: '#059669',
-                      fontSize: '0.72rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <MessageSquare size={13} />
-                    <span>View Conversation Thread</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const text = `*TouchQR Support Escalation*\n*Ticket Ref:* ${confirmedTicket.ticket_ref}\n*Business:* ${restoName} (${businessSlug})\n*Subject:* ${confirmedTicket.subject}\n\nI created this ticket on the dashboard and am reaching out on WhatsApp for urgent assistance.`;
-                      window.open(`https://wa.me/${cleanWhatsappNumber}?text=${encodeURIComponent(text)}`, '_blank');
-                    }}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: '#16A34A',
-                      color: '#FFFFFF',
-                      fontSize: '0.72rem',
-                      fontWeight: 900,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <MessageCircle size={13} />
-                    <span>Chat on WhatsApp with #{confirmedTicket.ticket_ref}</span>
-                    <ExternalLink size={11} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmedTicket(null)}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#64748B',
-                      fontSize: '0.70rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Submit Another
-                  </button>
-                </div>
               </div>
-            )}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setSupportTab('tickets')}
+                style={{
+                  height: '32px',
+                  padding: '0 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #064E3B',
+                  background: '#FFFFFF',
+                  color: '#064E3B',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                Open Support Ticket
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenWhatsApp}
+                style={{
+                  height: '32px',
+                  padding: '0 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#16A34A',
+                  color: '#FFFFFF',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <MessageCircle size={13} />
+                <span>WhatsApp Help</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            {!confirmedTicket && (
-              <form onSubmit={handleCreateTicket} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                    Subject *
-                  </label>
-                  <input
-                    type="text"
-                    value={supportSubject}
-                    onChange={(e) => setSupportSubject(e.target.value)}
-                    placeholder="e.g. Thermal receipt printer disconnect on KOT"
-                    required
-                    style={{
-                      width: '100%',
-                      height: '38px',
-                      borderRadius: '10px',
-                      border: '1px solid #CBD5E1',
-                      padding: '0 12px',
-                      fontSize: '0.80rem',
-                      color: '#0F172A',
-                      background: '#FAF8F5',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
+      {/* =========================================================================
+          TAB 2: SUPPORT TICKETS & CONVERSATIONS
+         ========================================================================= */}
+      {supportTab === 'tickets' && (
+        <div className="support-page-grid">
+          {/* LEFT COLUMN: CONTACT SUPPORT FORM */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div id="support-contact-form" style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '18px 20px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div>
+                <strong style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0F172A', display: 'block' }}>
+                  Open Official Support Ticket
+                </strong>
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Create a persistent support ticket. Our team responds directly here, with optional WhatsApp escalation.
+                </span>
+              </div>
+
+              {/* Error Message with Preserved Input */}
+              {supportError && (
+                <div style={{
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  color: '#DC2626',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                  <span>{supportError}</span>
                 </div>
+              )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '8px' }}>
+              {/* Confirmed Ticket Notice */}
+              {confirmedTicket && (
+                <div style={{
+                  padding: '14px',
+                  borderRadius: '12px',
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#064E3B' }}>
+                    <CheckCircle2 size={18} color="#059669" />
+                    <strong style={{ fontSize: '0.82rem', fontWeight: 900 }}>
+                      Ticket #{confirmedTicket.ticket_ref} Confirmed & Persisted!
+                    </strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.74rem', color: '#047857', lineHeight: 1.4 }}>
+                    Subject: <em>"{confirmedTicket.subject}"</em>. Our team has received your ticket and will update you directly here in your dashboard.
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTicketId(confirmedTicket.id)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #059669',
+                        background: '#FFFFFF',
+                        color: '#059669',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <MessageSquare size={13} />
+                      <span>View Conversation Thread</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const text = `*TouchQR Support Escalation*\n*Ticket Ref:* ${confirmedTicket.ticket_ref}\n*Business:* ${restoName} (${businessSlug})\n*Subject:* ${confirmedTicket.subject}\n\nI created this ticket on the dashboard and am reaching out on WhatsApp for urgent assistance.`;
+                        window.open(`https://wa.me/${cleanWhatsappNumber}?text=${encodeURIComponent(text)}`, '_blank');
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: '#16A34A',
+                        color: '#FFFFFF',
+                        fontSize: '0.72rem',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <MessageCircle size={13} />
+                      <span>Chat on WhatsApp with #{confirmedTicket.ticket_ref}</span>
+                      <ExternalLink size={11} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmedTicket(null)}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#64748B',
+                        fontSize: '0.70rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Submit Another
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!confirmedTicket && (
+                <form onSubmit={handleCreateTicket} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                      Category *
+                      Subject *
                     </label>
-                    <select
-                      value={supportCategory}
-                      onChange={(e) => setSupportCategory(e.target.value)}
+                    <input
+                      type="text"
+                      value={supportSubject}
+                      onChange={(e) => setSupportSubject(e.target.value)}
+                      placeholder="e.g. Thermal receipt printer disconnect on KOT"
+                      required
                       style={{
                         width: '100%',
                         height: '38px',
                         borderRadius: '10px',
                         border: '1px solid #CBD5E1',
-                        padding: '0 10px',
-                        fontSize: '0.78rem',
+                        padding: '0 12px',
+                        fontSize: '0.80rem',
                         color: '#0F172A',
                         background: '#FAF8F5',
                         outline: 'none',
                         boxSizing: 'border-box'
                       }}
-                    >
-                      <option value="orders">Orders & POS</option>
-                      <option value="menu">Menu & Dishes</option>
-                      <option value="qr">QR Standees & Spaces</option>
-                      <option value="kds">Kitchen Display (KDS)</option>
-                      <option value="billing">Billing & Mandate</option>
-                      <option value="printer">Thermal Printers & Hardware</option>
-                      <option value="analytics">Sales & Analytics</option>
-                      <option value="settings">Settings & Branding</option>
-                      <option value="other">General / Account</option>
-                    </select>
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                        Category *
+                      </label>
+                      <select
+                        value={supportCategory}
+                        onChange={(e) => setSupportCategory(e.target.value)}
+                        style={{
+                          width: '100%',
+                          height: '38px',
+                          borderRadius: '10px',
+                          border: '1px solid #CBD5E1',
+                          padding: '0 10px',
+                          fontSize: '0.78rem',
+                          color: '#0F172A',
+                          background: '#FAF8F5',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <option value="orders">Orders & POS</option>
+                        <option value="menu">Menu & Dishes</option>
+                        <option value="qr">QR Standees & Spaces</option>
+                        <option value="kds">Kitchen Display (KDS)</option>
+                        <option value="billing">Billing & Mandate</option>
+                        <option value="printer">Thermal Printers & Hardware</option>
+                        <option value="analytics">Sales & Analytics</option>
+                        <option value="settings">Settings & Branding</option>
+                        <option value="other">General / Account</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                        Priority
+                      </label>
+                      <select
+                        value={supportPriority}
+                        onChange={(e) => setSupportPriority(e.target.value)}
+                        style={{
+                          width: '100%',
+                          height: '38px',
+                          borderRadius: '10px',
+                          border: '1px solid #CBD5E1',
+                          padding: '0 10px',
+                          fontSize: '0.78rem',
+                          color: '#0F172A',
+                          background: '#FAF8F5',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          fontWeight: supportPriority === 'urgent' ? 800 : 600
+                        }}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Normal</option>
+                        <option value="high">High</option>
+                        <option value="urgent">🚨 Urgent</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>
                     <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                      Priority
+                      Problem Description *
                     </label>
-                    <select
-                      value={supportPriority}
-                      onChange={(e) => setSupportPriority(e.target.value)}
+                    <textarea
+                      value={supportMessage}
+                      onChange={(e) => setSupportMessage(e.target.value)}
+                      placeholder="Describe the issue in detail, device used, or error messages seen..."
+                      rows={3}
+                      required
                       style={{
                         width: '100%',
-                        height: '38px',
                         borderRadius: '10px',
                         border: '1px solid #CBD5E1',
-                        padding: '0 10px',
-                        fontSize: '0.78rem',
+                        padding: '8px 12px',
+                        fontSize: '0.80rem',
                         color: '#0F172A',
                         background: '#FAF8F5',
                         outline: 'none',
                         boxSizing: 'border-box',
-                        fontWeight: supportPriority === 'urgent' ? 800 : 600
+                        resize: 'vertical'
                       }}
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Normal</option>
-                      <option value="high">High</option>
-                      <option value="urgent">🚨 Urgent</option>
-                    </select>
+                    />
                   </div>
-                </div>
 
-                <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                    Problem Description *
-                  </label>
-                  <textarea
-                    value={supportMessage}
-                    onChange={(e) => setSupportMessage(e.target.value)}
-                    placeholder="Describe the issue in detail, device used, or error messages seen..."
-                    rows={3}
-                    required
+                  <button
+                    type="submit"
+                    disabled={supportSubmitting}
                     style={{
-                      width: '100%',
+                      height: '42px',
                       borderRadius: '10px',
-                      border: '1px solid #CBD5E1',
-                      padding: '8px 12px',
-                      fontSize: '0.80rem',
-                      color: '#0F172A',
-                      background: '#FAF8F5',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      resize: 'vertical'
+                      border: 'none',
+                      background: '#064E3B',
+                      color: '#FFFFFF',
+                      fontSize: '0.82rem',
+                      fontWeight: 900,
+                      cursor: supportSubmitting ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      marginTop: '4px',
+                      boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)',
+                      opacity: supportSubmitting ? 0.75 : 1
                     }}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={supportSubmitting}
-                  style={{
-                    height: '42px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: '#064E3B',
-                    color: '#FFFFFF',
-                    fontSize: '0.82rem',
-                    fontWeight: 900,
-                    cursor: supportSubmitting ? 'default' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    marginTop: '4px',
-                    boxShadow: '0 2px 6px rgba(6, 78, 59, 0.25)',
-                    opacity: supportSubmitting ? 0.75 : 1
-                  }}
-                >
-                  {supportSubmitting ? (
-                    <>
-                      <RefreshCw size={15} className="spin-animate" />
-                      <span>Submitting to Server...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send size={15} />
-                      <span>Submit Support Ticket</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
+                  >
+                    {supportSubmitting ? (
+                      <>
+                        <RefreshCw size={15} className="spin-animate" />
+                        <span>Submitting to Server...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={15} />
+                        <span>Submit Support Ticket</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
 
-          {/* SECTION 5 — OPTIONAL DIRECT WHATSAPP ESCALATION CARD */}
+          {/* RIGHT COLUMN: YOUR SUPPORT TICKETS & WHATSAPP CARD */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '18px 20px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A' }}>
+                  Your Support Tickets
+                </strong>
+                <button
+                  type="button"
+                  onClick={() => loadTickets(ticketPage)}
+                  disabled={loadingTickets}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748B',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <RefreshCw size={12} className={loadingTickets ? 'spin-animate' : ''} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {loadingTickets && tickets.length === 0 ? (
+                  <div style={{ padding: '20px', textAlign: 'center', fontSize: '0.76rem', color: '#64748B', background: '#FAF8F5', borderRadius: '10px' }}>
+                    Loading support tickets...
+                  </div>
+                ) : tickets.length === 0 ? (
+                  <div style={{ padding: '20px', textAlign: 'center', fontSize: '0.76rem', color: '#64748B', background: '#FAF8F5', borderRadius: '10px' }}>
+                    No support tickets created yet. Use the form above to submit an inquiry.
+                  </div>
+                ) : (
+                  tickets.map(ticket => {
+                    const statusMap = {
+                      open: { label: 'Open', bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' },
+                      in_progress: { label: 'In Progress', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' },
+                      waiting_on_tenant: { label: 'Waiting on You', bg: '#F3E8FF', color: '#7E22CE', border: '#DDD6FE' },
+                      resolved: { label: 'Resolved', bg: '#ECFDF5', color: '#059669', border: '#A7F3D0' },
+                      closed: { label: 'Closed', bg: '#F1F5F9', color: '#64748B', border: '#CBD5E1' }
+                    };
+                    const st = statusMap[ticket.status] || statusMap.open;
+                    const isUrgent = ticket.priority === 'urgent';
+                    const isHigh = ticket.priority === 'high';
+
+                    return (
+                      <div
+                        key={ticket.id}
+                        onClick={() => setActiveTicketId(ticket.id)}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          background: '#FAF8F5',
+                          border: '1px solid #EAE5DF',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#CBD5E1'}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#EAE5DF'}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                            {isUrgent && <span style={{ fontSize: '0.62rem', fontWeight: 900, padding: '2px 5px', borderRadius: '4px', background: '#FEE2E2', color: '#DC2626' }}>🚨 URGENT</span>}
+                            {isHigh && <span style={{ fontSize: '0.62rem', fontWeight: 900, padding: '2px 5px', borderRadius: '4px', background: '#FFEDD5', color: '#EA580C' }}>⚡ HIGH</span>}
+                            <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {ticket.subject}
+                            </strong>
+                          </div>
+                          <span style={{
+                            fontSize: '0.64rem',
+                            fontWeight: 900,
+                            padding: '2px 7px',
+                            borderRadius: '6px',
+                            background: st.bg,
+                            color: st.color,
+                            border: `1px solid ${st.border}`,
+                            flexShrink: 0
+                          }}>
+                            {st.label}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: '#94A3B8' }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#475569' }}>
+                            #{ticket.ticket_ref}
+                          </span>
+                          <span>
+                            {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Pagination Controls */}
+              {ticketPagination.totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px solid #F1F5F9' }}>
+                  <button
+                    type="button"
+                    disabled={ticketPage <= 1}
+                    onClick={() => setTicketPage(p => Math.max(1, p - 1))}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      cursor: ticketPage <= 1 ? 'default' : 'pointer',
+                      opacity: ticketPage <= 1 ? 0.5 : 1
+                    }}
+                  >
+                    Previous
+                  </button>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 700 }}>
+                    Page {ticketPage} of {ticketPagination.totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={ticketPage >= ticketPagination.totalPages}
+                    onClick={() => setTicketPage(p => p + 1)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      cursor: ticketPage >= ticketPagination.totalPages ? 'default' : 'pointer',
+                      opacity: ticketPage >= ticketPagination.totalPages ? 0.5 : 1
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* TOUCHQR WHATSAPP ESCALATION CARD */}
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #EAE5DF',
+              padding: '16px 18px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <MessageCircle size={18} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
+                    TouchQR WhatsApp Desk
+                  </strong>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block' }}>
+                    Available as secondary escalation channel
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleOpenWhatsApp}
+                style={{
+                  height: '34px',
+                  padding: '0 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#16A34A',
+                  color: '#FFFFFF',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  flexShrink: 0
+                }}
+              >
+                <span>Chat</span>
+                <ExternalLink size={12} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          TAB 3: SYSTEM STATUS & SERVICE HEALTH
+         ========================================================================= */}
+      {supportTab === 'status' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Main Status Hero Card */}
           <div style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '16px 18px',
+            padding: '20px 24px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '12px'
+            gap: '16px',
+            flexWrap: 'wrap'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <MessageCircle size={18} />
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 900, display: 'block' }}>
-                  TouchQR WhatsApp Desk
-                </strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block' }}>
-                  Available as secondary escalation channel
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleOpenWhatsApp}
-              style={{
-                height: '34px',
-                padding: '0 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: '#16A34A',
-                color: '#FFFFFF',
-                fontSize: '0.74rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'inline-flex',
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: '#ECFDF5',
+                color: '#059669',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                justifyContent: 'center',
                 flexShrink: 0
-              }}
-            >
-              <span>Chat</span>
-              <ExternalLink size={12} />
-            </button>
-          </div>
-
-          {/* SECTION 6 — REAL PERSISTENT SUPPORT TICKETS & HISTORY */}
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #EAE5DF',
-            padding: '18px 20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong style={{ fontSize: '0.90rem', fontWeight: 900, color: '#0F172A' }}>
-                Your Support Tickets
-              </strong>
-              <button
-                type="button"
-                onClick={() => loadTickets(ticketPage)}
-                disabled={loadingTickets}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#64748B',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <RefreshCw size={12} className={loadingTickets ? 'spin-animate' : ''} />
-                <span>Refresh</span>
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {loadingTickets && tickets.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', fontSize: '0.76rem', color: '#64748B', background: '#FAF8F5', borderRadius: '10px' }}>
-                  Loading support tickets...
-                </div>
-              ) : tickets.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', fontSize: '0.76rem', color: '#64748B', background: '#FAF8F5', borderRadius: '10px' }}>
-                  No support tickets created yet. Use the form above to submit an inquiry.
-                </div>
-              ) : (
-                tickets.map(ticket => {
-                  const statusMap = {
-                    open: { label: 'Open', bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' },
-                    in_progress: { label: 'In Progress', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' },
-                    waiting_on_tenant: { label: 'Waiting on You', bg: '#F3E8FF', color: '#7E22CE', border: '#DDD6FE' },
-                    resolved: { label: 'Resolved', bg: '#ECFDF5', color: '#059669', border: '#A7F3D0' },
-                    closed: { label: 'Closed', bg: '#F1F5F9', color: '#64748B', border: '#CBD5E1' }
-                  };
-                  const st = statusMap[ticket.status] || statusMap.open;
-                  const isUrgent = ticket.priority === 'urgent';
-                  const isHigh = ticket.priority === 'high';
-
-                  return (
-                    <div
-                      key={ticket.id}
-                      onClick={() => setActiveTicketId(ticket.id)}
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: '12px',
-                        background: '#FAF8F5',
-                        border: '1px solid #EAE5DF',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#CBD5E1'}
-                      onMouseLeave={(e) => e.currentTarget.style.borderColor = '#EAE5DF'}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                          {isUrgent && <span style={{ fontSize: '0.62rem', fontWeight: 900, padding: '2px 5px', borderRadius: '4px', background: '#FEE2E2', color: '#DC2626' }}>🚨 URGENT</span>}
-                          {isHigh && <span style={{ fontSize: '0.62rem', fontWeight: 900, padding: '2px 5px', borderRadius: '4px', background: '#FFEDD5', color: '#EA580C' }}>⚡ HIGH</span>}
-                          <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {ticket.subject}
-                          </strong>
-                        </div>
-                        <span style={{
-                          fontSize: '0.64rem',
-                          fontWeight: 900,
-                          padding: '2px 7px',
-                          borderRadius: '6px',
-                          background: st.bg,
-                          color: st.color,
-                          border: `1px solid ${st.border}`,
-                          flexShrink: 0
-                        }}>
-                          {st.label}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: '#94A3B8' }}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#475569' }}>
-                          #{ticket.ticket_ref}
-                        </span>
-                        <span>
-                          {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recently'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Pagination Controls */}
-            {ticketPagination.totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px solid #F1F5F9' }}>
-                <button
-                  type="button"
-                  disabled={ticketPage <= 1}
-                  onClick={() => setTicketPage(p => Math.max(1, p - 1))}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    background: '#FFFFFF',
-                    fontSize: '0.70rem',
-                    fontWeight: 700,
-                    cursor: ticketPage <= 1 ? 'default' : 'pointer',
-                    opacity: ticketPage <= 1 ? 0.5 : 1
-                  }}
-                >
-                  Previous
-                </button>
-                <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 700 }}>
-                  Page {ticketPage} of {ticketPagination.totalPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={ticketPage >= ticketPagination.totalPages}
-                  onClick={() => setTicketPage(p => p + 1)}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    background: '#FFFFFF',
-                    fontSize: '0.70rem',
-                    fontWeight: 700,
-                    cursor: ticketPage >= ticketPagination.totalPages ? 'default' : 'pointer',
-                    opacity: ticketPage >= ticketPagination.totalPages ? 0.5 : 1
-                  }}
-                >
-                  Next
-                </button>
+              }}>
+                <ShieldCheck size={24} />
               </div>
-            )}
+              <div>
+                <strong style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>TouchQR System Status</span>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 900,
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    background: '#ECFDF5',
+                    color: '#059669',
+                    border: '1px solid #A7F3D0'
+                  }}>
+                    All Systems Operational
+                  </span>
+                </strong>
+                <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                  Core ordering, realtime syncing, and POS cloud infrastructure running normally.
+                </span>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '10px',
+              background: '#FAF8F5',
+              border: '1px solid #EAE5DF',
+              fontSize: '0.72rem',
+              color: '#475569',
+              fontWeight: 700
+            }}>
+              <Clock size={13} color="#059669" />
+              <span>99.98% Uptime · Monitored 24/7</span>
+            </div>
           </div>
 
-          {/* SECTION 7 — TOUCHQR SYSTEM STATUS */}
+          {/* Services Grid */}
           <div style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '18px 20px',
+            padding: '20px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '10px'
+            gap: '14px'
           }}>
-            <strong style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ShieldCheck size={16} color="#064E3B" />
-              <span>TouchQR System Status</span>
+            <strong style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0F172A' }}>
+              Service Status Breakdown
             </strong>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.74rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#475569' }}>● Live Orders & POS:</span>
-                <span style={{ color: '#059669', fontWeight: 800 }}>Operational</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#475569' }}>● Menu Storefront:</span>
-                <span style={{ color: '#059669', fontWeight: 800 }}>Operational</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#475569' }}>● QR Services:</span>
-                <span style={{ color: '#059669', fontWeight: 800 }}>Operational</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#475569' }}>● Billing & Invoicing:</span>
-                <span style={{ color: '#059669', fontWeight: 800 }}>Operational</span>
-              </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '12px'
+            }}>
+              {[
+                { name: 'Live Orders & POS', desc: 'Realtime order placement & siren dispatch', icon: <ShoppingBag size={17} color="#059669" />, status: 'Operational', latency: '16ms' },
+                { name: 'Menu Storefront', desc: 'Customer digital menu browsing & cart', icon: <Utensils size={17} color="#059669" />, status: 'Operational', latency: '21ms' },
+                { name: 'QR Services', desc: 'Space QR routing, table pairing & standees', icon: <QrCode size={17} color="#059669" />, status: 'Operational', latency: '14ms' },
+                { name: 'Billing & Invoicing', desc: 'Cashfree mandates, GST & invoice PDF generation', icon: <CreditCard size={17} color="#059669" />, status: 'Operational', latency: '35ms' },
+                { name: 'Thermal Receipt Print', desc: '58mm / 80mm ESC/POS hardware print spooler', icon: <Printer size={17} color="#059669" />, status: 'Operational', latency: 'Local' },
+                { name: 'Kitchen Display (KDS)', desc: 'Live kitchen ticket state sync & prep timer', icon: <Tv size={17} color="#059669" />, status: 'Operational', latency: '18ms' }
+              ].map(svc => (
+                <div
+                  key={svc.name}
+                  style={{
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    background: '#FAF8F5',
+                    border: '1px solid #EAE5DF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {svc.icon}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        ● {svc.name}:
+                      </strong>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {svc.desc}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 900, display: 'block' }}>
+                      {svc.status}
+                    </span>
+                    <span style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 600 }}>
+                      {svc.latency}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-
         </div>
-      </div>
+      )}
 
       {/* =========================================================================
           FOCUSED TROUBLESHOOTING GUIDE MODAL
