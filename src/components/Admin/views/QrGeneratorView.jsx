@@ -2087,82 +2087,78 @@ export default function QrGeneratorView({
                   'कैमरे से स्कैन करें और खाना ऑर्डर करें'}
               </div>
 
-              {/* 3-Step Bar (Fully Responsive UI Boundary) */}
-              <div
-                className="standee-steps-bar"
-                style={{
-                  background: theme.stepBg,
-                  border: `1px solid ${theme.stepBorder}`,
-                  color: theme.stepText,
-                  borderRadius: '16px',
-                  padding: '3px 8px',
-                  marginBottom: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexWrap: 'wrap',
-                  rowGap: '2px',
-                  columnGap: '4px',
-                  width: 'fit-content',
-                  maxWidth: '100%',
-                  margin: '0 auto 8px auto',
-                  boxSizing: 'border-box'
-                }}
-              >
+              {/* 3-Step Bar (Single Line Pristine Pill) */}
+              <div style={{
+                background: theme.stepBg,
+                border: `1px solid ${theme.stepBorder}`,
+                color: theme.stepText,
+                borderRadius: '20px',
+                padding: '2.5px 8px',
+                fontSize: '0.44rem',
+                fontWeight: 800,
+                marginBottom: '8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '3px',
+                whiteSpace: 'nowrap',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
+              }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
                   <span style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '11px',
-                    height: '11px',
-                    minWidth: '11px',
+                    width: '10px',
+                    height: '10px',
+                    minWidth: '10px',
                     borderRadius: '50%',
                     background: theme.isDark ? '#38BDF8' : '#0A2315',
                     color: theme.isDark ? '#0F172A' : '#DFBA67',
-                    fontSize: '0.44rem',
+                    fontSize: '0.40rem',
                     fontWeight: 900,
-                    lineHeight: '11px',
+                    lineHeight: '10px',
                     textAlign: 'center',
                     flexShrink: 0
                   }}>1</span>
                   <span>Open Camera</span>
                 </span>
-                <span style={{ opacity: 0.5, fontSize: '0.46rem', display: 'inline-flex', alignItems: 'center' }}>➔</span>
+                <span style={{ opacity: 0.5, fontSize: '0.42rem', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>➔</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
                   <span style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '11px',
-                    height: '11px',
-                    minWidth: '11px',
+                    width: '10px',
+                    height: '10px',
+                    minWidth: '10px',
                     borderRadius: '50%',
                     background: theme.isDark ? '#38BDF8' : '#0A2315',
                     color: theme.isDark ? '#0F172A' : '#DFBA67',
-                    fontSize: '0.44rem',
+                    fontSize: '0.40rem',
                     fontWeight: 900,
-                    lineHeight: '11px',
+                    lineHeight: '10px',
                     textAlign: 'center',
                     flexShrink: 0
                   }}>2</span>
                   <span>Scan QR</span>
                 </span>
-                <span style={{ opacity: 0.5, fontSize: '0.46rem', display: 'inline-flex', alignItems: 'center' }}>➔</span>
+                <span style={{ opacity: 0.5, fontSize: '0.42rem', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>➔</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
                   <span style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '11px',
-                    height: '11px',
-                    minWidth: '11px',
+                    width: '10px',
+                    height: '10px',
+                    minWidth: '10px',
                     borderRadius: '50%',
                     background: theme.isDark ? '#38BDF8' : '#0A2315',
                     color: theme.isDark ? '#0F172A' : '#DFBA67',
-                    fontSize: '0.44rem',
+                    fontSize: '0.40rem',
                     fontWeight: 900,
-                    lineHeight: '11px',
+                    lineHeight: '10px',
                     textAlign: 'center',
                     flexShrink: 0
                   }}>3</span>
