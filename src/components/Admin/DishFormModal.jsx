@@ -16,6 +16,7 @@ const resolveImageUrl = (url) => {
 export default function DishFormModal({ dish, categories, token, modifiersEnabled = true, currencySymbol = '₹', restaurantInfo = {}, onSave, onClose }) {
   const terminology = getBusinessTerminology(restaurantInfo || {});
   const itemLabel = terminology.dishSingular || 'Item';
+  const isPureVegResto = restaurantInfo?.food_type === 'pure_veg' || restaurantInfo?.resto_type === 'pure_veg' || restaurantInfo?.is_pure_veg === true;
 
   const [activeTab, setActiveTab] = useState('basic'); // 'basic' | 'pricing' | 'details'
   const [categoryId, setCategoryId] = useState(dish?.category_id || categories?.[0]?.id || '');
@@ -52,7 +53,8 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
   const [badge, setBadge] = useState(dish?.badge || '');
   const [ingredients, setIngredients] = useState(dish?.ingredients || '');
   const [tasteProfile, setTasteProfile] = useState(dish?.taste_profile || '');
-  const [type, setType] = useState(dish?.type || 'veg'); // 'veg', 'nonveg', 'egg'
+  const defaultInitialType = dish?.type || (isPureVegResto ? 'veg' : (restaurantInfo?.food_type === 'non_veg' ? 'nonveg' : 'veg'));
+  const [type, setType] = useState(defaultInitialType); // 'veg', 'nonveg', 'egg'
   const [image, setImage] = useState(dish?.image ? resolveImageUrl(dish.image) : '');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [available, setAvailable] = useState(
@@ -448,6 +450,11 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                       );
                     })}
                   </div>
+                  {isPureVegResto && (
+                    <span style={{ fontSize: '0.64rem', color: '#15803D', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                      🟢 Synced with Pure Veg Business Profile
+                    </span>
+                  )}
                 </div>
               </div>
 

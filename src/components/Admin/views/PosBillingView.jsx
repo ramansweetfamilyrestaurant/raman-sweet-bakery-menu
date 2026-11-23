@@ -80,6 +80,11 @@ export default function PosBillingView({
   const totalTables = Math.max(1, Number(settingsForm?.total_tables ?? restaurantInfo?.total_tables ?? 20));
   const tablesList = useMemo(() => Array.from({ length: totalTables }, (_, i) => String(i + 1)), [totalTables]);
 
+  // Master dietary profile resolution
+  const resolvedFoodType = String(settingsForm?.food_type || restaurantInfo?.food_type || settingsForm?.resto_type || restaurantInfo?.resto_type || '').trim().toLowerCase();
+  const isPureVegRestaurant = resolvedFoodType === 'pure_veg' || resolvedFoodType === 'vegetarian' || restaurantInfo?.is_pure_veg === true;
+  const isPureNonVegRestaurant = resolvedFoodType === 'non_veg';
+
   // Keyboard shortcut: Ctrl+K or / to focus search, Esc to close modal
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -858,38 +863,42 @@ export default function PosBillingView({
                 >
                   All
                 </button>
-                <button
-                  onClick={() => setDietFilter(prev => prev === 'veg' ? 'all' : 'veg')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid',
-                    borderColor: dietFilter === 'veg' ? '#16A34A' : '#E2E8F0',
-                    background: dietFilter === 'veg' ? '#DCFCE7' : '#FFFFFF',
-                    color: '#15803D',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  🟢 Pure Veg
-                </button>
-                <button
-                  onClick={() => setDietFilter(prev => prev === 'nonveg' ? 'all' : 'nonveg')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid',
-                    borderColor: dietFilter === 'nonveg' ? '#DC2626' : '#E2E8F0',
-                    background: dietFilter === 'nonveg' ? '#FEE2E2' : '#FFFFFF',
-                    color: '#B91C1C',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  🔴 Non-Veg
-                </button>
+                {!isPureNonVegRestaurant && (
+                  <button
+                    onClick={() => setDietFilter(prev => prev === 'veg' ? 'all' : 'veg')}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid',
+                      borderColor: dietFilter === 'veg' ? '#16A34A' : '#E2E8F0',
+                      background: dietFilter === 'veg' ? '#DCFCE7' : '#FFFFFF',
+                      color: '#15803D',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🟢 Pure Veg
+                  </button>
+                )}
+                {!isPureVegRestaurant && (
+                  <button
+                    onClick={() => setDietFilter(prev => prev === 'nonveg' ? 'all' : 'nonveg')}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid',
+                      borderColor: dietFilter === 'nonveg' ? '#DC2626' : '#E2E8F0',
+                      background: dietFilter === 'nonveg' ? '#FEE2E2' : '#FFFFFF',
+                      color: '#B91C1C',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🔴 Non-Veg
+                  </button>
+                )}
               </div>
             </div>
 

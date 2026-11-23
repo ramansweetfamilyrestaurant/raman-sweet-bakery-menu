@@ -2141,6 +2141,10 @@ export default function SetupView({
                   );
                 })}
               </div>
+              <div style={{ marginTop: '8px', fontSize: '0.68rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#059669', flexShrink: 0 }} />
+                <span>Master Dietary Control: Automatically syncs across Customer QR Menu, Counter POS, and Dish management.</span>
+              </div>
             </div>
 
             {/* Cuisine / Specialization Multi-select Chips */}
@@ -3319,7 +3323,7 @@ export default function SetupView({
                 </div>
                 <div>
                   <strong style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>Food Type</strong>
-                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Dietary classification profile</span>
+                  <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Master dietary profile • Synced with Business Profile</span>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -3792,14 +3796,35 @@ export default function SetupView({
             </div>
 
             {/* Non-Veg Filter */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '13px 16px',
+              borderBottom: '1px solid #F1F5F9',
+              minHeight: '52px',
+              opacity: (settingsForm.food_type || 'pure_veg') === 'pure_veg' ? 0.65 : 1
+            }}>
               <div>
-                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>🍗 Non-Veg Filter</strong>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>Show Non-Veg filter pill in customer menu top bar</span>
+                <strong style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>
+                  🍗 Non-Veg Filter {(settingsForm.food_type || 'pure_veg') === 'pure_veg' && (
+                    <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 700, marginLeft: '6px' }}>
+                      (Auto-hidden: Pure Veg)
+                    </span>
+                  )}
+                </strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                  {(settingsForm.food_type || 'pure_veg') === 'pure_veg'
+                    ? 'Restaurant profile is set to Pure Veg — non-veg filter is automatically hidden from customer menu.'
+                    : 'Show Non-Veg filter pill in customer menu top bar'}
+                </span>
               </div>
               <ToggleSwitch
-                checked={prefFiltersVisibility?.nonveg ?? true}
-                onChange={(val) => setPrefFiltersVisibility(prev => ({ ...prev, nonveg: val }))}
+                checked={(settingsForm.food_type || 'pure_veg') === 'pure_veg' ? false : (prefFiltersVisibility?.nonveg ?? true)}
+                onChange={(val) => {
+                  if ((settingsForm.food_type || 'pure_veg') === 'pure_veg') return;
+                  setPrefFiltersVisibility(prev => ({ ...prev, nonveg: val }));
+                }}
               />
             </div>
 
