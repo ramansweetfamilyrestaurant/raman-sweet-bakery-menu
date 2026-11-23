@@ -734,7 +734,7 @@ export default function PosBillingView({
                   </div>
 
                   <div style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Order #{order.id}</span>
+                    <span>{order.customer_name ? order.customer_name : `${(order.items?.length || 1)} items`} (Ref #{order.id})</span>
                     <span>{currencySymbol}{formatPriceNumber(order.total_amount)}</span>
                   </div>
 

@@ -1637,8 +1637,9 @@ export default function CustomersView({
                         {/* Order Top: ID + Status + Total */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>
-                              Order #{ord.id}
+                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              {ord.token_display ? `Token ${ord.token_display}` : (ord.table_number ? `Table ${ord.table_number}` : 'Order')}
+                              <span style={{ fontSize: '0.68rem', color: '#94A3B8', fontWeight: 500 }}>(Ref #{ord.id})</span>
                             </strong>
                             <span style={{
                               fontSize: '0.64rem',

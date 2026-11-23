@@ -347,30 +347,31 @@ export default function HomeView({
       const isKitchen = ['kitchen', 'preparing', 'accepted'].includes(o.status);
       const isDone = ['ready', 'served', 'completed'].includes(o.status);
 
-      let title = `Order #${o.id}`;
+      const loc = formatLocation(o.table_number || o.delivery_location, o.space_type, o.token_display);
+
+      let title = loc || `Order #${o.id}`;
       let color = '#7E22CE';
       let bg = '#F3E8FF';
       let IconComponent = ShoppingBag;
 
       if (isPending) {
-        title = `New order received (#${o.id})`;
+        title = `New order from ${loc || `Table ${o.table_number || '1'}`}`;
         color = '#D97706';
         bg = '#FEF3C7';
         IconComponent = Clock;
       } else if (isKitchen) {
-        title = `Order #${o.id} is cooking`;
+        title = `${loc || `Order #${o.id}`} is cooking`;
         color = '#0284C7';
         bg = '#E0F2FE';
         IconComponent = ChefHat;
       } else if (isDone) {
-        title = `Order #${o.id} served`;
+        title = `${loc || `Order #${o.id}`} served`;
         color = '#16A34A';
         bg = '#DCFCE7';
         IconComponent = CheckCircle2;
       }
 
-      const loc = formatLocation(o.table_number || o.delivery_location, o.space_type, o.token_display);
-      const sub = `${loc} • ${currencySymbol}${o.total_amount || 0}${items.length > 0 ? ` (${items.length} ${items.length === 1 ? 'item' : 'items'})` : ''}`;
+      const sub = `${loc} • ${currencySymbol}${o.total_amount || 0}${items.length > 0 ? ` (${items.length} ${items.length === 1 ? 'item' : 'items'})` : ''} • Ref #${o.id}`;
 
       activities.push({
         id: `order_${o.id}`,

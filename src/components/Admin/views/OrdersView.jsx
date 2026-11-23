@@ -74,6 +74,13 @@ export default function OrdersView({
     triggerBillAction(order, onOpenBillModal);
   };
 
+  const handleCompleteSettledOrder = (targetOrder) => {
+    if (!targetOrder) return;
+    if (targetOrder.is_settled && typeof onUpdateStatus === 'function') {
+      onUpdateStatus(targetOrder.id, 'completed');
+    }
+  };
+
   const profile = resolveBusinessProfile(restaurantInfo || settingsForm || {});
   const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || settingsForm || {}), [restaurantInfo, settingsForm]);
   const effectiveBiz = profile?.business_type || settingsForm?.business_type || restaurantInfo?.business_type;
@@ -1427,7 +1434,7 @@ export default function OrdersView({
                                 </button>
                               ) : order.is_settled ? (
                                 <button
-                                  onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'completed') : null}
+                                  onClick={() => handleCompleteSettledOrder(order)}
                                   style={{
                                     padding: '6px 14px',
                                     borderRadius: '8px',
@@ -1813,7 +1820,7 @@ export default function OrdersView({
                             </button>
                           ) : order.is_settled ? (
                             <button
-                              onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'completed') : null}
+                              onClick={() => handleCompleteSettledOrder(order)}
                               style={{
                                 padding: '8px 14px',
                                 borderRadius: '10px',
@@ -2144,7 +2151,7 @@ export default function OrdersView({
                           <span>
                             {space.activeOrders && space.activeOrders.length > 1
                               ? `Session (${space.activeOrders.length} Rounds)`
-                              : `Order #${space.activeOrder.id}`}
+                              : (space.activeOrder.token_display ? `Token ${space.activeOrder.token_display}` : `Active Order`)}
                           </span>
                           <span style={{ color: '#DC2626' }}>
                             {currencySymbol}{Math.round(space.sessionTotal || space.activeOrder.total_amount || 0)}
@@ -2152,7 +2159,7 @@ export default function OrdersView({
                         </div>
                         {space.activeOrders && space.activeOrders.length > 1 && (
                           <div style={{ fontSize: '0.64rem', color: '#0369A1', marginTop: '2px', fontWeight: 700 }}>
-                            {space.activeOrders.map((o, idx) => `R${o.round_number || (idx + 1)} (#${o.id})`).join(' + ')}
+                            {space.activeOrders.map((o, idx) => `Round ${o.round_number || (idx + 1)}`).join(' + ')}
                           </div>
                         )}
                         <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
@@ -2692,8 +2699,9 @@ export default function OrdersView({
                                 }}>
                                   Round {sRound}
                                 </span>
-                                <span style={{ fontWeight: isCurrent ? 800 : 600, color: '#0F172A' }}>
-                                  Order #{sOrd.id}
+                                <span style={{ fontWeight: isCurrent ? 800 : 600, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  {sOrd.token_display ? `Token ${sOrd.token_display}` : `Round ${sRound}`}
+                                  <span style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 500 }}>(Ref #{sOrd.id})</span>
                                 </span>
                                 {isCurrent && <span style={{ color: '#0284C7', fontSize: '0.64rem', fontWeight: 800 }}>(Viewing)</span>}
                               </div>
@@ -3040,7 +3048,7 @@ export default function OrdersView({
                 ) : selectedOrder.is_settled ? (
                   <button
                     onClick={() => {
-                      if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'completed');
+                      handleCompleteSettledOrder(selectedOrder);
                       setSelectedOrder(null);
                     }}
                     style={{
