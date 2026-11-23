@@ -1086,7 +1086,7 @@ export default function AdminDashboard({
       const upiId = restoInfo?.upi_id || settingsForm?.upi_id;
       if (!isUnsettledSlip) {
         text += "--------------------------------\n";
-        text += `   *** PAID [${paymentMode.toUpperCase()}] ***   \n`;
+        text += `   *** PAID (${paymentMode.toUpperCase()}) ***   \n`;
         text += `   Amount: ${currency}${formatPriceNumber(grandTotal)}\n`;
         text += "--------------------------------\n";
       } else if (type !== 'kot' && upiUri && upiId) {
@@ -1486,7 +1486,7 @@ export default function AdminDashboard({
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <strong>${paymentMode === 'CHECK_SLIP' ? 'TABLE CHECK SLIP' : (isGst ? 'TAX INVOICE' : 'RETAIL BILL')}</strong>
               <span class="badge" style="${paymentMode === 'CHECK_SLIP' ? 'background:#7E22CE;' : ''}">
-                ${paymentMode === 'CHECK_SLIP' ? 'UNSETTLED SLIP' : `PAID • ${cleanPaymentMode}`}
+                ${paymentMode === 'CHECK_SLIP' ? 'UNSETTLED SLIP' : cleanPaymentMode}
               </span>
             </div>
             ${cleanToken
@@ -1545,11 +1545,11 @@ export default function AdminDashboard({
 
           ${!isUnsettledSlip ? `
             <div style="margin: 8px auto 4px auto; text-align: center; border: 1.5px solid #000; padding: 6px; border-radius: 4px; background: #FFF;">
-              <div style="font-size: 12px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">
-                ✓ PAID IN FULL [${cleanPaymentMode}]
+              <div style="font-size: 13px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">
+                ✓ PAID (${cleanPaymentMode})
               </div>
-              <div style="font-size: 9px; color: #333; margin-top: 2px;">
-                Amount: ${currency}${formatPriceNumber(grandTotal)} • Thank You!
+              <div style="font-size: 9.5px; color: #333; margin-top: 2px;">
+                Amount: ${currency}${formatPriceNumber(grandTotal)}
               </div>
             </div>
           ` : (upiQrDataUrl ? `
