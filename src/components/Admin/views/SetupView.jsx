@@ -1436,7 +1436,21 @@ export default function SetupView({
           )}
           <button
             type="button"
-            onClick={closeModal}
+            disabled={savingForm}
+            onClick={async () => {
+              if (savingForm) return;
+              setSavingForm(true);
+              try {
+                if (typeof handleSaveSettings === 'function') {
+                  await handleSaveSettings(settingsForm);
+                }
+                closeModal();
+              } catch (err) {
+                console.error('Failed to save Google review link:', err);
+              } finally {
+                setSavingForm(false);
+              }
+            }}
             style={{
               height: '44px',
               borderRadius: '10px',
@@ -1445,10 +1459,11 @@ export default function SetupView({
               fontWeight: 800,
               fontSize: '0.84rem',
               border: 'none',
-              cursor: 'pointer'
+              cursor: savingForm ? 'not-allowed' : 'pointer',
+              opacity: savingForm ? 0.7 : 1
             }}
           >
-            Save Review Link
+            {savingForm ? 'Saving Review Link...' : 'Save Review Link'}
           </button>
         </div>
       );
@@ -1532,7 +1547,21 @@ export default function SetupView({
           </div>
           <button
             type="button"
-            onClick={closeModal}
+            disabled={savingForm}
+            onClick={async () => {
+              if (savingForm) return;
+              setSavingForm(true);
+              try {
+                if (typeof handleSaveSettings === 'function') {
+                  await handleSaveSettings(settingsForm);
+                }
+                closeModal();
+              } catch (err) {
+                console.error('Failed to save Google Maps location:', err);
+              } finally {
+                setSavingForm(false);
+              }
+            }}
             style={{
               height: '44px',
               borderRadius: '10px',
@@ -1541,11 +1570,12 @@ export default function SetupView({
               fontWeight: 800,
               fontSize: '0.84rem',
               border: 'none',
-              cursor: 'pointer',
+              cursor: savingForm ? 'not-allowed' : 'pointer',
+              opacity: savingForm ? 0.7 : 1,
               marginTop: '4px'
             }}
           >
-            Save Location
+            {savingForm ? 'Saving Location...' : 'Save Location'}
           </button>
         </div>
       );
