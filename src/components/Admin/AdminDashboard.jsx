@@ -1382,6 +1382,10 @@ export default function AdminDashboard({
     const isUnsettledSlip = paymentMode === 'CHECK_SLIP' || (!order.is_settled && paymentMode !== 'CASH' && paymentMode !== 'CARD' && paymentMode !== 'UPI');
     const cleanPaymentMode = paymentMode === 'CHECK_SLIP' ? 'UNPAID' : paymentMode.toUpperCase();
 
+    const billNumberDisplay = cleanToken
+      ? cleanToken
+      : (order.table_number ? `Table ${order.table_number}` : `#${order.id}`);
+
     let totalItemCount = 0;
     let itemsHtml = '';
 
@@ -1390,7 +1394,7 @@ export default function AdminDashboard({
       if (totalRoundsCount > 1) {
         itemsHtml += `
           <tr style="background:#F1F5F9;">
-            <td colspan="2" style="padding:4px 6px;font-weight:900;font-size:11px;color:#334155;border-top:1px solid #CBD5E1;">
+            <td colspan="2" style="padding:4px 6px;font-weight:900;font-size:11px;color:#334155;border-top:1px solid #000;">
               ROUND ${ord.round_number || (oIdx + 1)} • KOT ${ord.id}
             </td>
           </tr>
@@ -1402,16 +1406,16 @@ export default function AdminDashboard({
         const portionText = i.portion ? ` (${i.portion})` : '';
         const mods = safeParseModifiers(i.modifiers);
         const modText = mods.length > 0
-          ? `<div style="font-size:10px;color:#555;font-weight:normal;padding-left:4px;margin-top:2px;word-break:break-word;">+ ${mods.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
+          ? `<div style="font-size:10px;color:#333;font-weight:normal;padding-left:4px;margin-top:2px;word-break:break-word;">+ ${mods.map(m => `${m.name} (+${currency}${formatPriceNumber(m.price)})`).join(', ')}</div>`
           : '';
         const lineTotal = Number(i.price) * qtyNum;
         itemsHtml += `
           <tr>
-            <td style="padding:4px 0;font-weight:bold;font-size:12px;border-bottom:1px dashed #DDD;width:72%;vertical-align:top;word-break:break-word;">
+            <td style="padding:4px 0;font-weight:bold;font-size:12px;border-bottom:1px dashed #888;width:72%;vertical-align:top;word-break:break-word;">
               ${qtyNum}x ${i.name}${portionText}
               ${modText}
             </td>
-            <td style="text-align:right;font-weight:bold;font-size:12px;border-bottom:1px dashed #DDD;vertical-align:top;width:28%;white-space:nowrap;">${currency}${lineTotal}</td>
+            <td style="text-align:right;font-weight:bold;font-size:12px;border-bottom:1px dashed #888;vertical-align:top;width:28%;white-space:nowrap;">${currency}${formatPriceNumber(lineTotal)}</td>
           </tr>
         `;
       });
@@ -1491,7 +1495,7 @@ export default function AdminDashboard({
             }
             ${isTakeaway ? `<div><strong>Order Type:</strong> Takeaway / Counter</div>` : `<div><strong>Table / Space:</strong> ${resolvedSpace}</div>`}
             <div><strong>Date:</strong> ${formatDateTimeString(order.created_at || Date.now())}</div>
-            <div><strong>${isGst ? 'Invoice No:' : 'Bill No:'}</strong> ${cleanToken ? cleanToken : order.id}</div>
+            <div><strong>${isGst ? 'Invoice No:' : 'Bill No:'}</strong> ${isGst ? `INV-${cleanToken ? cleanToken.replace(/^TK-?/i, '') : order.id}` : billNumberDisplay}</div>
             ${!isAutoName ? `<div><strong>Customer:</strong> ${customerDisplayName}</div>` : ''}
             ${totalRoundsCount > 1 ? `<div style="font-weight:bold;color:#0F766E;">Consolidated Bill: ${totalRoundsCount} Rounds</div>` : ''}
           </div>
@@ -1515,27 +1519,27 @@ export default function AdminDashboard({
             </div>
             <div style="display:flex;justify-content:space-between;font-size:11px;">
               <span>Subtotal:</span>
-              <span>${currency}${subtotal}</span>
+              <span>${currency}${formatPriceNumber(subtotal)}</span>
             </div>
             ${isGst ? `
               <div style="display:flex;justify-content:space-between;font-size:11px;color:#333;">
                 <span>CGST @ 2.5%:</span>
-                <span>${currency}${cgst}</span>
+                <span>${currency}${formatPriceNumber(cgst)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;font-size:11px;color:#333;">
                 <span>SGST @ 2.5%:</span>
-                <span>${currency}${sgst}</span>
+                <span>${currency}${formatPriceNumber(sgst)}</span>
               </div>
             ` : ''}
             ${serviceChargeAmount > 0 ? `
               <div style="display:flex;justify-content:space-between;font-size:11px;color:#333;">
                 <span>Service Charge:</span>
-                <span>${currency}${serviceChargeAmount}</span>
+                <span>${currency}${formatPriceNumber(serviceChargeAmount)}</span>
               </div>
             ` : ''}
             <div class="grand-total">
               <span>GRAND TOTAL:</span>
-              <span>${currency}${grandTotal}</span>
+              <span>${currency}${formatPriceNumber(grandTotal)}</span>
             </div>
           </div>
 
@@ -1545,7 +1549,7 @@ export default function AdminDashboard({
                 ✓ PAID IN FULL [${cleanPaymentMode}]
               </div>
               <div style="font-size: 9px; color: #333; margin-top: 2px;">
-                Amount: ${currency}${grandTotal} • Thank You!
+                Amount: ${currency}${formatPriceNumber(grandTotal)} • Thank You!
               </div>
             </div>
           ` : (upiQrDataUrl ? `
@@ -1560,7 +1564,7 @@ export default function AdminDashboard({
                 <img src="${upiQrDataUrl}" style="width: ${selectedWidth === '58mm' ? '110px' : '135px'}; height: ${selectedWidth === '58mm' ? '110px' : '135px'}; display: block; margin: 0 auto; image-rendering: pixelated;" alt="Scan UPI to Pay" />
               </div>
               <div style="font-size: 12px; font-weight: 900; margin-top: 3px;">
-                EXACT AMOUNT: ${currency}${grandTotal}
+                EXACT AMOUNT: ${currency}${formatPriceNumber(grandTotal)}
               </div>
               ${upiDetails?.upiId ? `<div style="font-size: 9px; color: #444; word-break: break-all; margin-top: 2px;">UPI ID: <strong>${upiDetails.upiId}</strong></div>` : ''}
               ${upiDetails?.payeeName ? `<div style="font-size: 8.5px; color: #666; margin-top: 1px;">Payee: ${upiDetails.payeeName}</div>` : ''}
