@@ -339,28 +339,30 @@ export function buildStandeeCardHtml({
         background-color: ${theme.stepBg};
         border: 1px solid ${theme.stepBorder};
         color: ${theme.stepText};
-        display: inline-flex;
+        display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 3px;
-        padding: 2.5px 8px;
+        justify-content: space-between;
+        gap: 2px;
+        padding: 3px 8px;
         border-radius: 20px;
         font-size: 7.5px;
         font-weight: 700;
         white-space: nowrap;
-        max-width: 100%;
+        width: 100%;
+        max-width: 246px;
+        margin: 0 auto 8px auto;
         box-sizing: border-box;
       ">
         <span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px;min-width:10px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:7px;font-weight:900;line-height:10px;text-align:center;">1</span>
           <span>Open Camera</span>
         </span>
-        <span style="opacity:0.5;font-size:7px;">➔</span>
+        <span style="opacity:0.45;font-size:7px;padding:0 1px;">➔</span>
         <span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px;min-width:10px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:7px;font-weight:900;line-height:10px;text-align:center;">2</span>
           <span>Scan QR</span>
         </span>
-        <span style="opacity:0.5;font-size:7px;">➔</span>
+        <span style="opacity:0.45;font-size:7px;padding:0 1px;">➔</span>
         <span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px;min-width:10px;border-radius:50%;background:${theme.isDark ? '#38BDF8' : '#0A2315'};color:${theme.isDark ? '#0F172A' : '#DFBA67'};font-size:7px;font-weight:900;line-height:10px;text-align:center;">3</span>
           <span>${isCinema ? 'Seat Delivery' : isHotel ? 'Room Delivery' : isCounter ? 'Pick Up' : 'Order Food'}</span>

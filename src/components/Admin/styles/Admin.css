@@ -1014,7 +1014,7 @@
   box-sizing: border-box;
 }
 
-@media (min-width: 769px) {
+@media (min-width: 1025px) {
   .standee-add-dropdown {
     left: auto;
     right: 0;
@@ -1056,8 +1056,8 @@
   display: none;
 }
 
-/* Responsive Breakpoint for Mobile Screens (< 768px) */
-@media (max-width: 767px) {
+/* Responsive Breakpoint for Tablet & Mobile Screens (<= 1024px) */
+@media (max-width: 1024px) {
   .standee-mobile-tabs {
     display: flex;
     gap: 6px;
