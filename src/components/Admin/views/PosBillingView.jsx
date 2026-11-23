@@ -27,6 +27,7 @@ import { createAdminPosOrder } from '../../../api/client';
 import { buildUpiPaymentUri, calculateBillDetails } from '../../../utils/billingHelper';
 import { resolveImageUrl, getDishImageUrl, getComboImageUrl } from '../../../utils/imageHelper';
 import { formatPriceNumber } from '../../../utils/currencyHelper.js';
+import { isPosItemNonVeg } from '../../../utils/dietHelper.js';
 
 export default function PosBillingView({
   dishes = [],
@@ -100,8 +101,9 @@ export default function PosBillingView({
       (Array.isArray(dishes) ? dishes : []).forEach(dish => {
         if (!dish) return;
         if (selectedCategory !== 'all' && String(dish.category_id) !== String(selectedCategory)) return;
-        if (dietFilter === 'veg' && dish.food_type !== 'veg' && dish.food_type !== 'pure_veg') return;
-        if (dietFilter === 'nonveg' && dish.food_type !== 'non_veg' && dish.food_type !== 'nonveg') return;
+        const isNonVeg = isPosItemNonVeg(dish);
+        if (dietFilter === 'veg' && isNonVeg) return;
+        if (dietFilter === 'nonveg' && !isNonVeg) return;
         if (search.trim()) {
           const q = search.toLowerCase().trim();
           const nameMatch = (dish.name || '').toLowerCase().includes(q);
@@ -115,8 +117,9 @@ export default function PosBillingView({
     if (selectedCategory === 'all' || selectedCategory === 'combos') {
       (Array.isArray(combos) ? combos : []).forEach(combo => {
         if (!combo) return;
-        if (dietFilter === 'veg' && combo.food_type !== 'veg' && combo.food_type !== 'pure_veg') return;
-        if (dietFilter === 'nonveg' && combo.food_type !== 'non_veg' && combo.food_type !== 'nonveg') return;
+        const isNonVeg = isPosItemNonVeg(combo);
+        if (dietFilter === 'veg' && isNonVeg) return;
+        if (dietFilter === 'nonveg' && !isNonVeg) return;
         if (search.trim()) {
           const q = search.toLowerCase().trim();
           const nameMatch = (combo.name || '').toLowerCase().includes(q);
@@ -856,7 +859,7 @@ export default function PosBillingView({
                   All
                 </button>
                 <button
-                  onClick={() => setDietFilter('veg')}
+                  onClick={() => setDietFilter(prev => prev === 'veg' ? 'all' : 'veg')}
                   style={{
                     padding: '6px 12px',
                     borderRadius: '8px',
@@ -872,7 +875,7 @@ export default function PosBillingView({
                   🟢 Pure Veg
                 </button>
                 <button
-                  onClick={() => setDietFilter('nonveg')}
+                  onClick={() => setDietFilter(prev => prev === 'nonveg' ? 'all' : 'nonveg')}
                   style={{
                     padding: '6px 12px',
                     borderRadius: '8px',
@@ -982,7 +985,7 @@ export default function PosBillingView({
                 const halfItemInCart = cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'half');
                 const hasHalfPrice = Boolean(dish.price_half && Number(dish.price_half) > 0);
 
-                const isNonVeg = dish.type === 'nonveg' || dish.type === 'non_veg' || dish.food_type === 'non_veg' || dish.food_type === 'nonveg';
+                const isNonVeg = isPosItemNonVeg(dish);
 
                 return (
                   <div
