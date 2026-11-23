@@ -16,7 +16,13 @@ const resolveImageUrl = (url) => {
 export default function DishFormModal({ dish, categories, token, modifiersEnabled = true, currencySymbol = '₹', restaurantInfo = {}, onSave, onClose }) {
   const terminology = getBusinessTerminology(restaurantInfo || {});
   const itemLabel = terminology.dishSingular || 'Item';
-  const isPureVegResto = restaurantInfo?.food_type === 'pure_veg' || restaurantInfo?.resto_type === 'pure_veg' || restaurantInfo?.is_pure_veg === true;
+  const resolvedFoodType = String(restaurantInfo?.food_type || restaurantInfo?.resto_type || '').trim().toLowerCase();
+  const isPureVegResto = restaurantInfo?.is_pure_veg === true ||
+    restaurantInfo?.is_pure_veg === 1 ||
+    restaurantInfo?.is_pure_veg === '1' ||
+    restaurantInfo?.is_pure_veg === 'true' ||
+    ['pure_veg', 'veg', 'vegetarian', 'vegan', 'only_veg'].includes(resolvedFoodType) ||
+    ['bakery_confectionery', 'sweet_shop'].includes(String(restaurantInfo?.business_type || '').toLowerCase());
 
   const [activeTab, setActiveTab] = useState('basic'); // 'basic' | 'pricing' | 'details'
   const [categoryId, setCategoryId] = useState(dish?.category_id || categories?.[0]?.id || '');

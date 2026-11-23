@@ -186,6 +186,15 @@ export default function App() {
 
   // Menu Data State (Declared at top of component to avoid TDZ access)
   const [info, setInfo] = useState(null);
+
+  // Master dietary profile resolution for Pure Veg compliance
+  const resolvedFoodType = String(info?.food_type || info?.resto_type || '').trim().toLowerCase();
+  const isPureVegResto = info?.is_pure_veg === true ||
+    info?.is_pure_veg === 1 ||
+    info?.is_pure_veg === '1' ||
+    info?.is_pure_veg === 'true' ||
+    ['pure_veg', 'veg', 'vegetarian', 'vegan', 'only_veg'].includes(resolvedFoodType) ||
+    ['bakery_confectionery', 'sweet_shop'].includes(String(info?.business_type || '').toLowerCase());
   const initialSpaceInfo = getSpaceInfoFromUrl();
   const initialTableNum = initialSpaceInfo.num;
   const [currentTableNum, setCurrentTableNum] = useState(initialSpaceInfo.num);
@@ -556,6 +565,13 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeQuickFilter, setActiveQuickFilter] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Reset dietary filter if switching to pure veg restaurant
+  useEffect(() => {
+    if (isPureVegResto && (activeQuickFilter === 'nonveg' || activeQuickFilter === 'egg')) {
+      setActiveQuickFilter('');
+    }
+  }, [isPureVegResto, activeQuickFilter]);
 
   // Modals
   const [selectedDishModal, setSelectedDishModal] = useState(null);
@@ -1706,10 +1722,6 @@ export default function App() {
     let list = Array.isArray(combos) ? combos : [];
     if (list.length === 0) return [];
 
-    const isPureVegResto = typeof info?.is_pure_veg === 'boolean'
-      ? info.is_pure_veg
-      : (info?.food_type ? (info.food_type === 'pure_veg' || info.food_type === 'vegan') : (info?.resto_type === 'pure_veg'));
-
     // Filter by quick filter
     if (activeQuickFilter) {
       if (activeQuickFilter === 'combo') {
@@ -1776,9 +1788,11 @@ export default function App() {
             return d.type === 'veg' || !d.type || d.type === '';
           }
           if (activeQuickFilter === 'nonveg') {
+            if (isPureVegResto) return false;
             return d.type === 'nonveg';
           }
           if (activeQuickFilter === 'egg') {
+            if (isPureVegResto) return false;
             return d.type === 'egg';
           }
           if (activeQuickFilter === 'must_try') {
@@ -2782,7 +2796,7 @@ export default function App() {
         filtersVisibility={info?.filters_visibility}
         restoType={info?.resto_type}
         foodType={info?.food_type}
-        isPureVeg={info?.is_pure_veg}
+        isPureVeg={isPureVegResto}
         lang={lang}
       />
 
@@ -3311,9 +3325,6 @@ export default function App() {
                   const hasDiscount = (originalTotal > effectivePrice) || (regularPrice > effectivePrice);
                   const comparePrice = originalTotal > effectivePrice ? originalTotal : regularPrice;
 
-                  const isPureVegResto = typeof info?.is_pure_veg === 'boolean'
-                    ? info.is_pure_veg
-                    : (info?.food_type ? (info.food_type === 'pure_veg' || info.food_type === 'vegan') : (info?.resto_type === 'pure_veg'));
                   const comboText = `${combo.name || ''} ${combo.description || ''} ${itemsSummaryText}`.toLowerCase();
                   const isNonVeg = comboText.includes('chicken') || comboText.includes('mutton') || comboText.includes('fish') || comboText.includes('egg');
                   const isVeg = isPureVegResto || !isNonVeg;
@@ -4634,7 +4645,7 @@ export default function App() {
           lang={lang}
           restoType={info?.resto_type}
           foodType={info?.food_type}
-          isPureVeg={info?.is_pure_veg}
+          isPureVeg={isPureVegResto}
         />
       )}
 

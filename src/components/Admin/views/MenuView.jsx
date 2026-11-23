@@ -120,6 +120,22 @@ export default function MenuView({
   // Dynamic currency resolver from restaurant settings or props
   const curr = getCurrencySymbol(restaurantInfo?.currency_symbol !== undefined ? restaurantInfo.currency_symbol : currencySymbol);
 
+  // Master dietary profile resolution for Pure Veg compliance
+  const resolvedFoodType = String(restaurantInfo?.food_type || restaurantInfo?.resto_type || '').trim().toLowerCase();
+  const isPureVegRestaurant = restaurantInfo?.is_pure_veg === true ||
+    restaurantInfo?.is_pure_veg === 1 ||
+    restaurantInfo?.is_pure_veg === '1' ||
+    restaurantInfo?.is_pure_veg === 'true' ||
+    ['pure_veg', 'veg', 'vegetarian', 'vegan', 'only_veg'].includes(resolvedFoodType) ||
+    ['bakery_confectionery', 'sweet_shop'].includes(String(restaurantInfo?.business_type || '').toLowerCase());
+
+  // Reset dietary filter if switching to a pure veg configuration
+  useEffect(() => {
+    if (isPureVegRestaurant && (dietFilter === 'nonveg' || dietFilter === 'egg')) {
+      setDietFilter('all');
+    }
+  }, [isPureVegRestaurant, dietFilter]);
+
   // Dynamic live dish counts by filter criteria
   const counts = useMemo(() => {
     return {
@@ -181,8 +197,8 @@ export default function MenuView({
       
       let matchesDiet = true;
       if (dietFilter === 'veg') matchesDiet = d.type === 'veg';
-      if (dietFilter === 'nonveg') matchesDiet = d.type === 'nonveg';
-      if (dietFilter === 'egg') matchesDiet = d.type === 'egg';
+      if (dietFilter === 'nonveg') matchesDiet = !isPureVegRestaurant && d.type === 'nonveg';
+      if (dietFilter === 'egg') matchesDiet = !isPureVegRestaurant && d.type === 'egg';
       if (dietFilter === 'must_try') {
         matchesDiet = Boolean(d.must_try) || (typeof d.badge === 'string' && d.badge.toLowerCase().includes('must try'));
       }
@@ -1337,8 +1353,10 @@ export default function MenuView({
           {[
             { id: 'all', label: 'All', count: counts.all },
             { id: 'veg', label: 'Veg', dot: '🟢', count: counts.veg },
-            { id: 'nonveg', label: 'Non-Veg', dot: '🔴', count: counts.nonveg },
-            { id: 'egg', label: 'Egg', dot: '🟡', count: counts.egg },
+            ...(!isPureVegRestaurant ? [
+              { id: 'nonveg', label: 'Non-Veg', dot: '🔴', count: counts.nonveg },
+              { id: 'egg', label: 'Egg', dot: '🟡', count: counts.egg }
+            ] : []),
             { id: 'must_try', label: 'Must Try', icon: '🔥', count: counts.must_try },
             { id: 'bestseller', label: 'Bestseller', icon: '⭐', count: counts.bestseller },
             { id: 'special', label: 'Special', icon: '✨', count: counts.special },
@@ -3763,8 +3781,10 @@ export default function MenuView({
                   {[
                     { id: 'all', label: `All Items (${counts.all})`, icon: '🍽️' },
                     { id: 'veg', label: `Pure Veg (${counts.veg})`, icon: '🟢' },
-                    { id: 'nonveg', label: `Non-Veg (${counts.nonveg})`, icon: '🔴' },
-                    { id: 'egg', label: `Contains Egg (${counts.egg})`, icon: '🟡' }
+                    ...(!isPureVegRestaurant ? [
+                      { id: 'nonveg', label: `Non-Veg (${counts.nonveg})`, icon: '🔴' },
+                      { id: 'egg', label: `Contains Egg (${counts.egg})`, icon: '🟡' }
+                    ] : [])
                   ].map(opt => {
                     const isSel = (dietFilter === opt.id) || (opt.id === 'all' && ['all', 'available', 'sold_out', 'must_try', 'special'].includes(dietFilter));
                     return (

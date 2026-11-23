@@ -106,4 +106,91 @@ test('🌱 Counter POS Dietary Classification & Filter Suite', async (t) => {
     assert.strictEqual(nonVegResults.length, 3, 'Exactly 3 non-veg items must be returned');
     assert.deepStrictEqual(nonVegResults.map(i => i.id), [3, 4, 6]);
   });
+
+  await t.test('10. Pure Veg Restaurant resolver robustly identifies pure veg across all formats', () => {
+    const resolvePureVeg = (info) => {
+      const resolvedFoodType = String(info?.food_type || info?.resto_type || '').trim().toLowerCase();
+      return info?.is_pure_veg === true ||
+        info?.is_pure_veg === 1 ||
+        info?.is_pure_veg === '1' ||
+        info?.is_pure_veg === 'true' ||
+        ['pure_veg', 'veg', 'vegetarian', 'vegan', 'only_veg'].includes(resolvedFoodType) ||
+        ['bakery_confectionery', 'sweet_shop'].includes(String(info?.business_type || '').toLowerCase());
+    };
+
+    assert.strictEqual(resolvePureVeg({ food_type: 'pure_veg' }), true);
+    assert.strictEqual(resolvePureVeg({ food_type: 'veg' }), true);
+    assert.strictEqual(resolvePureVeg({ food_type: 'only_veg' }), true);
+    assert.strictEqual(resolvePureVeg({ resto_type: 'pure_veg' }), true);
+    assert.strictEqual(resolvePureVeg({ is_pure_veg: 1 }), true);
+    assert.strictEqual(resolvePureVeg({ is_pure_veg: '1' }), true);
+    assert.strictEqual(resolvePureVeg({ is_pure_veg: true }), true);
+    assert.strictEqual(resolvePureVeg({ business_type: 'sweet_shop' }), true);
+    assert.strictEqual(resolvePureVeg({ business_type: 'bakery_confectionery' }), true);
+    assert.strictEqual(resolvePureVeg({ food_type: 'veg_nonveg' }), false);
+    assert.strictEqual(resolvePureVeg({ food_type: 'non_veg' }), false);
+  });
+
+  await t.test('11. MenuView filter pills strip excludes Non-Veg and Egg when restaurant is Pure Veg', () => {
+    const buildPills = (isPureVegRestaurant, counts = { all: 10, veg: 10, nonveg: 0, egg: 0, must_try: 2, bestseller: 1, special: 1, available: 10, sold_out: 0, under_100: 5 }, curr = '₹') => {
+      return [
+        { id: 'all', label: 'All', count: counts.all },
+        { id: 'veg', label: 'Veg', dot: '🟢', count: counts.veg },
+        ...(!isPureVegRestaurant ? [
+          { id: 'nonveg', label: 'Non-Veg', dot: '🔴', count: counts.nonveg },
+          { id: 'egg', label: 'Egg', dot: '🟡', count: counts.egg }
+        ] : []),
+        { id: 'must_try', label: 'Must Try', icon: '🔥', count: counts.must_try },
+        { id: 'bestseller', label: 'Bestseller', icon: '⭐', count: counts.bestseller },
+        { id: 'special', label: 'Special', icon: '✨', count: counts.special },
+        { id: 'available', label: 'In Stock', dot: '🟢', count: counts.available },
+        { id: 'sold_out', label: 'Sold Out', dot: '🔴', count: counts.sold_out },
+        { id: 'under_100', label: `Under ${curr}100`, count: counts.under_100 }
+      ];
+    };
+
+    const pureVegPills = buildPills(true);
+    assert.strictEqual(pureVegPills.some(p => p.id === 'nonveg'), false, 'Non-Veg pill must NOT exist in pure veg');
+    assert.strictEqual(pureVegPills.some(p => p.id === 'egg'), false, 'Egg pill must NOT exist in pure veg');
+    assert.strictEqual(pureVegPills.some(p => p.id === 'all'), true);
+    assert.strictEqual(pureVegPills.some(p => p.id === 'veg'), true);
+
+    const nonVegPills = buildPills(false);
+    assert.strictEqual(nonVegPills.some(p => p.id === 'nonveg'), true, 'Non-Veg pill must exist for mixed/nonveg');
+    assert.strictEqual(nonVegPills.some(p => p.id === 'egg'), true, 'Egg pill must exist for mixed/nonveg');
+  });
+
+  await t.test('12. SearchBar quick filters strictly hide Non-Veg and Egg when restaurant is Pure Veg even if filtersVisibility is true', () => {
+    const buildSearchBarFilters = (isPureVeg, filtersVisibility = { nonveg: true, egg: true }) => {
+      const vis = {
+        must_try: true,
+        combo: true,
+        special: true,
+        under100: true,
+        ...filtersVisibility,
+        ...(isPureVeg ? { veg: false, nonveg: false, egg: false } : {})
+      };
+
+      const allFilters = [
+        { id: '', label: '✨ All', show: true },
+        { id: 'combo', label: '🍱 Combos & Thalis', show: vis.combo !== false },
+        { id: 'veg', label: '🟢 Pure Veg', show: !isPureVeg && vis.veg !== false },
+        { id: 'nonveg', label: '🔴 Non-Veg', show: !isPureVeg && vis.nonveg !== false },
+        { id: 'egg', label: '🟡 Egg', show: !isPureVeg && vis.egg !== false },
+        { id: 'must_try', label: '⭐ Must Try', show: vis.must_try !== false },
+        { id: 'special', label: '✨ Special', show: vis.special !== false },
+        { id: 'under100', label: '⚡ Under ₹100', show: vis.under100 !== false }
+      ];
+
+      return allFilters.filter(f => f.show);
+    };
+
+    const pureVegFilters = buildSearchBarFilters(true, { nonveg: true, egg: true });
+    assert.strictEqual(pureVegFilters.some(f => f.id === 'nonveg'), false, 'Non-Veg must never show in pure veg filters');
+    assert.strictEqual(pureVegFilters.some(f => f.id === 'egg'), false, 'Egg must never show in pure veg filters');
+
+    const nonVegFilters = buildSearchBarFilters(false, { nonveg: true, egg: true });
+    assert.strictEqual(nonVegFilters.some(f => f.id === 'nonveg'), true, 'Non-Veg must show in mixed/nonveg filters');
+    assert.strictEqual(nonVegFilters.some(f => f.id === 'egg'), true, 'Egg must show in mixed/nonveg filters');
+  });
 });

@@ -45,9 +45,11 @@ export default function ComboModal({
   const imageSrc = getComboImageUrl(combo.image);
 
   // Dietary check
-  const isPureVegResto = typeof isPureVegProp === 'boolean'
-    ? isPureVegProp
-    : (foodType ? (foodType === 'pure_veg' || foodType === 'vegan') : (restoType === 'pure_veg'));
+  const cleanFood = String(foodType || '').trim().toLowerCase();
+  const cleanResto = String(restoType || '').trim().toLowerCase();
+  const isPureVegResto = (isPureVegProp === true || isPureVegProp === 1 || isPureVegProp === '1' || isPureVegProp === 'true')
+    || ['pure_veg', 'veg', 'vegetarian', 'vegan', 'only_veg'].includes(cleanFood)
+    || ['pure_veg', 'veg', 'vegetarian'].includes(cleanResto);
 
   const textToCheck = `${combo.name || ''} ${combo.description || ''} ${comboItems.map(i => i.dish_name || '').join(' ')}`.toLowerCase();
   const isNonVeg = textToCheck.includes('chicken') || textToCheck.includes('mutton') || textToCheck.includes('fish') || textToCheck.includes('egg');

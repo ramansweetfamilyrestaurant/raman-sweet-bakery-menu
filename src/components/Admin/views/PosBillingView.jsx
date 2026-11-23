@@ -83,8 +83,24 @@ export default function PosBillingView({
 
   // Master dietary profile resolution
   const resolvedFoodType = String(settingsForm?.food_type || restaurantInfo?.food_type || settingsForm?.resto_type || restaurantInfo?.resto_type || '').trim().toLowerCase();
-  const isPureVegRestaurant = resolvedFoodType === 'pure_veg' || resolvedFoodType === 'vegetarian' || restaurantInfo?.is_pure_veg === true;
+  const isPureVegRestaurant = restaurantInfo?.is_pure_veg === true ||
+    restaurantInfo?.is_pure_veg === 1 ||
+    restaurantInfo?.is_pure_veg === '1' ||
+    restaurantInfo?.is_pure_veg === 'true' ||
+    settingsForm?.is_pure_veg === true ||
+    settingsForm?.is_pure_veg === 1 ||
+    settingsForm?.is_pure_veg === '1' ||
+    settingsForm?.is_pure_veg === 'true' ||
+    ['pure_veg', 'veg', 'vegetarian', 'vegan', 'only_veg'].includes(resolvedFoodType) ||
+    ['bakery_confectionery', 'sweet_shop'].includes(String(restaurantInfo?.business_type || settingsForm?.business_type || '').toLowerCase());
   const isPureNonVegRestaurant = resolvedFoodType === 'non_veg';
+
+  // Reset dietary filter if switching to a pure veg configuration
+  useEffect(() => {
+    if (isPureVegRestaurant && dietFilter === 'nonveg') {
+      setDietFilter('all');
+    }
+  }, [isPureVegRestaurant, dietFilter]);
 
   // Keyboard shortcut: Ctrl+K or / to focus search, Esc to close modal
   useEffect(() => {

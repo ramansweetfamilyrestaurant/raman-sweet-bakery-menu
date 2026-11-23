@@ -17,19 +17,19 @@ export default function SearchBar({
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef(null);
 
-  const isPureVeg = typeof isPureVegProp === 'boolean'
-    ? isPureVegProp
-    : (foodType ? (foodType === 'pure_veg' || foodType === 'vegan') : (restoType === 'pure_veg'));
+  const cleanFood = String(foodType || '').trim().toLowerCase();
+  const cleanResto = String(restoType || '').trim().toLowerCase();
+  const isPureVeg = (isPureVegProp === true || isPureVegProp === 1 || isPureVegProp === '1' || isPureVegProp === 'true')
+    || ['pure_veg', 'veg', 'vegetarian', 'vegan', 'only_veg'].includes(cleanFood)
+    || ['pure_veg', 'veg', 'vegetarian'].includes(cleanResto);
 
   const vis = {
     must_try: true,
     combo: true,
     special: true,
     under100: true,
-    veg: !isPureVeg,
-    nonveg: !isPureVeg,
-    egg: !isPureVeg,
-    ...filtersVisibility
+    ...filtersVisibility,
+    ...(isPureVeg ? { veg: false, nonveg: false, egg: false } : {})
   };
 
   const allFilters = [
