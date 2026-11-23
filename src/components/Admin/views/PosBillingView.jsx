@@ -53,8 +53,9 @@ export default function PosBillingView({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash' | 'upi' | 'card'
+  const [cashTendered, setCashTendered] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successOrder, setSuccessOrder] = useState(null); // { order, token_display }
+  const [successOrder, setSuccessOrder] = useState(null); // { order, token_display, change_to_return }
   const [upiQrDataUrl, setUpiQrDataUrl] = useState(null);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [isTokensQueueCollapsed, setIsTokensQueueCollapsed] = useState(false);
@@ -188,6 +189,7 @@ export default function PosBillingView({
     setCustomerName('');
     setCustomerPhone('');
     setPaymentMethod('cash');
+    setCashTendered('');
     setUpiQrDataUrl(null);
   };
 
@@ -264,14 +266,48 @@ export default function PosBillingView({
       const result = await createAdminPosOrder(token, payload);
       if (result && result.order) {
         const orderData = result.order;
+        const tenderVal = Number(cashTendered);
+        const changeToReturn = (paymentMethod === 'cash' && tenderVal > grandTotal) ? (tenderVal - grandTotal) : 0;
+
         setSuccessOrder({
           order: orderData,
-          token_display: result.token_display || orderData.token_display
+          token_display: result.token_display || orderData.token_display,
+          change_to_return: changeToReturn
         });
 
         // Notify parent state
         if (onOrderCreated) {
           onOrderCreated(orderData);
+        }
+
+        // Auto print KOT if enabled in settings
+        const shouldAutoKot = Boolean(
+          settingsForm?.auto_print_kot === 1 || 
+          settingsForm?.auto_print_kot === true ||
+          restaurantInfo?.auto_print_kot === 1 ||
+          restaurantInfo?.auto_print_kot === true
+        );
+        if (shouldAutoKot && typeof onPrintKot === 'function') {
+          try {
+            onPrintKot(orderData);
+          } catch (printErr) {
+            console.error('Auto KOT print error:', printErr);
+          }
+        }
+
+        // Auto print Bill if enabled in settings
+        const shouldAutoBill = Boolean(
+          settingsForm?.auto_print_bill === 1 || 
+          settingsForm?.auto_print_bill === true ||
+          restaurantInfo?.auto_print_bill === 1 ||
+          restaurantInfo?.auto_print_bill === true
+        );
+        if (shouldAutoBill && typeof onPrintBill === 'function') {
+          try {
+            onPrintBill(orderData, paymentMethod.toUpperCase());
+          } catch (printErr) {
+            console.error('Auto Bill print error:', printErr);
+          }
         }
 
         // Reset cart & close mobile sheet
@@ -1602,6 +1638,107 @@ export default function PosBillingView({
             </div>
           </div>
 
+          {/* Cash Tendered & Change Return Calculator */}
+          {paymentMethod === 'cash' && grandTotal > 0 && (
+            <div style={{
+              flexShrink: 0,
+              background: '#F8FAFC',
+              borderRadius: '10px',
+              border: '1px solid #E2E8F0',
+              padding: '8px 10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#475569' }}>
+                  Cash Received:
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 700 }}>{currencySymbol}</span>
+                  <input
+                    type="number"
+                    value={cashTendered}
+                    onChange={(e) => setCashTendered(e.target.value)}
+                    placeholder={String(Math.ceil(grandTotal))}
+                    style={{
+                      width: '82px',
+                      height: '28px',
+                      padding: '0 6px',
+                      borderRadius: '6px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      color: '#0F172A',
+                      textAlign: 'right',
+                      outline: 'none',
+                      background: '#FFFFFF'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Quick Cash Chips */}
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setCashTendered(String(Math.ceil(grandTotal)))}
+                  style={{
+                    padding: '3px 7px',
+                    borderRadius: '5px',
+                    border: '1px solid #CBD5E1',
+                    background: Number(cashTendered) === Math.ceil(grandTotal) ? '#ECFDF5' : '#FFFFFF',
+                    color: Number(cashTendered) === Math.ceil(grandTotal) ? '#059669' : '#334155',
+                    fontSize: '0.66rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Exact
+                </button>
+                {[100, 200, 500, 1000].filter(amt => amt >= grandTotal).slice(0, 3).map(amt => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setCashTendered(String(amt))}
+                    style={{
+                      padding: '3px 7px',
+                      borderRadius: '5px',
+                      border: '1px solid #CBD5E1',
+                      background: Number(cashTendered) === amt ? '#ECFDF5' : '#FFFFFF',
+                      color: Number(cashTendered) === amt ? '#059669' : '#334155',
+                      fontSize: '0.66rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {currencySymbol}{amt}
+                  </button>
+                ))}
+              </div>
+
+              {/* Change Return Alert */}
+              {Number(cashTendered) > grandTotal && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '5px 8px',
+                  borderRadius: '6px',
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0'
+                }}>
+                  <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#065F46' }}>
+                    Change to Return:
+                  </span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#059669' }}>
+                    {currencySymbol}{formatPriceNumber(Number(cashTendered) - grandTotal)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Dynamic UPI QR Display on screen if UPI selected */}
           {paymentMethod === 'upi' && (
             upiQrDataUrl ? (
@@ -1797,9 +1934,35 @@ export default function PosBillingView({
               </div>
             )}
 
-            <div style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '20px' }}>
+            <div style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '16px' }}>
               Order <strong>#{successOrder.order.id}</strong> • Total Paid: <strong>{currencySymbol}{formatPriceNumber(successOrder.order.total_amount)}</strong> ({successOrder.order.payment_method?.toUpperCase()})
             </div>
+
+            {/* Change to Return Banner if Cash Tendered > Total */}
+            {successOrder.change_to_return > 0 && (
+              <div style={{
+                background: '#ECFDF5',
+                border: '1.5px solid #6EE7B7',
+                borderRadius: '12px',
+                padding: '10px 14px',
+                marginBottom: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ textAlign: 'left' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#065F46', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                    💵 Return Cash to Customer
+                  </span>
+                  <span style={{ fontSize: '0.68rem', color: '#047857' }}>
+                    Exact change balance
+                  </span>
+                </div>
+                <strong style={{ fontSize: '1.25rem', color: '#065F46', fontWeight: 950 }}>
+                  {currencySymbol}{formatPriceNumber(successOrder.change_to_return)}
+                </strong>
+              </div>
+            )}
 
             {/* Print and Next Customer Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
