@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Star, Sparkles, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
+import { X, Star, Sparkles, Copy, Check, ExternalLink, MessageSquarePlus } from 'lucide-react';
 import { generateSmartReview, getCustomerReviewProfile } from '../utils/aiReviewGenerator';
 import { getBusinessTerminology } from '../utils/businessTaxonomy';
+import { resolveImageUrl } from '../utils/imageHelper';
 
 export default function CustomerReviewModal({ info, onClose }) {
   const terms = getBusinessTerminology(info || {});
@@ -12,8 +13,10 @@ export default function CustomerReviewModal({ info, onClose }) {
   const [rating, setRating] = useState(5);
   const [selectedChips, setSelectedChips] = useState(profile.defaultChips || []);
   const [customNote, setCustomNote] = useState('');
+  const [showNoteInput, setShowNoteInput] = useState(false);
   const [generatedReview, setGeneratedReview] = useState('');
   const [copiedToast, setCopiedToast] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
 
   // Re-generate AI review on any input change
   useEffect(() => {
@@ -49,212 +52,351 @@ export default function CustomerReviewModal({ info, onClose }) {
         ? info.google_review_url.trim()
         : `https://www.google.com/search?q=${encodeURIComponent(restoName + ' ' + (info?.address || ''))}`;
       window.open(googleUrl, '_blank');
-    }, 1200);
+      if (onClose) onClose();
+    }, 900);
   };
 
+  const resolvedLogo = resolveImageUrl(info?.logo);
+
+  const getRatingFeedback = (val) => {
+    switch (val) {
+      case 5: return { label: 'Excellent experience!', color: '#16A34A', bg: '#DCFCE7' };
+      case 4: return { label: 'Great experience', color: '#16A34A', bg: '#DCFCE7' };
+      case 3: return { label: 'Good / Decent', color: '#D97706', bg: '#FEF3C7' };
+      case 2: return { label: 'Below expectations', color: '#EA580C', bg: '#FFEDD5' };
+      case 1: return { label: 'Needs improvement', color: '#DC2626', bg: '#FEE2E2' };
+      default: return { label: 'Rate your experience', color: '#64748B', bg: '#F1F5F9' };
+    }
+  };
+
+  const ratingInfo = getRatingFeedback(rating);
+
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 12000,
-      background: 'rgba(0, 0, 0, 0.82)',
-      backdropFilter: 'blur(8px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px'
-    }}>
-      <div style={{
-        background: 'var(--theme-modal-bg, #FFFFFF)',
-        borderRadius: '24px',
-        maxWidth: '440px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
-        position: 'relative',
-        animation: 'fadeIn 0.25s ease-out'
-      }}>
-        {/* Header */}
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 12000,
+        background: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        boxSizing: 'border-box'
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onClose) onClose();
+      }}
+    >
+      <div
+        style={{
+          background: '#FFFFFF',
+          borderRadius: '20px',
+          maxWidth: '410px',
+          width: '100%',
+          maxHeight: '92vh',
+          overflowY: 'auto',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06)',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+        }}
+      >
+        {/* Sleek, Clean Header */}
         <div style={{
-          background: 'var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #164E2A 100%))',
-          color: '#FFFFFF',
-          padding: '20px',
-          borderTopLeftRadius: '24px',
-          borderTopRightRadius: '24px',
-          borderBottom: '3px solid var(--gold-bright, #DFBA67)',
-          textAlign: 'center',
-          position: 'relative'
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 18px',
+          borderBottom: '1px solid #F1F5F9'
         }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              {!logoFailed && resolvedLogo ? (
+                <img
+                  src={resolvedLogo}
+                  alt={restoName}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={() => setLogoFailed(true)}
+                />
+              ) : (
+                <span style={{ fontSize: '1.1rem' }}>⭐</span>
+              )}
+            </div>
+            <div>
+              <h3 style={{
+                margin: 0,
+                fontSize: '0.94rem',
+                fontWeight: 800,
+                color: '#0F172A',
+                lineHeight: 1.25
+              }}>
+                {restoName}
+              </h3>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                marginTop: '2px',
+                fontSize: '0.70rem',
+                color: '#64748B',
+                fontWeight: 600
+              }}>
+                {/* Official Google G Logo SVG */}
+                <svg width="13" height="13" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <span>Google Review & Rating</span>
+              </div>
+            </div>
+          </div>
+
           <button
             onClick={onClose}
+            aria-label="Close"
             style={{
-              position: 'absolute', top: '14px', right: '14px',
-              background: 'rgba(255,255,255,0.15)', border: 'none',
-              color: '#FFFFFF', borderRadius: '50%', width: '30px', height: '30px',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: '#F1F5F9',
+              border: 'none',
+              color: '#475569',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.15s ease'
             }}
           >
             <X size={16} />
           </button>
-
-          <div style={{
-            width: '50px', height: '50px', borderRadius: '50%',
-            background: 'var(--theme-card-bg, #FFFFFF)', border: '2px solid var(--gold-bright, #DFBA67)',
-            margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.5rem', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-          }}>
-            {info?.logo ? <img src={info.logo} alt={restoName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '⭐'}
-          </div>
-          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: 'var(--gold-bright, #DFBA67)' }}>
-            {restoName}
-          </h3>
-          <span style={{ fontSize: '0.78rem', color: '#E2E8F0' }}>
-            Customer Rating & Google Review
-          </span>
         </div>
 
-        {/* Content Body */}
-        <div style={{ padding: '20px' }}>
-          
-          {/* Toast Notification */}
-          {copiedToast && (
-            <div style={{
-              background: '#0F172A',
-              color: '#FFD700',
-              padding: '10px 16px',
-              borderRadius: '9999px',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              border: '1px solid #FFD700',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              marginBottom: '14px',
-              animation: 'fadeIn 0.2s ease-out'
-            }}>
-              <CheckCircle2 size={16} color="#FFD700" />
-              <span>Review Copied! Opening Google Reviews...</span>
-            </div>
-          )}
+        {/* Modal Body */}
+        <div style={{ padding: '18px 18px 20px 18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-          {/* Star Rating Card */}
+          {/* Interactive Star Rating */}
           <div style={{
-            background: 'var(--bg-secondary, #F8FAFC)',
-            borderRadius: '16px',
-            padding: '16px',
             textAlign: 'center',
-            border: '1px solid var(--theme-card-border, #E2E8F0)',
-            marginBottom: '16px'
+            padding: '12px 14px',
+            background: '#F8FAFC',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0'
           }}>
-            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-dark, #0F172A)', marginBottom: '10px' }}>
-              {profile.question}
+            <div style={{
+              fontSize: '0.80rem',
+              fontWeight: 700,
+              color: '#475569',
+              marginBottom: '8px'
+            }}>
+              {profile.question || 'How was your experience today?'}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  onClick={() => setRating(star)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '2px',
-                    transition: 'transform 0.15s ease'
-                  }}
-                >
-                  <Star
-                    size={32}
-                    fill={star <= rating ? '#FFD700' : 'rgba(156, 163, 175, 0.3)'}
-                    color={star <= rating ? '#F59E0B' : 'rgba(156, 163, 175, 0.5)'}
-                  />
-                </button>
-              ))}
-            </div>
-
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--theme-price-color, #059669)' }}>
-              {rating === 5 && '⭐⭐⭐⭐⭐ Excellent Experience!'}
-              {rating === 4 && '⭐⭐⭐⭐ Great Experience!'}
-              {rating === 3 && '⭐⭐⭐ Good Experience'}
-              {rating === 2 && '⭐⭐ Average Experience'}
-              {rating === 1 && '⭐ Needs Improvement'}
-            </span>
-          </div>
-
-          {/* Highlight Chips */}
-          <div style={{ marginBottom: '14px' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted, #64748B)', display: 'block', marginBottom: '6px' }}>
-              ✨ Tap highlights to customize review (Optional):
-            </span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {availableChips.map((chip) => {
-                const isSelected = selectedChips.includes(chip.label);
+            {/* Stars */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '6px'
+            }}>
+              {[1, 2, 3, 4, 5].map((star) => {
+                const isActive = star <= rating;
                 return (
                   <button
-                    key={chip.id}
-                    onClick={() => toggleChip(chip.label)}
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
                     style={{
-                      background: isSelected ? 'var(--theme-badge-bg, #ECFDF5)' : 'var(--bg-secondary, #F1F5F9)',
-                      color: isSelected ? 'var(--theme-price-color, #047857)' : 'var(--text-dark, #334155)',
-                      border: isSelected ? '1px solid var(--theme-card-border, #10B981)' : '1px solid var(--border-light, #CBD5E1)',
-                      padding: '5px 10px',
-                      borderRadius: '20px',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
+                      background: 'none',
+                      border: 'none',
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease'
+                      padding: '3px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'transform 0.12s ease'
                     }}
                   >
-                    {chip.label}
+                    <Star
+                      size={32}
+                      fill={isActive ? '#F59E0B' : '#E2E8F0'}
+                      color={isActive ? '#D97706' : '#CBD5E1'}
+                      style={{ filter: isActive ? 'drop-shadow(0 2px 4px rgba(245, 158, 11, 0.25))' : 'none' }}
+                    />
                   </button>
                 );
               })}
             </div>
+
+            {/* Subtle Rating Pill */}
+            <span style={{
+              display: 'inline-block',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              color: ratingInfo.color,
+              background: ratingInfo.bg,
+              padding: '3px 10px',
+              borderRadius: '20px'
+            }}>
+              {ratingInfo.label}
+            </span>
           </div>
 
-          {/* Custom Note Input */}
-          <div style={{ marginBottom: '14px' }}>
-            <input
-              type="text"
-              value={customNote}
-              onChange={(e) => setCustomNote(e.target.value)}
-              placeholder={profile.placeholder}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '10px',
-                border: '1px solid var(--theme-card-border, #CBD5E1)',
-                background: 'var(--theme-card-bg, #FFFFFF)',
-                color: 'var(--text-dark, #0F172A)',
-                fontSize: '0.78rem',
-                outline: 'none'
-              }}
-            />
-          </div>
+          {/* Highlight Tags (Optional) */}
+          {availableChips.length > 0 && (
+            <div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '6px'
+              }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748B' }}>
+                  Tap highlights to include (Optional):
+                </span>
+                {!showNoteInput && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNoteInput(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      color: '#2563EB',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px'
+                    }}
+                  >
+                    <MessageSquarePlus size={12} />
+                    <span>+ Add dish note</span>
+                  </button>
+                )}
+              </div>
 
-          {/* AI Review Text Box */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {availableChips.map((chip) => {
+                  const isSelected = selectedChips.includes(chip.label);
+                  return (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => toggleChip(chip.label)}
+                      style={{
+                        background: isSelected ? '#0F172A' : '#F8FAFC',
+                        color: isSelected ? '#FFFFFF' : '#334155',
+                        border: isSelected ? '1px solid #0F172A' : '1px solid #E2E8F0',
+                        padding: '4px 9px',
+                        borderRadius: '20px',
+                        fontSize: '0.70rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {isSelected && <Check size={11} />}
+                      <span>{chip.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Optional Dish/Note Input Field */}
+          {showNoteInput && (
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={customNote}
+                onChange={(e) => setCustomNote(e.target.value)}
+                placeholder={profile.placeholder || 'Mention a dish or item...'}
+                autoFocus
+                style={{
+                  flex: 1,
+                  height: '36px',
+                  padding: '0 10px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#0F172A',
+                  fontSize: '0.76rem',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomNote('');
+                  setShowNoteInput(false);
+                }}
+                style={{
+                  height: '36px',
+                  padding: '0 8px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  background: '#F8FAFC',
+                  color: '#64748B',
+                  fontSize: '0.70rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* AI Review Draft Card */}
           <div style={{
-            background: 'var(--bg-card-soft, linear-gradient(135deg, #FEFCE8 0%, #FFFBEB 100%))',
-            border: '1.5px solid var(--theme-card-border, #DFBA67)',
+            background: '#F8FAFC',
+            border: '1px solid #E2E8F0',
             borderRadius: '14px',
             padding: '12px 14px',
-            marginBottom: '16px'
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{
-                background: 'var(--gold-gradient, linear-gradient(135deg, #DFBA67, #B45309))',
-                color: 'var(--dock-btn-text, #FFFFFF)',
-                fontSize: '0.62rem',
-                fontWeight: 900,
-                padding: '2px 7px',
-                borderRadius: '10px',
+                background: '#EEF2FF',
+                color: '#4338CA',
+                fontSize: '0.66rem',
+                fontWeight: 800,
+                padding: '2px 8px',
+                borderRadius: '8px',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px'
+                gap: '4px'
               }}>
-                <Sparkles size={10} /> AI Review Generated
+                <Sparkles size={11} /> AI Suggested Review
+              </span>
+              <span style={{ fontSize: '0.68rem', color: '#94A3B8', fontWeight: 600 }}>
+                Tap text to edit
               </span>
             </div>
 
@@ -266,40 +408,71 @@ export default function CustomerReviewModal({ info, onClose }) {
                 width: '100%',
                 border: 'none',
                 background: 'transparent',
-                resize: 'vertical',
-                fontSize: '0.84rem',
-                lineHeight: 1.4,
-                color: 'var(--text-dark, #1E293B)',
-                fontWeight: 600,
-                outline: 'none'
+                resize: 'none',
+                fontSize: '0.80rem',
+                lineHeight: 1.45,
+                color: '#1E293B',
+                fontWeight: 500,
+                outline: 'none',
+                padding: 0,
+                boxSizing: 'border-box'
               }}
             />
           </div>
 
-          {/* Primary Action Button */}
+          {/* High-Converting Primary Google CTA Button */}
           <button
+            type="button"
             onClick={handleCopyAndPost}
             style={{
               width: '100%',
-              background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+              height: '46px',
+              background: copiedToast ? '#16A34A' : '#1A73E8',
               color: '#FFFFFF',
               border: 'none',
-              padding: '12px 18px',
-              borderRadius: '14px',
-              fontWeight: 900,
-              fontSize: '0.9rem',
+              borderRadius: '12px',
+              fontWeight: 800,
+              fontSize: '0.86rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-              boxShadow: 'var(--theme-shadow, 0 8px 20px rgba(0, 0, 0, 0.25))'
+              gap: '8px',
+              boxShadow: copiedToast
+                ? '0 4px 12px rgba(22, 163, 74, 0.3)'
+                : '0 4px 12px rgba(26, 115, 232, 0.25)',
+              transition: 'all 0.2s ease'
             }}
           >
-            <Copy size={16} />
-            <span>Copy Review & Post on Google</span>
-            <ArrowRight size={16} />
+            {copiedToast ? (
+              <>
+                <Check size={18} />
+                <span>Copied! Opening Google Reviews...</span>
+              </>
+            ) : (
+              <>
+                {/* Clean White Google G Icon */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <span>Copy Review & Post on Google</span>
+                <ExternalLink size={14} />
+              </>
+            )}
           </button>
+
+          {/* Micro Caption */}
+          <div style={{
+            textAlign: 'center',
+            fontSize: '0.68rem',
+            color: '#94A3B8',
+            marginTop: '-4px'
+          }}>
+            Takes less than 10 seconds • Reviews help local businesses grow
+          </div>
 
         </div>
       </div>
