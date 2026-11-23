@@ -474,7 +474,15 @@ export default function SetupView({
   });
   const [activeBpModal, setActiveBpModal] = useState(null); // 'business_type' | 'hours' | 'google_review' | 'maps_location' | 'theme'
   const [bpSaveSuccess, setBpSaveSuccess] = useState(false);
-  const [isGstRegistered, setIsGstRegistered] = useState(Boolean(settingsForm.is_gst_registered || settingsForm.gst_number || settingsForm.gstin));
+  const [isGstRegistered, setIsGstRegistered] = useState(Boolean(
+    settingsForm.is_gst_registered ||
+    settingsForm.gst_number ||
+    settingsForm.gstin ||
+    settingsForm.gstin_number ||
+    settingsForm.gst_enabled === 1 ||
+    settingsForm.gst_enabled === true ||
+    settingsForm.gst_enabled === '1'
+  ));
 
   // Orders & Devices States
   const [deviceOrderAlarm, setDeviceOrderAlarm] = useState(settingsForm.order_alarm_enabled !== false);
@@ -1703,8 +1711,8 @@ export default function SetupView({
     };
 
     const currentFoodType = settingsForm.food_type || 'pure_veg';
-    const isGstActive = Boolean(isGstRegistered || settingsForm.gst_number || settingsForm.gstin);
-    const isGstValid = Boolean(settingsForm.gst_number && settingsForm.gst_number.trim().length >= 15);
+    const isGstActive = Boolean(isGstRegistered || settingsForm.gst_number || settingsForm.gstin || settingsForm.gstin_number || settingsForm.gst_enabled === 1 || settingsForm.gst_enabled === true || settingsForm.gst_enabled === '1');
+    const isGstValid = Boolean((settingsForm.gstin_number || settingsForm.gst_number || settingsForm.gstin || '').trim().length >= 15);
 
     const handleSaveBusinessProfile = async (e) => {
       if (e) e.preventDefault();
@@ -1722,9 +1730,13 @@ export default function SetupView({
           }
         }
 
+        const rawGstin = (settingsForm.gstin_number || settingsForm.gst_number || settingsForm.gstin || '').trim().toUpperCase();
         const updated = {
           ...settingsForm,
           is_gst_registered: isGstRegistered,
+          gst_enabled: isGstRegistered ? 1 : 0,
+          gstin_number: isGstRegistered ? rawGstin : '',
+          gst_number: isGstRegistered ? rawGstin : '',
           ...(isHotel ? { total_rooms: settingsForm.total_rooms !== undefined && settingsForm.total_rooms !== '' ? Math.max(0, parseInt(settingsForm.total_rooms, 10) || 0) : 0 } : {})
         };
         if (setSettingsForm) setSettingsForm(updated);
@@ -2444,9 +2456,19 @@ export default function SetupView({
                 onChange={(val) => {
                   setIsGstRegistered(val);
                   if (!val) {
-                    setSettingsForm({ ...settingsForm, gst_number: '', is_gst_registered: false });
+                    setSettingsForm({
+                      ...settingsForm,
+                      gst_number: '',
+                      gstin_number: '',
+                      is_gst_registered: false,
+                      gst_enabled: 0
+                    });
                   } else {
-                    setSettingsForm({ ...settingsForm, is_gst_registered: true });
+                    setSettingsForm({
+                      ...settingsForm,
+                      is_gst_registered: true,
+                      gst_enabled: 1
+                    });
                   }
                 }}
               />
@@ -2478,8 +2500,15 @@ export default function SetupView({
                   type="text"
                   maxLength={15}
                   placeholder="10AAAAA0000A1Z5"
-                  value={settingsForm.gst_number || settingsForm.gstin || ''}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, gst_number: e.target.value.toUpperCase() })}
+                  value={settingsForm.gstin_number || settingsForm.gst_number || settingsForm.gstin || ''}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setSettingsForm({
+                      ...settingsForm,
+                      gst_number: val,
+                      gstin_number: val
+                    });
+                  }}
                   style={{
                     width: '100%',
                     height: '46px',

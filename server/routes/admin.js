@@ -1551,6 +1551,14 @@ const handleUpdateSettings = async (req, res) => {
 
     const { name, tagline, logo, phone, address, openingHours, google_review_url, google_reviews_enabled, filters_visibility, currency_symbol, fssai_lic_no, resto_type, business_type, food_type, service_model, business_category, whatsapp_number, whatsapp_enabled, theme_color, latitude, longitude, max_distance_meters, gst_enabled, gstin_number, total_tables, total_cabins, total_rooms, total_vip, total_screens, total_seats, table_prefix, order_retention_days, custom_domain, location_initialized, owner_name, owner_email, city, state, pincode, table_verification_mode, staff_verification_timeout_seconds, counter_ordering_enabled, inactive_spaces, upi_id, upi_payee_name, print_upi_qr } = req.body;
 
+    const resolvedGstEnabled = gst_enabled !== undefined
+      ? (gst_enabled === true || gst_enabled === 1 || gst_enabled === 'true' || gst_enabled === '1' ? 1 : 0)
+      : (req.body.is_gst_registered !== undefined ? (req.body.is_gst_registered ? 1 : 0) : undefined);
+
+    const resolvedGstinNumber = gstin_number !== undefined
+      ? (gstin_number ? String(gstin_number).trim().toUpperCase() : null)
+      : (req.body.gst_number !== undefined ? (req.body.gst_number ? String(req.body.gst_number).trim().toUpperCase() : null) : (req.body.gstin !== undefined ? (req.body.gstin ? String(req.body.gstin).trim().toUpperCase() : null) : undefined));
+
     let cleanUpiId = undefined;
     if (upi_id !== undefined) {
       if (upi_id === null || upi_id === '') {
@@ -1953,7 +1961,7 @@ const handleUpdateSettings = async (req, res) => {
     }
 
     // 🏷️ AUTHORITATIVE SAAS PLAN GST INVOICING ENFORCEMENT
-    if (gst_enabled === true || gst_enabled === 1 || gst_enabled === 'true' || gst_enabled === '1') {
+    if (resolvedGstEnabled === 1) {
       const restoRows = await query('SELECT plan_tier, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
       const currentResto = restoRows[0] || {};
       const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
@@ -2037,8 +2045,8 @@ const handleUpdateSettings = async (req, res) => {
         latitude !== undefined && latitude !== null ? Number(latitude) : null,
         longitude !== undefined && longitude !== null ? Number(longitude) : null,
         max_distance_meters !== undefined ? Number(max_distance_meters) : null,
-        gst_enabled !== undefined ? (gst_enabled ? 1 : 0) : null,
-        gstin_number !== undefined ? gstin_number : null,
+        resolvedGstEnabled !== undefined ? resolvedGstEnabled : null,
+        resolvedGstinNumber !== undefined ? resolvedGstinNumber : null,
         total_tables !== undefined && total_tables !== null ? Number(total_tables) : null,
         total_cabins !== undefined && total_cabins !== null ? Number(total_cabins) : null,
         total_rooms !== undefined && total_rooms !== null ? Number(total_rooms) : null,
@@ -2129,8 +2137,8 @@ const handleUpdateSettings = async (req, res) => {
             latitude !== undefined && latitude !== null ? Number(latitude) : null,
             longitude !== undefined && longitude !== null ? Number(longitude) : null,
             max_distance_meters !== undefined ? Number(max_distance_meters) : null,
-            gst_enabled !== undefined ? (gst_enabled ? 1 : 0) : null,
-            gstin_number !== undefined ? gstin_number : null,
+            resolvedGstEnabled !== undefined ? resolvedGstEnabled : null,
+            resolvedGstinNumber !== undefined ? resolvedGstinNumber : null,
             total_tables !== undefined && total_tables !== null ? Number(total_tables) : null,
             total_cabins !== undefined && total_cabins !== null ? Number(total_cabins) : null,
             total_rooms !== undefined && total_rooms !== null ? Number(total_rooms) : null,
