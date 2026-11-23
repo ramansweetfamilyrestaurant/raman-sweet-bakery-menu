@@ -2579,7 +2579,7 @@ export default function OrdersView({
                   {selectedOrder.token_display ? `Token ${selectedOrder.token_display}` : formatCleanTableLabel(selectedOrder.table_number, selectedOrder.space_type, selectedOrder.token_display, selectedOrder)}
                 </h3>
                 <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                  {new Date(selectedOrder.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} • Ref #{selectedOrder.id}
+                  {new Date(selectedOrder.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
               <button
@@ -2701,7 +2701,6 @@ export default function OrdersView({
                                 </span>
                                 <span style={{ fontWeight: isCurrent ? 800 : 600, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                   {sOrd.token_display ? `Token ${sOrd.token_display}` : `Round ${sRound}`}
-                                  <span style={{ fontSize: '0.64rem', color: '#94A3B8', fontWeight: 500 }}>(Ref #{sOrd.id})</span>
                                 </span>
                                 {isCurrent && <span style={{ color: '#0284C7', fontSize: '0.64rem', fontWeight: 800 }}>(Viewing)</span>}
                               </div>

@@ -90,7 +90,7 @@ export default function NotificationView({
           type: 'orders',
           priority: 'urgent',
           title: `New Order from ${formatOrderLocation(ord, restaurantInfo)}`,
-          description: `${ord.items?.length || 2} items · ₹${ord.total_amount || 450} (Ref #${ord.id || ord.order_number || '101'})`,
+          description: `${ord.items?.length || 2} items · ₹${ord.total_amount || 450}`,
           timestamp: '2 min ago',
           group: 'today',
           read: false,

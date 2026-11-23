@@ -734,7 +734,7 @@ export default function PosBillingView({
                   </div>
 
                   <div style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{order.customer_name ? order.customer_name : `${(order.items?.length || 1)} items`} (Ref #{order.id})</span>
+                    <span>{order.customer_name ? order.customer_name : `${(order.items?.length || 1)} items`}</span>
                     <span>{currencySymbol}{formatPriceNumber(order.total_amount)}</span>
                   </div>
 
@@ -2035,10 +2035,6 @@ export default function PosBillingView({
               >
                 + Next Customer (Esc)
               </button>
-
-              <div style={{ fontSize: '0.66rem', color: '#94A3B8', marginTop: '6px' }}>
-                Ref ID: #{successOrder.order.id}
-              </div>
             </div>
           </div>
         </div>

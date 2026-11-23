@@ -4391,9 +4391,6 @@ export default function App() {
                 <p style={{ fontSize: '0.82rem', color: '#D1D5DB', margin: 0 }}>
                   Status: <strong style={{ color: '#FBBF24' }}>Pending Kitchen Acceptance 🟡</strong>
                 </p>
-                <span style={{ fontSize: '0.68rem', color: '#9CA3AF' }}>
-                  Ref #{orderSuccessModal.order_id}
-                </span>
               </div>
             </div>
 

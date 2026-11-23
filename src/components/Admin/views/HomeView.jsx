@@ -371,7 +371,7 @@ export default function HomeView({
         IconComponent = CheckCircle2;
       }
 
-      const sub = `${loc} • ${currencySymbol}${o.total_amount || 0}${items.length > 0 ? ` (${items.length} ${items.length === 1 ? 'item' : 'items'})` : ''} • Ref #${o.id}`;
+      const sub = `${loc} • ${currencySymbol}${o.total_amount || 0}${items.length > 0 ? ` (${items.length} ${items.length === 1 ? 'item' : 'items'})` : ''}`;
 
       activities.push({
         id: `order_${o.id}`,
