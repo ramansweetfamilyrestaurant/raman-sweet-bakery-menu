@@ -48,6 +48,7 @@ test('🛡️ Customer Review Modal & Smart Reputation Audit Suite', async (t) =
     });
     assert.ok(bakeryRev.includes('Raman Sweets'));
     assert.ok(bakeryRev.includes('Gulab jamun was melting in mouth'));
+    assert.ok(!bakeryRev.includes('!'), 'Bakery review must not contain exclamation marks (!)');
 
     const hotelRev = generateSmartReview({
       restoName: 'Hotel Royal Palace',
@@ -56,5 +57,14 @@ test('🛡️ Customer Review Modal & Smart Reputation Audit Suite', async (t) =
       selectedChips: ['🛏️ Comfortable Room']
     });
     assert.ok(hotelRev.includes('Hotel Royal Palace'));
+    assert.ok(!hotelRev.includes('!'), 'Hotel review must not contain exclamation marks (!)');
+
+    const cinemaRev = generateSmartReview({
+      restoName: 'City Cinema',
+      businessType: 'cinema_theatre',
+      rating: 5,
+      selectedChips: ['🎬 Great Movie Experience']
+    });
+    assert.ok(!cinemaRev.includes('!'), 'Cinema review must not contain exclamation marks (!)');
   });
 });

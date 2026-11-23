@@ -112,7 +112,7 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
     switch (val) {
       case 5:
         return {
-          label: isHi ? 'उत्कृष्ट अनुभव!' : 'Excellent experience!',
+          label: isHi ? 'उत्कृष्ट अनुभव' : 'Excellent experience',
           color: '#16A34A',
           bg: '#DCFCE7'
         };
@@ -639,7 +639,7 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
               {copiedToast ? (
                 <>
                   <Check size={18} />
-                  <span>{isHi ? 'कॉपी हो गया! गूगल खुल रहा है...' : 'Copied! Opening Google Reviews...'}</span>
+                  <span>{isHi ? 'कॉपी हो गया. गूगल खुल रहा है...' : 'Copied. Opening Google Reviews...'}</span>
                 </>
               ) : (
                 <>

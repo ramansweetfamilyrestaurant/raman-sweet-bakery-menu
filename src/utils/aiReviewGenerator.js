@@ -95,18 +95,18 @@ export const HIGHLIGHT_CHIPS = {
   ]
 };
 
-// Natural, human-written template pool with conversational variety
+// Natural, human-written template pool with conversational variety (No exclamation marks)
 const TEMPLATE_MATRIX = {
   sweet_bakery: {
     5: [
-      "Visited {name} with family and had a great experience! The sweets were exceptionally fresh and authentic. The packaging was neat, and the counter was spotless.",
+      "Visited {name} with family and had a great experience. The sweets were exceptionally fresh and authentic. The packaging was neat, and the counter was spotless.",
       "One of the best sweet shops and bakeries around. Tried their mithai and freshly baked items at {name}, both were top quality. Very courteous staff and fast billing.",
-      "{name} is absolute perfection! The sweets are ultra-fresh, authentic, and melt in the mouth. Loved the hygiene and prompt service. Highly recommended!",
+      "{name} was wonderful. The sweets were fresh, authentic, and soft. Loved the hygiene and prompt service. Highly recommended.",
       "Superb quality sweets and evening snacks at {name}. Everything tasted freshly made and well-balanced in sweetness. Very clean environment.",
-      "Hands down the best sweet shop & bakery in town! {name} serves high quality mithai and savory snacks. Super clean setup & polite staff."
+      "A trusted sweet shop and bakery in town. {name} serves high quality mithai and savory snacks. Super clean setup and polite staff."
     ],
     4: [
-      "Really good sweets and snacks at {name}. Fresh quality, clean environment, and good staff behavior. Will visit again!",
+      "Really good sweets and snacks at {name}. Fresh quality, clean environment, and good staff behavior. Will visit again.",
       "Tasty mithai and fresh items at {name}. Service was quick and packing was neat.",
       "Good experience overall at {name}. Fresh sweets, decent variety, and helpful counter staff."
     ],
@@ -116,8 +116,8 @@ const TEMPLATE_MATRIX = {
   },
   sweet_shop: {
     5: [
-      "Authentic taste and pure desi ghee sweets at {name}! Tried their fresh mithai and samosas, everything was piping hot and delicious. Very clean shop.",
-      "Visited {name} today. Excellent quality sweets with genuine traditional flavor. Polite staff and very hygienic packing. 5 stars!",
+      "Authentic taste and pure desi ghee sweets at {name}. Tried their fresh mithai and samosas, everything was piping hot and delicious. Very clean shop.",
+      "Visited {name} today. Excellent quality sweets with genuine traditional flavor. Polite staff and very hygienic packing.",
       "Super fresh sweets and crispy snacks at {name}. You can easily tell the ingredients are pure. A trustworthy sweet shop for family occasions.",
       "Great variety of fresh sweets and namkeen at {name}. Fast counter service and high cleanliness standards. Definitely our go-to mithai spot."
     ],
@@ -131,9 +131,9 @@ const TEMPLATE_MATRIX = {
   },
   cafe: {
     5: [
-      "Loved the vibe at {name}! Great coffee, delicious snacks, and a cozy aesthetic. Perfect place to sit, work, or hang out with friends.",
-      "A hidden gem! {name} serves refreshing drinks and crispy quick bites. The music and ambiance are super chill, and service is quick.",
-      "Awesome cafe experience at {name}! Loved the food presentation and fast turnaround. Staff was warm and welcoming. Definitely coming back soon."
+      "Loved the vibe at {name}. Great coffee, delicious snacks, and a cozy aesthetic. Perfect place to sit, work, or hang out with friends.",
+      "A really nice cafe. {name} serves refreshing drinks and crispy quick bites. The music and ambiance are super chill, and service is quick.",
+      "Great cafe experience at {name}. Loved the food presentation and fast turnaround. Staff was warm and welcoming. Definitely coming back soon."
     ],
     4: [
       "Nice cafe with pleasant ambiance at {name}. Coffee and snacks were tasty. Good spot to catch up with friends.",
@@ -145,10 +145,10 @@ const TEMPLATE_MATRIX = {
   },
   fast_food: {
     5: [
-      "Awesome food and great vibe at {name}! Super crispy items, delicious shakes, and lightning-fast service. 10/10 recommended for quick bites!",
-      "Best hangout spot! {name} serves fresh, mouth-watering fast food at reasonable prices. Super fast service and polite staff!",
+      "Really good food and great vibe at {name}. Super crispy items, delicious shakes, and quick service. Recommended for quick bites.",
+      "Great hangout spot. {name} serves fresh, tasty fast food at reasonable prices. Fast service and polite staff.",
       "Really enjoyed the food at {name}. Items were served hot and fresh, portion sizes were generous, and the staff was very friendly.",
-      "Super quick service and delicious quick meals at {name}. Everything tasted fresh and well prepared. Great value for money!"
+      "Super quick service and delicious quick meals at {name}. Everything tasted fresh and well prepared. Great value for money."
     ],
     4: [
       "Really tasty fast food at {name}. Quick service and good quality snacks.",
@@ -160,9 +160,9 @@ const TEMPLATE_MATRIX = {
   },
   dhaba: {
     5: [
-      "Authentic dhaba taste at {name}! The dal tadka and hot tandoori rotis were outstanding. Pure desi flavors, generous portions, and quick service.",
-      "Superb desi dining experience at {name}! Food had that genuine rustic flavor, rich gravies, and was served piping hot. Great place to dine with family and friends.",
-      "One of the best dhabas around. Hearty meals at {name}, excellent spice balance, and very prompt service. Value for money!"
+      "Authentic dhaba taste at {name}. The dal tadka and hot tandoori rotis were outstanding. Pure desi flavors, generous portions, and quick service.",
+      "Superb desi dining experience at {name}. Food had that genuine rustic flavor, rich gravies, and was served piping hot. Great place to dine with family and friends.",
+      "One of the best dhabas around. Hearty meals at {name}, excellent spice balance, and very prompt service. Value for money."
     ],
     4: [
       "Very tasty food with authentic desi tadka at {name}. Hot rotis and flavorful gravies. Good service.",
@@ -174,10 +174,10 @@ const TEMPLATE_MATRIX = {
   },
   pure_veg: {
     5: [
-      "Pure satisfaction at {name}! 100% fresh, hygienic, and authentic pure veg food. Amazing taste and very quick service!",
-      "Best pure veg spot! {name} serves delicious thalis and South Indian dishes with top-tier cleanliness and warm hospitality.",
+      "Pure satisfaction at {name}. 100% fresh, hygienic, and authentic pure veg food. Amazing taste and very quick service.",
+      "Great pure veg spot. {name} serves delicious thalis and South Indian dishes with top-tier cleanliness and warm hospitality.",
       "Visited {name} with family for lunch. The food was light, flavorful, and prepared with high hygiene standards. Courteous staff and quick table service.",
-      "Outstanding vegetarian dining at {name}. Fresh ingredients, authentic traditional taste, and very clean dining area. 5/5 stars!"
+      "Outstanding vegetarian dining at {name}. Fresh ingredients, authentic traditional taste, and very clean dining area."
     ],
     4: [
       "Very good pure veg food at {name}. Hygienic preparation, authentic flavor, and nice service.",
@@ -189,10 +189,10 @@ const TEMPLATE_MATRIX = {
   },
   biryani: {
     5: [
-      "Unmatched flavor at {name}! Perfectly cooked, aromatic biryani with rich spices and generous portions. Fast service & clean hygiene!",
-      "Best biryani & non-veg specialities! {name} serves succulent, flavor-packed dishes. Highly recommended for food lovers!",
+      "Unmatched flavor at {name}. Perfectly cooked, aromatic biryani with rich spices and generous portions. Fast service and clean hygiene.",
+      "Superb biryani and non-veg specialities. {name} serves succulent, flavor-packed dishes. Highly recommended for food lovers.",
       "Had an amazing meal at {name}. The biryani was aromatic with tender, juicy pieces and authentic spices. Table service was prompt and polite.",
-      "Top quality biryani and starters at {name}! Flavorful rice, authentic dum aroma, and very generous portions. Definitely ordering again soon."
+      "Top quality biryani and starters at {name}. Flavorful rice, authentic dum aroma, and very generous portions. Definitely ordering again soon."
     ],
     4: [
       "Really good biryani at {name}. Flavorful rice, tender pieces, and fast service.",
@@ -204,13 +204,13 @@ const TEMPLATE_MATRIX = {
   },
   multi_cuisine: {
     5: [
-      "Exceptional dining experience at {name}! Delicious food, rich authentic gravies, and beautiful family ambiance. Courteous staff and fast service!",
-      "Top-notch restaurant! {name} offers amazing food quality, quick hospitality, and great portion sizes. Best place to dine with family!",
+      "Exceptional dining experience at {name}. Delicious food, rich authentic gravies, and beautiful family ambiance. Courteous staff and fast service.",
+      "Top-notch restaurant. {name} offers amazing food quality, quick hospitality, and great portion sizes. Best place to dine with family.",
       "Had a wonderful dinner here at {name} with friends. Every dish was freshly cooked, perfectly seasoned, and arrived quickly. Staff was attentive and courteous.",
-      "Great ambience, delicious multi-cuisine spread, and high cleanliness standards at {name}. Very pleased with the overall experience!"
+      "Great ambience, delicious multi-cuisine spread, and high cleanliness standards at {name}. Very pleased with the overall experience."
     ],
     4: [
-      "Great meal at {name}! Flavorful dishes, polite staff, and clean seating. Good overall value for money.",
+      "Great meal at {name}. Flavorful dishes, polite staff, and clean seating. Good overall value for money.",
       "Enjoyed the dinner at {name}. Good food taste, comfortable seating, and quick service."
     ],
     3: [
@@ -219,9 +219,9 @@ const TEMPLATE_MATRIX = {
   },
   hotel_resort: {
     5: [
-      "{name} provided an exceptional stay experience! The rooms were ultra-clean, comfortable, and well-maintained. Warm hospitality, polite staff, and excellent room service. Highly recommended!",
-      "Wonderful stay at {name}! Beautiful ambience, spotless rooms, and top-tier hospitality. The staff was courteous and attentive to every need. Will definitely stay here again!",
-      "Had a very pleasant and restful stay at {name}. The room amenities were top notch, check-in was smooth, and food delivery was prompt. 5/5 stars!",
+      "{name} provided an exceptional stay experience. The rooms were ultra-clean, comfortable, and well-maintained. Warm hospitality, polite staff, and excellent room service. Highly recommended.",
+      "Wonderful stay at {name}. Beautiful ambience, spotless rooms, and top-tier hospitality. The staff was courteous and attentive to every need. Will definitely stay here again.",
+      "Had a very pleasant and restful stay at {name}. The room amenities were top notch, check-in was smooth, and food delivery was prompt. Everything was well managed.",
       "Exceptional hospitality and peaceful environment at {name}. Everything from the linen to the room service was impeccable. Highly recommended for family stays."
     ],
     4: [
@@ -234,9 +234,9 @@ const TEMPLATE_MATRIX = {
   },
   cinema_theatre: {
     5: [
-      "Fantastic movie experience at {name}! Crystal clear screen, immersive sound quality, and super comfortable seating. Clean theatre and great snacks. 10/10 recommended!",
-      "Best cinema in town! {name} offers top-notch picture quality, amazing Dolby sound, and plush comfortable seats. Very clean hall and quick snack service!",
-      "Loved watching the show at {name}! The projection was sharp, audio clarity was superb, and snacks arrived right at our seat without delay. Great movie outing!",
+      "Fantastic movie experience at {name}. Crystal clear screen, immersive sound quality, and super comfortable seating. Clean theatre and great snacks. Highly recommended.",
+      "One of the best cinemas in town. {name} offers top-notch picture quality, amazing Dolby sound, and plush comfortable seats. Very clean hall and quick snack service.",
+      "Loved watching the show at {name}. The projection was sharp, audio clarity was superb, and snacks arrived right at our seat without delay. Great movie outing.",
       "Super comfortable seats and outstanding audiovisuals at {name}. Clean hall, well-managed queues, and great snack options."
     ],
     4: [
@@ -249,9 +249,9 @@ const TEMPLATE_MATRIX = {
   },
   cloud_kitchen: {
     5: [
-      "Ordered from {name} and the food was fantastic! Everything arrived piping hot, neatly packaged in spill-proof containers, and tasted freshly prepared.",
-      "Superb food quality and reliable packaging from {name}. Portions were hearty, flavors were authentic, and preparation was very clean. Will definitely order again!",
-      "Top-tier delivery kitchen! {name} delivers delicious food with consistent taste and neat packing. Highly recommended for home meals."
+      "Ordered from {name} and the food was fantastic. Everything arrived piping hot, neatly packaged in spill-proof containers, and tasted freshly prepared.",
+      "Superb food quality and reliable packaging from {name}. Portions were hearty, flavors were authentic, and preparation was very clean. Will definitely order again.",
+      "Top-tier delivery kitchen. {name} delivers delicious food with consistent taste and neat packing. Highly recommended for home meals."
     ],
     4: [
       "Good food and neat packing from {name}. Hot delivery and nice portion size.",
@@ -462,6 +462,7 @@ export function getCustomerReviewProfile(businessType, restoType) {
 
 /**
  * Generates natural, authentic, human-written reviews tailored to venue type, rating, and highlights.
+ * Strips all exclamation marks (!) for a calm, real human conversational tone.
  */
 export function generateSmartReview({
   restoName = 'Restaurant',
@@ -510,6 +511,11 @@ export function generateSmartReview({
     if (!text.endsWith('.')) text += '.';
     text += ` ${formattedNote}${formattedNote.endsWith('.') ? '' : '.'}`;
   }
+
+  // Final cleanup: Replace any exclamation marks with standard periods for a natural human review
+  text = text.replace(/!+/g, '.');
+  // Collapse duplicate dots like '..' into single '.'
+  text = text.replace(/\.{2,}/g, '.').trim();
 
   return text;
 }
