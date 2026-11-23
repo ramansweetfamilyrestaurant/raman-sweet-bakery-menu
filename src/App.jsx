@@ -3707,6 +3707,7 @@ export default function App() {
       {showReviewModal && Boolean(info?.google_reviews_enabled) && (
         <CustomerReviewModal
           info={info}
+          lang={lang}
           onClose={() => setShowReviewModal(false)}
         />
       )}
