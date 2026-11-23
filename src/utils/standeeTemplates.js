@@ -339,15 +339,19 @@ export function buildStandeeCardHtml({
         background-color: ${theme.stepBg};
         border: 1px solid ${theme.stepBorder};
         color: ${theme.stepText};
-        display: inline-flex;
+        display: flex;
         align-items: center;
         justify-content: center;
-        gap: 2.5px;
-        padding: 2.5px 6px;
-        border-radius: 20px;
+        flex-wrap: wrap;
+        row-gap: 2px;
+        column-gap: 4px;
+        padding: 3px 8px;
+        border-radius: 16px;
         font-size: 8px;
         font-weight: 700;
-        max-width: 95%;
+        max-width: 100%;
+        width: fit-content;
+        margin: 0 auto 8px auto;
         box-sizing: border-box;
       ">
         <span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">

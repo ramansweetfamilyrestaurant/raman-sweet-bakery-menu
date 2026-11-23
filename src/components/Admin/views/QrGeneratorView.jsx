@@ -2087,23 +2087,28 @@ export default function QrGeneratorView({
                   'कैमरे से स्कैन करें और खाना ऑर्डर करें'}
               </div>
 
-              {/* 3-Step Bar */}
-              <div style={{
-                background: theme.stepBg,
-                border: `1px solid ${theme.stepBorder}`,
-                color: theme.stepText,
-                borderRadius: '20px',
-                padding: '2.5px 6px',
-                fontSize: '0.48rem',
-                fontWeight: 700,
-                marginBottom: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '2.5px',
-                maxWidth: '96%',
-                boxSizing: 'border-box'
-              }}>
+              {/* 3-Step Bar (Fully Responsive UI Boundary) */}
+              <div
+                className="standee-steps-bar"
+                style={{
+                  background: theme.stepBg,
+                  border: `1px solid ${theme.stepBorder}`,
+                  color: theme.stepText,
+                  borderRadius: '16px',
+                  padding: '3px 8px',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexWrap: 'wrap',
+                  rowGap: '2px',
+                  columnGap: '4px',
+                  width: 'fit-content',
+                  maxWidth: '100%',
+                  margin: '0 auto 8px auto',
+                  boxSizing: 'border-box'
+                }}
+              >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
                   <span style={{
                     display: 'inline-flex',
