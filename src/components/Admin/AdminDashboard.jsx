@@ -950,6 +950,22 @@ export default function AdminDashboard({
     }
   };
 
+  // 🧹 Clean Address Helper (Deduplicates repeated locality, city, state tokens)
+  const formatCleanAddress = (addr) => {
+    if (!addr) return '';
+    const parts = String(addr).split(',').map(s => s.trim()).filter(Boolean);
+    const seen = new Set();
+    const deduped = [];
+    for (const p of parts) {
+      const key = p.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduped.push(p);
+      }
+    }
+    return deduped.join(', ');
+  };
+
   // ⚡ RawBT Direct Thermal Printer ESC/POS Generator
   const generateRawBTText = (order, type = 'kot', restoInfo = {}, isReprint = false, paymentMode = 'CASH', upiUri = null) => {
     let text = '';
@@ -993,26 +1009,36 @@ export default function AdminDashboard({
       const billData = calculateBillDetails(order, orders, restoInfo, settingsForm);
       const { sessionOrders, totalRoundsCount, subtotal, cgst, sgst, grandTotal, serviceChargeAmount } = billData;
       const isGst = Boolean(cgst > 0 || sgst > 0);
+      const cleanAddress = formatCleanAddress(restoInfo?.address);
+
+      const isTakeaway = Boolean(order.token_display || order.token_number || order.order_type === 'takeaway' || order.order_type === 'counter');
+      const cleanToken = order.token_display || (order.token_number ? `TK-${String(order.token_number).padStart(2, '0')}` : null);
+      const rawCust = (order.customer_name || '').trim();
+      const isAutoName = !rawCust || /^(Takeaway Guest|Counter Customer|Valued Guest|Walk-in Guest)/i.test(rawCust) || (cleanToken && rawCust.includes(cleanToken));
+      const customerDisplayName = isAutoName ? (isTakeaway ? 'Walk-in Guest' : 'Dine-in Guest') : rawCust;
+      const isUnsettledSlip = paymentMode === 'CHECK_SLIP' || (!order.is_settled && paymentMode !== 'CASH' && paymentMode !== 'CARD' && paymentMode !== 'UPI');
 
       text += "================================" + "\n";
       text += `   ${(restoInfo?.name || 'TOUCHQR OUTLET').toUpperCase()}\n`;
-      if (restoInfo?.address) text += `   ${restoInfo.address}\n`;
+      if (cleanAddress) text += `   ${cleanAddress}\n`;
       if (restoInfo?.phone) text += `   Ph: ${restoInfo.phone}\n`;
       if (fssai) text += `   FSSAI Lic: ${fssai}\n`;
       if (gstin) text += `   GSTIN: ${gstin}\n`;
-      text += `   --- ${isGst ? 'TAX INVOICE' : 'FINAL BILL'} ---\n`;
+      text += `   --- ${paymentMode === 'CHECK_SLIP' ? 'TABLE CHECK SLIP' : (isGst ? 'TAX INVOICE' : 'RETAIL BILL')} ---\n`;
       if (isReprint) {
         text += "      *** [ REPRINT ] ***       \n";
       }
       text += "================================" + "\n";
-      text += `Bill No: INV-${order.id}\n`;
-      if (order.token_display || order.token_number) {
-        text += `*** TOKEN: ${order.token_display || order.token_number} [TAKEAWAY] ***\n`;
+      if (cleanToken) {
+        text += `*** TOKEN: ${cleanToken} [TAKEAWAY] ***\n`;
       }
+      text += `${isGst ? 'Invoice No:' : 'Bill No:'} ${cleanToken ? cleanToken : order.id}\n`;
       text += `Date: ${new Date(order.created_at || Date.now()).toLocaleString('en-IN')}\n`;
-      text += `Customer: ${order.customer_name || (order.order_type === 'counter' ? 'Counter Guest' : 'Valued Guest')}\n`;
+      if (!isAutoName) {
+        text += `Customer: ${customerDisplayName}\n`;
+      }
       if (paymentMode) {
-        text += `Payment: ${paymentMode}\n`;
+        text += `Payment: ${paymentMode === 'CHECK_SLIP' ? 'UNPAID SLIP' : paymentMode}\n`;
       }
       if (totalRoundsCount > 1) {
         text += `Consolidated: ${totalRoundsCount} Ordering Rounds\n`;
@@ -1058,7 +1084,12 @@ export default function AdminDashboard({
       }
       text += "================================" + "\n";
       const upiId = restoInfo?.upi_id || settingsForm?.upi_id;
-      if (type !== 'kot' && upiUri && upiId) {
+      if (!isUnsettledSlip) {
+        text += "--------------------------------\n";
+        text += `   *** PAID [${paymentMode.toUpperCase()}] ***   \n`;
+        text += `   Amount: ${currency}${formatPriceNumber(grandTotal)}\n`;
+        text += "--------------------------------\n";
+      } else if (type !== 'kot' && upiUri && upiId) {
         text += "--------------------------------\n";
         text += "     SCAN TO PAY VIA UPI        \n";
         text += " GPay • PhonePe • Paytm • BHIM  \n";
@@ -1340,8 +1371,18 @@ export default function AdminDashboard({
     const bizType = String(restaurantInfo?.business_type || '').toLowerCase();
     const isHotel = bizType === 'hotel_resort';
     const isCinema = bizType === 'cinema_theatre';
+    const cleanAddress = formatCleanAddress(restaurantInfo?.address || settingsForm?.address);
 
+    const isTakeaway = Boolean(order.token_display || order.token_number || order.order_type === 'takeaway' || order.order_type === 'counter');
+    const cleanToken = order.token_display || (order.token_number ? `TK-${String(order.token_number).padStart(2, '0')}` : null);
+    const rawCust = (order.customer_name || '').trim();
+    const isAutoName = !rawCust || /^(Takeaway Guest|Counter Customer|Valued Guest|Walk-in Guest)/i.test(rawCust) || (cleanToken && rawCust.includes(cleanToken));
+    const customerDisplayName = isAutoName ? (isTakeaway ? 'Walk-in Guest' : 'Dine-in Guest') : rawCust;
 
+    const isUnsettledSlip = paymentMode === 'CHECK_SLIP' || (!order.is_settled && paymentMode !== 'CASH' && paymentMode !== 'CARD' && paymentMode !== 'UPI');
+    const cleanPaymentMode = paymentMode === 'CHECK_SLIP' ? 'UNPAID' : paymentMode.toUpperCase();
+
+    let totalItemCount = 0;
     let itemsHtml = '';
 
     sessionOrders.forEach((ord, oIdx) => {
@@ -1356,16 +1397,18 @@ export default function AdminDashboard({
         `;
       }
       parsed.forEach(i => {
+        const qtyNum = Number(i.quantity) || 1;
+        totalItemCount += qtyNum;
         const portionText = i.portion ? ` (${i.portion})` : '';
         const mods = safeParseModifiers(i.modifiers);
         const modText = mods.length > 0
           ? `<div style="font-size:10px;color:#555;font-weight:normal;padding-left:4px;margin-top:2px;word-break:break-word;">+ ${mods.map(m => `${m.name} (+${currency}${m.price})`).join(', ')}</div>`
           : '';
-        const lineTotal = Number(i.price) * Number(i.quantity);
+        const lineTotal = Number(i.price) * qtyNum;
         itemsHtml += `
           <tr>
             <td style="padding:4px 0;font-weight:bold;font-size:12px;border-bottom:1px dashed #DDD;width:72%;vertical-align:top;word-break:break-word;">
-              ${i.quantity}x ${i.name}${portionText}
+              ${qtyNum}x ${i.name}${portionText}
               ${modText}
             </td>
             <td style="text-align:right;font-weight:bold;font-size:12px;border-bottom:1px dashed #DDD;vertical-align:top;width:28%;white-space:nowrap;">${currency}${lineTotal}</td>
@@ -1379,7 +1422,7 @@ export default function AdminDashboard({
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>Customer Bill ${order.id}</title>
+          <title>Customer Bill ${cleanToken || order.id}</title>
           <style>
             * {
               box-sizing: border-box;
@@ -1414,7 +1457,7 @@ export default function AdminDashboard({
               border-radius: 4px;
             }
             .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; }
-            .header h2 { margin: 0; font-size: ${selectedWidth === '58mm' ? '15px' : '17px'}; font-weight: 900; word-break: break-word; }
+            .header h2 { margin: 0; font-size: ${selectedWidth === '58mm' ? '15px' : '17px'}; font-weight: 900; word-break: break-word; text-transform: uppercase; }
             .header p { margin: 2px 0; font-size: 10px; word-break: break-word; }
             .meta { border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 6px; font-size: 11px; line-height: 1.4; word-break: break-word; }
             table { width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 6px; table-layout: fixed; }
@@ -1429,7 +1472,7 @@ export default function AdminDashboard({
           ${isReprint ? `<div class="reprint-banner">*** [ REPRINT ] ***</div>` : ''}
           <div class="header">
             <h2>${restaurantInfo?.name || 'TouchQR Store'}</h2>
-            ${restaurantInfo?.address ? `<p>${restaurantInfo.address}</p>` : ''}
+            ${cleanAddress ? `<p>${cleanAddress}</p>` : ''}
             ${restaurantInfo?.phone ? `<p>Tel: ${restaurantInfo.phone}</p>` : ''}
             ${gstin ? `<p style="font-weight:bold;">GSTIN: ${gstin}</p>` : ''}
             ${fssai ? `<p>FSSAI: ${fssai}</p>` : ''}
@@ -1437,25 +1480,27 @@ export default function AdminDashboard({
 
           <div class="meta">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-              <strong>${paymentMode === 'CHECK_SLIP' ? 'TABLE CHECK SLIP' : 'TAX INVOICE'}</strong>
-              <span class="badge" style="${paymentMode === 'CHECK_SLIP' ? 'background:#7E22CE;' : ''}">${paymentMode === 'CHECK_SLIP' ? 'UNSETTLED SLIP' : paymentMode}</span>
+              <strong>${paymentMode === 'CHECK_SLIP' ? 'TABLE CHECK SLIP' : (isGst ? 'TAX INVOICE' : 'RETAIL BILL')}</strong>
+              <span class="badge" style="${paymentMode === 'CHECK_SLIP' ? 'background:#7E22CE;' : ''}">
+                ${paymentMode === 'CHECK_SLIP' ? 'UNSETTLED SLIP' : `PAID • ${cleanPaymentMode}`}
+              </span>
             </div>
-            ${(order.token_display || order.token_number)
-              ? `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '17px' : '20px'};font-weight:900;border:2px dashed #000;padding:5px;margin:5px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;word-break:break-word;">TOKEN ${order.token_display || order.token_number}</div>`
-              : `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '15px' : '17px'};font-weight:900;border:1.5px solid #000;padding:4px;margin:5px 0;border-radius:4px;word-break:break-word;">${resolvedSpace.toUpperCase()}</div>`
+            ${cleanToken
+              ? `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px solid #000;padding:6px 4px;margin:6px 0;letter-spacing:1px;border-radius:4px;background:#FFF;color:#000;word-break:break-word;">TOKEN ${cleanToken}</div>`
+              : `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '15px' : '18px'};font-weight:900;border:2px solid #000;padding:5px 4px;margin:5px 0;border-radius:4px;letter-spacing:0.5px;word-break:break-word;">${resolvedSpace.toUpperCase()}</div>`
             }
-            <div><strong>Location / Space:</strong> ${resolvedSpace}</div>
-            <div><strong>Date:</strong> ${formatDateTimeString(order.created_at)}</div>
-            <div><strong>Bill Ref:</strong> #${order.id}</div>
-            <div><strong>Customer:</strong> ${order.customer_name ? `${order.customer_name} (${resolvedSpace})` : resolvedSpace}</div>
+            ${isTakeaway ? `<div><strong>Order Type:</strong> Takeaway / Counter</div>` : `<div><strong>Table / Space:</strong> ${resolvedSpace}</div>`}
+            <div><strong>Date:</strong> ${formatDateTimeString(order.created_at || Date.now())}</div>
+            <div><strong>${isGst ? 'Invoice No:' : 'Bill No:'}</strong> ${cleanToken ? cleanToken : order.id}</div>
+            ${!isAutoName ? `<div><strong>Customer:</strong> ${customerDisplayName}</div>` : ''}
             ${totalRoundsCount > 1 ? `<div style="font-weight:bold;color:#0F766E;">Consolidated Bill: ${totalRoundsCount} Rounds</div>` : ''}
           </div>
 
           <table>
             <thead>
-              <tr style="border-bottom:1px solid #000;text-align:left;font-size:11px;">
-                <th style="width:72%;">ITEM</th>
-                <th style="width:28%;text-align:right;">AMOUNT</th>
+              <tr style="border-bottom:1.5px solid #000;text-align:left;font-size:11px;">
+                <th style="width:72%;padding-bottom:3px;">ITEM</th>
+                <th style="width:28%;text-align:right;padding-bottom:3px;">AMOUNT</th>
               </tr>
             </thead>
             <tbody>
@@ -1464,6 +1509,10 @@ export default function AdminDashboard({
           </table>
 
           <div class="totals">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin-bottom:2px;">
+              <span>Total Items:</span>
+              <span>${totalItemCount} items</span>
+            </div>
             <div style="display:flex;justify-content:space-between;font-size:11px;">
               <span>Subtotal:</span>
               <span>${currency}${subtotal}</span>
@@ -1490,7 +1539,16 @@ export default function AdminDashboard({
             </div>
           </div>
 
-          ${upiQrDataUrl ? `
+          ${!isUnsettledSlip ? `
+            <div style="margin: 8px auto 4px auto; text-align: center; border: 1.5px solid #000; padding: 6px; border-radius: 4px; background: #FFF;">
+              <div style="font-size: 12px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">
+                ✓ PAID IN FULL [${cleanPaymentMode}]
+              </div>
+              <div style="font-size: 9px; color: #333; margin-top: 2px;">
+                Amount: ${currency}${grandTotal} • Thank You!
+              </div>
+            </div>
+          ` : (upiQrDataUrl ? `
             <div style="margin: 8px auto 4px auto; text-align: center; border: 1.5px dashed #000; padding: 6px 4px; border-radius: 6px; background: #FFF;">
               <div style="font-size: 10px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px;">
                 ⚡ SCAN TO PAY VIA UPI
@@ -1507,7 +1565,7 @@ export default function AdminDashboard({
               ${upiDetails?.upiId ? `<div style="font-size: 9px; color: #444; word-break: break-all; margin-top: 2px;">UPI ID: <strong>${upiDetails.upiId}</strong></div>` : ''}
               ${upiDetails?.payeeName ? `<div style="font-size: 8.5px; color: #666; margin-top: 1px;">Payee: ${upiDetails.payeeName}</div>` : ''}
             </div>
-          ` : ''}
+          ` : '')}
 
           <div class="footer">
             <p style="margin:0;font-weight:bold;">${isHotel ? 'Thank you for choosing In-Room Dining!' : isCinema ? 'Enjoy the show and your snacks!' : 'Thank you for dining with us!'}</p>
@@ -1610,14 +1668,15 @@ export default function AdminDashboard({
         console.warn('Notice logging print job:', logErr);
       }
 
-      // 📱 Resolve Dynamic UPI Payment QR
+      // 📱 Resolve Dynamic UPI Payment QR (Only for Unpaid Check Slips)
       const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
       const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
       const printUpiQr = (restaurantInfo?.print_upi_qr ?? settingsForm?.print_upi_qr) !== 0;
+      const isUnsettledSlip = paymentMode === 'CHECK_SLIP' || (!order.is_settled && paymentMode !== 'CASH' && paymentMode !== 'CARD' && paymentMode !== 'UPI');
 
       let upiQrDataUrl = null;
       let upiUri = null;
-      if (printUpiQr && upiId) {
+      if (printUpiQr && upiId && isUnsettledSlip) {
         const billData = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
         upiUri = buildUpiPaymentUri({
           upiId,
@@ -1741,8 +1800,9 @@ export default function AdminDashboard({
       const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
       const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
       const printUpiQr = (restaurantInfo?.print_upi_qr ?? settingsForm?.print_upi_qr) !== 0;
+      const isUnsettledSlip = paymentMode === 'CHECK_SLIP' || (!order.is_settled && paymentMode !== 'CASH' && paymentMode !== 'CARD' && paymentMode !== 'UPI');
       let upiQrDataUrl = null;
-      if (printUpiQr && upiId) {
+      if (printUpiQr && upiId && isUnsettledSlip) {
         const billData = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
         const upiUri = buildUpiPaymentUri({
           upiId,
