@@ -10002,19 +10002,19 @@ export default function SetupView({
                         </div>
                       </div>
 
-                      <div className="settings-card-secondary" onClick={() => onNavigate && onNavigate('review')}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <ShieldCheck size={18} />
+                      <div className="settings-card-secondary" onClick={() => setActiveBpModal('google_review')}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: settingsForm.google_review_url ? '#ECFDF5' : '#FEF3C7', color: settingsForm.google_review_url ? '#059669' : '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Globe size={18} />
                         </div>
                         <div>
-                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Reviews & AI Auto-Reply</strong>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '2px' }}>Google Reviews Link</strong>
                           <span style={{ fontSize: '0.70rem', color: '#64748B', lineHeight: 1.35, display: 'block' }}>
-                            Google reviews and AI reply
+                            {settingsForm.google_review_url ? 'Connected to Google Maps' : 'Connect Google review link'}
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                          <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}>
-                            Connected
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 7px', borderRadius: '5px', background: settingsForm.google_review_url ? '#ECFDF5' : '#F1F5F9', color: settingsForm.google_review_url ? '#059669' : '#64748B', border: settingsForm.google_review_url ? '1px solid #A7F3D0' : '1px solid #CBD5E1' }}>
+                            {settingsForm.google_review_url ? 'Connected' : 'Not Set'}
                           </span>
                         </div>
                       </div>
@@ -10084,16 +10084,16 @@ export default function SetupView({
                         </div>
                       </div>
 
-                      <div className="mobile-list-item-row" onClick={() => onNavigate && onNavigate('review')}>
+                      <div className="mobile-list-item-row" onClick={() => setActiveBpModal('google_review')}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <ShieldCheck size={18} />
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: settingsForm.google_review_url ? '#ECFDF5' : '#FEF3C7', color: settingsForm.google_review_url ? '#059669' : '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Globe size={18} />
                           </div>
-                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Reviews & AI Auto-Reply</strong>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>Google Reviews Link</strong>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}>
-                            Connected
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: settingsForm.google_review_url ? '#ECFDF5' : '#F1F5F9', color: settingsForm.google_review_url ? '#059669' : '#64748B', border: settingsForm.google_review_url ? '1px solid #A7F3D0' : '1px solid #CBD5E1' }}>
+                            {settingsForm.google_review_url ? 'Connected' : 'Not Set'}
                           </span>
                           <ChevronRight size={16} color="#94A3B8" />
                         </div>
@@ -10489,27 +10489,27 @@ export default function SetupView({
                       🚀 Advanced Tools & System Health
                     </h3>
                     <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                      Google Reviews integration, instant AI review assistant, database optimization, and data export.
+                      Google Reviews link connection, database optimization, and data export.
                     </span>
                   </div>
 
                   <div className="tab-content-grid-3col">
-                    {/* Card 1: Reviews & AI Auto-Reply */}
-                    <div className="settings-card-primary" onClick={() => onNavigate && onNavigate('review')}>
-                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#F3E8FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <ShieldCheck size={22} />
+                    {/* Card 1: Google Reviews Link */}
+                    <div className="settings-card-primary" onClick={() => setActiveBpModal('google_review')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: settingsForm.google_review_url ? '#ECFDF5' : '#FEF3C7', color: settingsForm.google_review_url ? '#059669' : '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Globe size={22} />
                       </div>
                       <div>
-                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Reviews & AI Auto-Reply</strong>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Google Reviews Link</strong>
                         <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                          Google reviews connection and AI powered smart auto-reply review assistant.
+                          {settingsForm.google_review_url ? 'Diners are routed to your public Google Business review page.' : 'Connect your Google Business review URL so diners can rate on Google.'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}>
-                          Connected
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: settingsForm.google_review_url ? '#ECFDF5' : '#F1F5F9', color: settingsForm.google_review_url ? '#059669' : '#64748B', border: settingsForm.google_review_url ? '1px solid #A7F3D0' : '1px solid #CBD5E1' }}>
+                          {settingsForm.google_review_url ? 'Connected' : 'Configure Link'}
                         </span>
-                        <span style={{ fontSize: '0.78rem', color: '#7E22CE', fontWeight: 700 }}>Open Reviews →</span>
+                        <span style={{ fontSize: '0.78rem', color: '#064E3B', fontWeight: 700 }}>Manage Link →</span>
                       </div>
                     </div>
 

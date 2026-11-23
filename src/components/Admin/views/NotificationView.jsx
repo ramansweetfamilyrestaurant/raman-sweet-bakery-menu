@@ -170,19 +170,19 @@ export default function NotificationView({
       });
     }
 
-    // 5. Customer Review Notification
+    // 5. Google Reviews Link Active Notification
     list.push({
       id: 'notif-rev-1',
-      type: 'reviews',
+      type: 'system',
       priority: 'normal',
-      title: 'Customer Feedback & Google Reviews',
-      description: `Google Business reviews integration is active. Generate AI auto-replies for new feedback.`,
+      title: 'Google Reviews Connection',
+      description: `Google Business reviews link is configured for customer menu ratings.`,
       timestamp: 'Yesterday, 06:15 PM',
       group: 'yesterday',
       read: true,
       source: 'Google Reviews',
-      actionLabel: 'View Reviews',
-      actionTab: 'review'
+      actionLabel: 'View Settings',
+      actionTab: 'settings'
     });
 
     // 6. Security Notification

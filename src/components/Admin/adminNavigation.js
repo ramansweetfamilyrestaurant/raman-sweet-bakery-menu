@@ -7,7 +7,6 @@ import {
   Tag,
   QrCode,
   CreditCard,
-  Star,
   Bell,
   Settings,
   MoreHorizontal,
@@ -109,15 +108,6 @@ export const ADMIN_NAVIGATION_ITEMS = Object.freeze([
     showInMobileDrawer: true,
     showInBottomNav: false,
     matchTabs: ['billing', 'subscription']
-  },
-  {
-    id: 'review',
-    label: 'Reviews & Feedback',
-    icon: Star,
-    showInDesktopSidebar: false,
-    showInMobileDrawer: true,
-    showInBottomNav: false,
-    matchTabs: ['review']
   },
   {
     id: 'notifications',

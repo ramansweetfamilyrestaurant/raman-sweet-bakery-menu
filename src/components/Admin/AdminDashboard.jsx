@@ -27,7 +27,6 @@ import AnalyticsView from './views/AnalyticsView';
 import MenuView from './views/MenuView';
 import SetupView from './views/SetupView';
 import QrGeneratorView from './views/QrGeneratorView';
-import ReviewView from './views/ReviewView';
 import NotificationView from './views/NotificationView';
 import SupportView from './views/SupportView';
 import OffersView from './views/OffersView';
@@ -4055,25 +4054,6 @@ export default function AdminDashboard({
                 />
               )}
 
-              {/* REVIEWS & FEEDBACK VIEW */}
-              {activeTab === 'review' && (
-                <ReviewView
-                  settingsForm={settingsForm}
-                  setSettingsForm={setSettingsForm}
-                  handleSaveSettings={handleSaveSettings}
-                  token={token}
-                  restaurantInfo={restaurantInfo}
-                  capabilities={tenantCaps}
-                  onUpgrade={() => {
-                    setActiveTab('billing');
-                  }}
-                  onBackToSetup={(drawer = null) => {
-                    setInitialSetupDrawer(drawer);
-                    setActiveTab('settings');
-                  }}
-                />
-              )}
-
               {/* NOTIFICATIONS & ALERTS CENTER VIEW */}
               {activeTab === 'notifications' && (
                 <NotificationView
@@ -4149,7 +4129,7 @@ export default function AdminDashboard({
               )}
 
               {/* SAFE FALLBACK FOR UNRECOGNIZED / INVALID TABS */}
-              {!['home', 'orders', 'floor-map', 'service-requests', 'kds', 'analytics', 'dishes', 'categories', 'combos', 'qr-generator', 'offers', 'customers', 'billing', 'subscription', 'review', 'notifications', 'support', 'settings', 'pos'].includes(activeTab) && (
+              {!['home', 'orders', 'floor-map', 'service-requests', 'kds', 'analytics', 'dishes', 'categories', 'combos', 'qr-generator', 'offers', 'customers', 'billing', 'subscription', 'notifications', 'support', 'settings', 'pos'].includes(activeTab) && (
                 <HomeView
                   restaurantInfo={restaurantInfo}
                   analyticsData={analyticsData}
