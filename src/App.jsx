@@ -2611,7 +2611,14 @@ export default function App() {
             <span style={{ fontSize: '1.2rem' }}>🛎️</span>
             <div>
               <strong style={{ fontSize: '0.86rem', color: 'var(--gold-bright)', display: 'block' }}>
-                Order {activeOrderTrack.id} • {formatCustomerLocation(activeOrderTrack.table_number)}
+                {(activeOrderTrack.token_display || activeOrderTrack.token_number) ? (
+                  <>Token {activeOrderTrack.token_display || `TK-${String(activeOrderTrack.token_number).padStart(2, '0')}`}</>
+                ) : (
+                  <>{formatCustomerLocation(activeOrderTrack.table_number)}</>
+                )}
+                {activeOrderTrack.round_number && Number(activeOrderTrack.round_number) > 1 && (
+                  <span style={{ fontSize: '0.74rem', opacity: 0.85, marginLeft: '6px' }}>(Round {activeOrderTrack.round_number})</span>
+                )}
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#E5E7EB', fontWeight: 700 }}>
                 Status: {
@@ -4368,12 +4375,26 @@ export default function App() {
                   </div>
                 </div>
               )}
-              <p style={{ fontSize: '1.1rem', fontWeight: 900, color: '#34D399', margin: '0 0 4px 0' }}>
-                Order #{orderSuccessModal.order_id} • {formatCustomerLocation(orderSuccessModal.table_number)}
+              <p style={{ fontSize: '1.2rem', fontWeight: 900, color: '#34D399', margin: '0 0 6px 0' }}>
+                {(orderSuccessModal.token_display || orderSuccessModal.token_number) ? (
+                  <>Token {orderSuccessModal.token_display || `TK-${String(orderSuccessModal.token_number).padStart(2, '0')}`}</>
+                ) : (
+                  <>{formatCustomerLocation(orderSuccessModal.table_number)}</>
+                )}
+                {orderSuccessModal.round_number && Number(orderSuccessModal.round_number) > 1 && (
+                  <span style={{ fontSize: '0.78rem', marginLeft: '6px', padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.15)', color: '#FCD34D' }}>
+                    Round {orderSuccessModal.round_number}
+                  </span>
+                )}
               </p>
-              <p style={{ fontSize: '0.82rem', color: '#D1D5DB', margin: 0 }}>
-                Status: <strong style={{ color: '#FBBF24' }}>Pending Kitchen Acceptance 🟡</strong>
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                <p style={{ fontSize: '0.82rem', color: '#D1D5DB', margin: 0 }}>
+                  Status: <strong style={{ color: '#FBBF24' }}>Pending Kitchen Acceptance 🟡</strong>
+                </p>
+                <span style={{ fontSize: '0.68rem', color: '#9CA3AF' }}>
+                  Ref #{orderSuccessModal.order_id}
+                </span>
+              </div>
             </div>
 
             <p style={{ fontSize: '0.86rem', color: '#E5E7EB', lineHeight: 1.5, marginBottom: '20px' }}>

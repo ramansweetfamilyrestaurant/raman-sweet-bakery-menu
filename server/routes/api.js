@@ -2795,12 +2795,12 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           distance_meters: distanceMetersValue,
           notes: cleanNotes,
           message: isTakeawayOrder
-            ? `🎉 Takeaway Order #${orderId} placed! Your Pickup Token is ${tokenDisplay}!`
+            ? `🎉 Takeaway Order placed! Your Pickup Token is ${tokenDisplay}!`
             : (isAddonOrder
-                ? `🎉 Round ${roundNumber} (Add-on Order #${orderId}) placed for Table #${cleanTable}!`
+                ? `🎉 Round ${roundNumber} (Add-on Order) placed for Table #${cleanTable}!`
                 : (resolvedSpaceType === 'counter'
-                    ? `🎉 Counter Order #${orderId} placed! Your Pickup Token is ${tokenDisplay}!`
-                    : `🎉 Order #${orderId} placed successfully for Table #${cleanTable}!`))
+                    ? `🎉 Counter Order placed! Your Pickup Token is ${tokenDisplay}!`
+                    : `🎉 Order placed successfully for Table #${cleanTable}!`))
         };
       });
 

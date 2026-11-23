@@ -687,7 +687,7 @@ export default function KdsDisplayView({
                       )}
                     </div>
                     <span style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 400 }}>
-                      #{order.id} • {order.customer_name || 'Dine-in'}
+                      Ref #{order.id} • {order.customer_name || 'Dine-in'}
                     </span>
                   </div>
 

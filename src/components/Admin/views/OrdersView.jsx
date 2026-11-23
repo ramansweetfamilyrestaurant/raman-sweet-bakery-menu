@@ -1211,7 +1211,21 @@ export default function OrdersView({
                       {/* Order # & Source */}
                       <td style={{ padding: '14px 18px', fontWeight: 800, color: '#0F172A' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                          <span>#{order.id}</span>
+                          {order.token_display ? (
+                            <span style={{
+                              padding: '2px 7px',
+                              borderRadius: '6px',
+                              background: '#FEF3C7',
+                              color: '#92400E',
+                              border: '1px solid #F59E0B',
+                              fontSize: '0.74rem',
+                              fontWeight: 900
+                            }}>
+                              {order.token_display}
+                            </span>
+                          ) : (
+                            <span>#{order.id}</span>
+                          )}
                           {isAddonRound ? (
                             <span style={{
                               padding: '2px 6px',
@@ -1574,7 +1588,21 @@ export default function OrdersView({
                   {/* Top Bar: Order ID + Round Badge + Status Badge */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <strong style={{ fontSize: '0.92rem', color: '#0F172A' }}>#{order.id}</strong>
+                      {order.token_display ? (
+                        <span style={{
+                          padding: '2px 7px',
+                          borderRadius: '6px',
+                          background: '#FEF3C7',
+                          color: '#92400E',
+                          border: '1px solid #F59E0B',
+                          fontSize: '0.76rem',
+                          fontWeight: 900
+                        }}>
+                          {order.token_display}
+                        </span>
+                      ) : (
+                        <strong style={{ fontSize: '0.92rem', color: '#0F172A' }}>#{order.id}</strong>
+                      )}
                       {isAddonRound ? (
                         <span style={{
                           padding: '2px 6px',
@@ -2541,10 +2569,10 @@ export default function OrdersView({
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                  Order #{selectedOrder.id}
+                  {selectedOrder.token_display ? `Token ${selectedOrder.token_display}` : formatCleanTableLabel(selectedOrder.table_number, selectedOrder.space_type, selectedOrder.token_display, selectedOrder)}
                 </h3>
                 <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                  {new Date(selectedOrder.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} • {formatCleanTableLabel(selectedOrder.table_number, selectedOrder.space_type, selectedOrder.token_display, selectedOrder)}
+                  {new Date(selectedOrder.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} • Ref #{selectedOrder.id}
                 </span>
               </div>
               <button

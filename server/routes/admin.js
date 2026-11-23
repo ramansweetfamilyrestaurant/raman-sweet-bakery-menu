@@ -3156,7 +3156,7 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
       order: createdOrder,
       token_display: tokenDisplay,
       token_number: tokenNumber,
-      message: `🎉 Order #${createdOrder?.id || ''} created successfully! ${tokenDisplay ? `Token: ${tokenDisplay}` : ''}`
+      message: tokenDisplay ? `🎉 Counter Order created! Token: ${tokenDisplay}` : `🎉 Order created for Table ${cleanTable}!`
     });
   } catch (err) {
     console.error('POS order creation error:', err);

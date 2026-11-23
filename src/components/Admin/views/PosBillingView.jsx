@@ -1934,8 +1934,14 @@ export default function PosBillingView({
               </div>
             )}
 
-            <div style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '16px' }}>
-              Order <strong>#{successOrder.order.id}</strong> • Total Paid: <strong>{currencySymbol}{formatPriceNumber(successOrder.order.total_amount)}</strong> ({successOrder.order.payment_method?.toUpperCase()})
+            <div style={{ fontSize: '0.84rem', color: '#334155', marginBottom: '16px', fontWeight: 600 }}>
+              {successOrder.token_display ? (
+                <>Token <strong>{successOrder.token_display}</strong></>
+              ) : (
+                <><strong>Table {successOrder.order.table_number || '1'}</strong></>
+              )}
+              {' • '}
+              Total Paid: <strong style={{ color: '#059669' }}>{currencySymbol}{formatPriceNumber(successOrder.order.total_amount)}</strong> ({successOrder.order.payment_method?.toUpperCase()})
             </div>
 
             {/* Change to Return Banner if Cash Tendered > Total */}
@@ -2029,6 +2035,10 @@ export default function PosBillingView({
               >
                 + Next Customer (Esc)
               </button>
+
+              <div style={{ fontSize: '0.66rem', color: '#94A3B8', marginTop: '6px' }}>
+                Ref ID: #{successOrder.order.id}
+              </div>
             </div>
           </div>
         </div>

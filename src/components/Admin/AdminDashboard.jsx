@@ -1437,15 +1437,16 @@ export default function AdminDashboard({
 
           <div class="meta">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-              <strong>${paymentMode === 'CHECK_SLIP' ? 'TABLE CHECK SLIP' : `INVOICE #${order.id}`}</strong>
+              <strong>${paymentMode === 'CHECK_SLIP' ? 'TABLE CHECK SLIP' : 'TAX INVOICE'}</strong>
               <span class="badge" style="${paymentMode === 'CHECK_SLIP' ? 'background:#7E22CE;' : ''}">${paymentMode === 'CHECK_SLIP' ? 'UNSETTLED SLIP' : paymentMode}</span>
             </div>
             ${(order.token_display || order.token_number)
               ? `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '17px' : '20px'};font-weight:900;border:2px dashed #000;padding:5px;margin:5px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;word-break:break-word;">TOKEN ${order.token_display || order.token_number}</div>`
-              : ''
+              : `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '15px' : '17px'};font-weight:900;border:1.5px solid #000;padding:4px;margin:5px 0;border-radius:4px;word-break:break-word;">${resolvedSpace.toUpperCase()}</div>`
             }
             <div><strong>Location / Space:</strong> ${resolvedSpace}</div>
             <div><strong>Date:</strong> ${formatDateTimeString(order.created_at)}</div>
+            <div><strong>Bill Ref:</strong> #${order.id}</div>
             <div><strong>Customer:</strong> ${order.customer_name ? `${order.customer_name} (${resolvedSpace})` : resolvedSpace}</div>
             ${totalRoundsCount > 1 ? `<div style="font-weight:bold;color:#0F766E;">Consolidated Bill: ${totalRoundsCount} Rounds</div>` : ''}
           </div>
