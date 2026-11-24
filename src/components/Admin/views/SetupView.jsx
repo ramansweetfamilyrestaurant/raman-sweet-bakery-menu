@@ -1844,7 +1844,7 @@ export default function SetupView({
           alignItems: 'center',
           justifyContent: 'center',
           padding: '16px',
-          zIndex: 9999
+          zIndex: 11000
         }}
       >
         <div
@@ -1988,9 +1988,6 @@ export default function SetupView({
         boxSizing: 'border-box',
         paddingBottom: '140px'
       }}>
-        {/* Render BP Subpage Modal */}
-        {renderBpModal()}
-
         {/* TOP HEADER */}
         <div style={{
           background: '#FFFFFF',
@@ -3345,7 +3342,7 @@ export default function SetupView({
           alignItems: 'center',
           justifyContent: 'center',
           padding: '16px',
-          zIndex: 9999
+          zIndex: 11000
         }}
       >
         <div
@@ -9370,11 +9367,6 @@ export default function SetupView({
           grid-template-columns: repeat(3, 1fr);
           gap: 12px;
         }
-        .quick-actions-mobile {
-          display: none;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-        }
         .quick-action-card-desktop {
           cursor: pointer;
           display: flex;
@@ -9548,10 +9540,26 @@ export default function SetupView({
             display: flex !important;
           }
           .quick-actions-desktop {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 8px !important;
+          }
+          .quick-action-card-desktop {
+            padding: 10px 6px !important;
+            flex-direction: column !important;
+            text-align: center !important;
+            gap: 6px !important;
+          }
+          .quick-action-card-desktop > div {
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 6px !important;
+          }
+          .quick-action-card-desktop span {
             display: none !important;
           }
-          .quick-actions-mobile {
-            display: grid !important;
+          .quick-action-card-desktop svg:last-child {
+            display: none !important;
           }
           .health-items-desktop {
             display: none !important;
@@ -9915,30 +9923,6 @@ export default function SetupView({
                           </div>
                         </div>
                         <ChevronRight size={16} color="#94A3B8" />
-                      </div>
-                    </div>
-
-                    {/* MOBILE: 3 Compact 1-Click Action Tiles */}
-                    <div className="quick-actions-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                      <div className="quick-action-tile-mobile" onClick={testAlarmSound}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Bell size={20} />
-                        </div>
-                        <strong style={{ fontSize: '0.76rem', color: '#0F172A', fontWeight: 800 }}>Test Siren</strong>
-                      </div>
-
-                      <div className="quick-action-tile-mobile" onClick={handlePrintSampleThermalBill}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Printer size={20} />
-                        </div>
-                        <strong style={{ fontSize: '0.76rem', color: '#0F172A', fontWeight: 800 }}>Test Bill</strong>
-                      </div>
-
-                      <div className="quick-action-tile-mobile" onClick={handlePrintSampleThermalKot}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <FileText size={20} />
-                        </div>
-                        <strong style={{ fontSize: '0.76rem', color: '#0F172A', fontWeight: 800 }}>Test KOT</strong>
                       </div>
                     </div>
                   </div>
@@ -13300,6 +13284,9 @@ export default function SetupView({
       </div>
     )
   }
+
+      {/* Root-Level Subpage Modals (e.g. Google Reviews link) */}
+      {renderBpModal()}
     </div >
   );
 }
