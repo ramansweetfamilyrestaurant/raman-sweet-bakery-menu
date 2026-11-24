@@ -328,6 +328,120 @@ export default function BillingView({
     }
   };
 
+  // Dedicated clean tax invoice printing handler
+  const handlePrintInvoice = (invoice) => {
+    if (!invoice) return;
+    const invDate = parseSafeDate(invoice.paid_at || invoice.created_at)?.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) || 'Recent';
+    const bizName = restaurantInfo?.name || 'Business Partner';
+    const bizPhone = restaurantInfo?.phone || '';
+    const bizGst = restaurantInfo?.gstin_number || '';
+    const bizAddress = restaurantInfo?.address || '';
+    const planName = currentPlanTier.toUpperCase();
+    const formattedAmount = formatPriceNumber(invoice.amount);
+
+    const printWindow = window.open('', '_blank', 'width=700,height=800');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Tax Invoice #INV-${invoice.id} - TouchQR</title>
+  <style>
+    @page { size: A4 portrait; margin: 20mm 15mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #0F172A; margin: 0; padding: 24px; font-size: 13px; line-height: 1.5; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #064E3B; padding-bottom: 16px; margin-bottom: 24px; }
+    .brand { font-size: 26px; font-weight: 900; color: #064E3B; letter-spacing: -0.5px; }
+    .subbrand { font-size: 12px; color: #64748B; margin-top: 2px; }
+    .invoice-title { text-align: right; }
+    .invoice-title h2 { margin: 0; font-size: 20px; font-weight: 900; color: #0F172A; }
+    .invoice-title .badge { display: inline-block; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px; margin-bottom: 4px; text-transform: uppercase; }
+    .inv-num { font-size: 12px; color: #64748B; }
+    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 16px; }
+    .details-grid strong { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; margin-bottom: 6px; }
+    .table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    .table th { background: #064E3B; color: #FFFFFF; text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .table td { padding: 12px; border-bottom: 1px solid #E2E8F0; font-size: 13px; }
+    .table tfoot td { font-weight: 800; border-top: 2px solid #064E3B; border-bottom: none; font-size: 15px; color: #064E3B; }
+    .footer { text-align: center; margin-top: 40px; font-size: 11px; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 16px; }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="brand">TouchQR</div>
+      <div class="subbrand">Hospitality & Restaurant Cloud Platform</div>
+    </div>
+    <div class="invoice-title">
+      <span class="badge">Paid</span>
+      <h2>TAX INVOICE</h2>
+      <div class="inv-num">#INV-${invoice.id}</div>
+    </div>
+  </div>
+
+  <div class="details-grid">
+    <div>
+      <strong>Billed To:</strong>
+      <div style="font-weight: 700; font-size: 14px; color: #0F172A;">${bizName}</div>
+      ${bizPhone ? `<div>Ph: ${bizPhone}</div>` : ''}
+      ${bizGst ? `<div>GSTIN: ${bizGst}</div>` : ''}
+      ${bizAddress ? `<div>${bizAddress}</div>` : ''}
+    </div>
+    <div style="text-align: right;">
+      <strong>Invoice Details:</strong>
+      <div>Date: ${invDate}</div>
+      <div>Payment Method: AutoPay Mandate / Online UPI</div>
+      <div>Status: <strong>PAID</strong></div>
+    </div>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th style="text-align: right; width: 120px;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div style="font-weight: 700; color: #0F172A;">TouchQR ${planName} Subscription</div>
+          <div style="font-size: 11px; color: #64748B; margin-top: 2px;">Monthly Cloud SaaS access for QR menus, POS billing, KDS and reports</div>
+        </td>
+        <td style="text-align: right; font-weight: 700;">₹${formattedAmount}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td>Total Amount Paid:</td>
+        <td style="text-align: right;">₹${formattedAmount}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="footer">
+    Thank you for partnering with TouchQR Technologies.<br/>
+    This is an authentic computer-generated tax receipt. For queries, contact support@touchqr.in
+  </div>
+
+  <script>
+    window.focus();
+    setTimeout(function() { window.print(); }, 250);
+  </script>
+</body>
+</html>`;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   // Feature capability items list for "Included in your plan"
   const planFeaturesList = useMemo(() => {
     return [
@@ -340,9 +454,6 @@ export default function BillingView({
       ...(isHotel ? [{ name: 'Hotel Amenities & Toiletries Booking', enabled: Boolean(resolvedCaps?.amenities_booking_enabled), benefit: 'Guests can request room amenities, toiletries, and housekeeping' }] : []),
       ...(isCinema ? [
         { name: 'In-Seat Direct Delivery Ordering', enabled: Boolean(resolvedCaps?.cinema_ordering_enabled || resolvedCaps?.seat_runner_dispatch_enabled), benefit: 'Audi, row & seat QR codes for in-seat delivery' },
-        { name: 'Interval Rush Mode & Runner Dispatch', enabled: Boolean(resolvedCaps?.interval_rush_mode_enabled), benefit: 'Fast interval ordering and runner delivery queue' }
-      ] : []),
-      ...(isCinema ? [
         { name: 'Movie Interval Express Rush Mode', enabled: Boolean(resolvedCaps?.interval_rush_mode_enabled), benefit: 'Prioritize fast-prep snacks and drinks during 10-minute intervals' },
         { name: 'In-Seat Runner Dispatch Terminal', enabled: Boolean(resolvedCaps?.seat_runner_dispatch_enabled), benefit: 'Dispatch usher and runner staff directly to auditorium seat rows' }
       ] : []),
@@ -1657,7 +1768,7 @@ export default function BillingView({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => handlePrintInvoice(selectedInvoice)}
                 style={{
                   padding: '8px 16px',
                   borderRadius: '8px',
