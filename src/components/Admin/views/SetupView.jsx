@@ -266,6 +266,7 @@ export default function SetupView({
   const [savingForm, setSavingForm] = useState(false);
   const [showProgressMenu, setShowProgressMenu] = useState(false);
   const progressMenuRef = useRef(null);
+  const isPrintingSampleRef = useRef(false);
 
   useEffect(() => {
     if (activeSubPage) {
@@ -1233,12 +1234,65 @@ export default function SetupView({
     }
   };
 
-  const handlePrintSampleThermalBill = () => {
-    const printWindow = window.open('', '_blank', 'width=380,height=600');
-    if (!printWindow) {
-      window.print();
-      return;
+  // Hidden iframe sample print engine (prevents multiple tabs/popups from opening)
+  const printSampleReceiptViaIframe = (htmlContent) => {
+    if (isPrintingSampleRef.current) return;
+    isPrintingSampleRef.current = true;
+    setTimeout(() => {
+      isPrintingSampleRef.current = false;
+    }, 1500);
+
+    const existingFrame = document.getElementById('touchqr-sample-print-frame');
+    if (existingFrame) {
+      existingFrame.remove();
     }
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'touchqr-sample-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '-9999px';
+    iframe.style.width = '800px';
+    iframe.style.height = '1000px';
+    iframe.style.border = '0';
+    iframe.style.zIndex = '-9999';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    const triggerPrint = () => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.error('Sample print iframe error, fallback to window:', err);
+        const win = window.open('', '_blank');
+        if (win) {
+          win.document.open();
+          win.document.write(htmlContent);
+          win.document.close();
+          win.focus();
+          setTimeout(() => win.print(), 350);
+        }
+      } finally {
+        setTimeout(() => {
+          if (iframe.parentNode) {
+            iframe.parentNode.removeChild(iframe);
+          }
+        }, 10000);
+      }
+    };
+
+    setTimeout(triggerPrint, 300);
+  };
+
+  const handlePrintSampleThermalBill = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
     const bizName = settingsForm?.name || restaurantInfo?.name || 'TouchQR Restaurant';
     const bizPhone = settingsForm?.phone || restaurantInfo?.phone || '';
     const bizAddress = settingsForm?.address || restaurantInfo?.address || '';
@@ -1318,23 +1372,15 @@ export default function SetupView({
     Thermal Printer Test Successful<br/>
     TouchQR Cloud POS
   </div>
-  <script>
-    window.focus();
-    setTimeout(function() { window.print(); }, 250);
-  </script>
 </body>
 </html>`;
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+    printSampleReceiptViaIframe(html);
   };
 
-  const handlePrintSampleThermalKot = () => {
-    const printWindow = window.open('', '_blank', 'width=380,height=600');
-    if (!printWindow) {
-      window.print();
-      return;
-    }
+  const handlePrintSampleThermalKot = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
     const bizName = settingsForm?.name || restaurantInfo?.name || 'TouchQR Restaurant';
     const nowStr = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -1402,15 +1448,9 @@ export default function SetupView({
   <div class="text-center bold" style="font-size: 12px; margin-top: 8px;">
     *** KITCHEN COPY (TEST) ***
   </div>
-  <script>
-    window.focus();
-    setTimeout(function() { window.print(); }, 250);
-  </script>
 </body>
 </html>`;
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+    printSampleReceiptViaIframe(html);
   };
 
   const isProfileConfigured = Boolean(settingsForm?.name && (settingsForm?.phone || restaurantInfo?.phone));
