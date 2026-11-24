@@ -102,19 +102,35 @@ export default function PosBillingView({
     }
   }, [isPureVegRestaurant, dietFilter]);
 
-  // Keyboard shortcut: Ctrl+K or / to focus search, Esc to close modal
+  // Currency resolver
+  const curr = getCurrencySymbol(restaurantInfo?.currency_symbol !== undefined ? restaurantInfo.currency_symbol : (settingsForm?.currency_symbol !== undefined ? settingsForm.currency_symbol : currencySymbol));
+
+  const handleCloseSuccess = () => {
+    setSuccessOrder(null);
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 50);
+  };
+
+  // Keyboard shortcut: Ctrl+K or / to focus search, Esc to close modal/cart/search
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey && e.key === 'k') || (e.key === '/' && document.activeElement !== searchInputRef.current)) {
         e.preventDefault();
         searchInputRef.current?.focus();
       } else if (e.key === 'Escape') {
-        setSuccessOrder(null);
+        if (successOrder) {
+          handleCloseSuccess();
+        } else if (isMobileCartOpen) {
+          setIsMobileCartOpen(false);
+        } else if (search) {
+          setSearch('');
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [successOrder, isMobileCartOpen, search]);
 
   // Filter dishes & combos
   const filteredDishes = useMemo(() => {
@@ -148,11 +164,16 @@ export default function PosBillingView({
           const descMatch = (combo.description || '').toLowerCase().includes(q);
           if (!nameMatch && !descMatch) return;
         }
+        const effectiveComboPrice = (combo.offer_price !== undefined && combo.offer_price !== null && Number(combo.offer_price) > 0)
+          ? Number(combo.offer_price)
+          : (Number(combo.price) || 0);
+
         list.push({
           ...combo,
           id: `combo_${combo.id}`,
           isCombo: true,
-          price: combo.price
+          price: effectiveComboPrice,
+          regular_price: Number(combo.price) || effectiveComboPrice
         });
       });
     }
@@ -162,7 +183,12 @@ export default function PosBillingView({
   // Cart operations
   const addToCart = (dish, variant = 'full') => {
     setCart(prev => {
-      const price = variant === 'half' && dish.price_half ? (Number(dish.price_half) || 0) : (Number(dish.price) || 0);
+      const effectiveFullPrice = (dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) > 0 && Number(dish.offer_price) < Number(dish.price))
+        ? Number(dish.offer_price)
+        : (Number(dish.price) || 0);
+      const price = variant === 'half' && dish.price_half
+        ? (Number(dish.price_half) || 0)
+        : (dish.isCombo ? Number(dish.price || 0) : effectiveFullPrice);
       const existingIdx = prev.findIndex(item => String(item.dish.id) === String(dish.id) && item.selectedVariant === variant);
       if (existingIdx >= 0) {
         const next = [...prev];
@@ -228,6 +254,20 @@ export default function PosBillingView({
   const taxAmount = Math.round((cgstAmount + sgstAmount) * 100) / 100;
   const grandTotal = Math.round((subtotal + taxAmount) * 100) / 100;
 
+  // Dynamic Cash Tendered Chips (ensures options exist even for large bills > ₹1000)
+  const quickCashChips = useMemo(() => {
+    if (grandTotal <= 0) return [];
+    const baseAmounts = [100, 200, 500, 1000, 2000, 5000];
+    const higherDenoms = baseAmounts.filter(amt => amt >= grandTotal);
+    const nextHundred = Math.ceil(grandTotal / 100) * 100;
+    const nextFiveHundred = Math.ceil(grandTotal / 500) * 500;
+    const set = new Set();
+    if (nextHundred > grandTotal) set.add(nextHundred);
+    if (nextFiveHundred > grandTotal) set.add(nextFiveHundred);
+    higherDenoms.forEach(a => set.add(a));
+    return Array.from(set).sort((a, b) => a - b).slice(0, 4);
+  }, [grandTotal]);
+
   // Generate Dynamic UPI QR when payment method is UPI
   useEffect(() => {
     if (paymentMethod !== 'upi' || grandTotal <= 0) {
@@ -264,7 +304,7 @@ export default function PosBillingView({
     try {
       const itemsPayload = cart.map(it => ({
         dish_id: it.dish.id,
-        name: it.selectedVariant === 'half' ? `${it.dish.name} (Half)` : (it.dish.isCombo ? `[Combo] ${it.dish.name}` : it.dish.name),
+        name: it.selectedVariant === 'half' ? `${it.dish.name} (${it.dish.portion_half_label || 'Half'})` : (it.dish.isCombo ? `[Combo] ${it.dish.name}` : it.dish.name),
         price: it.price,
         quantity: it.quantity,
         variant: it.selectedVariant
@@ -1045,8 +1085,13 @@ export default function PosBillingView({
                 const fullItemInCart = cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'full');
                 const halfItemInCart = cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'half');
                 const hasHalfPrice = Boolean(dish.price_half && Number(dish.price_half) > 0);
-
                 const isNonVeg = isPosItemNonVeg(dish);
+                const isSoldOut = dish.is_available === false || dish.is_available === 0 || dish.available === false || dish.available === 0;
+
+                const effectiveFullPrice = (dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) > 0 && Number(dish.offer_price) < Number(dish.price))
+                  ? Number(dish.offer_price)
+                  : (Number(dish.price) || 0);
+                const hasFullOffer = !dish.isCombo && effectiveFullPrice < Number(dish.price);
 
                 return (
                   <div
@@ -1060,7 +1105,8 @@ export default function PosBillingView({
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      opacity: isSoldOut ? 0.8 : 1
                     }}
                   >
                     <div>
@@ -1113,11 +1159,19 @@ export default function PosBillingView({
                           </span>
                         </div>
 
-                        {/* Low stock / Combo Badge (Floating Top-Right on Image) */}
+                        {/* Low stock / Sold out / Combo / Special Badge (Floating Top-Right on Image) */}
                         <div style={{ position: 'absolute', top: '6px', right: '6px', zIndex: 2 }}>
                           {dish.isCombo ? (
                             <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
                               🎁 COMBO
+                            </span>
+                          ) : isSoldOut ? (
+                            <span style={{ fontSize: '0.62rem', background: '#FEE2E2', color: '#B91C1C', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                              🔴 Sold Out
+                            </span>
+                          ) : hasFullOffer ? (
+                            <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#D97706', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                              🔥 Special
                             </span>
                           ) : (dish.available === 0 && (
                             <span style={{ fontSize: '0.62rem', background: '#FEE2E2', color: '#B91C1C', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
@@ -1150,7 +1204,7 @@ export default function PosBillingView({
                           {/* Half Portion Option */}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', minWidth: 0 }}>
                             <span style={{ fontSize: '0.72rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              Half: <strong style={{ color: '#0F172A' }}>{currencySymbol}{formatPriceNumber(dish.price_half)}</strong>
+                              {dish.portion_half_label || 'Half'}: <strong style={{ color: '#0F172A' }}>{curr}{formatPriceNumber(dish.price_half)}</strong>
                             </span>
                             {halfItemInCart ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
@@ -1173,7 +1227,7 @@ export default function PosBillingView({
                                 onClick={() => addToCart(dish, 'half')}
                                 style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.70rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
                               >
-                                + Half
+                                + {dish.portion_half_label || 'Half'}
                               </button>
                             )}
                           </div>
@@ -1181,7 +1235,10 @@ export default function PosBillingView({
                           {/* Full Portion Option */}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', minWidth: 0 }}>
                             <span style={{ fontSize: '0.72rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              Full: <strong style={{ color: '#0F172A' }}>{currencySymbol}{formatPriceNumber(dish.price)}</strong>
+                              Full: <strong style={{ color: '#0F172A' }}>{curr}{formatPriceNumber(effectiveFullPrice)}</strong>
+                              {hasFullOffer && (
+                                <del style={{ color: '#94A3B8', fontSize: '0.66rem', marginLeft: '3px' }}>{curr}{formatPriceNumber(dish.price)}</del>
+                              )}
                             </span>
                             {fullItemInCart ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
@@ -1227,7 +1284,12 @@ export default function PosBillingView({
                             textOverflow: 'ellipsis',
                             minWidth: 0
                           }}>
-                            {currencySymbol}{formatPriceNumber(dish.price)}
+                            {curr}{formatPriceNumber(effectiveFullPrice)}
+                            {hasFullOffer && (
+                              <del style={{ color: '#94A3B8', fontSize: '0.70rem', fontWeight: 600, marginLeft: '4px' }}>
+                                {curr}{formatPriceNumber(dish.price)}
+                              </del>
+                            )}
                           </span>
                           {fullItemInCart ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
@@ -1671,7 +1733,7 @@ export default function PosBillingView({
                   Cash Received:
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 700 }}>{currencySymbol}</span>
+                  <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 700 }}>{curr}</span>
                   <input
                     type="number"
                     value={cashTendered}
@@ -1712,7 +1774,7 @@ export default function PosBillingView({
                 >
                   Exact
                 </button>
-                {[100, 200, 500, 1000].filter(amt => amt >= grandTotal).slice(0, 3).map(amt => (
+                {quickCashChips.map(amt => (
                   <button
                     key={amt}
                     type="button"
@@ -1728,7 +1790,7 @@ export default function PosBillingView({
                       cursor: 'pointer'
                     }}
                   >
-                    {currencySymbol}{amt}
+                    {curr}{amt}
                   </button>
                 ))}
               </div>
@@ -2037,7 +2099,7 @@ export default function PosBillingView({
               </div>
 
               <button
-                onClick={() => setSuccessOrder(null)}
+                onClick={handleCloseSuccess}
                 style={{
                   padding: '12px',
                   borderRadius: '10px',

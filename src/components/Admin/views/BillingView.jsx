@@ -220,7 +220,7 @@ export default function BillingView({
       return { label: 'Cancelled (Active Period)', bg: '#F1F5F9', color: '#475569', border: '#CBD5E1', icon: AlertCircle, desc: `Auto-renew is OFF. Plan access remains active until ${formattedRenewalDate}.` };
     }
     return { label: 'Active', bg: '#ECFDF5', color: '#064E3B', border: '#A7F3D0', icon: CheckCircle2, desc: `Subscription active. Renews automatically on ${formattedRenewalDate}.` };
-  }, [rawStatus, isComplimentary, subData, formattedRenewalDate]);
+  }, [rawStatus, isComplimentary, subData, formattedRenewalDate, isLifetimeVip]);
 
   // Quota usage computations
   const isUnlimitedPlan = Boolean(
