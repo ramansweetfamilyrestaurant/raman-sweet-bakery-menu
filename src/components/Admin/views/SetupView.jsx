@@ -268,6 +268,17 @@ export default function SetupView({
   const progressMenuRef = useRef(null);
 
   useEffect(() => {
+    if (activeSubPage) {
+      document.body.classList.add('setup-subpage-active');
+    } else {
+      document.body.classList.remove('setup-subpage-active');
+    }
+    return () => {
+      document.body.classList.remove('setup-subpage-active');
+    };
+  }, [activeSubPage]);
+
+  useEffect(() => {
     if (!showProgressMenu) return;
     const handleClickOutside = (e) => {
       if (progressMenuRef.current && !progressMenuRef.current.contains(e.target)) {
@@ -1197,23 +1208,28 @@ export default function SetupView({
       }).catch(() => {
         playKitchenSiren();
       });
-      alert('🔊 Playing Test Siren Ringtone!');
+      setSaveSuccessMsg('🔊 Playing test order siren sound...');
+      setTimeout(() => setSaveSuccessMsg(''), 3500);
     } catch (e) {
-      alert('Audio alert triggered');
+      setSaveSuccessMsg('🔊 Test siren triggered');
+      setTimeout(() => setSaveSuccessMsg(''), 3500);
     }
   };
 
   const requestPushPermission = () => {
     if ('Notification' in window) {
       if (Notification.permission === 'granted' || Notification.permission === 'denied') {
-        alert(`Push Notifications Permission: ${Notification.permission.toUpperCase()}`);
+        setSaveSuccessMsg(`Push Notifications Permission: ${Notification.permission.toUpperCase()}`);
+        setTimeout(() => setSaveSuccessMsg(''), 4000);
         return;
       }
       Notification.requestPermission().then(perm => {
-        alert(`Push Notifications Permission: ${perm.toUpperCase()}`);
+        setSaveSuccessMsg(`Push Notifications Permission: ${perm.toUpperCase()}`);
+        setTimeout(() => setSaveSuccessMsg(''), 4000);
       });
     } else {
-      alert('Push notifications not supported on this browser.');
+      setSaveSuccessMsg('Push notifications not supported on this browser.');
+      setTimeout(() => setSaveSuccessMsg(''), 4000);
     }
   };
 
@@ -5352,8 +5368,8 @@ export default function SetupView({
           token={token}
           capabilities={capabilities}
           currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
-          onUpgrade={() => { }}
-          onNavigate={(tab) => { }}
+          onUpgrade={onUpgrade || (() => onNavigate && onNavigate('subscription'))}
+          onNavigate={onNavigate || (() => { })}
           onRefreshInfo={() => loadSubscriptionStatus()}
         />
       </div>
@@ -9194,6 +9210,7 @@ export default function SetupView({
     >
       <style>{`
         @media (max-width: 900px) {
+          body.setup-subpage-active .adm-mobile-only-bottom-bar,
           body:has(.setup-subpage-active) .adm-mobile-only-bottom-bar,
           .adm-dashboard-shell:has(.setup-subpage-active) .adm-mobile-only-bottom-bar {
             display: none !important;
