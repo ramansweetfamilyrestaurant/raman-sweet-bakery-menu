@@ -1217,6 +1217,186 @@ export default function SetupView({
     }
   };
 
+  const handlePrintSampleThermalBill = () => {
+    const printWindow = window.open('', '_blank', 'width=380,height=600');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    const bizName = settingsForm?.name || restaurantInfo?.name || 'TouchQR Restaurant';
+    const bizPhone = settingsForm?.phone || restaurantInfo?.phone || '';
+    const bizAddress = settingsForm?.address || restaurantInfo?.address || '';
+    const nowStr = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Sample Thermal Bill - ${bizName}</title>
+  <style>
+    @page { size: 80mm auto; margin: 2mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Courier New", monospace; font-size: 12px; margin: 0; padding: 10px; color: #000; width: 280px; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .bold { font-weight: bold; }
+    .divider { border-top: 1px dashed #000; margin: 8px 0; }
+    .header { text-align: center; margin-bottom: 8px; }
+    .title { font-size: 16px; font-weight: 900; }
+    .token { font-size: 18px; font-weight: 900; background: #000; color: #FFF; padding: 4px 0; margin: 6px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    td { padding: 3px 0; }
+    @media print { body { width: 100%; padding: 0; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">${bizName}</div>
+    ${bizAddress ? `<div>${bizAddress}</div>` : ''}
+    ${bizPhone ? `<div>Tel: ${bizPhone}</div>` : ''}
+    <div class="bold" style="margin-top: 4px;">*** SAMPLE TEST BILL ***</div>
+  </div>
+  <div class="token text-center">TOKEN TK-01</div>
+  <div>Location: Counter / Table 1</div>
+  <div>Date: ${nowStr}</div>
+  <div>Bill Ref: #TEST-999</div>
+  <div class="divider"></div>
+  <table>
+    <thead>
+      <tr class="bold">
+        <td>ITEM</td>
+        <td class="text-right">AMT</td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1x Paneer Butter Masala</td>
+        <td class="text-right">240.00</td>
+      </tr>
+      <tr>
+        <td>2x Butter Tandoori Roti</td>
+        <td class="text-right">50.00</td>
+      </tr>
+      <tr>
+        <td>1x Sweet Lassi</td>
+        <td class="text-right">70.00</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="divider"></div>
+  <table>
+    <tr>
+      <td>Subtotal:</td>
+      <td class="text-right">360.00</td>
+    </tr>
+    <tr>
+      <td>GST (5%):</td>
+      <td class="text-right">18.00</td>
+    </tr>
+    <tr class="bold" style="font-size: 14px;">
+      <td>GRAND TOTAL:</td>
+      <td class="text-right">₹378.00</td>
+    </tr>
+  </table>
+  <div class="divider"></div>
+  <div class="text-center" style="font-size: 11px; margin-top: 10px;">
+    Thermal Printer Test Successful<br/>
+    TouchQR Cloud POS
+  </div>
+  <script>
+    window.focus();
+    setTimeout(function() { window.print(); }, 250);
+  </script>
+</body>
+</html>`;
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const handlePrintSampleThermalKot = () => {
+    const printWindow = window.open('', '_blank', 'width=380,height=600');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    const bizName = settingsForm?.name || restaurantInfo?.name || 'TouchQR Restaurant';
+    const nowStr = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Sample Kitchen Ticket (KOT) - ${bizName}</title>
+  <style>
+    @page { size: 80mm auto; margin: 2mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Courier New", monospace; font-size: 13px; margin: 0; padding: 10px; color: #000; width: 280px; }
+    .text-center { text-align: center; }
+    .bold { font-weight: bold; }
+    .divider { border-top: 2px dashed #000; margin: 8px 0; }
+    .header { text-align: center; margin-bottom: 6px; }
+    .title { font-size: 18px; font-weight: 900; }
+    .kot-box { border: 2px solid #000; padding: 6px; text-align: center; font-size: 15px; font-weight: 900; margin: 6px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+    td { padding: 4px 0; }
+    .qty { font-size: 16px; font-weight: 900; width: 35px; }
+    @media print { body { width: 100%; padding: 0; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">KITCHEN ORDER TICKET (KOT)</div>
+    <div>${bizName}</div>
+  </div>
+  <div class="kot-box">TABLE #04 • DINE-IN</div>
+  <div>KOT #: KOT-088</div>
+  <div>Time: ${nowStr}</div>
+  <div>Waiter: Captain 1</div>
+  <div class="divider"></div>
+  <table>
+    <thead>
+      <tr class="bold" style="border-bottom: 1px solid #000;">
+        <td style="width: 35px;">QTY</td>
+        <td>ITEM PARTICULARS</td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="qty">1x</td>
+        <td>
+          <div class="bold">Paneer Butter Masala</div>
+          <div style="font-size: 11px;">[Note: Less Spicy]</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="qty">2x</td>
+        <td>
+          <div class="bold">Butter Tandoori Roti</div>
+          <div style="font-size: 11px;">[Crisp & Hot]</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="qty">1x</td>
+        <td>
+          <div class="bold">Veg Sweet Corn Soup</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="divider"></div>
+  <div class="text-center bold" style="font-size: 12px; margin-top: 8px;">
+    *** KITCHEN COPY (TEST) ***
+  </div>
+  <script>
+    window.focus();
+    setTimeout(function() { window.print(); }, 250);
+  </script>
+</body>
+</html>`;
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   const isProfileConfigured = Boolean(settingsForm?.name && (settingsForm?.phone || restaurantInfo?.phone));
   const isLogoConfigured = Boolean(settingsForm?.logo || restaurantInfo?.logo);
   const isGpsConfigured = Boolean(settingsForm?.latitude && settingsForm?.longitude);
@@ -2797,7 +2977,7 @@ export default function SetupView({
           borderTop: '1px solid #EAE5DF',
           padding: '12px 16px 24px 16px',
           boxShadow: '0 -4px 16px rgba(0,0,0,0.06)',
-          zIndex: 900,
+          zIndex: 1050,
           boxSizing: 'border-box'
         }}>
           <div style={{ maxWidth: '540px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -4226,7 +4406,7 @@ export default function SetupView({
             borderTop: '1px solid #EAE5DF',
             padding: '12px 16px 24px 16px',
             boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
-            zIndex: 900,
+            zIndex: 1050,
             boxSizing: 'border-box'
           }}>
             <div style={{
@@ -4428,9 +4608,7 @@ export default function SetupView({
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <button
                       type="button"
-                      onClick={() => {
-                        window.print();
-                      }}
+                      onClick={handlePrintSampleThermalBill}
                       style={{
                         padding: '12px',
                         borderRadius: '10px',
@@ -4452,9 +4630,7 @@ export default function SetupView({
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        window.print();
-                      }}
+                      onClick={handlePrintSampleThermalKot}
                       style={{
                         padding: '12px',
                         borderRadius: '10px',
@@ -5076,7 +5252,7 @@ export default function SetupView({
             borderTop: '1px solid #EAE5DF',
             padding: '12px 16px 24px 16px',
             boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
-            zIndex: 900,
+            zIndex: 1050,
             boxSizing: 'border-box'
           }}>
             <div style={{
@@ -6893,7 +7069,7 @@ export default function SetupView({
             bottom: '20px',
             left: '50%',
             transform: 'translateX(-50%)',
-            zIndex: 1000,
+            zIndex: 1050,
             maxWidth: '680px',
             width: 'calc(100% - 32px)',
             background: '#FFFFFF',
@@ -9002,18 +9178,27 @@ export default function SetupView({
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '18px',
-      maxWidth: '1400px',
-      margin: '0 auto',
-      width: '100%',
-      boxSizing: 'border-box',
-      overflowX: 'hidden',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
-    }}>
+    <div 
+      className={activeSubPage ? 'setup-view-wrapper setup-subpage-active' : 'setup-view-wrapper'}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '18px',
+        maxWidth: '1400px',
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+      }}
+    >
       <style>{`
+        @media (max-width: 900px) {
+          body:has(.setup-subpage-active) .adm-mobile-only-bottom-bar,
+          .adm-dashboard-shell:has(.setup-subpage-active) .adm-mobile-only-bottom-bar {
+            display: none !important;
+          }
+        }
         .business-profile-page-grid {
           display: grid;
           grid-template-columns: minmax(0, 1.75fr) minmax(320px, 1fr);
@@ -9676,74 +9861,67 @@ export default function SetupView({
 
                     {/* DESKTOP: 3 Cards Row */}
                     <div className="quick-actions-desktop">
-                      <div className="quick-action-card-desktop" onClick={() => setActiveSubPage('profile')}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Store size={18} />
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Edit Profile</strong>
-                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Update business details</span>
-                          </div>
-                        </div>
-                        <ChevronRight size={16} color="#94A3B8" />
-                      </div>
-
-                      <div className="quick-action-card-desktop" onClick={() => onNavigate && onNavigate('qr-generator')}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Printer size={18} />
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Generate QR</strong>
-                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Create QR standees</span>
-                          </div>
-                        </div>
-                        <ChevronRight size={16} color="#94A3B8" />
-                      </div>
-
                       <div className="quick-action-card-desktop" onClick={testAlarmSound}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                           <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Bell size={18} />
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Test Order Alert</strong>
-                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Test sound & notification</span>
+                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Test Order Siren</strong>
+                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Sound alarm & volume test</span>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} color="#94A3B8" />
+                      </div>
+
+                      <div className="quick-action-card-desktop" onClick={handlePrintSampleThermalBill}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Printer size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Print Test Bill</strong>
+                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Verify thermal POS receipt output</span>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} color="#94A3B8" />
+                      </div>
+
+                      <div className="quick-action-card-desktop" onClick={handlePrintSampleThermalKot}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <FileText size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>Print Test KOT</strong>
+                            <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Verify kitchen order ticket</span>
                           </div>
                         </div>
                         <ChevronRight size={16} color="#94A3B8" />
                       </div>
                     </div>
 
-                    {/* MOBILE: 2x2 Compact Grid matching mockup */}
-                    <div className="quick-actions-mobile">
-                      <div className="quick-action-tile-mobile" onClick={() => setActiveSubPage('profile')}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Store size={20} />
-                        </div>
-                        <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Edit Profile</strong>
-                      </div>
-
-                      <div className="quick-action-tile-mobile" onClick={() => onNavigate && onNavigate('qr-generator')}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Printer size={20} />
-                        </div>
-                        <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Generate QR</strong>
-                      </div>
-
+                    {/* MOBILE: 3 Compact 1-Click Action Tiles */}
+                    <div className="quick-actions-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                       <div className="quick-action-tile-mobile" onClick={testAlarmSound}>
                         <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Bell size={20} />
                         </div>
-                        <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>Test Alert</strong>
+                        <strong style={{ fontSize: '0.76rem', color: '#0F172A', fontWeight: 800 }}>Test Siren</strong>
                       </div>
 
-                      <div className="quick-action-tile-mobile" onClick={() => setActiveSubPage('menu-preferences')}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Utensils size={20} />
+                      <div className="quick-action-tile-mobile" onClick={handlePrintSampleThermalBill}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Printer size={20} />
                         </div>
-                        <strong style={{ fontSize: '0.80rem', color: '#0F172A', fontWeight: 800 }}>GST & Currency</strong>
+                        <strong style={{ fontSize: '0.76rem', color: '#0F172A', fontWeight: 800 }}>Test Bill</strong>
+                      </div>
+
+                      <div className="quick-action-tile-mobile" onClick={handlePrintSampleThermalKot}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <FileText size={20} />
+                        </div>
+                        <strong style={{ fontSize: '0.76rem', color: '#0F172A', fontWeight: 800 }}>Test KOT</strong>
                       </div>
                     </div>
                   </div>
@@ -10163,45 +10341,26 @@ export default function SetupView({
                   </div>
 
                   <div className="tab-content-grid-3col">
-                    {/* Card 1: Business Profile */}
+                    {/* Card 1: Business Profile & Branding */}
                     <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')}>
                       <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Store size={22} />
                       </div>
                       <div>
-                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Business Profile</strong>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Business Profile & Branding</strong>
                         <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                          Business name, contact phone number, address, and license details.
+                          Business name, phone, address, brand logo icon and high-resolution header banner.
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
                         <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: isProfileConfigured ? '#DCFCE7' : '#FEF3C7', color: isProfileConfigured ? '#15803D' : '#D97706', border: isProfileConfigured ? '1px solid #BBF7D0' : '1px solid #FDE68A' }}>
                           {isProfileConfigured ? 'Configured' : 'Needs Attention'}
                         </span>
-                        <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Edit Profile →</span>
+                        <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Edit Profile & Logo →</span>
                       </div>
                     </div>
 
-                    {/* Card 2: Brand Logo & Banner */}
-                    <div className="settings-card-primary" onClick={() => setActiveSubPage('profile')}>
-                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Upload size={22} />
-                      </div>
-                      <div>
-                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Brand Logo & Banner</strong>
-                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                          Upload your official brand logo icon and high-resolution header banner.
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: isLogoConfigured ? '#DCFCE7' : '#FEF3C7', color: isLogoConfigured ? '#15803D' : '#D97706', border: isLogoConfigured ? '1px solid #BBF7D0' : '1px solid #FDE68A' }}>
-                          {isLogoConfigured ? 'Logo Active' : 'No Logo'}
-                        </span>
-                        <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Manage Logo →</span>
-                      </div>
-                    </div>
-
-                    {/* Card 3: Location & GPS Geofence */}
+                    {/* Card 2: Location & GPS Geofence */}
                     <div className="settings-card-primary" onClick={() => setActiveSubPage('location')}>
                       <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <MapPin size={22} />
@@ -10217,6 +10376,25 @@ export default function SetupView({
                           {isGpsConfigured ? 'GPS Active' : 'Setup Required'}
                         </span>
                         <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Configure GPS →</span>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Google Reviews Link */}
+                    <div className="settings-card-primary" onClick={() => setActiveBpModal('google_review')}>
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: settingsForm.google_review_url ? '#ECFDF5' : '#FEF3C7', color: settingsForm.google_review_url ? '#059669' : '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Globe size={22} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Google Reviews Link</strong>
+                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
+                          {settingsForm.google_review_url ? 'Diners are routed to your public Google Business review page.' : 'Connect your Google review link so diners can rate your restaurant.'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: settingsForm.google_review_url ? '#ECFDF5' : '#F1F5F9', color: settingsForm.google_review_url ? '#059669' : '#64748B', border: settingsForm.google_review_url ? '1px solid #A7F3D0' : '1px solid #CBD5E1' }}>
+                          {settingsForm.google_review_url ? 'Connected' : 'Not Set'}
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 700 }}>Manage Link →</span>
                       </div>
                     </div>
                   </div>
@@ -10277,7 +10455,7 @@ export default function SetupView({
                     </div>
 
                     {/* Card 3: Thermal Receipt Printer */}
-                    <div className="settings-card-primary" onClick={() => setActiveSubPage('orders-devices')}>
+                    <div className="settings-card-primary" onClick={() => setShowPrinterModal ? setShowPrinterModal(true) : setActiveSubPage('orders-devices')}>
                       <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Printer size={22} />
                       </div>
@@ -10291,7 +10469,7 @@ export default function SetupView({
                         <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
                           Connected
                         </span>
-                        <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Configure Printer →</span>
+                        <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Open Printer Setup →</span>
                       </div>
                     </div>
 
@@ -10355,15 +10533,15 @@ export default function SetupView({
                   </div>
 
                   <div className="tab-content-grid-3col">
-                    {/* Card 1: Menu Preferences */}
+                    {/* Card 1: Dietary & Menu Preferences */}
                     <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
                       <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Utensils size={22} />
                       </div>
                       <div>
-                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Menu Preferences</strong>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Dietary & Menu Preferences</strong>
                         <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                          Vegetarian/Non-veg markers, spice indicators, cuisine classifications, and badge filters.
+                          Vegetarian/Non-veg markers, spice indicators, cuisine classifications, and customer badges (Must-Try, Chef Special).
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
@@ -10382,7 +10560,7 @@ export default function SetupView({
                       <div>
                         <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>5% GST & Tax Billing</strong>
                         <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                          Automatic GST tax calculation on checkout bills, CGST/SGST breakdown.
+                          Automatic GST tax calculation on checkout bills, CGST/SGST breakdown, and GSTIN registration display.
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
@@ -10411,25 +10589,6 @@ export default function SetupView({
                         <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>Manage Billing →</span>
                       </div>
                     </div>
-
-                    {/* Card 4: Customer Menu Badges & Filters */}
-                    <div className="settings-card-primary" onClick={() => setActiveSubPage('menu-preferences')}>
-                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFF4EE', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Sparkles size={22} />
-                      </div>
-                      <div>
-                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 800, display: 'block', marginBottom: '4px' }}>Customer Menu Badges & Filters</strong>
-                        <span style={{ fontSize: '0.76rem', color: '#64748B', lineHeight: 1.45, display: 'block' }}>
-                          Toggle Must Try, Special, Combo, Customizable, Veg, Non-Veg, Egg, and Under ₹100 pills.
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                        <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-                          8 Badges & Filters
-                        </span>
-                        <span style={{ fontSize: '0.78rem', color: '#FF5A1F', fontWeight: 700 }}>Customize Badges →</span>
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}
@@ -10450,7 +10609,7 @@ export default function SetupView({
 
                   <div className="tab-content-grid-3col">
                     {/* Card 1: Security & Credentials */}
-                    <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
+                    <div className="settings-card-primary" onClick={() => { setActiveSubPage('security'); setSecurityModal('password'); }}>
                       <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Lock size={22} />
                       </div>
@@ -10469,7 +10628,7 @@ export default function SetupView({
                     </div>
 
                     {/* Card 2: KDS Kitchen PIN */}
-                    <div className="settings-card-primary" onClick={() => setActiveSubPage('security')}>
+                    <div className="settings-card-primary" onClick={() => { setActiveSubPage('security'); setSecurityModal('kds_pin'); }}>
                       <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <ShieldCheck size={22} />
                       </div>
@@ -10502,7 +10661,7 @@ export default function SetupView({
                         <span style={{ fontSize: '0.70rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0' }}>
                           Active
                         </span>
-                        <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>View Details →</span>
+                        <span style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 700 }}>View Security →</span>
                       </div>
                     </div>
                   </div>

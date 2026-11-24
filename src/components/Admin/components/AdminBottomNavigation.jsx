@@ -12,6 +12,10 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
           .adm-mobile-only-bottom-bar {
             display: flex !important;
           }
+          body:has(.setup-subpage-active) .adm-mobile-only-bottom-bar,
+          .adm-dashboard-shell:has(.setup-subpage-active) .adm-mobile-only-bottom-bar {
+            display: none !important;
+          }
         }
       `}</style>
       <nav 
