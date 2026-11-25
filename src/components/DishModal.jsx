@@ -3,11 +3,13 @@ import { X, ShieldCheck, Sparkles, Clock, Utensils, CheckCircle } from 'lucide-r
 import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 import { getValidDishModifiers } from '../utils/billingHelper';
+import { isFlagEnabled } from '../utils/customerHelpers';
 
 export default function DishModal({ dish, onClose, onAddToCart, currencySymbol = '₹', lang = 'en', initialPortion = null, modifiersEnabled = true, addonOnly = false }) {
   if (!dish) return null;
 
   const symbol = getCurrencySymbol(currencySymbol);
+  const isAvailable = isFlagEnabled(dish?.available, true);
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
   const displayDesc = (lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
@@ -594,9 +596,9 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 <span style={{
                   fontSize: '0.8rem',
                   fontWeight: 800,
-                  color: dish.available !== false ? 'var(--veg-green)' : '#EF4444'
+                  color: isAvailable ? 'var(--veg-green)' : '#EF4444'
                 }}>
-                  {dish.available !== false ? '● Available Fresh Now' : '● Currently Out of Stock'}
+                  {isAvailable ? '● Available Fresh Now' : '● Currently Out of Stock'}
                 </span>
               </div>
             </>
@@ -616,7 +618,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             justifyContent: 'space-between',
             gap: '12px'
           }}>
-            {addonOnly && dish.available !== false && onAddToCart ? (
+            {addonOnly && isAvailable && onAddToCart ? (
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -677,7 +679,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
               </div>
             )}
 
-            {dish.available !== false && onAddToCart ? (
+            {isAvailable && onAddToCart ? (
               <button
                 type="button"
                 onClick={() => {

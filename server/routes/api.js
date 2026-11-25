@@ -19,6 +19,7 @@ import { isAuthoritativeComplimentaryTenant } from '../services/subscriptionStat
 import { resolvePlanAllowedThemes } from '../config/themes.js';
 import { exchangeAuthCode } from '../services/authCodeService.js';
 import { calculateOfferPrice } from '../../src/utils/offerPricing.js';
+import { isCustomDomainHost } from '../../src/utils/customerHelpers.js';
 export { calculateOfferPrice };
 import { checkExpiredSubscriptions } from '../subscriptionCron.js';
 import { verifyQrToken, normalizeSpaceType, normalizeSpaceNumber, validateSpaceCapacity, generateRestaurantQrSecret } from '../utils/qrSecurity.js';
@@ -391,11 +392,11 @@ async function resolveRestaurant(req, slug) {
     try {
       const rawHeader = req.headers['x-forwarded-host'] || req.headers.host || '';
       const hostStr = Array.isArray(rawHeader) ? rawHeader[0] : String(rawHeader);
-      const rawHost = hostStr.split(':')[0].toLowerCase().replace(/^www\./, '');
-      if (rawHost && !rawHost.includes('touchqr') && !rawHost.includes('localhost') && !rawHost.includes('vercel.app') && !rawHost.includes('127.0.0.1')) {
+      const rawHost = hostStr.split(':')[0].toLowerCase().replace(/^www\./, '').replace(/\.+$/, '').trim();
+      if (rawHost && isCustomDomainHost(rawHost)) {
         const domainRestos = await query('SELECT * FROM restaurants WHERE LOWER(custom_domain) = $1 OR LOWER(custom_domain) = $2', [rawHost, `www.${rawHost}`]);
         if (domainRestos && domainRestos.length > 0) {
-          return domainRestos[0];
+          return await ensureRestoSecret(domainRestos[0]);
         }
       }
     } catch (e) {
@@ -729,11 +730,12 @@ router.get('/menu-bundle', async (req, res) => {
     }
 
     const targetId = resto.id;
-    const canonicalSlug = cleanSlug ? String(resto.slug || lookupKey).trim().toLowerCase() : '';
+    const canonicalSlug = String(resto.slug || lookupKey || '').trim().toLowerCase();
+    const cacheLookupKey = cleanSlug || canonicalSlug;
     const cacheBuildStartGen = canonicalSlug ? getMenuBundleCacheGen(canonicalSlug) : null;
 
-    if (canonicalSlug) {
-      const directCached = menuBundleCache.get(cleanSlug);
+    if (canonicalSlug && cacheLookupKey) {
+      const directCached = menuBundleCache.get(cacheLookupKey);
       const strippedCached = directCached || !cleanSlug.endsWith('-menu')
         ? null
         : menuBundleCache.get(canonicalSlug);

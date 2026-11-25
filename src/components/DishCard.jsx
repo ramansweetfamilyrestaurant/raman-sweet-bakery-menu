@@ -4,10 +4,11 @@ import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 import { getValidDishModifiers } from '../utils/billingHelper';
 import { triggerHaptic } from '../utils/haptics';
+import { isFlagEnabled } from '../utils/customerHelpers';
 
 export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹', lang = 'en', filtersVisibility, modifiersEnabled = true }) {
   const symbol = getCurrencySymbol(currencySymbol);
-  const isAvailable = dish.available !== false;
+  const isAvailable = isFlagEnabled(dish.available, true);
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
   const imageSrc = getDishImageUrl(dish.image);
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;

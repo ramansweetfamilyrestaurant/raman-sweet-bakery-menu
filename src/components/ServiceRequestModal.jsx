@@ -7,8 +7,9 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
   const [customNote, setCustomNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const isCinema = Boolean(tableNum && (tableNum.includes('Screen') || tableNum.includes('Seat') || tableNum.includes('🎬')));
-  const isHotel = Boolean(tableNum && (tableNum.includes('Room') || tableNum.includes('🏨')));
+  const normalizedSpaceType = String(spaceType || '').toLowerCase();
+  const isCinema = normalizedSpaceType === 'cinema' || normalizedSpaceType === 'cinema_seat' || Boolean(tableNum && (tableNum.includes('Screen') || tableNum.includes('Seat') || tableNum.includes('🎬')));
+  const isHotel = normalizedSpaceType === 'room' || Boolean(tableNum && (tableNum.includes('Room') || tableNum.includes('🏨')));
 
   // Cinema is a pure seat-ordering flow with NO customer staff-call modal
   if (isCinema) {

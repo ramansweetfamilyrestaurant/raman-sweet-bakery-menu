@@ -3,10 +3,11 @@ import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 import { getValidDishModifiers } from '../utils/billingHelper';
 import { triggerHaptic } from '../utils/haptics';
+import { isFlagEnabled } from '../utils/customerHelpers';
 
 export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol, filtersVisibility, modifiersEnabled = true }) {
   const symbol = getCurrencySymbol(currencySymbol);
-  const isAvailable = dish.available !== false;
+  const isAvailable = isFlagEnabled(dish.available, true);
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
   const hasModifiers = modifiersEnabled !== false && getValidDishModifiers(dish?.modifiers).length > 0;
   const imageSrc = getDishImageUrl(dish.image);

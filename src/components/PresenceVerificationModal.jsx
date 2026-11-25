@@ -144,8 +144,8 @@ export default function PresenceVerificationModal({
   // --------------------------------------------------------------------------
   const handleAcquireGps = () => {
     if (isAcquiringGpsRef.current) return;
-    isAcquiringGpsRef.current = true;
     cleanupAllTimers();
+    isAcquiringGpsRef.current = true;
 
     const cleanToken = String(tableToken || '').trim();
     if (!cleanToken || !isValidQrTokenFormat(cleanToken)) {
@@ -342,8 +342,8 @@ export default function PresenceVerificationModal({
   // --------------------------------------------------------------------------
   const handleRequestStaff = async () => {
     if (isRequestingStaffRef.current) return;
-    isRequestingStaffRef.current = true;
     cleanupAllTimers();
+    isRequestingStaffRef.current = true;
 
     const cleanToken = String(tableToken || '').trim();
     if (!cleanToken) {

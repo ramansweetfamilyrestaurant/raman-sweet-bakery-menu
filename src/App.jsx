@@ -24,6 +24,13 @@ import { getCurrencySymbol, formatPriceNumber, formatPrice } from './utils/curre
 import { getValidDishModifiers } from './utils/billingHelper';
 import { roundOfferCurrency } from './utils/offerPricing';
 import { triggerHaptic } from './utils/haptics';
+import {
+  isFlagEnabled,
+  isCustomDomainHost,
+  parseCustomerSpaceFromLocation,
+  isCustomerSpaceValid,
+  buildScopedStorageKey
+} from './utils/customerHelpers';
 
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
@@ -100,54 +107,7 @@ export const isSlugKitchenPath = (rawPath) => {
 export default function App() {
   // 1. Canonical Scanned QR Identity from URL
   const getSpaceInfoFromUrl = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = (urlParams.get('tkn') || urlParams.get('token') || urlParams.get('sig') || '').trim();
-    let type = '';
-    let num = '';
-
-    if (urlParams.get('cinema') || urlParams.get('seat')) {
-      type = 'cinema_seat';
-      num = (urlParams.get('cinema') || urlParams.get('seat')).trim();
-    } else if (urlParams.get('screen') && urlParams.get('row')) {
-      type = 'cinema_seat';
-      const screen = urlParams.get('screen').trim();
-      const row = urlParams.get('row').trim().toUpperCase();
-      const seat = (urlParams.get('seatno') || urlParams.get('seat_num') || '1').trim();
-      num = `S${screen}-${row}-${seat}`;
-    } else if (urlParams.get('counter') || urlParams.get('takeaway') || urlParams.get('space_type') === 'counter') {
-      type = 'counter';
-      num = 'COUNTER';
-    } else if (urlParams.get('cabin')) {
-      type = 'cabin';
-      num = urlParams.get('cabin').trim();
-    } else if (urlParams.get('room')) {
-      type = 'room';
-      num = urlParams.get('room').trim();
-    } else if (urlParams.get('vip')) {
-      type = 'vip';
-      num = urlParams.get('vip').trim();
-    } else if (urlParams.get('table') || urlParams.get('t') || urlParams.get('tableno') || urlParams.get('tbl')) {
-      type = 'table';
-      num = (urlParams.get('table') || urlParams.get('t') || urlParams.get('tableno') || urlParams.get('tbl')).trim();
-    } else {
-      const parts = window.location.pathname.split('/').filter(Boolean);
-      if (parts.length >= 2) {
-        const lastPart = parts[parts.length - 1];
-        const prevPart = parts[parts.length - 2].toLowerCase();
-        if (prevPart === 'cinema' || prevPart === 'seat') {
-          type = 'cinema_seat';
-          num = lastPart;
-        } else if (prevPart === 'counter' || prevPart === 'takeaway' || lastPart.toLowerCase() === 'counter' || lastPart.toLowerCase() === 'takeaway') {
-          type = 'counter';
-          num = 'COUNTER';
-        } else if (/^\d+$/.test(lastPart)) {
-          if (prevPart === 'cabin') { type = 'cabin'; num = lastPart; }
-          else if (prevPart === 'room') { type = 'room'; num = lastPart; }
-          else if (prevPart === 'vip') { type = 'vip'; num = lastPart; }
-          else if (prevPart === 'table' || prevPart === 'tbl' || prevPart === 'r') { type = 'table'; num = lastPart; }
-        }
-      }
-    }
+    const { type, num, token } = parseCustomerSpaceFromLocation(window.location.search, window.location.pathname);
 
     const isScanned = Boolean(type && num);
     const isValidTokenShape = Boolean(token && isValidQrTokenFormat(token));
@@ -207,54 +167,12 @@ export default function App() {
 
   // Validate if the table/space number exists within the restaurant's configured capacity & has valid token shape
   const isSpaceNumberValid = () => {
-    if (!currentTableNum) return true;
-
-    // Strict requirement: A scanned space QR MUST have a token with valid shape (8 hex chars)
-    if (!initialSpaceInfo.isValidTokenShape) {
-      return false;
-    }
-
-    if (currentSpaceType === 'counter' || initialSpaceInfo.type === 'counter') {
-      const isCanonicalCounter = String(currentTableNum).trim().toUpperCase() === 'COUNTER';
-      if (!isCanonicalCounter) return false;
-      // If restaurant info is still loading, do not prematurely fail
-      if (!info) return true;
-      const isCounterEnabled = info.counter_ordering_enabled === true || 
-                               info.counter_ordering_enabled === 1 || 
-                               info.counter_ordering_enabled === '1' ||
-                               // Dining, restaurants, bakeries, cafes with a valid HMAC token format
-                               Boolean(initialSpaceInfo.isValidTokenShape && info.resto_type !== 'cinema' && info.business_type !== 'cinema_theatre');
-      return Boolean(isCounterEnabled);
-    }
-
-    if (currentSpaceType === 'cinema_seat' || initialSpaceInfo.type === 'cinema_seat') {
-      const cMatch = String(currentTableNum).match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
-      return Boolean(cMatch || String(currentTableNum).trim().length > 0);
-    }
-
-    const num = parseInt(currentTableNum, 10);
-    if (isNaN(num) || num <= 0) return false;
-
-    if (!info) return true; // Still loading restaurant info
-
-    const activeType = (currentSpaceType || String(info.table_prefix || 'table')).toLowerCase();
-    let maxAllowed = 0;
-    if (activeType === 'cabin') {
-      maxAllowed = Number(info.total_cabins) || 0;
-    } else if (activeType === 'room') {
-      maxAllowed = Number(info.total_rooms) || 0;
-    } else if (activeType === 'vip') {
-      maxAllowed = Number(info.total_vip) || 0;
-    } else {
-      maxAllowed = Number(info.total_tables) || 0;
-    }
-
-    // Capacity check
-    if (maxAllowed > 0 && num > maxAllowed) {
-      return false;
-    }
-
-    return true;
+    return isCustomerSpaceValid({
+      currentTableNum,
+      currentSpaceType: currentSpaceType || initialSpaceInfo.type,
+      hasValidTokenShape: initialSpaceInfo.isValidTokenShape,
+      info
+    });
   };
 
   const isTableValid = isSpaceNumberValid();
@@ -333,8 +251,8 @@ export default function App() {
     !isCurrentSpacePaused &&
     hasScannedSpace &&
     info &&
-    (info.direct_ordering_enabled === true || info.direct_ordering_enabled === 1 || info.direct_ordering_enabled === '1') &&
-    (info.permissions?.direct_ordering_enabled !== false && info.permissions?.direct_ordering_enabled !== 0 && info.permissions?.direct_ordering_enabled !== 'false')
+    isFlagEnabled(info.direct_ordering_enabled, false) &&
+    isFlagEnabled(info.permissions?.direct_ordering_enabled, true)
   );
 
   const isCinemaVenue = Boolean(
@@ -415,7 +333,9 @@ export default function App() {
       }
       return 'admin-login';
     }
-    if (path === '' || path === '/') return 'landing';
+    if (path === '' || path === '/') {
+      return isCustomDomainHost(window.location.hostname) ? 'menu' : 'landing';
+    }
     return 'menu';
   };
 
@@ -624,6 +544,7 @@ export default function App() {
   const [showCartDrawer, setShowCartDrawer] = useState(false);
 
   const handleAddToCart = (dish, portionType = 'full', selectedModifiers = [], quantity = 1) => {
+    if (!dish || !isFlagEnabled(dish.available, true)) return;
     triggerHaptic('success');
     const addQty = Math.min(99, Math.max(1, parseInt(quantity, 10) || 1));
     const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
@@ -762,9 +683,12 @@ export default function App() {
       alert('WhatsApp number is not configured for this business yet.');
       return;
     }
-    let msg = `👋 Hello *${info.name}*!\nI would like to place an order from ${getDynamicSpaceLabel() || formatCustomerLocation(effectiveTableNum || '1')}:\n\n`;
+    const locationText = getDynamicSpaceLabel() || (effectiveTableNum ? formatCustomerLocation(effectiveTableNum) : '');
+    let msg = locationText
+      ? `👋 Hello *${info.name}*!\nI would like to place an order from ${locationText}:\n\n`
+      : `👋 Hello *${info.name}*!\nI would like to place an order:\n\n`;
     let grandTotal = 0;
-    const sym = (info?.currency_symbol !== undefined && info?.currency_symbol !== null) ? info.currency_symbol : '₹';
+    const sym = getCurrencySymbol(info?.currency_symbol);
     cartItems.forEach(item => {
       const itemPrice = item.price * item.quantity;
       grandTotal += itemPrice;
@@ -777,7 +701,7 @@ export default function App() {
         : '';
       msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${formatPriceNumber(itemPrice)}${comboText}${modText}\n`;
     });
-    const isGst = Boolean(info?.gst_enabled);
+    const isGst = isFlagEnabled(info?.gst_enabled, false);
     if (isGst) {
       const cgst = Math.round(grandTotal * 0.025 * 100) / 100;
       const sgst = Math.round(grandTotal * 0.025 * 100) / 100;
@@ -820,15 +744,31 @@ export default function App() {
     setPresenceModalOpen(false);
   }, [currentTableNum, currentSpaceType, currentTableToken, info?.slug]);
 
-  // FIX: Table-specific localStorage key (Only for scanned table QR or active table number)
-  const getOrderStorageKey = (tbl) => {
+  const getActiveStorageTenantSlug = () => {
+    return getSlugFromUrl() || (info && info.slug) || '';
+  };
+
+  // FIX: Tenant + space scoped localStorage key (waits for resolved tenant slug)
+  const getOrderStorageKey = (tbl, sType) => {
     const t = tbl || effectiveTableNum || orderTableInput;
-    return t ? `touchqr_active_order_id_table_${t}` : null;
+    const tenantSlug = getActiveStorageTenantSlug();
+    if (!t || !tenantSlug) return null;
+    return buildScopedStorageKey('touchqr_active_order_id', {
+      slug: tenantSlug,
+      spaceType: sType || currentSpaceType || initialSpaceInfo.type || 'table',
+      tableNumber: t
+    });
   };
 
   const getInitialActiveOrderId = () => {
-    if (initialTableNum) {
-      return localStorage.getItem(`touchqr_active_order_id_table_${initialTableNum}`) || null;
+    const initialSlug = getSlugFromUrl();
+    if (initialTableNum && initialSlug) {
+      const key = buildScopedStorageKey('touchqr_active_order_id', {
+        slug: initialSlug,
+        spaceType: initialSpaceInfo.type || 'table',
+        tableNumber: initialTableNum
+      });
+      return (key && localStorage.getItem(key)) || null;
     }
     return null;
   };
@@ -836,6 +776,33 @@ export default function App() {
   const [activeOrderId, setActiveOrderId] = useState(getInitialActiveOrderId);
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
   const trackingExpiredRef = useRef(false);
+  const restoredTenantOrderRef = useRef(getSlugFromUrl() || '');
+  const [restoredOrderSlug, setRestoredOrderSlug] = useState(() => getSlugFromUrl() || '');
+
+  // Restore saved order once tenant slug resolves (e.g. custom domain root load)
+  useEffect(() => {
+    const tenantSlug = getActiveStorageTenantSlug();
+    if (!tenantSlug || sessionExpired) return;
+    if (restoredTenantOrderRef.current === tenantSlug) {
+      if (restoredOrderSlug !== tenantSlug) {
+        setRestoredOrderSlug(tenantSlug);
+      }
+      return;
+    }
+    restoredTenantOrderRef.current = tenantSlug;
+    if (initialTableNum && !activeOrderId) {
+      const key = buildScopedStorageKey('touchqr_active_order_id', {
+        slug: tenantSlug,
+        spaceType: initialSpaceInfo.type || 'table',
+        tableNumber: initialTableNum
+      });
+      const savedOrderId = key ? localStorage.getItem(key) : null;
+      if (savedOrderId) {
+        setActiveOrderId(savedOrderId);
+      }
+    }
+    setRestoredOrderSlug(tenantSlug);
+  }, [info?.slug, sessionExpired]);
 
   useEffect(() => {
     trackingExpiredRef.current = false;
@@ -862,7 +829,7 @@ export default function App() {
 
       if (remainingSec <= 0) {
         // Auto-kill session cleanly after 5 seconds
-        const key = getOrderStorageKey(activeOrderTrack.table_number);
+        const key = getOrderStorageKey(activeOrderTrack.table_number, activeOrderTrack.space_type || currentSpaceType);
         if (key) localStorage.removeItem(key);
         localStorage.removeItem(timeKey);
         setActiveOrderId(null);
@@ -887,11 +854,27 @@ export default function App() {
 
   // 3-Minute Inactivity Auto-Kill for Table QR Scanned Customers who haven't placed an order
   useEffect(() => {
-    if (!effectiveTableNum || sessionExpired || activeOrderId || (activeOrderTrack && ['pending', 'accepted', 'kitchen', 'preparing', 'served'].includes(activeOrderTrack.status))) {
+    const tenantSlug = getActiveStorageTenantSlug();
+    const isOrderRestorationComplete = Boolean(
+      tenantSlug &&
+      restoredTenantOrderRef.current === tenantSlug &&
+      restoredOrderSlug === tenantSlug
+    );
+    if (!isOrderRestorationComplete || !effectiveTableNum || sessionExpired || activeOrderId || (activeOrderTrack && ['pending', 'accepted', 'kitchen', 'preparing', 'served'].includes(activeOrderTrack.status))) {
       return;
     }
 
-    const scanTimeKey = `touchqr_table_scan_time_${effectiveTableNum}`;
+    const activeOrderKey = getOrderStorageKey(effectiveTableNum, currentSpaceType || initialSpaceInfo.type);
+    if (activeOrderKey && localStorage.getItem(activeOrderKey)) {
+      return;
+    }
+
+    const scanTimeKey = buildScopedStorageKey('touchqr_table_scan_time', {
+      slug: tenantSlug,
+      spaceType: currentSpaceType || initialSpaceInfo.type || 'table',
+      tableNumber: effectiveTableNum
+    });
+    if (!scanTimeKey) return;
     let scanTime = Number(localStorage.getItem(scanTimeKey));
     if (!scanTime || isNaN(scanTime)) {
       scanTime = Date.now();
@@ -918,7 +901,7 @@ export default function App() {
     checkInactivity();
     const timer = setInterval(checkInactivity, 1000);
     return () => clearInterval(timer);
-  }, [effectiveTableNum, activeOrderId, activeOrderTrack?.status, sessionExpired]);
+  }, [info?.slug, restoredOrderSlug, effectiveTableNum, activeOrderId, activeOrderTrack?.status, sessionExpired]);
 
   // Multi-Device Table-Level Live Sync Effect (Only runs if table QR code scanned OR order active in session)
   useEffect(() => {
@@ -935,8 +918,9 @@ export default function App() {
           return;
         }
         if (activeOrderId) {
+          let trackingToken = '';
           try {
-            const trackingToken = typeof sessionStorage !== 'undefined'
+            trackingToken = typeof sessionStorage !== 'undefined'
               ? (sessionStorage.getItem(`tq_track_${activeOrderId}`) || sessionStorage.getItem('tq_active_tracking_token') || '')
               : '';
             const data = await trackOrderStatus(activeOrderId, currentSlug, trackingToken);
@@ -1070,9 +1054,21 @@ export default function App() {
             sessionStorage.setItem('tq_active_tracking_token', res.tracking_token);
           } catch (e) {}
         }
-        const storageKey = `touchqr_active_order_id_table_${targetTable}`;
-        localStorage.setItem(storageKey, String(res.order_id));
-        localStorage.removeItem(`touchqr_table_scan_time_${targetTable}`);
+        const storageSlug = slug || getActiveStorageTenantSlug();
+        if (storageSlug) {
+          const storageKey = buildScopedStorageKey('touchqr_active_order_id', {
+            slug: storageSlug,
+            spaceType: targetSpaceType,
+            tableNumber: targetTable
+          });
+          if (storageKey) localStorage.setItem(storageKey, String(res.order_id));
+          const scanKey = buildScopedStorageKey('touchqr_table_scan_time', {
+            slug: storageSlug,
+            spaceType: targetSpaceType,
+            tableNumber: targetTable
+          });
+          if (scanKey) localStorage.removeItem(scanKey);
+        }
         setActiveOrderId(String(res.order_id));
       }
 
@@ -1118,7 +1114,8 @@ export default function App() {
           customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : (targetSpaceType === 'cinema_seat' || targetSpaceType === 'cinema') ? 'Seat Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
           customer_phone: customerPhoneInput || '',
           items: itemsPayload,
-          total_amount: grandTotal
+          total_amount: grandTotal,
+          idempotency_key: attemptIdempKey
         };
         setPresenceModalOpen(true);
         return;
@@ -1163,9 +1160,22 @@ export default function App() {
             sessionStorage.setItem('tq_active_tracking_token', res.tracking_token);
           } catch (e) {}
         }
-        const storageKey = `touchqr_active_order_id_table_${payload.table_number}`;
-        localStorage.setItem(storageKey, String(res.order_id));
-        localStorage.removeItem(`touchqr_table_scan_time_${payload.table_number}`);
+        const retrySlug = payload.slug || getActiveStorageTenantSlug();
+        const retrySpaceType = payload.space_type || currentSpaceType || 'table';
+        if (retrySlug) {
+          const storageKey = buildScopedStorageKey('touchqr_active_order_id', {
+            slug: retrySlug,
+            spaceType: retrySpaceType,
+            tableNumber: payload.table_number
+          });
+          if (storageKey) localStorage.setItem(storageKey, String(res.order_id));
+          const scanKey = buildScopedStorageKey('touchqr_table_scan_time', {
+            slug: retrySlug,
+            spaceType: retrySpaceType,
+            tableNumber: payload.table_number
+          });
+          if (scanKey) localStorage.removeItem(scanKey);
+        }
         setActiveOrderId(String(res.order_id));
       }
 
@@ -1230,13 +1240,14 @@ export default function App() {
       setLoading(true);
     }
     setRestaurantStatus('active');
+    const isCustomDomainMenu = !slug && (rawPath === '' || rawPath === '/') && isCustomDomainHost(typeof window !== 'undefined' ? window.location.hostname : '');
     const isSystemNonMenuRoute = ['/', '/register', '/billing', '/super-admin', '/superadmin', '/privacy-policy', '/privacy', '/terms', '/terms-of-service', '/refund-policy', '/refunds', '/security', '/contact', '/support'].includes(rawPath);
-    if (!slug && isSystemNonMenuRoute) {
+    if (!slug && isSystemNonMenuRoute && !isCustomDomainMenu) {
       setLoading(false);
       return;
     }
     const isAdminMode = Boolean(adminToken && isAdminRoute);
-    if (!slug && !isAdminMode) {
+    if (!slug && !isAdminMode && !isCustomDomainMenu) {
       setRestaurantStatus('not_found');
       setLoading(false);
       return;
@@ -1260,7 +1271,8 @@ export default function App() {
         if (typeof window !== 'undefined' && window.sessionStorage) {
           try {
             const spaceKey = spaceInfo?.type && spaceInfo?.num ? `${spaceInfo.type}_${spaceInfo.num}` : 'main';
-            const sessionKey = `touchqr_scan_${slug}_${spaceKey}`;
+            const tenantKey = slug || (typeof window !== 'undefined' ? window.location.hostname : 'host') || 'host';
+            const sessionKey = `touchqr_scan_${tenantKey}_${spaceKey}`;
             if (!sessionStorage.getItem(sessionKey)) {
               isNewScanSession = true;
               sessionStorage.setItem(sessionKey, String(Date.now()));
@@ -1276,7 +1288,8 @@ export default function App() {
         try {
           const scanParam = isNewScanSession ? '1' : '0';
           const spaceQuery = spaceTypeParam ? `&space_type=${encodeURIComponent(spaceTypeParam)}&table_num=${encodeURIComponent(tableNumParam)}` : '';
-          const bundleRes = await fetch(`/api/menu-bundle?slug=${encodeURIComponent(slug)}&scan=${scanParam}${spaceQuery}`);
+          const slugQuery = slug ? `slug=${encodeURIComponent(slug)}&` : '';
+          const bundleRes = await fetch(`/api/menu-bundle?${slugQuery}scan=${scanParam}${spaceQuery}`);
           if (bundleRes.ok) {
             const bundle = await bundleRes.json();
             if (bundle && bundle.info) {
@@ -1340,9 +1353,10 @@ export default function App() {
       setCategories(catData);
       setDishes(dishData);
       setCombos(Array.isArray(comboData) ? comboData : []);
-      if (infoData && infoData.name && window.location.pathname !== '/' && window.location.pathname !== '/register') {
+      const isCustomDomainRoot = window.location.pathname === '/' && isCustomDomainHost(window.location.hostname);
+      if (infoData && infoData.name && ((window.location.pathname !== '/' && window.location.pathname !== '/register') || isCustomDomainRoot)) {
         document.title = `${infoData.name} - Digital Menu & Ordering`;
-      } else if (window.location.pathname === '/') {
+      } else if (window.location.pathname === '/' && !isCustomDomainRoot) {
         document.title = 'TouchQR - Digital Menu & QR Ordering Platform';
       }
     } catch (err) {
@@ -1579,8 +1593,15 @@ export default function App() {
           setView('admin-login');
         }
       } else if (isRootPath) {
-        setView('landing');
-        document.title = 'TouchQR - Digital Menu & QR Ordering Platform';
+        if (isCustomDomainHost(window.location.hostname)) {
+          setView('menu');
+          if (info && info.name) {
+            document.title = `${info.name} - Digital Menu & Ordering`;
+          }
+        } else {
+          setView('landing');
+          document.title = 'TouchQR - Digital Menu & QR Ordering Platform';
+        }
       } else if (path === '/menu' || path === '/menu/') {
         setRestaurantStatus('not_found');
         setLoading(false);
@@ -1777,13 +1798,18 @@ export default function App() {
         // Show all available combos
       } else if (activeQuickFilter === 'under100') {
         list = list.filter(c => {
-          const p = Number(c.offer_price) > 0 ? Number(c.offer_price) : Number(c.price || 0);
-          return p > 0 && p <= 100;
+          const hasOffer = c.offer_price !== undefined && c.offer_price !== null && c.offer_price !== '';
+          const p = hasOffer ? Number(c.offer_price) : Number(c.price || 0);
+          return (hasOffer ? p >= 0 : p > 0) && p <= 100;
         });
       } else if (activeQuickFilter === 'must_try') {
         list = list.filter(c => String(c.badge || '').toLowerCase().includes('must'));
       } else if (activeQuickFilter === 'special') {
-        list = list.filter(c => String(c.badge || '').toLowerCase().includes('special') || Boolean(c.offer_price));
+        list = list.filter(c => {
+          const basePrice = Number(c.regular_price ?? c.price ?? 0);
+          const hasOffer = c.offer_price !== undefined && c.offer_price !== null && c.offer_price !== '' && Number(c.offer_price) >= 0 && Number(c.offer_price) < basePrice;
+          return String(c.badge || '').toLowerCase().includes('special') || hasOffer;
+        });
       } else if (activeQuickFilter === 'veg') {
         list = list.filter(c => {
           if (isPureVegResto) return true;
@@ -1820,7 +1846,7 @@ export default function App() {
     }
 
     return list;
-  }, [combos, activeQuickFilter, searchQuery, info]);
+  }, [combos, activeQuickFilter, searchQuery, info, isPureVegResto]);
 
   // Group dishes by category with in-memory multi-field tokenized search & quick filters
   const { groupedDishes, totalMatchingDishesCount } = useMemo(() => {
@@ -1850,14 +1876,17 @@ export default function App() {
           }
           if (activeQuickFilter === 'special') {
             const badge = String(d.badge || '').toLowerCase();
-            const hasOffer = Boolean(d.offer_badge || (d.offer && d.offer.offer_badge) || (Number(d.offer_price) > 0 && Number(d.offer_price) < Number(d.price || d.portion_full_price)));
+            const basePrice = Number(d.regular_price ?? d.price ?? d.portion_full_price ?? 0);
+            const hasValidOfferPrice = d.offer_price !== undefined && d.offer_price !== null && d.offer_price !== '' && Number(d.offer_price) >= 0 && Number(d.offer_price) < basePrice;
+            const hasOffer = Boolean(d.offer_badge || (d.offer && d.offer.offer_badge) || hasValidOfferPrice);
             return Boolean(d.special || d.is_special || badge.includes('special') || hasOffer);
           }
           if (activeQuickFilter === 'under100') {
-            const effectivePrice = Number(d.offer_price) > 0 
-              ? Number(d.offer_price) 
+            const hasOffer = d.offer_price !== undefined && d.offer_price !== null && d.offer_price !== '';
+            const effectivePrice = hasOffer
+              ? Number(d.offer_price)
               : (Number(d.price) > 0 ? Number(d.price) : Number(d.portion_full_price) || 0);
-            return effectivePrice > 0 && effectivePrice <= 100;
+            return (hasOffer ? effectivePrice >= 0 : effectivePrice > 0) && effectivePrice <= 100;
           }
           return true;
         });
@@ -1925,7 +1954,7 @@ export default function App() {
     }
 
     return { groupedDishes: results, totalMatchingDishesCount: totalMatchingCount };
-  }, [dishes, categories, searchQuery, activeQuickFilter, selectedCategory, filteredCombos]);
+  }, [dishes, categories, searchQuery, activeQuickFilter, selectedCategory, filteredCombos, isPureVegResto]);
 
   // Categories that contain at least one dish (auto-hides blank categories for customers)
   const populatedCategories = useMemo(() => {
@@ -2718,7 +2747,8 @@ export default function App() {
               if (activeOrderTrack?.id) {
                 localStorage.removeItem(`touchqr_order_completed_time_${activeOrderTrack.id}`);
               }
-              localStorage.removeItem(getOrderStorageKey());
+              const scopedKey = getOrderStorageKey(activeOrderTrack?.table_number, activeOrderTrack?.space_type || currentSpaceType);
+              if (scopedKey) localStorage.removeItem(scopedKey);
               setActiveOrderId(null);
               setActiveOrderTrack(null);
               setCurrentTableNum('');
@@ -2847,6 +2877,7 @@ export default function App() {
         foodType={info?.food_type}
         isPureVeg={isPureVegResto}
         lang={lang}
+        currencySymbol={getCurrencySymbol(info?.currency_symbol)}
       />
 
       {/* Sticky Category Quick Jump Rail (only shows populated categories to customers) */}
@@ -3080,8 +3111,16 @@ export default function App() {
           <>
           {/* 🔥 SPECIAL OFFERS BANNER */}
           {!searchQuery && !activeQuickFilter && selectedCategory === 'all' && (() => {
-            const offerDishes = dishes.filter(d => d.offer_price !== undefined && d.offer_price !== null && Number(d.offer_price) < Number(d.price));
-            const offerCombos = (combos || []).filter(c => c.offer_price !== undefined && c.offer_price !== null && Number(c.offer_price) < Number(c.price));
+            const offerDishes = dishes.filter(d => {
+              if (!isFlagEnabled(d.available, true)) return false;
+              const basePrice = Number(d.regular_price ?? d.price ?? d.portion_full_price ?? 0);
+              return d.offer_price !== undefined && d.offer_price !== null && d.offer_price !== '' && Number(d.offer_price) < basePrice;
+            });
+            const offerCombos = (combos || []).filter(c => {
+              if (!isFlagEnabled(c.available, true)) return false;
+              const basePrice = Number(c.regular_price ?? c.price ?? 0);
+              return c.offer_price !== undefined && c.offer_price !== null && c.offer_price !== '' && Number(c.offer_price) < basePrice;
+            });
             const allOfferItems = [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
             if (allOfferItems.length === 0) return null;
             const sym = getCurrencySymbol(info?.currency_symbol);
@@ -3281,6 +3320,88 @@ export default function App() {
                                     </div>
                                 );
                               }
+                            } else {
+                              const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
+                              const hasModifiers = isFlagEnabled(info?.modifiers_enabled, true) && getValidDishModifiers(item.modifiers).length > 0;
+                              if (!hasHalf && !hasModifiers) {
+                                const inCartDish = cartItems.find(i => !i.isCombo && String(i.dish?.id) === String(item.id) && (!i.modifiers || i.modifiers.length === 0) && String(i.portion_type || 'full') === 'full');
+                                const dishQty = inCartDish ? inCartDish.quantity : 0;
+                                if (dishQty > 0) {
+                                  return (
+                                    <div
+                                      onClick={(e) => e.stopPropagation()}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '3px',
+                                        background: 'var(--theme-card-bg, #FFFFFF)',
+                                        border: '1.5px solid var(--primary-emerald, #10B981)',
+                                        borderRadius: 'var(--radius-pill)',
+                                        padding: '2px 4px',
+                                        flexShrink: 0
+                                      }}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateCartQuantity(inCartDish.key || inCartDish.dish?.id, -1)}
+                                        aria-label="Decrease quantity"
+                                        style={{
+                                          background: 'var(--bg-secondary, #F1F5F9)',
+                                          color: 'var(--text-dark, #0F172A)',
+                                          border: 'none',
+                                          width: '22px',
+                                          height: '22px',
+                                          padding: 0,
+                                          flexShrink: 0,
+                                          borderRadius: '50%',
+                                          fontWeight: 900,
+                                          cursor: 'pointer',
+                                          fontSize: '0.82rem',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          lineHeight: 1
+                                        }}
+                                      >
+                                        −
+                                      </button>
+                                      <span style={{
+                                        minWidth: '16px',
+                                        textAlign: 'center',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 900,
+                                        color: 'var(--theme-price-color, var(--primary-emerald, #10B981))'
+                                      }}>
+                                        {dishQty}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateCartQuantity(inCartDish.key || inCartDish.dish?.id, 1)}
+                                        aria-label="Increase quantity"
+                                        style={{
+                                          background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                                          color: 'var(--theme-btn-text, #FFFFFF)',
+                                          border: 'none',
+                                          width: '22px',
+                                          height: '22px',
+                                          padding: 0,
+                                          flexShrink: 0,
+                                          borderRadius: '50%',
+                                          fontWeight: 900,
+                                          cursor: 'pointer',
+                                          fontSize: '0.82rem',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          lineHeight: 1
+                                        }}
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  );
+                                }
+                              }
                             }
 
                             return (
@@ -3292,7 +3413,7 @@ export default function App() {
                                     handleAddComboToCart(item);
                                   } else {
                                     const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
-                                    const hasModifiers = info?.modifiers_enabled !== false && getValidDishModifiers(item.modifiers).length > 0;
+                                    const hasModifiers = isFlagEnabled(info?.modifiers_enabled, true) && getValidDishModifiers(item.modifiers).length > 0;
                                     if (hasHalf || hasModifiers) {
                                       openDishCustomizationModal(item, null, 'addon');
                                     } else {
@@ -3372,8 +3493,9 @@ export default function App() {
                   const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
                   const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
 
-                  const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null) ? Number(combo.regular_price) : Number(combo.price || 0);
-                  const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null) ? Number(combo.offer_price) : regularPrice;
+                  const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null && combo.regular_price !== '') ? Number(combo.regular_price) : Number(combo.price || 0);
+                  const hasValidOffer = combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) < regularPrice;
+                  const effectivePrice = hasValidOffer ? Number(combo.offer_price) : regularPrice;
                   const hasDiscount = (originalTotal > effectivePrice) || (regularPrice > effectivePrice);
                   const comparePrice = originalTotal > effectivePrice ? originalTotal : regularPrice;
 
@@ -3411,7 +3533,7 @@ export default function App() {
                           position: 'relative'
                         }}>
                           <img 
-                            src={combo.image ? resolveImageUrl(combo.image) : '/images/default-combo.webp?v=3'} 
+                            src={getComboImageUrl(combo.image)} 
                             alt={combo.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => {
@@ -3671,7 +3793,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={getCurrencySymbol(info?.currency_symbol)}
                       filtersVisibility={info?.filters_visibility}
-                      modifiersEnabled={info?.modifiers_enabled !== false}
+                      modifiersEnabled={isFlagEnabled(info?.modifiers_enabled, true)}
                       onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                     />
@@ -3690,7 +3812,7 @@ export default function App() {
                       lang={lang}
                       currencySymbol={getCurrencySymbol(info?.currency_symbol)}
                       filtersVisibility={info?.filters_visibility}
-                      modifiersEnabled={info?.modifiers_enabled !== false}
+                      modifiersEnabled={isFlagEnabled(info?.modifiers_enabled, true)}
                       onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                     />
@@ -3749,7 +3871,7 @@ export default function App() {
                     {(() => {
                       const sym = getCurrencySymbol(info?.currency_symbol);
                       const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                      const isGst = Boolean(info?.gst_enabled);
+                      const isGst = isFlagEnabled(info?.gst_enabled, false);
                       const cgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
                       const sgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
                       const grandTotal = isGst ? Math.round((subtotal + cgst + sgst) * 100) / 100 : subtotal;
@@ -3850,7 +3972,7 @@ export default function App() {
             const sym = getCurrencySymbol(info?.currency_symbol);
             const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const subtotal = cartTotal;
-            const isGst = Boolean(info?.gst_enabled);
+            const isGst = isFlagEnabled(info?.gst_enabled, false);
             const cgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
             const sgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
             const grandTotal = isGst ? Math.round((subtotal + cgst + sgst) * 100) / 100 : subtotal;
@@ -4462,7 +4584,7 @@ export default function App() {
                         </button>
                       )}
 
-                      {info && info.whatsapp_enabled !== false && (
+                      {info && isFlagEnabled(info.whatsapp_enabled, true) && (
                         <button
                           type="button"
                           onClick={handleSendWhatsAppOrder}
@@ -4484,7 +4606,7 @@ export default function App() {
                           }}
                         >
                           <MessageSquare size={16} />
-                          <span>Order via WhatsApp ({sym}{formatPriceNumber(cartTotal)})</span>
+                          <span>Order via WhatsApp ({sym}{formatPriceNumber(isGst ? grandTotal : subtotal)})</span>
                         </button>
                       )}
                     </div>

@@ -12,7 +12,8 @@ export default function SearchBar({
   restoType,
   foodType,
   isPureVeg: isPureVegProp,
-  lang = 'en'
+  lang = 'en',
+  currencySymbol = '₹'
 }) {
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef(null);
@@ -40,7 +41,7 @@ export default function SearchBar({
     { id: 'egg', label: lang === 'hi' ? '🟡 अंडा' : '🟡 Egg', show: !isPureVeg && vis.egg !== false },
     { id: 'must_try', label: lang === 'hi' ? '⭐ मस्ट ट्राई' : '⭐ Must Try', show: vis.must_try !== false },
     { id: 'special', label: lang === 'hi' ? '✨ स्पेशल' : '✨ Special', show: vis.special !== false },
-    { id: 'under100', label: lang === 'hi' ? '⚡ ₹100 से कम' : '⚡ Under ₹100', show: vis.under100 !== false }
+    { id: 'under100', label: lang === 'hi' ? `⚡ ${currencySymbol}100 से कम` : `⚡ Under ${currencySymbol}100`, show: vis.under100 !== false }
   ];
 
   const filters = allFilters.filter(f => f.show);
