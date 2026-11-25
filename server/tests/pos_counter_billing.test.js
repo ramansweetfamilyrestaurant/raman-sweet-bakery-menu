@@ -397,12 +397,20 @@ async function runTestSuite() {
               price: 250,
               quantity: 2,
               variant: 'full',
-              portion: '',
+              portion: 'Half',
               modifiers: [
                 { name: 'Extra Cheese', price: 40 },
                 { name: 'Jalapenos', price: 20 },
                 { name: '   ', price: 10 }
               ]
+            },
+            {
+              dish_id: 22,
+              name: 'Dal Makhani (Half)',
+              price: 90,
+              quantity: 1,
+              variant: 'half',
+              modifiers: []
             }
           ]
         })
@@ -412,12 +420,14 @@ async function runTestSuite() {
       const data = await res.json();
       assert.strictEqual(data.success, true);
       const parsed = typeof data.order.items === 'string' ? JSON.parse(data.order.items) : data.order.items;
-      assert.strictEqual(parsed.length, 1);
+      assert.strictEqual(parsed.length, 2);
       assert.strictEqual(parsed[0].modifiers.length, 2);
       assert.strictEqual(parsed[0].modifiers[0].name, 'Extra Cheese');
       assert.strictEqual(Number(parsed[0].modifiers[0].price), 40);
       assert.strictEqual(parsed[0].modifiers[1].name, 'Jalapenos');
-      assert.strictEqual(Number(data.order.subtotal_amount), 500);
+      assert.strictEqual(parsed[0].portion, 'Half');
+      assert.strictEqual(parsed[1].portion, '', 'Legacy name ending in (Half) must not get duplicate portion');
+      assert.strictEqual(Number(data.order.subtotal_amount), 590);
     });
 
   } finally {

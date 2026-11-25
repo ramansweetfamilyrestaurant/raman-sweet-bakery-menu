@@ -3082,15 +3082,17 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
               price: Math.max(0, Number(typeof m === 'object' ? m.price : 0) || 0)
             }))
         : [];
+      const itemName = String(it.name || 'Custom Item').trim();
+      const alreadyHasPortionInName = /\((half|full)\)$/i.test(itemName);
       subtotal += (price * qty);
       return {
         id: it.id || it.dish_id || idx + 1,
         dish_id: it.dish_id || it.id || null,
-        name: String(it.name || 'Custom Item').trim(),
+        name: itemName,
         price,
         quantity: qty,
         variant: it.variant || null,
-        portion: it.portion || (it.variant === 'half' ? 'Half' : ''),
+        portion: it.portion || ((it.variant === 'half' && !alreadyHasPortionInName) ? 'Half' : ''),
         modifiers: sanitizedModifiers,
         round: 1,
         notes: it.notes || ''

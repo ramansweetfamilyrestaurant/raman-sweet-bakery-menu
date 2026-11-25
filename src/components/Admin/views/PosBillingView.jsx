@@ -253,26 +253,28 @@ export default function PosBillingView({
     }
   };
 
-  const isCartItemMatch = (item, targetKeyOrDishId, variant) => {
-    if (item.cartKey && item.cartKey === targetKeyOrDishId) return true;
-    const isCompositeKey = String(targetKeyOrDishId).includes('_full') || String(targetKeyOrDishId).includes('_half');
-    return !isCompositeKey && String(item.dish.id) === String(targetKeyOrDishId) && item.selectedVariant === variant && (!item.modifiers || item.modifiers.length === 0);
+  const updateCartQuantityByKey = (cartKey, delta) => {
+    setCart(prev => prev.map(item => {
+      if (item.cartKey === cartKey) {
+        const newQty = item.quantity + delta;
+        return newQty > 0 ? { ...item, quantity: newQty } : null;
+      }
+      return item;
+    }).filter(Boolean));
   };
 
-  const updateQuantity = (targetKeyOrDishId, variant, delta) => {
-    setCart(prev => {
-      return prev.map(item => {
-        if (isCartItemMatch(item, targetKeyOrDishId, variant)) {
-          const newQty = item.quantity + delta;
-          return newQty > 0 ? { ...item, quantity: newQty } : null;
-        }
-        return item;
-      }).filter(Boolean);
-    });
+  const removeCartItemByKey = (cartKey) => {
+    setCart(prev => prev.filter(item => item.cartKey !== cartKey));
   };
 
-  const removeFromCart = (targetKeyOrDishId, variant) => {
-    setCart(prev => prev.filter(item => !isCartItemMatch(item, targetKeyOrDishId, variant)));
+  const updateQuantity = (dishId, variant, delta) => {
+    setCart(prev => prev.map(item => {
+      if (String(item.dish.id) === String(dishId) && item.selectedVariant === variant && (!item.modifiers || item.modifiers.length === 0)) {
+        const newQty = item.quantity + delta;
+        return newQty > 0 ? { ...item, quantity: newQty } : null;
+      }
+      return item;
+    }).filter(Boolean));
   };
 
   const clearCart = () => {
@@ -383,7 +385,7 @@ export default function PosBillingView({
     try {
       const itemsPayload = cart.map(it => ({
         dish_id: it.dish.id,
-        name: it.selectedVariant === 'half' ? `${it.dish.name} (${formatHalfLabel(it.dish.portion_half_label)})` : (it.dish.isCombo ? `[Combo] ${it.dish.name}` : it.dish.name),
+        name: it.dish.isCombo ? `[Combo] ${it.dish.name}` : it.dish.name,
         price: it.price,
         quantity: it.quantity,
         variant: it.selectedVariant,
@@ -1668,14 +1670,14 @@ export default function PosBillingView({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <button
-                        onClick={() => updateQuantity(item.cartKey || item.dish.id, item.selectedVariant, -1)}
+                        onClick={() => updateCartQuantityByKey(item.cartKey, -1)}
                         style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid #CBD5E1', background: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Minus size={11} />
                       </button>
                       <span style={{ fontSize: '0.78rem', fontWeight: 800, minWidth: '16px', textAlign: 'center' }}>{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.cartKey || item.dish.id, item.selectedVariant, 1)}
+                        onClick={() => updateCartQuantityByKey(item.cartKey, 1)}
                         style={{ width: '22px', height: '22px', borderRadius: '5px', border: 'none', background: '#059669', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Plus size={11} />
@@ -1687,7 +1689,7 @@ export default function PosBillingView({
                     </strong>
 
                     <button
-                      onClick={() => removeFromCart(item.cartKey || item.dish.id, item.selectedVariant)}
+                      onClick={() => removeCartItemByKey(item.cartKey)}
                       style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '2px' }}
                       title="Remove Item"
                     >
