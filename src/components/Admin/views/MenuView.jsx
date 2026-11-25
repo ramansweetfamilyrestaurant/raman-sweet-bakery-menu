@@ -116,6 +116,11 @@ export default function MenuView({
   const dishQuota = formatQuota(safeDishes.length, maxDishes);
   const catQuota = formatQuota(safeCategories.length, maxCategories);
   const comboQuota = formatQuota(safeCombos.length, maxCombos);
+  const activeTabAtLimit = activeSubTab === 'combos'
+    ? comboQuota.isAtLimit
+    : activeSubTab === 'categories'
+      ? catQuota.isAtLimit
+      : dishQuota.isAtLimit;
 
   // Dynamic currency resolver from restaurant settings or props
   const curr = getCurrencySymbol(restaurantInfo?.currency_symbol !== undefined ? restaurantInfo.currency_symbol : currencySymbol);
@@ -155,10 +160,19 @@ export default function MenuView({
   const activeFilterCount = (dietFilter !== 'all' ? 1 : 0) + (priceFilter !== 'all' ? 1 : 0) + (selectedCatFilter !== 'all' ? 1 : 0) + (sortBy !== 'recent' ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0 || Boolean(search);
 
-  // Reset pagination on filter or search change
+  const prevDishCountRef = useRef(safeDishes.length);
+
+  // Reset pagination on filter/search change or when new dishes are added so newest items show on page 1
   useEffect(() => {
     setCurrentPage(1);
   }, [search, selectedCatFilter, dietFilter, priceFilter, sortBy, pageSize]);
+
+  useEffect(() => {
+    if (safeDishes.length > prevDishCountRef.current) {
+      setCurrentPage(1);
+    }
+    prevDishCountRef.current = safeDishes.length;
+  }, [safeDishes.length]);
 
   // Close open menus on outside click / escape
   useEffect(() => {
@@ -552,15 +566,15 @@ export default function MenuView({
             <div style={{ display: 'flex', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 3px 10px rgba(10,35,21,0.25)' }}>
               <button
                 onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
-                disabled={dishQuota.isAtLimit}
+                disabled={activeTabAtLimit}
                 style={{
                   padding: '11px 18px',
-                  background: dishQuota.isAtLimit ? '#94A3B8' : '#0A2315',
+                  background: activeTabAtLimit ? '#94A3B8' : '#0A2315',
                   color: '#FFFFFF',
                   fontSize: '0.84rem',
                   fontWeight: 800,
                   border: 'none',
-                  cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer',
+                  cursor: activeTabAtLimit ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px'
@@ -734,16 +748,16 @@ export default function MenuView({
         <div style={{ display: 'flex', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
           <button
             onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
-            disabled={dishQuota.isAtLimit}
+            disabled={activeTabAtLimit}
             style={{
               flex: 1,
               padding: '11px 14px',
-              background: '#261B14',
+              background: activeTabAtLimit ? '#475569' : '#261B14',
               color: '#FFFFFF',
               border: 'none',
               fontSize: '0.84rem',
               fontWeight: 800,
-              cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer',
+              cursor: activeTabAtLimit ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1879,13 +1893,32 @@ export default function MenuView({
               }}>
                 <Utensils size={34} color="#94A3B8" style={{ margin: '0 auto 10px auto' }} />
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>No {terminology.dishPlural?.toLowerCase() || 'items'} found</h3>
-                <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 16px 0' }}>Try clearing filters or add your first {terminology.dishSingular?.toLowerCase() || 'item'}.</p>
-                <button
-                  onClick={onOpenAddDish}
-                  style={{ padding: '9px 18px', borderRadius: '10px', background: '#0A2315', color: '#FFFFFF', border: 'none', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
-                >
-                  + Add {terminology.dishSingular || 'Item'}
-                </button>
+                <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 16px 0' }}>
+                  {hasActiveFilters ? 'No items match your active filters.' : `Try clearing filters or add your first ${terminology.dishSingular?.toLowerCase() || 'item'}.`}
+                </p>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch && setSearch('');
+                        setSelectedCatFilter && setSelectedCatFilter('all');
+                        setDietFilter('all');
+                        setPriceFilter('all');
+                        setSortBy('recent');
+                      }}
+                      style={{ padding: '9px 16px', borderRadius: '10px', background: '#F1F5F9', color: '#0F172A', border: '1px solid #CBD5E1', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                  <button
+                    onClick={onOpenAddDish}
+                    style={{ padding: '9px 18px', borderRadius: '10px', background: '#0A2315', color: '#FFFFFF', border: 'none', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    + Add {terminology.dishSingular || 'Item'}
+                  </button>
+                </div>
               </div>
             ) : viewMode === 'grid' ? (
               /* GRID VIEW (Both Desktop & Mobile 2-col) */
@@ -3546,7 +3579,7 @@ export default function MenuView({
       <button
         className="mobile-floating-add-btn"
         onClick={activeSubTab === 'combos' ? onOpenAddCombo : activeSubTab === 'categories' ? onOpenAddCategory : onOpenAddDish}
-        disabled={dishQuota.isAtLimit}
+        disabled={activeTabAtLimit}
         style={{
           position: 'fixed',
           bottom: '76px',
@@ -3554,7 +3587,7 @@ export default function MenuView({
           width: '46px',
           height: '46px',
           borderRadius: '50%',
-          background: dishQuota.isAtLimit ? '#64748B' : 'linear-gradient(135deg, #0A2315 0%, #062B1C 100%)',
+          background: activeTabAtLimit ? '#64748B' : 'linear-gradient(135deg, #0A2315 0%, #062B1C 100%)',
           color: '#FFFFFF',
           border: '1.5px solid #D4AF37',
           boxShadow: '0 6px 18px rgba(0,0,0,0.3)',
@@ -3562,7 +3595,7 @@ export default function MenuView({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 89,
-          cursor: dishQuota.isAtLimit ? 'not-allowed' : 'pointer'
+          cursor: activeTabAtLimit ? 'not-allowed' : 'pointer'
         }}
         title={activeSubTab === 'combos' ? 'Add Combo' : activeSubTab === 'categories' ? 'Add Category' : 'Add Dish'}
       >

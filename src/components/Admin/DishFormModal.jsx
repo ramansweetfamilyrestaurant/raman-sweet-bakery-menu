@@ -13,7 +13,7 @@ const resolveImageUrl = (url) => {
   return url;
 };
 
-export default function DishFormModal({ dish, categories, token, modifiersEnabled = true, currencySymbol = '₹', restaurantInfo = {}, onSave, onClose }) {
+export default function DishFormModal({ dish, defaultCategoryId = '', categories, token, modifiersEnabled = true, currencySymbol = '₹', restaurantInfo = {}, onSave, onClose }) {
   const terminology = getBusinessTerminology(restaurantInfo || {});
   const itemLabel = terminology.dishSingular || 'Item';
   const resolvedFoodType = String(restaurantInfo?.food_type || restaurantInfo?.resto_type || '').trim().toLowerCase();
@@ -25,13 +25,13 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
     ['bakery_confectionery', 'sweet_shop'].includes(String(restaurantInfo?.business_type || '').toLowerCase());
 
   const [activeTab, setActiveTab] = useState('basic'); // 'basic' | 'pricing' | 'details'
-  const [categoryId, setCategoryId] = useState(dish?.category_id || categories?.[0]?.id || '');
+  const [categoryId, setCategoryId] = useState(dish?.category_id || defaultCategoryId || categories?.[0]?.id || '');
 
   useEffect(() => {
     if (!categoryId && Array.isArray(categories) && categories.length > 0) {
-      setCategoryId(dish?.category_id || categories[0].id);
+      setCategoryId(dish?.category_id || defaultCategoryId || categories[0].id);
     }
-  }, [categories, dish, categoryId]);
+  }, [categories, dish, defaultCategoryId, categoryId]);
 
   const [name, setName] = useState(dish?.name || '');
   const [nameHi, setNameHi] = useState(dish?.name_hi || '');
@@ -411,7 +411,9 @@ export default function DishFormModal({ dish, categories, token, modifiersEnable
                       lineHeight: 1.35
                     }}
                   >
-                    <option value="" disabled>Select Category</option>
+                    <option value="" disabled>
+                      {Array.isArray(categories) && categories.length === 0 ? 'No categories yet — create a category first' : 'Select Category'}
+                    </option>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}

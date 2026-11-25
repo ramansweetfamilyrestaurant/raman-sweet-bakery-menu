@@ -2154,10 +2154,10 @@ export default function AdminDashboard({
     }
     try {
       let [catData, dishData, infoData, comboData, subStatusData, analyticsResp] = await Promise.all([
-        fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => []),
-        fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => []),
+        fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => null),
+        fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => null),
         fetchRestaurantInfo({ token, slug: currentSlug }).catch((err) => { console.warn('[MENU] fetchRestaurantInfo notice:', err); return null; }),
-        fetchAdminCombos(token).catch(() => []),
+        fetchAdminCombos(token).catch(() => null),
         fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
         fetchAdminAnalytics(token, 'all').catch(() => null)
       ]);
@@ -2167,9 +2167,9 @@ export default function AdminDashboard({
         return;
       }
 
-      const safeCats = Array.isArray(catData) ? catData : [];
-      const safeDishes = Array.isArray(dishData) ? dishData : [];
-      const safeCombos = Array.isArray(comboData) ? comboData : [];
+      const safeCats = Array.isArray(catData) ? catData : categories;
+      const safeDishes = Array.isArray(dishData) ? dishData : dishes;
+      const safeCombos = Array.isArray(comboData) ? comboData : combos;
 
       console.log('[MENU] requested slug:', currentSlug || '(authenticated tenant)');
       console.log('[MENU] resolved restaurant id:', infoData ? infoData.id : 'none');
@@ -2177,9 +2177,9 @@ export default function AdminDashboard({
       console.log('[MENU] API categories count:', safeCats.length);
       console.log('[MENU] final dishes count:', safeDishes.length);
 
-      setCategories(safeCats);
-      setDishes(safeDishes);
-      setCombos(safeCombos);
+      if (Array.isArray(catData)) setCategories(catData);
+      if (Array.isArray(dishData)) setDishes(dishData);
+      if (Array.isArray(comboData)) setCombos(comboData);
 
       if (infoData) {
         setRestaurantInfo(infoData);
@@ -3046,50 +3046,72 @@ export default function AdminDashboard({
     printViaHiddenIframe(htmlContent, 'All Standees');
   };
 
-  const handleSaveDish = async (dishData) => {
-    const isEdit = Boolean(dishModalData?.id);
-    const url = isEdit ? `/api/admin/dishes/${dishModalData.id}` : '/api/admin/dishes';
-    const method = isEdit ? 'PUT' : 'POST';
-
+  const saveCatalogEntity = async ({ url, isEdit, payload, fallbackError }) => {
     const res = await fetch(url, {
-      method,
+      method: isEdit ? 'PUT' : 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(dishData)
+      body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || 'Failed to save dish');
+    const rawText = await res.text();
+    let data = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      data = {};
     }
 
+    if (!res.ok) {
+      throw new Error(data.message || data.error || fallbackError);
+    }
+
+    return data;
+  };
+
+  const handleSaveDish = async (dishData) => {
+    const isEdit = Boolean(dishModalData?.id);
+    const url = isEdit ? `/api/admin/dishes/${dishModalData.id}` : '/api/admin/dishes';
+
+    await saveCatalogEntity({
+      url,
+      isEdit,
+      payload: dishData,
+      fallbackError: 'Failed to save dish'
+    });
+
+    if (search && dishData?.name && !dishData.name.toLowerCase().includes(search.toLowerCase().trim())) {
+      setSearch('');
+    }
+    if (selectedCatFilter !== 'all' && dishData?.category_id && String(dishData.category_id) !== String(selectedCatFilter)) {
+      setSelectedCatFilter(String(dishData.category_id));
+    }
+
+    await loadData(true);
     setDishModalData(null);
-    loadData();
+    showToast(`✅ ${dishData?.name || 'Item'} ${isEdit ? 'updated' : 'added to menu'}`, 2600);
   };
 
   const handleSaveCategory = async (catData) => {
     const isEdit = Boolean(catModalData?.id);
     const url = isEdit ? `/api/admin/categories/${catModalData.id}` : '/api/admin/categories';
-    const method = isEdit ? 'PUT' : 'POST';
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(catData)
+    await saveCatalogEntity({
+      url,
+      isEdit,
+      payload: catData,
+      fallbackError: 'Failed to save category'
     });
 
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || 'Failed to save category');
+    if (search && catData?.name && !catData.name.toLowerCase().includes(search.toLowerCase().trim())) {
+      setSearch('');
     }
 
+    await loadData(true);
     setCatModalData(null);
-    loadData();
+    showToast(`✅ Category '${catData?.name || ''}' ${isEdit ? 'updated' : 'added'}`, 2600);
   };
 
   const handleSaveSettings = async (overrideForm = null) => {
@@ -4247,6 +4269,7 @@ export default function AdminDashboard({
       {dishModalData && (
         <DishFormModal
           dish={dishModalData === 'new' ? null : dishModalData}
+          defaultCategoryId={selectedCatFilter !== 'all' ? selectedCatFilter : ''}
           categories={categories}
           token={token}
           modifiersEnabled={

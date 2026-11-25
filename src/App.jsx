@@ -1656,51 +1656,61 @@ export default function App() {
     window.history.pushState({}, '', '/super-admin');
   };
 
-  // In-Context Owner Handlers
-  const handleSaveInlineDish = async (dishData) => {
-    const isEdit = Boolean(ownerDishModalData?.id);
-    const url = isEdit ? `/api/admin/dishes/${ownerDishModalData.id}` : '/api/admin/dishes';
-    const method = isEdit ? 'PUT' : 'POST';
-
+  // In-Context Owner Modals State
+  const saveInlineCatalogEntity = async ({ url, isEdit, payload, fallbackError }) => {
     const res = await fetch(url, {
-      method,
+      method: isEdit ? 'PUT' : 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${adminToken}`
       },
-      body: JSON.stringify(dishData)
+      body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || 'Failed to save dish');
+    const rawText = await res.text();
+    let data = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      data = {};
     }
 
+    if (!res.ok) {
+      throw new Error(data.message || data.error || fallbackError);
+    }
+
+    return data;
+  };
+
+  // In-Context Owner Handlers
+  const handleSaveInlineDish = async (dishData) => {
+    const isEdit = Boolean(ownerDishModalData?.id);
+    const url = isEdit ? `/api/admin/dishes/${ownerDishModalData.id}` : '/api/admin/dishes';
+
+    await saveInlineCatalogEntity({
+      url,
+      isEdit,
+      payload: dishData,
+      fallbackError: 'Failed to save dish'
+    });
+
+    await loadMenuData(info?.slug || '', true);
     setOwnerDishModalData(null);
-    loadMenuData();
   };
 
   const handleSaveInlineCategory = async (catData) => {
     const isEdit = Boolean(ownerCatModalData?.id);
     const url = isEdit ? `/api/admin/categories/${ownerCatModalData.id}` : '/api/admin/categories';
-    const method = isEdit ? 'PUT' : 'POST';
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${adminToken}`
-      },
-      body: JSON.stringify(catData)
+    await saveInlineCatalogEntity({
+      url,
+      isEdit,
+      payload: catData,
+      fallbackError: 'Failed to save category'
     });
 
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || 'Failed to save category');
-    }
-
+    await loadMenuData(info?.slug || '', true);
     setOwnerCatModalData(null);
-    loadMenuData();
   };
 
   const handleInlineToggleDish = async (dishId, currentAvailable) => {
@@ -1864,7 +1874,7 @@ export default function App() {
         map[d.category_id].items.push(d);
       } else if (d) {
         if (!map['uncategorized']) {
-          map['uncategorized'] = { category: { name: 'Special Treats' }, items: [] };
+          map['uncategorized'] = { category: { id: 'uncategorized', name: 'Special Treats' }, items: [] };
         }
         map['uncategorized'].items.push(d);
       }

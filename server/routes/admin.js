@@ -998,7 +998,8 @@ router.post('/categories', authenticateToken, requireActiveSubscription, async (
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const { name, name_hi, image, sort_order } = req.body;
-    if (!name) {
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    if (!trimmedName) {
       return res.status(400).json({ error: 'Category name is required' });
     }
 
@@ -1026,10 +1027,10 @@ router.post('/categories', authenticateToken, requireActiveSubscription, async (
     }
 
     const processedImage = await processExternalImageUrl(image, targetId, 'categories');
-    const order = sort_order || 0;
+    const order = Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0;
     const result = await query(
       'INSERT INTO categories (restaurant_id, name, name_hi, image, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-      [targetId, name, name_hi || '', processedImage || null, order]
+      [targetId, trimmedName, typeof name_hi === 'string' ? name_hi.trim() : '', processedImage || null, order]
     );
 
     // Invalidate cache
@@ -1256,9 +1257,12 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
       category_id, name, name_hi, description, description_hi, image, price, price_half, 
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
     } = req.body;
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    const numPrice = Number(price);
+    const hasValidPrice = price !== undefined && price !== null && price !== '' && Number.isFinite(numPrice) && numPrice >= 0;
 
-    if (!name || !price || !category_id) {
-      return res.status(400).json({ error: 'Category, name, and price are required' });
+    if (!trimmedName || !hasValidPrice || !category_id) {
+      return res.status(400).json({ error: 'Category, name, and valid price are required' });
     }
 
     // Authoritative SaaS Plan Quota Check (Dishes)
@@ -1301,7 +1305,7 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
         portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available, modifiers
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`,
       [
-        targetId, category_id, name, name_hi || '', description || '', description_hi || '', processedImage || '', price, price_half || null,
+        targetId, category_id, trimmedName, typeof name_hi === 'string' ? name_hi.trim() : '', description || '', description_hi || '', processedImage || '', numPrice, price_half || null,
         portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availBool, modifiersVal
       ]
     );
