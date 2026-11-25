@@ -181,7 +181,8 @@ async function runTests() {
 
       assert.ok(dishModalCode.includes("defaultCategoryId = ''"), 'DishFormModal must accept defaultCategoryId');
       assert.ok(dishModalCode.includes('noValidate'), 'DishFormModal must use noValidate so multi-tab submit validates across unmounted tabs cleanly');
-      assert.ok(dishModalCode.includes('Next: Pricing'), 'DishFormModal must provide Next step navigation across tabs');
+      assert.ok(dishModalCode.includes('dish-tab-btn'), 'DishFormModal must keep top segmented tab navigation');
+      assert.ok(!dishModalCode.includes('Next: Pricing'), 'DishFormModal footer must stay compact with Cancel and Save buttons only');
       assert.ok(dishModalCode.includes('dish-modal-field'), 'DishFormModal must use unified field styling and focus borders');
       assert.ok(dishModalCode.includes('descriptionHi'), 'DishFormModal Tab 3 must expose Hindi description input');
 
@@ -293,6 +294,10 @@ async function runTests() {
         'Replacing the availability button with a div must fail the native button check'
       );
       assert.ok(dishFormCode.includes('.dish-modal-focus-btn:focus-visible'), 'DishFormModal interactive buttons must define visible focus indicators');
+
+      const catFormCode = fs.readFileSync(path.join(rootDir, 'src/components/Admin/CategoryFormModal.jsx'), 'utf8');
+      assert.ok(!/type="file"[^>]*display:\s*'none'/.test(catFormCode), 'CategoryFormModal file input must not use display: none');
+      assert.ok(catFormCode.includes('fileInputRef.current?.click()') && catFormCode.includes('.cat-modal-focus-btn:focus-visible'), 'CategoryFormModal must provide keyboard-accessible image upload button with focus ring');
     });
   } finally {
     server.close();

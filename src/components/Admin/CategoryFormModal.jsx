@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { X, Upload, Trash2, FolderOpen, ArrowUpDown, Globe, Sparkles } from 'lucide-react';
 import { uploadImage } from '../../api/client';
 import { resolveImageUrl, getCategoryImageUrl, hasCustomCategoryImage } from '../../utils/imageHelper';
@@ -92,6 +92,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef(null);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -183,6 +184,23 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
             border-color: #0A2315 !important;
             box-shadow: 0 0 0 3px rgba(10, 35, 21, 0.08) !important;
           }
+          .cat-modal-container .cat-modal-focus-btn:focus-visible {
+            outline: 2px solid #0A2315;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.24);
+          }
+          .cat-modal-container .cat-sr-only-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            min-height: 0 !important;
+            padding: 0 !important;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+          }
           @media (max-width: 600px) {
             .cat-modal-container {
               max-width: 100% !important;
@@ -192,7 +210,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
             .cat-modal-body-form {
               padding: 12px 14px !important;
             }
-            .cat-modal-body-form input,
+            .cat-modal-body-form input:not([type="file"]),
             .cat-modal-body-form select {
               font-size: 14px !important;
               padding: 8px 10px !important;
@@ -384,30 +402,46 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, position: 'relative' }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    className="cat-sr-only-input"
+                  />
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <label style={{
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      background: '#0A2315',
-                      color: '#FFFFFF',
-                      padding: '6px 12px',
-                      borderRadius: '7px',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      minWidth: '104px',
-                      justifyContent: 'center'
-                    }}>
+                    <button
+                      type="button"
+                      className="cat-modal-focus-btn"
+                      disabled={uploading}
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{
+                        cursor: uploading ? 'wait' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        background: '#0A2315',
+                        color: '#FFFFFF',
+                        border: '1.5px solid #0A2315',
+                        padding: '6px 12px',
+                        borderRadius: '7px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        minWidth: '104px',
+                        justifyContent: 'center'
+                      }}
+                    >
                       <Upload size={11} color="#D4AF37" />
                       <span>{uploading ? 'Uploading...' : 'Upload Image'}</span>
-                      <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
-                    </label>
+                    </button>
 
                     {hasCustomCategoryImage(image) && (
                       <button
                         type="button"
+                        className="cat-modal-focus-btn"
                         onClick={() => setImage('')}
                         style={{
                           background: '#FEE2E2',
@@ -426,8 +460,9 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
                   </div>
                   <button
                     type="button"
+                    className="cat-modal-focus-btn"
                     onClick={() => setShowUrlInput(!showUrlInput)}
-                    style={{ background: 'none', border: 'none', color: '#475569', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                    style={{ background: 'none', border: 'none', color: '#475569', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'left', borderRadius: '4px' }}
                   >
                     {showUrlInput ? 'Hide URL input' : 'Or paste image URL'}
                   </button>

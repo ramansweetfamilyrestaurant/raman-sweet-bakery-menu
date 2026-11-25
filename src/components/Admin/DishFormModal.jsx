@@ -1087,86 +1087,44 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
             </div>
           )}
 
-          {/* Compact Step & Save Action Footer */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', borderTop: '1px solid #CBD5E1', paddingTop: '12px', marginTop: '14px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button
-                type="button"
-                onClick={handleCancelClose}
-                style={{
-                  padding: '0 14px',
-                  height: '38px',
-                  borderRadius: '9px',
-                  border: '1.5px solid #CBD5E1',
-                  background: '#FFFFFF',
-                  color: '#475569',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              {activeTab !== 'basic' && (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(activeTab === 'details' ? 'pricing' : 'basic')}
-                  style={{
-                    padding: '0 12px',
-                    height: '38px',
-                    borderRadius: '9px',
-                    border: '1.5px solid #CBD5E1',
-                    background: '#F8FAFC',
-                    color: '#0F172A',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  ← Back
-                </button>
-              )}
-            </div>
+          {/* Compact Save Action Footer */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid #CBD5E1', paddingTop: '12px', marginTop: '14px' }}>
+            <button
+              type="button"
+              onClick={handleCancelClose}
+              style={{
+                padding: '0 14px',
+                height: '38px',
+                borderRadius: '9px',
+                border: '1.5px solid #CBD5E1',
+                background: '#FFFFFF',
+                color: '#475569',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
 
-            <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-              {activeTab !== 'details' && (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(activeTab === 'basic' ? 'pricing' : 'details')}
-                  style={{
-                    padding: '0 13px',
-                    height: '38px',
-                    borderRadius: '9px',
-                    border: '1.5px solid #0A2315',
-                    background: '#F0FDF4',
-                    color: '#0A2315',
-                    fontSize: '0.74rem',
-                    fontWeight: 750,
-                    cursor: 'pointer'
-                  }}
-                >
-                  {activeTab === 'basic' ? 'Next: Pricing →' : 'Next: Details →'}
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={saving || uploading}
-                style={{
-                  padding: '0 16px',
-                  height: '38px',
-                  borderRadius: '9px',
-                  background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
-                  color: '#FFFFFF',
-                  border: '1.5px solid #0A2315',
-                  fontSize: '0.76rem',
-                  fontWeight: 750,
-                  boxShadow: '0 2px 8px rgba(10, 35, 21, 0.22)',
-                  cursor: (saving || uploading) ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {saving ? 'Saving...' : (dish ? `✓ Update ${itemLabel}` : `✓ Save ${itemLabel}`)}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={saving || uploading}
+              style={{
+                padding: '0 18px',
+                height: '38px',
+                borderRadius: '9px',
+                background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+                color: '#FFFFFF',
+                border: '1.5px solid #0A2315',
+                fontSize: '0.76rem',
+                fontWeight: 750,
+                boxShadow: '0 2px 8px rgba(10, 35, 21, 0.22)',
+                cursor: (saving || uploading) ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {saving ? 'Saving...' : (dish ? `✓ Update ${itemLabel}` : `✓ Save ${itemLabel}`)}
+            </button>
           </div>
         </form>
       </div>
