@@ -337,7 +337,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             {symbol}{formatPriceNumber(portionMode === 'half' ? halfPriceNum : fullPriceNum)}
           </div>
         ) : (
-          dish.offer_price !== undefined && dish.offer_price !== null ? (
+          dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? (
             <div 
               style={{
                 display: 'flex',

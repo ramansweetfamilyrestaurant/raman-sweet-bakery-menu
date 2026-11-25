@@ -30,7 +30,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
 
   const regularBasePrice = (selectedPortion === 'half' && hasHalfPrice) ? Number(dish.price_half) : Number(dish.price);
   let basePrice = regularBasePrice;
-  if ((dish.offer_price !== undefined && dish.offer_price !== null) && selectedPortion !== 'half') {
+  if ((dish.offer_price !== undefined && dish.offer_price !== null) && Number(dish.offer_price) < Number(dish.price) && selectedPortion !== 'half') {
     basePrice = Number(dish.offer_price);
   }
   const extraModifiersPrice = selectedModifiers.reduce((acc, m) => acc + (Number(m.price) || 0), 0);

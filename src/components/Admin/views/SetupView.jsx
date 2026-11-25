@@ -11039,6 +11039,21 @@ export default function SetupView({
             >
               <Check size={18} />
               <span>Save Changes</span>
+            </button>
+            <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
+              All changes are saved securely
+            </span>
+          </div>
+        )}
+      >
+        <form onSubmit={handleFormSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.84rem' }}>
+
+          {/* 1. BUSINESS IDENTITY */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #EAE5DF',
+            padding: '16px',
             display: 'flex',
             flexDirection: 'column',
             gap: '14px',

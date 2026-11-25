@@ -17,11 +17,12 @@ import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
 import PresenceVerificationModal from './components/PresenceVerificationModal';
 import CategoryImage from './components/CategoryImage';
-import { resolveImageUrl } from './utils/imageHelper';
+import { resolveImageUrl, getDishImageUrl, getComboImageUrl } from './utils/imageHelper';
 import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
 import { resolveTheme, DEFAULT_THEME } from './constants/themes';
 import { getCurrencySymbol, formatPriceNumber, formatPrice } from './utils/currencyHelper';
 import { getValidDishModifiers } from './utils/billingHelper';
+import { roundOfferCurrency } from './utils/offerPricing';
 import { triggerHaptic } from './utils/haptics';
 
 // Robust Lazy Loading with automatic retry on new production deploys
@@ -636,17 +637,17 @@ export default function App() {
       portionName = dish.portion.trim();
     }
 
-    const regularBasePrice = isHalf ? Math.round(Number(dish.price_half) || 0) : Math.round(Number(dish.price) || 0);
+    const regularBasePrice = roundOfferCurrency(isHalf ? (Number(dish.price_half) || 0) : (Number(dish.price) || 0));
     let effectiveBasePrice = regularBasePrice;
-    if ((dish.offer_price !== undefined && dish.offer_price !== null) && !isHalf) {
-      effectiveBasePrice = Math.round(Number(dish.offer_price) || 0);
+    if ((dish.offer_price !== undefined && dish.offer_price !== null) && Number(dish.offer_price) < Number(dish.price) && !isHalf) {
+      effectiveBasePrice = roundOfferCurrency(Number(dish.offer_price) || 0);
     }
 
     const normalizedMods = Array.isArray(selectedModifiers) ? selectedModifiers : [];
     const extraPrice = normalizedMods.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
-    const unitPrice = effectiveBasePrice + extraPrice;
-    const regularUnitPrice = regularBasePrice + extraPrice;
-    const discountAmount = Math.max(0, regularUnitPrice - unitPrice);
+    const unitPrice = roundOfferCurrency(effectiveBasePrice + extraPrice);
+    const regularUnitPrice = roundOfferCurrency(regularBasePrice + extraPrice);
+    const discountAmount = Math.max(0, roundOfferCurrency(regularUnitPrice - unitPrice));
 
     // Unique cart key including selected modifiers
     const modKey = normalizedMods.map(m => m.name).sort().join('_');
@@ -682,9 +683,11 @@ export default function App() {
     try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
     const includesText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}${i.portion === 'half' ? ' (H)' : ''}`).join(' + ');
     const cartKey = `combo_${combo.id}`;
-    const regularPrice = Math.round(Number(combo.price) || 0);
-    const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null) ? Math.round(Number(combo.offer_price) || 0) : regularPrice;
-    const discountAmount = Math.max(0, regularPrice - effectivePrice);
+    const regularPrice = roundOfferCurrency(Number(combo.price) || 0);
+    const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null && Number(combo.offer_price) < Number(combo.price))
+      ? roundOfferCurrency(Number(combo.offer_price) || 0)
+      : regularPrice;
+    const discountAmount = Math.max(0, roundOfferCurrency(regularPrice - effectivePrice));
 
     setCartItems(prev => {
       const existingIndex = prev.findIndex(i => (i.key || i.dish?.id) === cartKey);
@@ -3077,8 +3080,8 @@ export default function App() {
           <>
           {/* 🔥 SPECIAL OFFERS BANNER */}
           {!searchQuery && !activeQuickFilter && selectedCategory === 'all' && (() => {
-            const offerDishes = dishes.filter(d => d.offer_price !== undefined && d.offer_price !== null);
-            const offerCombos = (combos || []).filter(c => c.offer_price !== undefined && c.offer_price !== null);
+            const offerDishes = dishes.filter(d => d.offer_price !== undefined && d.offer_price !== null && Number(d.offer_price) < Number(d.price));
+            const offerCombos = (combos || []).filter(c => c.offer_price !== undefined && c.offer_price !== null && Number(c.offer_price) < Number(c.price));
             const allOfferItems = [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
             if (allOfferItems.length === 0) return null;
             const sym = getCurrencySymbol(info?.currency_symbol);
@@ -3142,10 +3145,14 @@ export default function App() {
                             </span>
                           )}
                           {item.image ? (
-                            <img src={item.image} alt={item.name} style={{
-                              width: '100%', height: '74px', objectFit: 'cover',
-                              borderRadius: '8px', marginBottom: '6px'
-                            }} />
+                            <img
+                              src={item._type === 'combo' ? getComboImageUrl(item.image) : getDishImageUrl(item.image)}
+                              alt={item.name}
+                              style={{
+                                width: '100%', height: '74px', objectFit: 'cover',
+                                borderRadius: '8px', marginBottom: '6px'
+                              }}
+                            />
                           ) : (
                             <div style={{
                               width: '100%', height: '74px', borderRadius: '8px',

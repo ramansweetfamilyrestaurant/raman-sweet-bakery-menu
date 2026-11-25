@@ -34,10 +34,23 @@ import {
   toggleAdminOffer, 
   deleteAdminOffer 
 } from '../../../api/client';
-import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
 import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
-import PlanLockedCard from '../components/PlanLockedCard';
+import { calculateOfferPrice } from '../../../utils/offerPricing';
+
+function isOfferActiveFlag(val) {
+  if (val === false || val === 0 || val === '0' || val === null || val === undefined) return false;
+  const s = String(val).trim().toLowerCase();
+  return s !== 'false' && s !== 'f' && s !== '0' && s !== '';
+}
+
+function formatDateTimeLocalInput(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export default function OffersView({
   restaurantInfo = {},
@@ -45,12 +58,8 @@ export default function OffersView({
   dishes = [],
   combos = [],
   categories = [],
-  token,
-  capabilities,
-  onUpgrade,
-  onNavigate
+  token
 }) {
-  const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
   const currencySym = getCurrencySymbol(settingsForm?.currency_symbol !== undefined ? settingsForm.currency_symbol : restaurantInfo?.currency_symbol);
   const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || {}), [restaurantInfo]);
 
@@ -77,8 +86,13 @@ export default function OffersView({
   const [formStartsAt, setFormStartsAt] = useState('');
   const [formEndsAt, setFormEndsAt] = useState('');
   const [formActive, setFormActive] = useState(true);
+  const [originalStartsAt, setOriginalStartsAt] = useState(null);
+  const [originalEndsAt, setOriginalEndsAt] = useState(null);
+  const [startsAtDirty, setStartsAtDirty] = useState(false);
+  const [endsAtDirty, setEndsAtDirty] = useState(false);
   const [selectedDishIds, setSelectedDishIds] = useState([]);
   const [selectedComboIds, setSelectedComboIds] = useState([]);
+  const [modalItemTypeTab, setModalItemTypeTab] = useState('dishes'); // 'dishes' | 'combos'
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [itemCategoryFilter, setItemCategoryFilter] = useState('all');
   const [submitting, setSubmitting] = useState(false);
@@ -108,13 +122,13 @@ export default function OffersView({
 
   // Helper: Determine Offer Lifecycle Status
   const getOfferStatus = (offer) => {
-    if (!offer.active) return 'paused';
+    if (!isOfferActiveFlag(offer.active)) return 'paused';
     const now = new Date();
     const startsAt = offer.starts_at ? new Date(offer.starts_at) : null;
     const endsAt = offer.ends_at ? new Date(offer.ends_at) : null;
 
-    if (startsAt && startsAt > now) return 'scheduled';
-    if (endsAt && endsAt < now) return 'expired';
+    if (startsAt && !Number.isNaN(startsAt.getTime()) && startsAt > now) return 'scheduled';
+    if (endsAt && !Number.isNaN(endsAt.getTime()) && endsAt <= now) return 'expired';
     return 'active';
   };
 
@@ -165,9 +179,16 @@ export default function OffersView({
     setFormAlwaysActive(true);
     setFormStartsAt('');
     setFormEndsAt('');
+    setOriginalStartsAt(null);
+    setOriginalEndsAt(null);
+    setStartsAtDirty(false);
+    setEndsAtDirty(false);
     setFormActive(true);
     setSelectedDishIds([]);
     setSelectedComboIds([]);
+    setModalItemTypeTab('dishes');
+    setItemSearchQuery('');
+    setItemCategoryFilter('all');
     setCurrentStep(1);
     setShowModal(true);
   };
@@ -177,30 +198,152 @@ export default function OffersView({
     setEditingOfferId(offer.id);
     setFormName(offer.name || '');
     setFormType(offer.type || 'percentage');
-    setFormValue(String(offer.value || ''));
-    setFormActive(Boolean(offer.active));
+    setFormValue(String(offer.value ?? ''));
+    setFormActive(isOfferActiveFlag(offer.active));
+    setOriginalStartsAt(offer.starts_at || null);
+    setOriginalEndsAt(offer.ends_at || null);
+    setStartsAtDirty(false);
+    setEndsAtDirty(false);
 
-    if (offer.starts_at && offer.ends_at) {
-      setFormAlwaysActive(false);
-      setFormStartsAt(offer.starts_at ? new Date(offer.starts_at).toISOString().slice(0, 16) : '');
-      setFormEndsAt(offer.ends_at ? new Date(offer.ends_at).toISOString().slice(0, 16) : '');
-    } else {
+    const startsDate = offer.starts_at ? new Date(offer.starts_at) : null;
+    const endsDate = offer.ends_at ? new Date(offer.ends_at) : null;
+    const hasValidStart = Boolean(startsDate && !Number.isNaN(startsDate.getTime()));
+    const hasValidEnd = Boolean(endsDate && !Number.isNaN(endsDate.getTime()));
+    const isFutureStart = hasValidStart && startsDate.getTime() > Date.now();
+    const isAlwaysActive = !hasValidEnd && !isFutureStart;
+
+    if (isAlwaysActive) {
       setFormAlwaysActive(true);
       setFormStartsAt('');
       setFormEndsAt('');
+    } else {
+      setFormAlwaysActive(false);
+      setFormStartsAt(hasValidStart ? formatDateTimeLocalInput(offer.starts_at) : '');
+      setFormEndsAt(hasValidEnd ? formatDateTimeLocalInput(offer.ends_at) : '');
     }
 
     const dIds = [];
     const cIds = [];
     (offer.items || []).forEach(item => {
-      if (item.dish_id) dIds.push(item.dish_id);
-      if (item.combo_id) cIds.push(item.combo_id);
+      if (item.dish_id !== null && item.dish_id !== undefined) {
+        const dId = Number(item.dish_id);
+        if (Number.isInteger(dId) && dId > 0 && !dIds.includes(dId)) dIds.push(dId);
+      }
+      if (item.combo_id !== null && item.combo_id !== undefined) {
+        const cId = Number(item.combo_id);
+        if (Number.isInteger(cId) && cId > 0 && !cIds.includes(cId)) cIds.push(cId);
+      }
     });
     setSelectedDishIds(dIds);
     setSelectedComboIds(cIds);
+    setModalItemTypeTab(dIds.length === 0 && cIds.length > 0 ? 'combos' : 'dishes');
+    setItemSearchQuery('');
+    setItemCategoryFilter('all');
 
     setCurrentStep(1);
     setShowModal(true);
+  };
+
+  const resolveEffectiveSchedule = () => {
+    const now = new Date();
+    const nowMs = now.getTime();
+    const nowIso = now.toISOString();
+
+    if (formAlwaysActive) {
+      const origStartMs = originalStartsAt ? new Date(originalStartsAt).getTime() : NaN;
+      const effectiveStart = (!Number.isNaN(origStartMs) && origStartMs <= nowMs)
+        ? originalStartsAt
+        : nowIso;
+      return { startsAt: effectiveStart, endsAt: null, isStartOnPublish: false, error: null };
+    }
+
+    let startsAt = null;
+    let isStartOnPublish = false;
+    if (startsAtDirty) {
+      if (formStartsAt) {
+        const parsed = new Date(formStartsAt);
+        if (Number.isNaN(parsed.getTime())) {
+          return { startsAt: null, endsAt: null, isStartOnPublish: false, error: 'Please enter a valid start date and time.' };
+        }
+        startsAt = parsed.toISOString();
+      } else {
+        startsAt = nowIso;
+        isStartOnPublish = true;
+      }
+    } else if (originalStartsAt && !Number.isNaN(new Date(originalStartsAt).getTime())) {
+      startsAt = originalStartsAt;
+    } else if (formStartsAt) {
+      const parsed = new Date(formStartsAt);
+      if (Number.isNaN(parsed.getTime())) {
+        return { startsAt: null, endsAt: null, isStartOnPublish: false, error: 'Please enter a valid start date and time.' };
+      }
+      startsAt = parsed.toISOString();
+    } else {
+      startsAt = nowIso;
+      isStartOnPublish = true;
+    }
+
+    let endsAt = null;
+    if (endsAtDirty) {
+      if (formEndsAt) {
+        const parsed = new Date(formEndsAt);
+        if (Number.isNaN(parsed.getTime())) {
+          return { startsAt: null, endsAt: null, isStartOnPublish: false, error: 'Please enter a valid end date and time.' };
+        }
+        endsAt = parsed.toISOString();
+      } else {
+        endsAt = null;
+      }
+    } else if (originalEndsAt && !Number.isNaN(new Date(originalEndsAt).getTime())) {
+      endsAt = originalEndsAt;
+    } else if (formEndsAt) {
+      const parsed = new Date(formEndsAt);
+      if (Number.isNaN(parsed.getTime())) {
+        return { startsAt: null, endsAt: null, isStartOnPublish: false, error: 'Please enter a valid end date and time.' };
+      }
+      endsAt = parsed.toISOString();
+    }
+
+    return { startsAt, endsAt, isStartOnPublish, error: null };
+  };
+
+  const validateDiscountAndSchedule = (scheduleOverride = null) => {
+    const val = Number(formValue);
+    if (!Number.isFinite(val) || val <= 0) {
+      return 'Please enter a valid discount value greater than 0.';
+    }
+    if (formType === 'percentage' && val > 100) {
+      return 'Percentage discount cannot exceed 100%.';
+    }
+    if (formType === 'special_price') {
+      const dishSet = new Set(selectedDishIds.map(Number));
+      const comboSet = new Set(selectedComboIds.map(Number));
+      const selectedPrices = [
+        ...(dishes || []).filter(d => dishSet.has(Number(d.id))).map(d => Number(d.price) || 0),
+        ...(combos || []).filter(c => comboSet.has(Number(c.id))).map(c => Number(c.price) || 0)
+      ];
+      if (selectedPrices.length > 0 && !selectedPrices.some(p => p > val)) {
+        return 'Special price must be lower than at least one selected item\'s regular price.';
+      }
+    }
+    if (!formAlwaysActive) {
+      if (!formStartsAt && !formEndsAt && !originalStartsAt && !originalEndsAt) {
+        return 'Please choose a start time and/or end time, or enable "Always Active".';
+      }
+      const schedule = scheduleOverride || resolveEffectiveSchedule();
+      if (schedule.error) return schedule.error;
+      if (!formEndsAt && !schedule.endsAt && !formStartsAt) {
+        return 'Please choose a start time and/or end time, or enable "Always Active".';
+      }
+      if (schedule.startsAt && schedule.endsAt) {
+        const startMs = new Date(schedule.startsAt).getTime();
+        const endMs = new Date(schedule.endsAt).getTime();
+        if (endMs <= startMs) {
+          return 'End time must be after start time.';
+        }
+      }
+    }
+    return null;
   };
 
   // Save / Publish Offer
@@ -210,20 +353,18 @@ export default function OffersView({
       alert('Please enter an offer name.');
       return;
     }
-    const val = Number(formValue);
-    if (isNaN(val) || val <= 0) {
-      alert('Please enter a valid discount value greater than 0.');
-      return;
-    }
-    if (formType === 'percentage' && val > 100) {
-      alert('Percentage discount cannot exceed 100%.');
-      return;
-    }
     if (selectedDishIds.length === 0 && selectedComboIds.length === 0) {
       alert('Please select at least one menu item or combo deal for this offer.');
       return;
     }
+    const schedule = resolveEffectiveSchedule();
+    const validationError = validateDiscountAndSchedule(schedule);
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
 
+    const val = Number(formValue);
     setSubmitting(true);
     try {
       const itemsPayload = [
@@ -235,18 +376,18 @@ export default function OffersView({
         name: formName.trim(),
         type: formType,
         value: val,
-        starts_at: !formAlwaysActive && formStartsAt ? new Date(formStartsAt).toISOString() : new Date().toISOString(),
-        ends_at: !formAlwaysActive && formEndsAt ? new Date(formEndsAt).toISOString() : null,
+        starts_at: schedule.startsAt,
+        ends_at: schedule.endsAt,
         active: formActive,
         items: itemsPayload
       };
 
       if (editingOfferId) {
         await updateAdminOffer(editingOfferId, payload, token);
-        setSuccessToast(`✓ Offer "${formName}" updated successfully!`);
+        setSuccessToast(`✓ Offer "${formName.trim()}" updated.`);
       } else {
         await createAdminOffer(payload, token);
-        setSuccessToast(`✓ Offer "${formName}" created and published!`);
+        setSuccessToast(`✓ Offer "${formName.trim()}" created and published.`);
       }
 
       setShowModal(false);
@@ -263,7 +404,7 @@ export default function OffersView({
   const handleToggleOffer = async (offer, e) => {
     if (e) e.stopPropagation();
     try {
-      const newStatus = !offer.active;
+      const newStatus = !isOfferActiveFlag(offer.active);
       await toggleAdminOffer(offer.id, newStatus, token);
       setOffersList(prev => prev.map(o => o.id === offer.id ? { ...o, active: newStatus ? 1 : 0 } : o));
       setSuccessToast(`✓ Offer "${offer.name}" ${newStatus ? 'resumed' : 'paused'}.`);
@@ -288,15 +429,21 @@ export default function OffersView({
 
   // Dish selection toggle
   const toggleDishSelection = (dishId) => {
+    const cleanId = Number(dishId);
     setSelectedDishIds(prev => 
-      prev.includes(dishId) ? prev.filter(id => id !== dishId) : [...prev, dishId]
+      prev.some(id => Number(id) === cleanId)
+        ? prev.filter(id => Number(id) !== cleanId)
+        : [...prev, cleanId]
     );
   };
 
   // Combo selection toggle
   const toggleComboSelection = (comboId) => {
+    const cleanId = Number(comboId);
     setSelectedComboIds(prev => 
-      prev.includes(comboId) ? prev.filter(id => id !== comboId) : [...prev, comboId]
+      prev.some(id => Number(id) === cleanId)
+        ? prev.filter(id => Number(id) !== cleanId)
+        : [...prev, cleanId]
     );
   };
 
@@ -306,37 +453,51 @@ export default function OffersView({
       if (itemCategoryFilter !== 'all' && String(d.category_id) !== String(itemCategoryFilter)) return false;
       if (itemSearchQuery.trim()) {
         const q = itemSearchQuery.toLowerCase();
-        return d.name.toLowerCase().includes(q) || (d.name_hi && d.name_hi.toLowerCase().includes(q));
+        return (d.name || '').toLowerCase().includes(q) || (d.name_hi && d.name_hi.toLowerCase().includes(q));
       }
       return true;
     });
   }, [dishes, itemCategoryFilter, itemSearchQuery]);
 
-  // Preview Calculations for Step 3/4
+  // Filtered Combos for Step 2
+  const filteredCombosForSelection = useMemo(() => {
+    return (combos || []).filter(c => {
+      if (itemSearchQuery.trim()) {
+        const q = itemSearchQuery.toLowerCase();
+        return (c.name || '').toLowerCase().includes(q) || (c.description && c.description.toLowerCase().includes(q));
+      }
+      return true;
+    });
+  }, [combos, itemSearchQuery]);
+
+  // Preview Calculations for Step 3/4 (reuses canonical menu/checkout calculator)
   const previewCalculation = (basePrice) => {
     const numBase = Number(basePrice) || 0;
-    const val = Number(formValue) || 0;
-    let disc = numBase;
-    let badge = '';
+    const val = Number(formValue);
+    const result = calculateOfferPrice(
+      numBase,
+      {
+        id: editingOfferId || 0,
+        name: formName.trim(),
+        type: formType,
+        value: formValue
+      },
+      currencySym
+    );
 
-    if (formType === 'percentage') {
-      const pct = Math.min(100, Math.max(0, val));
-      const discAmt = Math.round((numBase * pct) / 100);
-      disc = Math.max(0, numBase - discAmt);
-      badge = `${pct}% OFF`;
-    } else if (formType === 'flat') {
-      disc = Math.max(0, numBase - val);
-      badge = currencySym ? `${currencySym}${val} OFF` : `${val} OFF`;
-    } else if (formType === 'special_price') {
-      disc = Math.max(0, val);
-      badge = `Special Price`;
-    }
+    const ineligibleReason = result
+      ? null
+      : (formType === 'special_price' && numBase > 0 && Number.isFinite(val) && val > 0 && val >= numBase
+          ? 'special_price'
+          : 'ineligible');
 
     return {
       original: numBase,
-      discounted: disc,
-      saved: Math.max(0, numBase - disc),
-      badge
+      discounted: result ? result.offer_price : numBase,
+      saved: result ? result.discount_amount : 0,
+      badge: result ? result.offer_badge : '',
+      eligible: Boolean(result),
+      ineligibleReason
     };
   };
 
@@ -885,7 +1046,7 @@ export default function OffersView({
                     <button
                       type="button"
                       onClick={(e) => handleToggleOffer(offer, e)}
-                      title={offer.active ? 'Pause Offer' : 'Resume Offer'}
+                      title={isOfferActiveFlag(offer.active) ? 'Pause Offer' : 'Resume Offer'}
                       style={{
                         height: '32px',
                         padding: '0 10px',
@@ -902,8 +1063,8 @@ export default function OffersView({
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      {offer.active ? <Pause size={12} /> : <Play size={12} />}
-                      <span>{offer.active ? 'Pause' : 'Resume'}</span>
+                      {isOfferActiveFlag(offer.active) ? <Pause size={12} /> : <Play size={12} />}
+                      <span>{isOfferActiveFlag(offer.active) ? 'Pause' : 'Resume'}</span>
                     </button>
                   )}
 
@@ -1289,25 +1450,71 @@ export default function OffersView({
                 </div>
               )}
 
-              {/* STEP 2: SELECT MENU ITEMS */}
+              {/* STEP 2: SELECT MENU ITEMS & COMBO DEALS */}
               {currentStep === 2 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#475569' }}>
                       Selected: {selectedDishIds.length + selectedComboIds.length} item(s)
                     </span>
                     <button
                       type="button"
                       onClick={() => {
-                        if (selectedDishIds.length === dishes.length) {
-                          setSelectedDishIds([]);
+                        if (modalItemTypeTab === 'combos') {
+                          if (selectedComboIds.length === (combos || []).length) {
+                            setSelectedComboIds([]);
+                          } else {
+                            setSelectedComboIds((combos || []).map(c => Number(c.id)));
+                          }
                         } else {
-                          setSelectedDishIds(dishes.map(d => d.id));
+                          if (selectedDishIds.length === (dishes || []).length) {
+                            setSelectedDishIds([]);
+                          } else {
+                            setSelectedDishIds((dishes || []).map(d => Number(d.id)));
+                          }
                         }
                       }}
                       style={{ background: 'none', border: 'none', color: '#064E3B', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer' }}
                     >
-                      {selectedDishIds.length === dishes.length ? 'Deselect All' : `Select All ${terminology.dishPlural || 'Dishes'}`}
+                      {modalItemTypeTab === 'combos'
+                        ? (selectedComboIds.length === (combos || []).length && (combos || []).length > 0 ? 'Deselect All Combos' : 'Select All Combos')
+                        : (selectedDishIds.length === (dishes || []).length && (dishes || []).length > 0 ? 'Deselect All' : `Select All ${terminology.dishPlural || 'Dishes'}`)}
+                    </button>
+                  </div>
+
+                  {/* Dishes vs Combos Switcher */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', background: '#FAF8F5', padding: '4px', borderRadius: '10px', border: '1px solid #EAE5DF' }}>
+                    <button
+                      type="button"
+                      onClick={() => setModalItemTypeTab('dishes')}
+                      style={{
+                        height: '32px',
+                        borderRadius: '7px',
+                        border: 'none',
+                        background: modalItemTypeTab === 'dishes' ? '#064E3B' : 'transparent',
+                        color: modalItemTypeTab === 'dishes' ? '#FFFFFF' : '#475569',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {terminology.dishPlural || 'Menu Items'} ({selectedDishIds.length}/{(dishes || []).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalItemTypeTab('combos')}
+                      style={{
+                        height: '32px',
+                        borderRadius: '7px',
+                        border: 'none',
+                        background: modalItemTypeTab === 'combos' ? '#064E3B' : 'transparent',
+                        color: modalItemTypeTab === 'combos' ? '#FFFFFF' : '#475569',
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Combo Deals ({selectedComboIds.length}/{(combos || []).length})
                     </button>
                   </div>
 
@@ -1317,7 +1524,7 @@ export default function OffersView({
                       type="text"
                       value={itemSearchQuery}
                       onChange={(e) => setItemSearchQuery(e.target.value)}
-                      placeholder={`Search ${terminology.dishSingular?.toLowerCase() || 'item'}...`}
+                      placeholder={modalItemTypeTab === 'combos' ? 'Search combos...' : `Search ${terminology.dishSingular?.toLowerCase() || 'item'}...`}
                       style={{
                         flex: 1,
                         height: '36px',
@@ -1330,68 +1537,111 @@ export default function OffersView({
                         boxSizing: 'border-box'
                       }}
                     />
-                    <select
-                      value={itemCategoryFilter}
-                      onChange={(e) => setItemCategoryFilter(e.target.value)}
-                      style={{
-                        height: '36px',
-                        borderRadius: '8px',
-                        border: '1px solid #CBD5E1',
-                        padding: '0 8px',
-                        fontSize: '0.76rem',
-                        background: '#FAF8F5',
-                        outline: 'none',
-                        boxSizing: 'border-box'
-                      }}
-                    >
-                      <option value="all">All Categories</option>
-                      {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                    {modalItemTypeTab === 'dishes' && (
+                      <select
+                        value={itemCategoryFilter}
+                        onChange={(e) => setItemCategoryFilter(e.target.value)}
+                        style={{
+                          height: '36px',
+                          borderRadius: '8px',
+                          border: '1px solid #CBD5E1',
+                          padding: '0 8px',
+                          fontSize: '0.76rem',
+                          background: '#FAF8F5',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <option value="all">All Categories</option>
+                        {categories.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   {/* Items Checkbox Feed */}
                   <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #EAE5DF', borderRadius: '10px', padding: '6px' }}>
-                    {filteredDishesForSelection.length === 0 ? (
-                      <div style={{ padding: '16px', textAlign: 'center', fontSize: '0.76rem', color: '#64748B' }}>
-                        No dishes found.
-                      </div>
-                    ) : (
-                      filteredDishesForSelection.map(d => {
-                        const isChecked = selectedDishIds.includes(d.id);
-                        return (
-                          <div
-                            key={d.id}
-                            onClick={() => toggleDishSelection(d.id)}
-                            style={{
-                              padding: '8px 10px',
-                              borderRadius: '8px',
-                              background: isChecked ? '#ECFDF5' : 'transparent',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              cursor: 'pointer',
-                              marginBottom: '2px'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => {}} // handled by parent onClick
-                                style={{ width: '16px', height: '16px', accentColor: '#064E3B', cursor: 'pointer' }}
-                              />
-                              <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>
-                                {d.name}
+                    {modalItemTypeTab === 'dishes' ? (
+                      filteredDishesForSelection.length === 0 ? (
+                        <div style={{ padding: '16px', textAlign: 'center', fontSize: '0.76rem', color: '#64748B' }}>
+                          No dishes found.
+                        </div>
+                      ) : (
+                        filteredDishesForSelection.map(d => {
+                          const isChecked = selectedDishIds.some(id => Number(id) === Number(d.id));
+                          return (
+                            <label
+                              key={d.id}
+                              style={{
+                                padding: '8px 10px',
+                                borderRadius: '8px',
+                                background: isChecked ? '#ECFDF5' : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                cursor: 'pointer',
+                                marginBottom: '2px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleDishSelection(d.id)}
+                                  style={{ width: '16px', height: '16px', accentColor: '#064E3B', cursor: 'pointer' }}
+                                />
+                                <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>
+                                  {d.name}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#064E3B' }}>
+                                {currencySym}{formatPriceNumber(d.price)}
                               </span>
-                            </div>
-                            <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#064E3B' }}>
-                              {currencySym}{formatPriceNumber(d.price)}
-                            </span>
-                          </div>
-                        );
-                      })
+                            </label>
+                          );
+                        })
+                      )
+                    ) : (
+                      filteredCombosForSelection.length === 0 ? (
+                        <div style={{ padding: '16px', textAlign: 'center', fontSize: '0.76rem', color: '#64748B' }}>
+                          No combo deals found.
+                        </div>
+                      ) : (
+                        filteredCombosForSelection.map(c => {
+                          const isChecked = selectedComboIds.some(id => Number(id) === Number(c.id));
+                          return (
+                            <label
+                              key={`combo-${c.id}`}
+                              style={{
+                                padding: '8px 10px',
+                                borderRadius: '8px',
+                                background: isChecked ? '#ECFDF5' : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                cursor: 'pointer',
+                                marginBottom: '2px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleComboSelection(c.id)}
+                                  style={{ width: '16px', height: '16px', accentColor: '#064E3B', cursor: 'pointer' }}
+                                />
+                                <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>
+                                  {c.name}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#064E3B' }}>
+                                {currencySym}{formatPriceNumber(c.price)}
+                              </span>
+                            </label>
+                          );
+                        })
+                      )
                     )}
                   </div>
                 </div>
@@ -1409,8 +1659,9 @@ export default function OffersView({
                       value={formValue}
                       onChange={(e) => setFormValue(e.target.value)}
                       placeholder={formType === 'percentage' ? '10' : '50'}
-                      min="1"
-                      max={formType === 'percentage' ? '100' : '10000'}
+                      min="0.01"
+                      step="any"
+                      max={formType === 'percentage' ? '100' : undefined}
                       style={{
                         width: '100%',
                         height: '40px',
@@ -1445,7 +1696,10 @@ export default function OffersView({
                           <input
                             type="datetime-local"
                             value={formStartsAt}
-                            onChange={(e) => setFormStartsAt(e.target.value)}
+                            onChange={(e) => {
+                              setFormStartsAt(e.target.value);
+                              setStartsAtDirty(true);
+                            }}
                             style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '0.74rem' }}
                           />
                         </div>
@@ -1454,7 +1708,10 @@ export default function OffersView({
                           <input
                             type="datetime-local"
                             value={formEndsAt}
-                            onChange={(e) => setFormEndsAt(e.target.value)}
+                            onChange={(e) => {
+                              setFormEndsAt(e.target.value);
+                              setEndsAtDirty(true);
+                            }}
                             style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '0.74rem' }}
                           />
                         </div>
@@ -1474,11 +1731,23 @@ export default function OffersView({
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '0.74rem', color: '#64748B' }}>Selected Items:</span>
-                      <strong style={{ fontSize: '0.76rem', color: '#064E3B' }}>{selectedDishIds.length + selectedComboIds.length} items</strong>
+                      <strong style={{ fontSize: '0.76rem', color: '#064E3B' }}>
+                        {selectedDishIds.length} dishes{selectedComboIds.length > 0 ? ` + ${selectedComboIds.length} combos` : ''}
+                      </strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '0.74rem', color: '#64748B' }}>Schedule:</span>
-                      <strong style={{ fontSize: '0.76rem', color: '#0F172A' }}>{formAlwaysActive ? 'Always Active' : 'Custom Dates'}</strong>
+                      <strong style={{ fontSize: '0.76rem', color: '#0F172A' }}>
+                        {(() => {
+                          if (formAlwaysActive) return 'Always Active';
+                          const eff = resolveEffectiveSchedule();
+                          const startTxt = eff.isStartOnPublish
+                            ? 'On publish'
+                            : (formatDateTimeLocalInput(eff.startsAt)?.replace('T', ' ') || 'On publish');
+                          const endTxt = eff.endsAt ? (formatDateTimeLocalInput(eff.endsAt)?.replace('T', ' ') || 'End') : 'No End';
+                          return `${startTxt} → ${endTxt}`;
+                        })()}
+                      </strong>
                     </div>
                   </div>
 
@@ -1488,15 +1757,18 @@ export default function OffersView({
                       Customer Menu Preview:
                     </span>
 
-                    {selectedDishIds.length > 0 && (() => {
-                      const sampleDish = dishes.find(d => d.id === selectedDishIds[0]) || dishes[0] || { name: 'Featured Item', price: 220 };
-                      const calc = previewCalculation(sampleDish.price);
+                    {(selectedDishIds.length > 0 || selectedComboIds.length > 0) && (() => {
+                      const sampleDish = selectedDishIds.length > 0
+                        ? (dishes || []).find(d => Number(d.id) === Number(selectedDishIds[0]))
+                        : (combos || []).find(c => Number(c.id) === Number(selectedComboIds[0]));
+                      const resolvedSample = sampleDish || { name: 'Featured Item', price: 220 };
+                      const calc = previewCalculation(resolvedSample.price);
                       return (
                         <div style={{
                           padding: '14px',
                           borderRadius: '12px',
                           background: '#FFFFFF',
-                          border: '1.5px solid #FDE68A',
+                          border: calc.eligible ? '1.5px solid #FDE68A' : '1px solid #E2E8F0',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                           display: 'flex',
                           justifyContent: 'space-between',
@@ -1504,21 +1776,31 @@ export default function OffersView({
                         }}>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                              <strong style={{ fontSize: '0.86rem', color: '#0F172A' }}>{sampleDish.name}</strong>
-                              <span style={{ padding: '1px 6px', borderRadius: '4px', background: '#FEF3C7', color: '#D97706', fontSize: '0.66rem', fontWeight: 900 }}>
-                                🔥 {calc.badge}
-                              </span>
+                              <strong style={{ fontSize: '0.86rem', color: '#0F172A' }}>{resolvedSample.name}</strong>
+                              {calc.eligible && calc.badge && (
+                                <span style={{ padding: '1px 6px', borderRadius: '4px', background: '#FEF3C7', color: '#D97706', fontSize: '0.66rem', fontWeight: 900 }}>
+                                  🔥 {calc.badge}
+                                </span>
+                              )}
                             </div>
-                            <span style={{ fontSize: '0.70rem', color: '#059669', fontWeight: 700 }}>✓ Available for Digital Ordering</span>
+                            <span style={{ fontSize: '0.70rem', color: calc.eligible ? '#059669' : '#64748B', fontWeight: 700 }}>
+                              {calc.eligible
+                                ? '✓ Available on Full Portion & Combos'
+                                : (calc.ineligibleReason === 'special_price'
+                                    ? 'Regular price applies (Special price is not lower than this item)'
+                                    : 'Regular price applies')}
+                            </span>
                           </div>
 
                           <div style={{ textAlign: 'right' }}>
                             <div style={{ fontSize: '0.94rem', fontWeight: 900, color: '#064E3B' }}>
                               {currencySym}{formatPriceNumber(calc.discounted)}
                             </div>
-                            <div style={{ fontSize: '0.72rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                              {currencySym}{formatPriceNumber(calc.original)}
-                            </div>
+                            {calc.eligible && calc.saved > 0 && (
+                              <div style={{ fontSize: '0.72rem', color: '#94A3B8', textDecoration: 'line-through' }}>
+                                {currencySym}{formatPriceNumber(calc.original)}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -1558,8 +1840,15 @@ export default function OffersView({
                       return;
                     }
                     if (currentStep === 2 && selectedDishIds.length === 0 && selectedComboIds.length === 0) {
-                      alert('Please select at least one menu item.');
+                      alert('Please select at least one menu item or combo deal.');
                       return;
+                    }
+                    if (currentStep === 3) {
+                      const err = validateDiscountAndSchedule();
+                      if (err) {
+                        alert(err);
+                        return;
+                      }
                     }
                     setCurrentStep(prev => prev + 1);
                   }}

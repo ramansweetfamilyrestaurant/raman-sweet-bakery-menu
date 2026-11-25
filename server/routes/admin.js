@@ -6442,6 +6442,173 @@ Strict Instructions:
 
 // ========== OFFERS & PROMOTIONS CRUD (ADMIN ROUTES) ==========
 
+function parseOfferBoolean(val, fallback) {
+  if (val === undefined || val === null) return fallback;
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'number') return val !== 0;
+  const s = String(val).trim().toLowerCase();
+  if (s === 'false' || s === '0' || s === 'f' || s === '') return false;
+  return true;
+}
+
+function parseOfferTimestamp(val, fieldName) {
+  if (val === undefined || val === null || String(val).trim() === '') return null;
+  if (typeof val === 'boolean') {
+    return { error: `Invalid ${fieldName} timestamp` };
+  }
+  const parsed = new Date(val);
+  if (Number.isNaN(parsed.getTime())) {
+    return { error: `Invalid ${fieldName} timestamp` };
+  }
+  return parsed.toISOString();
+}
+
+async function clearOfferMenuCache(targetId) {
+  try {
+    const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
+    if (slugRows && slugRows[0]?.slug) {
+      clearMenuBundleCache(slugRows[0].slug);
+      return;
+    }
+  } catch (_) {}
+  clearMenuBundleCache();
+}
+
+async function validateAndPrepareOfferData(body, targetId, { existingOffer = null, queryFn = query } = {}) {
+  const { name, type, value, starts_at, ends_at, active, items } = body || {};
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  if (!cleanName) {
+    return { status: 400, error: 'Offer name is required' };
+  }
+  if (!['percentage', 'flat', 'special_price'].includes(type)) {
+    return { status: 400, error: 'Invalid offer type. Allowed: percentage, flat, special_price' };
+  }
+  const numValue = Number(value);
+  if (value === undefined || value === null || value === '' || !Number.isFinite(numValue) || numValue <= 0) {
+    return { status: 400, error: 'Offer value must be a positive number' };
+  }
+  if (type === 'percentage' && numValue > 100) {
+    return { status: 400, error: 'Percentage discount cannot exceed 100%' };
+  }
+
+  let resolvedStartsAt;
+  if (starts_at === undefined) {
+    resolvedStartsAt = existingOffer ? existingOffer.starts_at : new Date().toISOString();
+  } else {
+    const parsedStart = parseOfferTimestamp(starts_at, 'starts_at');
+    if (parsedStart && typeof parsedStart === 'object' && parsedStart.error) {
+      return { status: 400, error: parsedStart.error };
+    }
+    resolvedStartsAt = parsedStart || (existingOffer ? existingOffer.starts_at : new Date().toISOString());
+  }
+
+  let resolvedEndsAt;
+  if (ends_at === undefined) {
+    resolvedEndsAt = existingOffer ? existingOffer.ends_at : null;
+  } else {
+    const parsedEnd = parseOfferTimestamp(ends_at, 'ends_at');
+    if (parsedEnd && typeof parsedEnd === 'object' && parsedEnd.error) {
+      return { status: 400, error: parsedEnd.error };
+    }
+    resolvedEndsAt = parsedEnd;
+  }
+
+  if (resolvedStartsAt && resolvedEndsAt) {
+    const startMs = new Date(resolvedStartsAt).getTime();
+    const endMs = new Date(resolvedEndsAt).getTime();
+    if (!Number.isNaN(startMs) && !Number.isNaN(endMs) && endMs <= startMs) {
+      return { status: 400, error: 'Offer end time must be after start time' };
+    }
+  }
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return { status: 400, error: 'Please select at least one dish or combo for this offer' };
+  }
+
+  const [validDishes, validCombos] = await Promise.all([
+    queryFn('SELECT id, price FROM dishes WHERE restaurant_id = $1', [targetId]),
+    queryFn('SELECT id, price FROM combos WHERE restaurant_id = $1', [targetId])
+  ]);
+  const validDishMap = new Map((validDishes || []).map(d => [Number(d.id), Number(d.price) || 0]));
+  const validComboMap = new Map((validCombos || []).map(c => [Number(c.id), Number(c.price) || 0]));
+
+  const insertedDishIds = new Set();
+  const insertedComboIds = new Set();
+  const normalizedItems = [];
+  const selectedPrices = [];
+
+  const parsePositiveIdRef = (rawRef) => {
+    if (typeof rawRef === 'boolean' || (typeof rawRef === 'object' && rawRef !== null)) return null;
+    if (typeof rawRef === 'string' && rawRef.trim() === '') return null;
+    const n = Number(rawRef);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  };
+
+  for (const item of items) {
+    if (!item && item !== 0) {
+      return { status: 400, error: 'Invalid item entry in offer selection' };
+    }
+    const rawDishId = typeof item === 'object' ? (item.dish_id ?? null) : item;
+    const rawComboId = typeof item === 'object' ? (item.combo_id ?? null) : null;
+    const hasDishRef = rawDishId !== null && rawDishId !== undefined && rawDishId !== '';
+    const hasComboRef = rawComboId !== null && rawComboId !== undefined && rawComboId !== '';
+
+    if (!hasDishRef && !hasComboRef) {
+      return { status: 400, error: 'Each selected offer item must reference a valid dish or combo' };
+    }
+    if (hasDishRef && hasComboRef) {
+      return { status: 400, error: 'An offer item cannot reference both a dish and a combo' };
+    }
+
+    if (hasDishRef) {
+      const numericDishId = parsePositiveIdRef(rawDishId);
+      if (!numericDishId || !validDishMap.has(numericDishId)) {
+        return { status: 400, error: 'One or more selected items do not exist or belong to another restaurant' };
+      }
+      if (!insertedDishIds.has(numericDishId)) {
+        insertedDishIds.add(numericDishId);
+        normalizedItems.push({ dish_id: numericDishId, combo_id: null });
+        selectedPrices.push(validDishMap.get(numericDishId));
+      }
+    }
+
+    if (hasComboRef) {
+      const numericComboId = parsePositiveIdRef(rawComboId);
+      if (!numericComboId || !validComboMap.has(numericComboId)) {
+        return { status: 400, error: 'One or more selected combos do not exist or belong to another restaurant' };
+      }
+      if (!insertedComboIds.has(numericComboId)) {
+        insertedComboIds.add(numericComboId);
+        normalizedItems.push({ dish_id: null, combo_id: numericComboId });
+        selectedPrices.push(validComboMap.get(numericComboId));
+      }
+    }
+  }
+
+  if (normalizedItems.length === 0) {
+    return { status: 400, error: 'Please select at least one valid dish or combo for this offer' };
+  }
+
+  if (type === 'special_price' && !selectedPrices.some(p => p > numValue)) {
+    return { status: 400, error: 'Special price must be lower than at least one selected item regular price' };
+  }
+
+  const existingActive = existingOffer
+    ? parseOfferBoolean(existingOffer.active, true)
+    : true;
+  const resolvedActive = parseOfferBoolean(active, existingActive);
+
+  return {
+    name: cleanName,
+    type,
+    value: numValue,
+    starts_at: resolvedStartsAt,
+    ends_at: resolvedEndsAt,
+    active: resolvedActive,
+    normalizedItems
+  };
+}
+
 // GET all offers for admin
 router.get('/offers', authenticateToken, async (req, res) => {
   try {
@@ -6479,61 +6646,28 @@ router.post('/offers', authenticateToken, requireActiveSubscription, async (req,
     if (!targetId) {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const { name, type, value, starts_at, ends_at, active = true, items = [] } = req.body;
-    if (!name || !type || value === undefined || value === null) {
-      return res.status(400).json({ error: 'Name, type, and value are required' });
-    }
-    if (!['percentage', 'flat', 'special_price'].includes(type)) {
-      return res.status(400).json({ error: 'Invalid offer type. Allowed: percentage, flat, special_price' });
-    }
-    const numValue = Number(value);
-    if (isNaN(numValue) || numValue <= 0) {
-      return res.status(400).json({ error: 'Offer value must be a positive number' });
-    }
-    if (type === 'percentage' && numValue > 100) {
-      return res.status(400).json({ error: 'Percentage discount cannot exceed 100%' });
+    const validated = await validateAndPrepareOfferData(req.body, targetId);
+    if (validated.error) {
+      return res.status(validated.status || 400).json({ error: validated.error });
     }
 
-    // Verify dish and combo ownership for target restaurant
-    const [validDishes, validCombos] = await Promise.all([
-      query('SELECT id FROM dishes WHERE restaurant_id = $1', [targetId]),
-      query('SELECT id FROM combos WHERE restaurant_id = $1', [targetId])
-    ]);
-    const validDishSet = new Set((validDishes || []).map(d => Number(d.id)));
-    const validComboSet = new Set((validCombos || []).map(c => Number(c.id)));
+    const offerId = await withTransaction(async (txQuery) => {
+      const offerResult = await txQuery(
+        'INSERT INTO offers (restaurant_id, name, type, value, starts_at, ends_at, active) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+        [targetId, validated.name, validated.type, validated.value, validated.starts_at, validated.ends_at, validated.active]
+      );
+      const createdId = offerResult[0]?.id || offerResult.lastInsertRowid;
 
-    const offerResult = await query(
-      'INSERT INTO offers (restaurant_id, name, type, value, starts_at, ends_at, active) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-      [targetId, name.trim(), type, numValue, starts_at || new Date().toISOString(), ends_at || null, active !== false && active !== 0 && active !== '0']
-    );
-    const offerId = offerResult[0]?.id || offerResult.lastInsertRowid;
-
-    if (Array.isArray(items) && items.length > 0) {
-      const insertedDishIds = new Set();
-      const insertedComboIds = new Set();
-      for (const item of items) {
-        const rawDishId = item.dish_id || (typeof item === 'number' || !isNaN(Number(item)) ? Number(item) : null);
-        const rawComboId = item.combo_id || null;
-        const dishId = rawDishId && validDishSet.has(Number(rawDishId)) ? Number(rawDishId) : null;
-        const comboId = rawComboId && validComboSet.has(Number(rawComboId)) ? Number(rawComboId) : null;
-
-        if (dishId && !insertedDishIds.has(dishId)) {
-          insertedDishIds.add(dishId);
-          await query(
-            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, $3, NULL)',
-            [offerId, targetId, dishId]
-          );
-        } else if (comboId && !insertedComboIds.has(comboId)) {
-          insertedComboIds.add(comboId);
-          await query(
-            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, NULL, $3)',
-            [offerId, targetId, comboId]
-          );
-        }
+      for (const item of validated.normalizedItems) {
+        await txQuery(
+          'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, $3, $4)',
+          [createdId, targetId, item.dish_id, item.combo_id]
+        );
       }
-    }
+      return createdId;
+    });
 
-    clearMenuBundleCache();
+    await clearOfferMenuCache(targetId);
     res.json({ id: offerId, message: 'Offer created successfully' });
   } catch (err) {
     console.error('Create offer error:', err);
@@ -6548,62 +6682,51 @@ router.put('/offers/:id', authenticateToken, requireActiveSubscription, async (r
     if (!targetId) {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const { name, type, value, starts_at, ends_at, active, items = [] } = req.body;
-    if (!name || !type || value === undefined || value === null) {
-      return res.status(400).json({ error: 'Name, type, and value are required' });
-    }
-    if (!['percentage', 'flat', 'special_price'].includes(type)) {
-      return res.status(400).json({ error: 'Invalid offer type. Allowed: percentage, flat, special_price' });
-    }
-    const numValue = Number(value);
-    if (isNaN(numValue) || numValue <= 0) {
-      return res.status(400).json({ error: 'Offer value must be a positive number' });
-    }
-    if (type === 'percentage' && numValue > 100) {
-      return res.status(400).json({ error: 'Percentage discount cannot exceed 100%' });
+    const offerId = Number(req.params.id);
+    if (!Number.isInteger(offerId) || offerId <= 0) {
+      return res.status(400).json({ error: 'Invalid offer ID' });
     }
 
-    // Verify dish and combo ownership for target restaurant
-    const [validDishes, validCombos] = await Promise.all([
-      query('SELECT id FROM dishes WHERE restaurant_id = $1', [targetId]),
-      query('SELECT id FROM combos WHERE restaurant_id = $1', [targetId])
-    ]);
-    const validDishSet = new Set((validDishes || []).map(d => Number(d.id)));
-    const validComboSet = new Set((validCombos || []).map(c => Number(c.id)));
-
-    await query(
-      'UPDATE offers SET name = $1, type = $2, value = $3, starts_at = $4, ends_at = $5, active = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 AND restaurant_id = $8',
-      [name.trim(), type, numValue, starts_at || new Date().toISOString(), ends_at || null, active !== false && active !== 0 && active !== '0', req.params.id, targetId]
-    );
-
-    // Re-sync offer_items
-    await query('DELETE FROM offer_items WHERE offer_id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
-    if (Array.isArray(items) && items.length > 0) {
-      const insertedDishIds = new Set();
-      const insertedComboIds = new Set();
-      for (const item of items) {
-        const rawDishId = item.dish_id || (typeof item === 'number' || !isNaN(Number(item)) ? Number(item) : null);
-        const rawComboId = item.combo_id || null;
-        const dishId = rawDishId && validDishSet.has(Number(rawDishId)) ? Number(rawDishId) : null;
-        const comboId = rawComboId && validComboSet.has(Number(rawComboId)) ? Number(rawComboId) : null;
-
-        if (dishId && !insertedDishIds.has(dishId)) {
-          insertedDishIds.add(dishId);
-          await query(
-            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, $3, NULL)',
-            [req.params.id, targetId, dishId]
-          );
-        } else if (comboId && !insertedComboIds.has(comboId)) {
-          insertedComboIds.add(comboId);
-          await query(
-            'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, NULL, $3)',
-            [req.params.id, targetId, comboId]
-          );
-        }
+    const updateResult = await withTransaction(async (txQuery) => {
+      const existingRows = await txQuery(
+        'SELECT * FROM offers WHERE id = $1 AND restaurant_id = $2 FOR UPDATE',
+        [offerId, targetId]
+      );
+      if (!existingRows || existingRows.length === 0) {
+        return { status: 404, error: 'Offer not found' };
       }
+
+      const validated = await validateAndPrepareOfferData(req.body, targetId, {
+        existingOffer: existingRows[0],
+        queryFn: txQuery
+      });
+      if (validated.error) {
+        return { status: validated.status || 400, error: validated.error };
+      }
+
+      const updatedRows = await txQuery(
+        'UPDATE offers SET name = $1, type = $2, value = $3, starts_at = $4, ends_at = $5, active = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 AND restaurant_id = $8 RETURNING id',
+        [validated.name, validated.type, validated.value, validated.starts_at, validated.ends_at, validated.active, offerId, targetId]
+      );
+      if (!updatedRows || updatedRows.length === 0) {
+        return { status: 404, error: 'Offer not found' };
+      }
+
+      await txQuery('DELETE FROM offer_items WHERE offer_id = $1 AND restaurant_id = $2', [offerId, targetId]);
+      for (const item of validated.normalizedItems) {
+        await txQuery(
+          'INSERT INTO offer_items (offer_id, restaurant_id, dish_id, combo_id) VALUES ($1, $2, $3, $4)',
+          [offerId, targetId, item.dish_id, item.combo_id]
+        );
+      }
+      return { ok: true };
+    });
+
+    if (updateResult?.error) {
+      return res.status(updateResult.status || 400).json({ error: updateResult.error });
     }
 
-    clearMenuBundleCache();
+    await clearOfferMenuCache(targetId);
     res.json({ message: 'Offer updated successfully' });
   } catch (err) {
     console.error('Update offer error:', err);
@@ -6618,10 +6741,32 @@ router.patch('/offers/:id/toggle', authenticateToken, requireActiveSubscription,
     if (!targetId) {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const { active } = req.body;
-    await query('UPDATE offers SET active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND restaurant_id = $3', [active !== false && active !== 0 && active !== '0', req.params.id, targetId]);
-    clearMenuBundleCache();
-    res.json({ message: 'Offer status updated' });
+    const offerId = Number(req.params.id);
+    if (!Number.isInteger(offerId) || offerId <= 0) {
+      return res.status(400).json({ error: 'Invalid offer ID' });
+    }
+
+    let updatedRows;
+    if (req.body?.active !== undefined) {
+      const explicitActive = parseOfferBoolean(req.body.active, true);
+      updatedRows = await query(
+        'UPDATE offers SET active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND restaurant_id = $3 RETURNING id, active',
+        [explicitActive, offerId, targetId]
+      );
+    } else {
+      updatedRows = await query(
+        "UPDATE offers SET active = CASE WHEN (active IS NOT FALSE AND active::text NOT IN ('0', 'false', 'f')) THEN FALSE ELSE TRUE END, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND restaurant_id = $2 RETURNING id, active",
+        [offerId, targetId]
+      );
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    const updatedActive = parseOfferBoolean(updatedRows[0].active, false);
+    await clearOfferMenuCache(targetId);
+    res.json({ message: 'Offer status updated', active: updatedActive });
   } catch (err) {
     console.error('Toggle offer error:', err);
     res.status(500).json({ error: 'Failed to toggle offer' });
@@ -6635,9 +6780,26 @@ router.delete('/offers/:id', authenticateToken, requireActiveSubscription, async
     if (!targetId) {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    await query('DELETE FROM offer_items WHERE offer_id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
-    await query('DELETE FROM offers WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
-    clearMenuBundleCache();
+    const offerId = Number(req.params.id);
+    if (!Number.isInteger(offerId) || offerId <= 0) {
+      return res.status(400).json({ error: 'Invalid offer ID' });
+    }
+
+    const deleted = await withTransaction(async (txQuery) => {
+      const existingRows = await txQuery('SELECT id FROM offers WHERE id = $1 AND restaurant_id = $2 FOR UPDATE', [offerId, targetId]);
+      if (!existingRows || existingRows.length === 0) {
+        return false;
+      }
+      await txQuery('DELETE FROM offer_items WHERE offer_id = $1 AND restaurant_id = $2', [offerId, targetId]);
+      await txQuery('DELETE FROM offers WHERE id = $1 AND restaurant_id = $2', [offerId, targetId]);
+      return true;
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+
+    await clearOfferMenuCache(targetId);
     res.json({ message: 'Offer deleted successfully' });
   } catch (err) {
     console.error('Delete offer error:', err);
