@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Sparkles, AlertCircle, Trash2, Tag, Globe, Sliders, Flame, Layers, Utensils, Check } from 'lucide-react';
 import { uploadImage, deleteImageApi } from '../../api/client';
 import { getDishImageUrl } from '../../utils/imageHelper';
-import { getBusinessTerminology } from '../../utils/businessTaxonomy';
+import { getBusinessTerminology, isAuthoritativePureVeg, resolveBusinessProfile } from '../../utils/businessTaxonomy';
 
 const resolveImageUrl = (url) => {
   if (!url || url === '/uploads/logo.jpg') return '';
@@ -16,13 +16,8 @@ const resolveImageUrl = (url) => {
 export default function DishFormModal({ dish, defaultCategoryId = '', categories, token, modifiersEnabled = true, currencySymbol = '₹', restaurantInfo = {}, onSave, onClose }) {
   const terminology = getBusinessTerminology(restaurantInfo || {});
   const itemLabel = terminology.dishSingular || 'Item';
-  const resolvedFoodType = String(restaurantInfo?.food_type || restaurantInfo?.resto_type || '').trim().toLowerCase();
-  const isPureVegResto = restaurantInfo?.is_pure_veg === true ||
-    restaurantInfo?.is_pure_veg === 1 ||
-    restaurantInfo?.is_pure_veg === '1' ||
-    restaurantInfo?.is_pure_veg === 'true' ||
-    ['pure_veg', 'veg', 'vegetarian', 'vegan', 'only_veg'].includes(resolvedFoodType) ||
-    ['bakery_confectionery', 'sweet_shop'].includes(String(restaurantInfo?.business_type || '').toLowerCase());
+  const businessProfile = resolveBusinessProfile(restaurantInfo || {});
+  const isPureVegResto = isAuthoritativePureVeg(restaurantInfo);
 
   const [activeTab, setActiveTab] = useState('basic'); // 'basic' | 'pricing' | 'details'
   const [categoryId, setCategoryId] = useState(dish?.category_id || defaultCategoryId || categories?.[0]?.id || '');
@@ -59,7 +54,7 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
   const [badge, setBadge] = useState(dish?.badge || '');
   const [ingredients, setIngredients] = useState(dish?.ingredients || '');
   const [tasteProfile, setTasteProfile] = useState(dish?.taste_profile || '');
-  const defaultInitialType = dish?.type || (isPureVegResto ? 'veg' : (restaurantInfo?.food_type === 'non_veg' ? 'nonveg' : 'veg'));
+  const defaultInitialType = dish?.type || (isPureVegResto ? 'veg' : (businessProfile.food_type === 'non_veg' ? 'nonveg' : 'veg'));
   const [type, setType] = useState(defaultInitialType); // 'veg', 'nonveg', 'egg'
   const [image, setImage] = useState(dish?.image ? resolveImageUrl(dish.image) : '');
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -73,6 +68,7 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef(null);
 
   const handleCancelClose = () => {
     if (tempUploadedImages.length > 0) {
@@ -285,6 +281,27 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
             border-color: #0A2315 !important;
             box-shadow: 0 0 0 3px rgba(10, 35, 21, 0.08) !important;
           }
+          .dish-modal-container .dish-modal-focus-btn:focus-visible {
+            outline: 2px solid #0A2315;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.24);
+          }
+          .dish-modal-container .dish-availability-toggle {
+            min-height: 18px !important;
+            min-width: 34px !important;
+          }
+          .dish-modal-container .dish-sr-only-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            min-height: 0 !important;
+            padding: 0 !important;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+          }
           @media (max-width: 600px) {
             .dish-modal-container {
               max-width: 100% !important;
@@ -294,7 +311,7 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
             .dish-modal-body-form {
               padding: 12px 14px !important;
             }
-            .dish-modal-body-form input:not([type="checkbox"]),
+            .dish-modal-body-form input:not([type="checkbox"]):not([type="file"]),
             .dish-modal-body-form select,
             .dish-modal-body-form textarea {
               font-size: 14px !important;
@@ -626,29 +643,45 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                       }}
                       onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
                     />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <label style={{
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        background: '#0A2315',
-                        color: '#FFFFFF',
-                        padding: '6px 12px',
-                        borderRadius: '7px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        minWidth: '104px',
-                        justifyContent: 'center'
-                      }}>
-                        <Upload size={11} color="#D4AF37" />
-                        <span>{uploading ? 'Uploading...' : (image ? 'Change Photo' : 'Upload Photo')}</span>
-                        <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
-                      </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', position: 'relative' }}>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        className="dish-sr-only-input"
+                      />
                       <button
                         type="button"
+                        className="dish-modal-focus-btn"
+                        disabled={uploading}
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{
+                          cursor: uploading ? 'wait' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          background: '#0A2315',
+                          color: '#FFFFFF',
+                          border: '1.5px solid #0A2315',
+                          padding: '6px 12px',
+                          borderRadius: '7px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          minWidth: '104px',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Upload size={11} color="#D4AF37" />
+                        <span>{uploading ? 'Uploading...' : (image ? 'Change Photo' : 'Upload Photo')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="dish-modal-focus-btn"
                         onClick={() => setShowUrlInput(!showUrlInput)}
-                        style={{ background: 'none', border: 'none', color: '#475569', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                        style={{ background: 'none', border: 'none', color: '#475569', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'left', borderRadius: '4px' }}
                       >
                         {showUrlInput ? 'Hide URL input' : 'Or paste image URL'}
                       </button>
@@ -660,7 +693,11 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                     <span style={{ fontSize: '0.70rem', fontWeight: 750, color: available ? '#16A34A' : '#64748B' }}>
                       {available ? '● In Stock' : '○ Out of Stock'}
                     </span>
-                    <div
+                    <button
+                      type="button"
+                      className="dish-modal-focus-btn dish-availability-toggle"
+                      aria-label={`Toggle ${itemLabel} availability`}
+                      aria-pressed={Boolean(available)}
                       onClick={() => setAvailable(!available)}
                       style={{
                         width: '34px',
@@ -671,20 +708,25 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                         cursor: 'pointer',
                         transition: 'background-color 0.2s',
                         display: 'inline-flex',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        padding: 0,
+                        border: 'none'
                       }}
                     >
-                      <div style={{
-                        width: '14px',
-                        height: '14px',
-                        borderRadius: '50%',
-                        background: '#FFFFFF',
-                        position: 'absolute',
-                        left: available ? '18px' : '2px',
-                        transition: 'left 0.2s',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
-                      }} />
-                    </div>
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: '14px',
+                          height: '14px',
+                          borderRadius: '50%',
+                          background: '#FFFFFF',
+                          position: 'absolute',
+                          left: available ? '18px' : '2px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                        }}
+                      />
+                    </button>
                   </div>
                 </div>
 

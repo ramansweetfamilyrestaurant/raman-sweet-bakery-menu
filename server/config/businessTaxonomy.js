@@ -72,6 +72,7 @@ export const FOOD_TYPE_ALIASES = Object.freeze({
   'veg': 'pure_veg',
   'vegetarian': 'pure_veg',
   'pure_veg': 'pure_veg',
+  'only_veg': 'pure_veg',
   'vegan': 'pure_veg',
   'veg_nonveg': 'veg_nonveg',
   'both': 'veg_nonveg',
@@ -254,7 +255,7 @@ export function resolveBusinessProfile(restaurant = {}) {
     food_type = rawFood;
   } else if (rawFood && FOOD_TYPE_ALIASES[rawFood]) {
     food_type = FOOD_TYPE_ALIASES[rawFood];
-  } else if (legacyResto === 'pure_veg') {
+  } else if (legacyResto === 'pure_veg' || legacyResto === 'only_veg') {
     food_type = 'pure_veg';
   } else if (legacyResto === 'non_veg') {
     food_type = 'non_veg';

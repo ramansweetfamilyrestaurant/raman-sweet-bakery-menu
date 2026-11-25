@@ -114,6 +114,7 @@ export const FOOD_TYPE_ALIASES = Object.freeze({
   'veg': 'pure_veg',
   'vegetarian': 'pure_veg',
   'pure_veg': 'pure_veg',
+  'only_veg': 'pure_veg',
   'vegan': 'pure_veg',
   'veg_nonveg': 'veg_nonveg',
   'both': 'veg_nonveg',
@@ -274,7 +275,7 @@ export function resolveBusinessProfile(restaurant = {}) {
     food_type = rawFood;
   } else if (rawFood && FOOD_TYPE_ALIASES[rawFood]) {
     food_type = FOOD_TYPE_ALIASES[rawFood];
-  } else if (legacyResto === 'pure_veg') {
+  } else if (legacyResto === 'pure_veg' || legacyResto === 'only_veg') {
     food_type = 'pure_veg';
   } else if (legacyResto === 'non_veg') {
     food_type = 'non_veg';
@@ -304,6 +305,45 @@ export function resolveBusinessProfile(restaurant = {}) {
     legacy_resto_type: safeResto.resto_type || 'pure_veg',
     is_pure_veg
   };
+}
+
+/**
+ * Resolves whether a business is strictly Pure Veg from authoritative dietary
+ * settings (food_type, explicit is_pure_veg, legacy resto_type), never
+ * business_type alone. Explicit food_type values take precedence over derived
+ * is_pure_veg booleans from resolveBusinessProfile.
+ * @param {object} [restaurant={}]
+ * @returns {boolean}
+ */
+export function isAuthoritativePureVeg(restaurant = {}) {
+  const safeResto = (restaurant && typeof restaurant === 'object') ? restaurant : {};
+  const rawFood = safeResto.food_type ? String(safeResto.food_type).trim().toLowerCase() : '';
+  const canonicalFood = rawFood
+    ? (isValidFoodType(rawFood) ? rawFood : (FOOD_TYPE_ALIASES[rawFood] || null))
+    : null;
+
+  if (canonicalFood === 'non_veg' || canonicalFood === 'veg_nonveg') {
+    return false;
+  }
+  if (canonicalFood === 'pure_veg') {
+    return true;
+  }
+
+  const rawPureVeg = safeResto.is_pure_veg;
+  const hasExplicitFalse = rawPureVeg === false || rawPureVeg === 0 || rawPureVeg === '0'
+    || (typeof rawPureVeg === 'string' && rawPureVeg.trim().toLowerCase() === 'false');
+  if (hasExplicitFalse) {
+    return false;
+  }
+
+  const hasExplicitTrue = rawPureVeg === true || rawPureVeg === 1 || rawPureVeg === '1'
+    || (typeof rawPureVeg === 'string' && rawPureVeg.trim().toLowerCase() === 'true');
+  if (hasExplicitTrue) {
+    return true;
+  }
+
+  const profile = resolveBusinessProfile(safeResto);
+  return profile.is_pure_veg;
 }
 
 export function resolveBannerBadge(restaurant = {}) {

@@ -24,6 +24,8 @@ import { JWT_SECRET } from '../config/jwt.js';
 import { initDb, query } from '../db.js';
 import adminRoutes from '../routes/admin.js';
 import apiRoutes from '../routes/api.js';
+import { isAuthoritativePureVeg, resolveBusinessProfile as resolveFrontendBusinessProfile } from '../../src/utils/businessTaxonomy.js';
+import { resolveBusinessProfile as resolveBackendBusinessProfile } from '../config/businessTaxonomy.js';
 
 let passed = 0;
 let failed = 0;
@@ -187,6 +189,110 @@ async function runTests() {
       assert.ok(custDishModalCode.includes('dish.taste_profile'), 'Customer DishModal must display taste_profile when present');
       assert.ok(appCode.includes('saveInlineCatalogEntity'), 'App.jsx inline dish and category saves must use shared helper and await reload');
       assert.ok(appCode.includes("id: 'uncategorized'"), 'App.jsx uncategorized bucket must have explicit id');
+    });
+
+    await testAsync('6. Authoritative Pure Veg resolution does not lock egg/nonveg businesses or bakeries by business_type alone', async () => {
+      assert.strictEqual(isAuthoritativePureVeg({ business_type: 'bakery_confectionery', is_pure_veg: false, food_type: 'non_veg' }), false);
+      assert.strictEqual(isAuthoritativePureVeg({ business_type: 'bakery_confectionery', food_type: 'veg_nonveg' }), false);
+      assert.strictEqual(isAuthoritativePureVeg({ business_type: 'bakery_confectionery', food_type: 'egg' }), false);
+      assert.strictEqual(isAuthoritativePureVeg({ business_type: 'bakery_confectionery' }), false);
+      assert.strictEqual(isAuthoritativePureVeg({ business_type: 'sweet_shop' }), false);
+      assert.strictEqual(isAuthoritativePureVeg({ business_type: 'bakery_confectionery', is_pure_veg: false, resto_type: 'pure_veg' }), false);
+      assert.strictEqual(isAuthoritativePureVeg({ food_type: 'non_veg', is_pure_veg: true }), false);
+
+      assert.strictEqual(isAuthoritativePureVeg({ business_type: 'bakery_confectionery', is_pure_veg: true, food_type: 'pure_veg' }), true);
+      assert.strictEqual(isAuthoritativePureVeg({ food_type: 'only_veg' }), true);
+      assert.strictEqual(isAuthoritativePureVeg({ business_type: 'bakery_confectionery', food_type: 'only_veg', is_pure_veg: false }), true);
+      assert.strictEqual(isAuthoritativePureVeg({ business_type: 'bakery_confectionery', food_type: null, resto_type: 'pure_veg', is_pure_veg: false }), false);
+      assert.strictEqual(isAuthoritativePureVeg({ resto_type: 'pure_veg' }), true);
+      assert.strictEqual(isAuthoritativePureVeg({ resto_type: 'only_veg' }), true);
+      assert.strictEqual(isAuthoritativePureVeg({ is_pure_veg: true }), true);
+      assert.strictEqual(isAuthoritativePureVeg({ is_pure_veg: '1' }), true);
+
+      const feOnlyVeg = resolveFrontendBusinessProfile({ business_type: 'bakery_confectionery', food_type: 'only_veg', resto_type: 'bakery' });
+      const beOnlyVeg = resolveBackendBusinessProfile({ business_type: 'bakery_confectionery', food_type: 'only_veg', resto_type: 'bakery' });
+      assert.strictEqual(feOnlyVeg.food_type, 'pure_veg');
+      assert.strictEqual(feOnlyVeg.is_pure_veg, true);
+      assert.strictEqual(beOnlyVeg.food_type, 'pure_veg');
+      assert.strictEqual(beOnlyVeg.is_pure_veg, true);
+
+      const testDir = path.dirname(fileURLToPath(import.meta.url));
+      const rootDir = path.resolve(testDir, '../..');
+      const dishModalCode = fs.readFileSync(path.join(rootDir, 'src/components/Admin/DishFormModal.jsx'), 'utf8');
+      assert.ok(dishModalCode.includes('isAuthoritativePureVeg(restaurantInfo)'), 'DishFormModal must resolve isPureVegResto via isAuthoritativePureVeg');
+      assert.ok(!dishModalCode.includes("'bakery_confectionery'") && !dishModalCode.includes("'sweet_shop'"), 'DishFormModal must not lock dietary type from business_type alone');
+      assert.ok(dishModalCode.includes('dish?.type || (isPureVegResto'), 'DishFormModal must preserve existing dish.type when permitted');
+      assert.ok(dishModalCode.includes("type: isPureVegResto ? 'veg' : type"), 'DishFormModal save payload must preserve non-pure-veg dietary types');
+    });
+
+    await testAsync('7. Accessibility controls and price_half persistence with modifiers disabled', async () => {
+      // Disable modifiers and raise dish quota on basic tier, then create dish with full=200 and half=100
+      await query("UPDATE saas_plans SET modifiers_enabled = 0, max_dishes = 10 WHERE LOWER(key) = 'basic'");
+
+      const halfDishRes = await fetch(`${baseUrl}/api/admin/dishes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: 'Veg Biryani',
+          category_id: createdCategoryId,
+          price: 200,
+          price_half: 100,
+          portion_half_label: 'Half',
+          portion_full_label: 'Full',
+          type: 'veg',
+          modifiers: []
+        })
+      });
+      const halfDishData = await halfDishRes.json();
+      assert.strictEqual(halfDishRes.status, 200);
+      assert.strictEqual(halfDishData.success, true);
+
+      const bundle = await fetch(`${baseUrl}/api/menu-bundle?slug=${resto.slug}`).then(r => r.json());
+      assert.strictEqual(bundle.info.modifiers_enabled, false, 'Menu bundle must reflect disabled modifiers flag');
+      const savedHalfDish = bundle.dishes.find(d => d.id === halfDishData.id);
+      assert.ok(savedHalfDish, 'Dish created while modifiers are disabled must appear in menu bundle');
+      assert.strictEqual(Number(savedHalfDish.price), 200);
+      assert.strictEqual(Number(savedHalfDish.price_half), 100);
+
+      const testDir = path.dirname(fileURLToPath(import.meta.url));
+      const rootDir = path.resolve(testDir, '../..');
+      const dishFormCode = fs.readFileSync(path.join(rootDir, 'src/components/Admin/DishFormModal.jsx'), 'utf8');
+      const custDishModalCode = fs.readFileSync(path.join(rootDir, 'src/components/DishModal.jsx'), 'utf8');
+      const dishCardCode = fs.readFileSync(path.join(rootDir, 'src/components/DishCard.jsx'), 'utf8');
+      const menuCardCode = fs.readFileSync(path.join(rootDir, 'src/components/MenuCardItem.jsx'), 'utf8');
+
+      // Finding 1: Keyboard-accessible file upload button + no display: 'none' on file input
+      assert.ok(!/type="file"[^>]*display:\s*'none'/.test(dishFormCode), 'DishFormModal file input must not use display: none');
+      assert.ok(dishFormCode.includes('fileInputRef.current?.click()') && dishFormCode.includes('onChange={handleFileUpload}'), 'DishFormModal must use focusable native button opening file input while preserving handleFileUpload');
+
+      // Finding 2: Half price retention & portion offering independent of modifiersEnabled
+      assert.ok(dishFormCode.includes('price_half: (hasHalf'), 'DishFormModal must serialize price_half independently of modifiersEnabled');
+      assert.ok(custDishModalCode.includes("dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0") && custDishModalCode.includes("setSelectedPortion('half')"), 'Customer DishModal must offer half portion independently of modifiersEnabled');
+      assert.ok(dishCardCode.includes("handleAddAction(e, 'half')") && menuCardCode.includes("setPortionMode('half')"), 'DishCard and MenuCardItem must expose half portion independently of modifiersEnabled');
+
+      // Finding 3: Native button for stock availability with accessible name, aria-pressed, and focus indicator
+      const hasSingleAvailabilityButton = (source) => {
+        const buttonOpeningTags = source.match(/<button\b(?:[^><{}]|\{(?:[^{}]|\{[^{}]*\})*\})*>/g) || [];
+        return buttonOpeningTags.some(tag =>
+          /\btype="button"/.test(tag) &&
+          /aria-label=\{`Toggle \$\{itemLabel\} availability`\}/.test(tag) &&
+          /aria-pressed=\{Boolean\(available\)\}/.test(tag)
+        );
+      };
+      assert.ok(
+        hasSingleAvailabilityButton(dishFormCode),
+        'DishFormModal availability toggle must be a single native button with type="button", accessible name, and aria-pressed'
+      );
+      const mutatedWithDiv = dishFormCode.replace(
+        /<button\b([^>]*aria-label=\{`Toggle \$\{itemLabel\} availability`\})/,
+        '<div$1'
+      );
+      assert.strictEqual(
+        hasSingleAvailabilityButton(mutatedWithDiv),
+        false,
+        'Replacing the availability button with a div must fail the native button check'
+      );
+      assert.ok(dishFormCode.includes('.dish-modal-focus-btn:focus-visible'), 'DishFormModal interactive buttons must define visible focus indicators');
     });
   } finally {
     server.close();

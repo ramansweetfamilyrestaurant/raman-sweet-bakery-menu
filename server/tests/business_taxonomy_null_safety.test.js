@@ -41,6 +41,15 @@ test('businessTaxonomy null-safety test suite', async (t) => {
     const spaces = frontendTaxonomy.getAvailableSpaceTypesForBusiness(null, null, null);
     assert.ok(Array.isArray(spaces));
     assert.ok(spaces.length >= 3);
+    // 5. isAuthoritativePureVeg
+    assert.doesNotThrow(() => frontendTaxonomy.isAuthoritativePureVeg(null));
+    assert.doesNotThrow(() => frontendTaxonomy.isAuthoritativePureVeg(undefined));
+    assert.doesNotThrow(() => frontendTaxonomy.isAuthoritativePureVeg({}));
+    assert.doesNotThrow(() => frontendTaxonomy.isAuthoritativePureVeg(false));
+    assert.doesNotThrow(() => frontendTaxonomy.isAuthoritativePureVeg(0));
+    assert.doesNotThrow(() => frontendTaxonomy.isAuthoritativePureVeg(''));
+    assert.equal(frontendTaxonomy.isAuthoritativePureVeg(null), false);
+    assert.equal(frontendTaxonomy.isAuthoritativePureVeg({}), false);
   });
 
   await t.test('backend config/businessTaxonomy handles null and undefined gracefully', () => {
