@@ -330,7 +330,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       loadSuperAnnouncements();
     }, 120);
 
-    return () => clearTimeout(timer);
+    // 3. Live Ticket Count Polling: Keeps Super Admin notification bell & sidebar badge fresh
+    const ticketInterval = setInterval(() => {
+      loadTicketCount();
+    }, 25000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(ticketInterval);
+    };
   }, [token]);
 
   useEffect(() => {
