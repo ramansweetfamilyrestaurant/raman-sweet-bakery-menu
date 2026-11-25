@@ -213,14 +213,17 @@ export const kdsPinRateLimiter = rateLimit({
 
 /**
  * Guard middleware that enforces distributed rate limiting configuration in production.
- * In production/serverless, memory-backed rate limiting does not scale across instances;
- * if REDIS_URL is absent, it fails closed with an explicit 503 configuration error.
- * In local development and automated testing, it passes through to allow local MemoryStore.
+ * If REQUIRE_DISTRIBUTED_RATE_LIMIT=true is explicitly configured and REDIS_URL is absent,
+ * it fails closed with an explicit 503 configuration error.
+ * In standard production deployments without an external Redis instance, it logs a notice
+ * and falls back gracefully to in-memory rate limiting so legitimate admin tickets are not blocked.
  */
 export function enforceDistributedRateLimitGuard(scope = 'support_ticket') {
   return (req, res, next) => {
     const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
-    if (isProduction && !process.env.REDIS_URL) {
+    const isStrictRequired = process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT === 'true';
+
+    if (isProduction && !process.env.REDIS_URL && isStrictRequired) {
       console.error(`❌ [DISTRIBUTED RATE LIMIT ERROR] Scope '${scope}' requires REDIS_URL in production for multi-instance serverless rate limiting.`);
       return res.status(503).json({
         error: 'RATE_LIMITER_CONFIGURATION_ERROR',
@@ -228,6 +231,11 @@ export function enforceDistributedRateLimitGuard(scope = 'support_ticket') {
         message: 'Service temporarily unavailable: Distributed rate limiting shared store is not configured for production.'
       });
     }
+
+    if (isProduction && !process.env.REDIS_URL) {
+      console.warn(`⚠️ [RATE LIMIT NOTICE] Scope '${scope}' running with local in-memory store in production (REDIS_URL not configured).`);
+    }
+
     next();
   };
 }
@@ -244,7 +252,7 @@ const innerTicketCreateLimiter = rateLimit({
   max: process.env.NODE_ENV === 'test' ? 1000 : 15,
   standardHeaders: true,
   legacyHeaders: false,
-  passOnStoreError: !isProductionEnv,
+  passOnStoreError: true,
   store: getRateLimitStore('tkt_create:'),
   message: { error: 'TOO_MANY_TICKETS', message: 'Too many support ticket submissions. Please wait a few minutes before submitting another request.' },
   handler: createRateLimitHandler({ error: 'TOO_MANY_TICKETS', message: 'Too many support ticket submissions. Please wait a few minutes before submitting another request.' })
@@ -265,7 +273,7 @@ const innerTicketReplyLimiter = rateLimit({
   max: process.env.NODE_ENV === 'test' ? 1000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
-  passOnStoreError: !isProductionEnv,
+  passOnStoreError: true,
   store: getRateLimitStore('tkt_reply:'),
   message: { error: 'TOO_MANY_REPLIES', message: 'Too many messages sent. Please wait a moment before sending another reply.' },
   handler: createRateLimitHandler({ error: 'TOO_MANY_REPLIES', message: 'Too many messages sent. Please wait a moment before sending another reply.' })

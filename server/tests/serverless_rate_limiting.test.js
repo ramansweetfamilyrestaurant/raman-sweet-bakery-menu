@@ -88,10 +88,11 @@ async function runSuite() {
   });
 
   // -------------------------------------------------------------------
-  // 2. Production mode (NODE_ENV=production) without REDIS_URL fails closed
+  // 2. Production mode (NODE_ENV=production) with strict flag and without REDIS_URL fails closed
   // -------------------------------------------------------------------
-  await test('2. Production mode (NODE_ENV=production) without REDIS_URL fails closed with 503', async () => {
+  await test('2. Production mode (NODE_ENV=production) without REDIS_URL and strict flag fails closed with 503', async () => {
     process.env.NODE_ENV = 'production';
+    process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT = 'true';
     delete process.env.VERCEL_ENV;
     delete process.env.REDIS_URL;
 
@@ -103,20 +104,22 @@ async function runSuite() {
       nextCalled = true;
     });
 
-    assert.strictEqual(nextCalled, false, 'Next must NOT be called when REDIS_URL is missing in production');
+    assert.strictEqual(nextCalled, false, 'Next must NOT be called when REDIS_URL is missing in strict production');
     assert.strictEqual(res.statusCode, 503, 'Must return 503 Service Unavailable');
     assert.strictEqual(res.body?.error, 'RATE_LIMITER_CONFIGURATION_ERROR');
     assert(res.body?.message?.includes('Distributed rate limiting shared store is not configured for production'));
 
+    delete process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT;
     process.env.NODE_ENV = 'test';
   });
 
   // -------------------------------------------------------------------
-  // 3. Production mode (VERCEL_ENV=production) without REDIS_URL fails closed
+  // 3. Production mode (VERCEL_ENV=production) with strict flag and without REDIS_URL fails closed
   // -------------------------------------------------------------------
-  await test('3. Production mode (VERCEL_ENV=production) without REDIS_URL fails closed with 503', async () => {
+  await test('3. Production mode (VERCEL_ENV=production) without REDIS_URL and strict flag fails closed with 503', async () => {
     process.env.NODE_ENV = 'test';
     process.env.VERCEL_ENV = 'production';
+    process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT = 'true';
     delete process.env.REDIS_URL;
 
     const { req, res } = createMockReqRes();
@@ -127,10 +130,11 @@ async function runSuite() {
       nextCalled = true;
     });
 
-    assert.strictEqual(nextCalled, false, 'Next must NOT be called in Vercel production without Redis');
+    assert.strictEqual(nextCalled, false, 'Next must NOT be called in Vercel production without Redis when strict');
     assert.strictEqual(res.statusCode, 503);
     assert.strictEqual(res.body?.error, 'RATE_LIMITER_CONFIGURATION_ERROR');
 
+    delete process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT;
     delete process.env.VERCEL_ENV;
   });
 
@@ -146,10 +150,11 @@ async function runSuite() {
   });
 
   // -------------------------------------------------------------------
-  // 5. Composite limiter in production without REDIS_URL invokes guard and blocks
+  // 5. Composite limiter in production with strict flag blocks execution via guard
   // -------------------------------------------------------------------
-  await test('5. Composite ticket limiter in production blocks execution via guard', () => {
+  await test('5. Composite ticket limiter in production blocks execution via guard when strict', () => {
     process.env.NODE_ENV = 'production';
+    process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT = 'true';
     delete process.env.REDIS_URL;
 
     const { req, res } = createMockReqRes();
@@ -160,8 +165,31 @@ async function runSuite() {
       nextCalled = true;
     });
 
-    assert.strictEqual(nextCalled, false, 'Guard must intercept and stop middleware chain');
+    assert.strictEqual(nextCalled, false, 'Guard must intercept and stop middleware chain when strict');
     assert.strictEqual(res.statusCode, 503);
+
+    delete process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT;
+    process.env.NODE_ENV = 'test';
+  });
+
+  // -------------------------------------------------------------------
+  // 6. Production mode without REDIS_URL gracefully falls back to local in-memory store
+  // -------------------------------------------------------------------
+  await test('6. Production mode without REDIS_URL gracefully falls back to in-memory store without 503', () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT;
+    delete process.env.REDIS_URL;
+
+    const { req, res } = createMockReqRes();
+    let nextCalled = false;
+
+    const [guard] = supportTicketCreateRateLimiter;
+    guard(req, res, () => {
+      nextCalled = true;
+    });
+
+    assert.strictEqual(nextCalled, true, 'Guard must allow execution when distributed rate limiting is optional');
+    assert.strictEqual(res.statusCode, 200, 'Status code should remain 200 (not 503)');
 
     process.env.NODE_ENV = 'test';
   });
