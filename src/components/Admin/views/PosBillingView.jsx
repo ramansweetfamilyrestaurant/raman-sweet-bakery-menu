@@ -105,6 +105,13 @@ export default function PosBillingView({
   // Currency resolver
   const curr = getCurrencySymbol(restaurantInfo?.currency_symbol !== undefined ? restaurantInfo.currency_symbol : (settingsForm?.currency_symbol !== undefined ? settingsForm.currency_symbol : currencySymbol));
 
+  // Helper to format portion label cleanly (e.g. "Half Portion" -> "Half")
+  const formatHalfLabel = (lbl) => {
+    if (!lbl) return 'Half';
+    const clean = String(lbl).replace(/\s*portion$/i, '').trim();
+    return clean || 'Half';
+  };
+
   const handleCloseSuccess = () => {
     setSuccessOrder(null);
     setTimeout(() => {
@@ -241,11 +248,11 @@ export default function PosBillingView({
   }, [cart]);
 
   const isGstEnabled = Boolean(
-    restaurantInfo?.gst_enabled === 1 || 
-    restaurantInfo?.gst_enabled === true || 
+    restaurantInfo?.gst_enabled === 1 ||
+    restaurantInfo?.gst_enabled === true ||
     restaurantInfo?.gst_enabled === '1' ||
-    settingsForm?.gst_enabled === 1 || 
-    settingsForm?.gst_enabled === true || 
+    settingsForm?.gst_enabled === 1 ||
+    settingsForm?.gst_enabled === true ||
     settingsForm?.gst_enabled === '1'
   );
 
@@ -292,7 +299,7 @@ export default function PosBillingView({
         width: 180,
         margin: 1,
         color: { dark: '#0F172A', light: '#FFFFFF' }
-      }).then(url => setUpiQrDataUrl(url)).catch(() => {});
+      }).then(url => setUpiQrDataUrl(url)).catch(() => { });
     }
   }, [paymentMethod, grandTotal, restaurantInfo, settingsForm, orderType, tableNumber]);
 
@@ -304,7 +311,7 @@ export default function PosBillingView({
     try {
       const itemsPayload = cart.map(it => ({
         dish_id: it.dish.id,
-        name: it.selectedVariant === 'half' ? `${it.dish.name} (${it.dish.portion_half_label || 'Half'})` : (it.dish.isCombo ? `[Combo] ${it.dish.name}` : it.dish.name),
+        name: it.selectedVariant === 'half' ? `${it.dish.name} (${formatHalfLabel(it.dish.portion_half_label)})` : (it.dish.isCombo ? `[Combo] ${it.dish.name}` : it.dish.name),
         price: it.price,
         quantity: it.quantity,
         variant: it.selectedVariant
@@ -338,7 +345,7 @@ export default function PosBillingView({
 
         // Auto print KOT if enabled in settings
         const shouldAutoKot = Boolean(
-          settingsForm?.auto_print_kot === 1 || 
+          settingsForm?.auto_print_kot === 1 ||
           settingsForm?.auto_print_kot === true ||
           restaurantInfo?.auto_print_kot === 1 ||
           restaurantInfo?.auto_print_kot === true
@@ -353,7 +360,7 @@ export default function PosBillingView({
 
         // Auto print Bill if enabled in settings
         const shouldAutoBill = Boolean(
-          settingsForm?.auto_print_bill === 1 || 
+          settingsForm?.auto_print_bill === 1 ||
           settingsForm?.auto_print_bill === true ||
           restaurantInfo?.auto_print_bill === 1 ||
           restaurantInfo?.auto_print_bill === true
@@ -748,117 +755,117 @@ export default function PosBillingView({
 
           {!isTokensQueueCollapsed && (
             <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-            {activeTokensQueue.map(order => {
-              const isReady = order.status === 'served' || order.status === 'ready' || order.kitchen_prepared === 1 || order.kitchen_prepared === '1' || order.kitchen_prepared === true;
-              const tokenText = order.token_display || (order.token_number ? `TK-${String(order.token_number).padStart(2, '0')}` : `#${order.id}`);
+              {activeTokensQueue.map(order => {
+                const isReady = order.status === 'served' || order.status === 'ready' || order.kitchen_prepared === 1 || order.kitchen_prepared === '1' || order.kitchen_prepared === true;
+                const tokenText = order.token_display || (order.token_number ? `TK-${String(order.token_number).padStart(2, '0')}` : `#${order.id}`);
 
-              return (
-                <div
-                  key={order.id}
-                  style={{
-                    flexShrink: 0,
-                    minWidth: '220px',
-                    borderRadius: '12px',
-                    border: isReady ? '1.5px solid #86EFAC' : '1.5px solid #BAE6FD',
-                    background: isReady ? '#F0FDF4' : '#F0F9FF',
-                    padding: '10px 12px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '8px'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{
-                      fontWeight: 950,
-                      fontSize: '1.05rem',
-                      color: isReady ? '#166534' : '#0369A1',
-                      letterSpacing: '0.02em'
-                    }}>
-                      {tokenText}
-                    </span>
-                    <span style={{
-                      fontSize: '0.68rem',
-                      fontWeight: 800,
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      background: isReady ? '#DCFCE7' : '#E0F2FE',
-                      color: isReady ? '#15803D' : '#0284C7'
-                    }}>
-                      {isReady ? '🔔 READY FOR PICKUP' : '🍳 PREPARING'}
-                    </span>
-                  </div>
+                return (
+                  <div
+                    key={order.id}
+                    style={{
+                      flexShrink: 0,
+                      minWidth: '220px',
+                      borderRadius: '12px',
+                      border: isReady ? '1.5px solid #86EFAC' : '1.5px solid #BAE6FD',
+                      background: isReady ? '#F0FDF4' : '#F0F9FF',
+                      padding: '10px 12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '8px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{
+                        fontWeight: 950,
+                        fontSize: '1.05rem',
+                        color: isReady ? '#166534' : '#0369A1',
+                        letterSpacing: '0.02em'
+                      }}>
+                        {tokenText}
+                      </span>
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        background: isReady ? '#DCFCE7' : '#E0F2FE',
+                        color: isReady ? '#15803D' : '#0284C7'
+                      }}>
+                        {isReady ? '🔔 READY FOR PICKUP' : '🍳 PREPARING'}
+                      </span>
+                    </div>
 
-                  <div style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{order.customer_name ? order.customer_name : `${(order.items?.length || 1)} items`}</span>
-                    <span>{currencySymbol}{formatPriceNumber(order.total_amount)}</span>
-                  </div>
+                    <div style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{order.customer_name ? order.customer_name : `${(order.items?.length || 1)} items`}</span>
+                      <span>{currencySymbol}{formatPriceNumber(order.total_amount)}</span>
+                    </div>
 
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
-                    {isReady ? (
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+                      {isReady ? (
+                        <button
+                          onClick={() => {
+                            if (onUpdateStatus) onUpdateStatus(order.id, 'completed');
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: '#16A34A',
+                            color: '#FFFFFF',
+                            fontSize: '0.74rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✓ Handover (Done)
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (onUpdateStatus) onUpdateStatus(order.id, 'served');
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: '#0284C7',
+                            color: '#FFFFFF',
+                            fontSize: '0.74rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✓ Mark Ready
+                        </button>
+                      )}
                       <button
                         onClick={() => {
-                          if (onUpdateStatus) onUpdateStatus(order.id, 'completed');
+                          if (onPrintBill) onPrintBill(order, order.payment_method?.toUpperCase());
                         }}
+                        title="Print Customer Bill"
                         style={{
-                          flex: 1,
-                          padding: '6px 10px',
+                          padding: '6px 8px',
                           borderRadius: '8px',
-                          border: 'none',
-                          background: '#16A34A',
-                          color: '#FFFFFF',
-                          fontSize: '0.74rem',
-                          fontWeight: 800,
-                          cursor: 'pointer'
+                          border: '1px solid #CBD5E1',
+                          background: '#FFFFFF',
+                          color: '#334155',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
                       >
-                        ✓ Handover (Done)
+                        <Printer size={13} />
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          if (onUpdateStatus) onUpdateStatus(order.id, 'served');
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: 'none',
-                          background: '#0284C7',
-                          color: '#FFFFFF',
-                          fontSize: '0.74rem',
-                          fontWeight: 800,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✓ Mark Ready
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        if (onPrintBill) onPrintBill(order, order.payment_method?.toUpperCase());
-                      }}
-                      title="Print Customer Bill"
-                      style={{
-                        padding: '6px 8px',
-                        borderRadius: '8px',
-                        border: '1px solid #CBD5E1',
-                        background: '#FFFFFF',
-                        color: '#334155',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Printer size={13} />
-                    </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -866,10 +873,10 @@ export default function PosBillingView({
           2. MAIN POS WORKSPACE: DISHES (LEFT) + BILLING (RIGHT)
          ======================================================== */}
       <div className="pos-grid-container">
-        
+
         {/* LEFT COLUMN: FILTERS & DISH GRID */}
         <div className="pos-left-column">
-          
+
           {/* Sticky Filters Header inside Left Menu Column */}
           <div className="pos-filters-sticky-wrap" style={{
             position: 'sticky',
@@ -1204,7 +1211,7 @@ export default function PosBillingView({
                           {/* Half Portion Option */}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', minWidth: 0 }}>
                             <span style={{ fontSize: '0.72rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {dish.portion_half_label || 'Half'}: <strong style={{ color: '#0F172A' }}>{curr}{formatPriceNumber(dish.price_half)}</strong>
+                              {formatHalfLabel(dish.portion_half_label)}: <strong style={{ color: '#0F172A' }}>{curr}{formatPriceNumber(dish.price_half)}</strong>
                             </span>
                             {halfItemInCart ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
@@ -1227,7 +1234,7 @@ export default function PosBillingView({
                                 onClick={() => addToCart(dish, 'half')}
                                 style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.70rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
                               >
-                                + {dish.portion_half_label || 'Half'}
+                                + {formatHalfLabel(dish.portion_half_label)}
                               </button>
                             )}
                           </div>
