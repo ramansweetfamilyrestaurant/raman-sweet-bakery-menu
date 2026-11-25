@@ -250,16 +250,40 @@ export default function SetupView({
 }) {
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
   const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'restaurant' | 'operations' | 'menu-billing' | 'security' | 'advanced'
-  const [activeSubPage, setActiveSubPage] = useState(
-    initialDrawer === 'profile' ? 'profile' :
-      initialDrawer === 'menu-preferences' ? 'menu-preferences' :
-        initialDrawer === 'devices' || initialDrawer === 'orders-devices' ? 'orders-devices' :
-          initialDrawer === 'subscription' || initialDrawer === 'billing' ? 'subscription' :
-            initialDrawer === 'location' || initialDrawer === 'gps' ? 'location' :
-              initialDrawer === 'security' || initialDrawer === 'credentials' ? 'security' :
-                initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize' ? 'database' :
-                  null
-  );
+  const VALID_SETUP_SECTIONS = ['profile', 'menu-preferences', 'orders-devices', 'subscription', 'location', 'security', 'database'];
+  const [activeSubPage, setActiveSubPage] = useState(() => {
+    if (initialDrawer === 'profile') return 'profile';
+    if (initialDrawer === 'menu-preferences') return 'menu-preferences';
+    if (initialDrawer === 'devices' || initialDrawer === 'orders-devices') return 'orders-devices';
+    if (initialDrawer === 'subscription' || initialDrawer === 'billing') return 'subscription';
+    if (initialDrawer === 'location' || initialDrawer === 'gps') return 'location';
+    if (initialDrawer === 'security' || initialDrawer === 'credentials') return 'security';
+    if (initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize') return 'database';
+    if (typeof window !== 'undefined') {
+      try {
+        const secParam = new URLSearchParams(window.location.search).get('section');
+        if (secParam && VALID_SETUP_SECTIONS.includes(secParam)) return secParam;
+      } catch {}
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('tab') !== 'settings') return;
+      if (activeSubPage && VALID_SETUP_SECTIONS.includes(activeSubPage)) {
+        if (url.searchParams.get('section') !== activeSubPage) {
+          url.searchParams.set('section', activeSubPage);
+          window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+        }
+      } else if (url.searchParams.has('section')) {
+        url.searchParams.delete('section');
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      }
+    } catch {}
+  }, [activeSubPage]);
   const [openDrawer, setOpenDrawer] = useState(
     (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing' || initialDrawer === 'location' || initialDrawer === 'gps' || initialDrawer === 'security' || initialDrawer === 'credentials' || initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize') ? null : initialDrawer
   ); // 'menu', 'cinema'

@@ -273,10 +273,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
           slug: createdSlug,
           msg: msg || `Business '${createdSlug}' provisioned successfully with verified Cashfree mandate!`
         });
-        window.history.replaceState({}, document.title, window.location.pathname);
+        const nextUrl = new URL(window.location.href);
+        ['onboarding', 'created', 'reason', 'error', 'msg'].forEach(k => nextUrl.searchParams.delete(k));
+        window.history.replaceState({}, document.title, `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
       } else if (onboarding === 'failed') {
         setToastMessage(`⚠️ Onboarding Notice: ${reason || 'Subscription authorization was not completed.'}`);
-        window.history.replaceState({}, document.title, window.location.pathname);
+        const nextUrl = new URL(window.location.href);
+        ['onboarding', 'created', 'reason', 'error', 'msg'].forEach(k => nextUrl.searchParams.delete(k));
+        window.history.replaceState({}, document.title, `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
       }
     } catch (e) {
       console.warn('URL param parse notice:', e.message);

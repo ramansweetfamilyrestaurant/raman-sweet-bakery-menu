@@ -123,20 +123,41 @@ export default function AdminDashboard({
   const [initialSetupDrawer, setInitialSetupDrawer] = useState(null);
 
   useEffect(() => {
+    if (activeTab !== 'settings' && initialSetupDrawer) {
+      setInitialSetupDrawer(null);
+    }
     if (typeof window === 'undefined') return;
     try {
       const url = new URL(window.location.href);
+      let changed = false;
+      if (activeTab !== 'settings' && url.searchParams.has('section')) {
+        url.searchParams.delete('section');
+        changed = true;
+      }
       if (activeTab === 'home') {
         if (url.searchParams.has('tab')) {
           url.searchParams.delete('tab');
-          window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+          changed = true;
         }
       } else if (url.searchParams.get('tab') !== activeTab) {
         url.searchParams.set('tab', activeTab);
+        changed = true;
+      }
+      if (changed) {
         window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
       }
     } catch {}
   }, [activeTab]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncTabFromHistory = () => {
+      const nextTab = getInitialAdminTabFromUrl();
+      setActiveTab(prev => (prev === nextTab ? prev : nextTab));
+    };
+    window.addEventListener('popstate', syncTabFromHistory);
+    return () => window.removeEventListener('popstate', syncTabFromHistory);
+  }, []);
   const [categories, setCategories] = useState(() => getInitialAdminState('categories', []));
   const [dishes, setDishes] = useState(() => getInitialAdminState('dishes', []));
   const [announcements, setAnnouncements] = useState(() => { try { const cached = localStorage.getItem('touchqr_cached_announcements'); return cached ? JSON.parse(cached) : []; } catch { return []; } });
