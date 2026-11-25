@@ -26,7 +26,7 @@ import QRCode from 'qrcode';
 import { createAdminPosOrder } from '../../../api/client';
 import { buildUpiPaymentUri, calculateBillDetails } from '../../../utils/billingHelper';
 import { resolveImageUrl, getDishImageUrl, getComboImageUrl } from '../../../utils/imageHelper';
-import { formatPriceNumber } from '../../../utils/currencyHelper.js';
+import { formatPriceNumber, getCurrencySymbol } from '../../../utils/currencyHelper.js';
 import { isPosItemNonVeg } from '../../../utils/dietHelper.js';
 
 export default function PosBillingView({
