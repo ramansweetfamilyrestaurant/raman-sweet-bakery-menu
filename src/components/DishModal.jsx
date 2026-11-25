@@ -365,7 +365,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   return (
                     <label
                       key={idx}
-                      onClick={(e) => { e.stopPropagation(); toggleModifier(mod); }}
+                      onClick={(e) => e.stopPropagation()}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -382,7 +382,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => {}}
+                          onChange={() => toggleModifier(mod)}
                           style={{ width: '16px', height: '16px', accentColor: 'var(--primary-emerald)', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-dark)' }}>

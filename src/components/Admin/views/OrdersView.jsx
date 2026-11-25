@@ -1299,8 +1299,12 @@ export default function OrdersView({
                         <div style={{ fontWeight: 700, color: '#0F172A' }}>
                           {items.length} item{items.length > 1 ? 's' : ''}
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: '#64748B', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {items.map(i => `${i.quantity || 1}x ${i.name}${i.portion ? ` (${i.portion})` : ''}`).join(', ')}
+                        <div style={{ fontSize: '0.72rem', color: '#64748B', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {items.map(i => {
+                            const mods = safeParseModifiers(i.modifiers);
+                            const modTxt = mods.length > 0 ? ` [+ ${mods.map(m => m.name || m).join(', ')}]` : '';
+                            return `${i.quantity || 1}x ${i.name}${i.portion ? ` (${i.portion})` : ''}${modTxt}`;
+                          }).join(', ')}
                         </div>
                       </td>
 
@@ -1690,19 +1694,29 @@ export default function OrdersView({
                     flexDirection: 'column',
                     gap: '4px'
                   }}>
-                    {items.map((it, idx) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span>{it.quantity || 1}x {it.name}</span>
-                          {it.portion && (
-                            <span style={{ fontSize: '0.66rem', color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                              {it.portion}
-                            </span>
-                          )}
+                    {items.map((it, idx) => {
+                      const mods = safeParseModifiers(it.modifiers);
+                      return (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span>{it.quantity || 1}x {it.name}</span>
+                              {it.portion && (
+                                <span style={{ fontSize: '0.66rem', color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                  {it.portion}
+                                </span>
+                              )}
+                            </div>
+                            {mods.length > 0 && (
+                              <div style={{ fontSize: '0.68rem', color: '#64748B', marginTop: '2px', lineHeight: 1.3 }}>
+                                + {mods.map(m => `${m.name || m}${Number(m.price) > 0 ? ` (+${currencySymbol}${m.price})` : ''}`).join(', ')}
+                              </div>
+                            )}
+                          </div>
+                          <strong style={{ color: '#0F172A', flexShrink: 0 }}>{currencySymbol}{Math.round((it.price || 0) * (it.quantity || 1))}</strong>
                         </div>
-                        <strong style={{ color: '#0F172A' }}>{currencySymbol}{Math.round((it.price || 0) * (it.quantity || 1))}</strong>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* Total & Action Buttons */}
@@ -2759,11 +2773,14 @@ export default function OrdersView({
                               </span>
                             )}
                           </div>
-                          {item.modifiers && item.modifiers.length > 0 && (
-                            <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '2px' }}>
-                              {item.modifiers.map(m => m.name || m).join(', ')}
-                            </div>
-                          )}
+                          {(() => {
+                            const drawerMods = safeParseModifiers(item.modifiers);
+                            return drawerMods.length > 0 ? (
+                              <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '2px' }}>
+                                + {drawerMods.map(m => `${m.name || m}${Number(m.price) > 0 ? ` (+${currencySymbol}${m.price})` : ''}`).join(', ')}
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <span style={{ fontWeight: 800, fontSize: '0.84rem', color: '#0F172A' }}>

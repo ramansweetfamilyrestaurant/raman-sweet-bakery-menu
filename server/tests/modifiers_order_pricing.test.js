@@ -211,7 +211,13 @@ async function runModifiersPricingTests() {
     assert.ok(dishCardCode.includes('getValidDishModifiers') && dishCardCode.includes('handleAddAction'), 'DishCard + Half / + Full / + Add must open customization modal when dish has add-ons');
     assert.ok(dishModalCode.includes('initialPortion') && dishModalCode.includes('modifiersEnabled'), 'DishModal must respect initialPortion and modifiersEnabled');
     assert.ok(appCode.includes('openDishCustomizationModal'), 'App.jsx must route menu card and Top Picks customizations through openDishCustomizationModal');
-    record('CUSTOMER_ADDON_MODAL_PROMPT', true, 'MenuCardItem, DishCard, DishModal, and App.jsx consistently trigger add-on selection modal on + Add');
+    assert.ok(!dishModalCode.includes('toggleModifier(mod);'), 'DishModal label must rely on checkbox onChange without duplicate label onClick toggle');
+
+    const posCode = fs.readFileSync(path.resolve(testDir, '../../src/components/Admin/views/PosBillingView.jsx'), 'utf8');
+    const ordersViewCode = fs.readFileSync(path.resolve(testDir, '../../src/components/Admin/views/OrdersView.jsx'), 'utf8');
+    assert.ok(posCode.includes('handleDishAddClick') && posCode.includes('addonModalData'), 'PosBillingView must support add-on customization modal');
+    assert.ok(ordersViewCode.includes('safeParseModifiers(i.modifiers)') && ordersViewCode.includes('safeParseModifiers(it.modifiers)'), 'OrdersView summary table & cards must render add-on modifiers');
+    record('CUSTOMER_ADDON_MODAL_PROMPT', true, 'Customer Menu, DishModal, POS Counter, and OrdersView consistently support add-ons');
 
     console.log('\n======================================================================');
     console.log('ALL MODIFIERS PRICING TESTS PASSED (5/5)');

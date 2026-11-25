@@ -3074,13 +3074,24 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
     const formattedItems = items.map((it, idx) => {
       const qty = Math.max(1, parseInt(it.quantity || 1, 10));
       const price = Math.max(0, parseFloat(it.price || 0));
+      const sanitizedModifiers = Array.isArray(it.modifiers)
+        ? it.modifiers
+            .filter(m => m && (typeof m === 'string' || String(m.name || '').trim() !== ''))
+            .map(m => ({
+              name: String(typeof m === 'string' ? m : m.name).trim().substring(0, 80),
+              price: Math.max(0, Number(typeof m === 'object' ? m.price : 0) || 0)
+            }))
+        : [];
       subtotal += (price * qty);
       return {
         id: it.id || it.dish_id || idx + 1,
+        dish_id: it.dish_id || it.id || null,
         name: String(it.name || 'Custom Item').trim(),
         price,
         quantity: qty,
         variant: it.variant || null,
+        portion: it.portion || (it.variant === 'half' ? 'Half' : ''),
+        modifiers: sanitizedModifiers,
         round: 1,
         notes: it.notes || ''
       };

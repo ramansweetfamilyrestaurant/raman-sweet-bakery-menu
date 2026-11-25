@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { createAdminPosOrder } from '../../../api/client';
-import { buildUpiPaymentUri, calculateBillDetails } from '../../../utils/billingHelper';
+import { buildUpiPaymentUri, calculateBillDetails, getValidDishModifiers } from '../../../utils/billingHelper';
 import { resolveImageUrl, getDishImageUrl, getComboImageUrl } from '../../../utils/imageHelper';
 import { formatPriceNumber, getCurrencySymbol } from '../../../utils/currencyHelper.js';
 import { isPosItemNonVeg } from '../../../utils/dietHelper.js';
@@ -37,6 +37,7 @@ export default function PosBillingView({
   onUpdateStatus,
   restaurantInfo = {},
   settingsForm = {},
+  modifiersEnabled = true,
   token,
   currencySymbol = '₹',
   onPrintBill,
@@ -47,7 +48,7 @@ export default function PosBillingView({
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [dietFilter, setDietFilter] = useState('all'); // 'all' | 'veg' | 'nonveg'
-  const [cart, setCart] = useState([]); // [{ dish, quantity, selectedVariant: 'full' | 'half' }]
+  const [cart, setCart] = useState([]); // [{ cartKey, dish, quantity, selectedVariant: 'full' | 'half', modifiers: [], price }]
   const [orderType, setOrderType] = useState('takeaway'); // 'takeaway' | 'dine_in'
   const [tableNumber, setTableNumber] = useState('1');
   const [customerName, setCustomerName] = useState('');
@@ -56,6 +57,7 @@ export default function PosBillingView({
   const [cashTendered, setCashTendered] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successOrder, setSuccessOrder] = useState(null); // { order, token_display, change_to_return }
+  const [addonModalData, setAddonModalData] = useState(null); // { dish, variant, availableModifiers, selectedModifiers }
   const [upiQrDataUrl, setUpiQrDataUrl] = useState(null);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [isTokensQueueCollapsed, setIsTokensQueueCollapsed] = useState(false);
@@ -128,7 +130,9 @@ export default function PosBillingView({
         e.preventDefault();
         searchInputRef.current?.focus();
       } else if (e.key === 'Escape') {
-        if (successOrder) {
+        if (addonModalData) {
+          setAddonModalData(null);
+        } else if (successOrder) {
           handleCloseSuccess();
         } else if (isMobileCartOpen) {
           setIsMobileCartOpen(false);
@@ -139,7 +143,7 @@ export default function PosBillingView({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [successOrder, isMobileCartOpen, search]);
+  }, [addonModalData, successOrder, isMobileCartOpen, search]);
 
   // Filter dishes & combos
   const filteredDishes = useMemo(() => {
@@ -190,15 +194,27 @@ export default function PosBillingView({
   }, [dishes, combos, selectedCategory, dietFilter, search]);
 
   // Cart operations
-  const addToCart = (dish, variant = 'full') => {
+  const getDishBasePrice = (dish, variant = 'full') => {
+    const effectiveFullPrice = (dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) > 0 && Number(dish.offer_price) < Number(dish.price))
+      ? Number(dish.offer_price)
+      : (Number(dish.price) || 0);
+    return variant === 'half' && dish.price_half
+      ? (Number(dish.price_half) || 0)
+      : (dish.isCombo ? Number(dish.price || 0) : effectiveFullPrice);
+  };
+
+  const addToCart = (dish, variant = 'full', selectedModifiers = []) => {
+    const normalizedMods = Array.isArray(selectedModifiers) ? selectedModifiers : [];
+    const extraPrice = normalizedMods.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
+    const modKey = normalizedMods.map(m => m.name).sort().join('_');
+    const cartKey = `${dish.id}_${variant}${modKey ? '_' + modKey : ''}`;
+    const price = getDishBasePrice(dish, variant) + extraPrice;
+
     setCart(prev => {
-      const effectiveFullPrice = (dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) > 0 && Number(dish.offer_price) < Number(dish.price))
-        ? Number(dish.offer_price)
-        : (Number(dish.price) || 0);
-      const price = variant === 'half' && dish.price_half
-        ? (Number(dish.price_half) || 0)
-        : (dish.isCombo ? Number(dish.price || 0) : effectiveFullPrice);
-      const existingIdx = prev.findIndex(item => String(item.dish.id) === String(dish.id) && item.selectedVariant === variant);
+      const existingIdx = prev.findIndex(item =>
+        (item.cartKey && item.cartKey === cartKey) ||
+        (!item.cartKey && String(item.dish.id) === String(dish.id) && item.selectedVariant === variant && normalizedMods.length === 0)
+      );
       if (existingIdx >= 0) {
         const next = [...prev];
         next[existingIdx] = {
@@ -210,19 +226,43 @@ export default function PosBillingView({
       return [
         ...prev,
         {
+          cartKey,
           dish,
           quantity: 1,
           selectedVariant: variant,
+          modifiers: normalizedMods,
           price
         }
       ];
     });
   };
 
-  const updateQuantity = (dishId, variant, delta) => {
+  const handleDishAddClick = (dish, variant = 'full') => {
+    const availableModifiers = (modifiersEnabled !== false && !dish.isCombo)
+      ? getValidDishModifiers(dish?.modifiers)
+      : [];
+    if (availableModifiers.length > 0) {
+      setAddonModalData({
+        dish,
+        variant,
+        availableModifiers,
+        selectedModifiers: []
+      });
+    } else {
+      addToCart(dish, variant, []);
+    }
+  };
+
+  const isCartItemMatch = (item, targetKeyOrDishId, variant) => {
+    if (item.cartKey && item.cartKey === targetKeyOrDishId) return true;
+    const isCompositeKey = String(targetKeyOrDishId).includes('_full') || String(targetKeyOrDishId).includes('_half');
+    return !isCompositeKey && String(item.dish.id) === String(targetKeyOrDishId) && item.selectedVariant === variant && (!item.modifiers || item.modifiers.length === 0);
+  };
+
+  const updateQuantity = (targetKeyOrDishId, variant, delta) => {
     setCart(prev => {
       return prev.map(item => {
-        if (String(item.dish.id) === String(dishId) && item.selectedVariant === variant) {
+        if (isCartItemMatch(item, targetKeyOrDishId, variant)) {
           const newQty = item.quantity + delta;
           return newQty > 0 ? { ...item, quantity: newQty } : null;
         }
@@ -231,8 +271,8 @@ export default function PosBillingView({
     });
   };
 
-  const removeFromCart = (dishId, variant) => {
-    setCart(prev => prev.filter(item => !(String(item.dish.id) === String(dishId) && item.selectedVariant === variant)));
+  const removeFromCart = (targetKeyOrDishId, variant) => {
+    setCart(prev => prev.filter(item => !isCartItemMatch(item, targetKeyOrDishId, variant)));
   };
 
   const clearCart = () => {
@@ -242,6 +282,7 @@ export default function PosBillingView({
     setPaymentMethod('cash');
     setCashTendered('');
     setUpiQrDataUrl(null);
+    setAddonModalData(null);
     billSessionIdRef.current = null;
     lastUpiUriRef.current = null;
   };
@@ -345,7 +386,9 @@ export default function PosBillingView({
         name: it.selectedVariant === 'half' ? `${it.dish.name} (${formatHalfLabel(it.dish.portion_half_label)})` : (it.dish.isCombo ? `[Combo] ${it.dish.name}` : it.dish.name),
         price: it.price,
         quantity: it.quantity,
-        variant: it.selectedVariant
+        variant: it.selectedVariant,
+        portion: it.selectedVariant === 'half' ? formatHalfLabel(it.dish.portion_half_label) : '',
+        modifiers: Array.isArray(it.modifiers) ? it.modifiers : []
       }));
 
       const payload = {
@@ -1120,8 +1163,11 @@ export default function PosBillingView({
               </div>
             ) : (
               filteredDishes.map(dish => {
-                const fullItemInCart = cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'full');
-                const halfItemInCart = cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'half');
+                const hasModifiers = modifiersEnabled !== false && !dish.isCombo && getValidDishModifiers(dish?.modifiers).length > 0;
+                const fullCartCount = cart.filter(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'full').reduce((s, it) => s + it.quantity, 0);
+                const halfCartCount = cart.filter(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'half').reduce((s, it) => s + it.quantity, 0);
+                const fullItemInCart = hasModifiers ? null : cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'full');
+                const halfItemInCart = hasModifiers ? null : cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'half');
                 const hasHalfPrice = Boolean(dish.price_half && Number(dish.price_half) > 0);
                 const isNonVeg = isPosItemNonVeg(dish);
                 const isSoldOut = dish.is_available === false || dish.is_available === 0 || dish.available === false || dish.available === 0;
@@ -1262,10 +1308,10 @@ export default function PosBillingView({
                               </div>
                             ) : (
                               <button
-                                onClick={() => addToCart(dish, 'half')}
+                                onClick={() => handleDishAddClick(dish, 'half')}
                                 style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: '0.70rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
                               >
-                                + {formatHalfLabel(dish.portion_half_label)}
+                                + {formatHalfLabel(dish.portion_half_label)}{hasModifiers && halfCartCount > 0 ? ` (${halfCartCount})` : ''}
                               </button>
                             )}
                           </div>
@@ -1296,10 +1342,10 @@ export default function PosBillingView({
                               </div>
                             ) : (
                               <button
-                                onClick={() => addToCart(dish, 'full')}
+                                onClick={() => handleDishAddClick(dish, 'full')}
                                 style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #059669', background: '#ECFDF5', color: '#065F46', fontSize: '0.70rem', fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
                               >
-                                + Full
+                                + Full{hasModifiers && fullCartCount > 0 ? ` (${fullCartCount})` : ''}
                               </button>
                             )}
                           </div>
@@ -1347,7 +1393,7 @@ export default function PosBillingView({
                             </div>
                           ) : (
                             <button
-                              onClick={() => addToCart(dish, 'full')}
+                              onClick={() => handleDishAddClick(dish, 'full')}
                               style={{
                                 padding: '5px 11px',
                                 borderRadius: '8px',
@@ -1367,7 +1413,7 @@ export default function PosBillingView({
                               }}
                             >
                               <Plus size={12} strokeWidth={2.5} />
-                              <span>Add</span>
+                              <span>{hasModifiers && fullCartCount > 0 ? `Add (${fullCartCount})` : 'Add'}</span>
                             </button>
                           )}
                         </div>
@@ -1577,7 +1623,7 @@ export default function PosBillingView({
             ) : (
               cart.map((item, idx) => (
                 <div
-                  key={`${item.dish.id}_${item.selectedVariant}_${idx}`}
+                  key={item.cartKey || `${item.dish.id}_${item.selectedVariant}_${idx}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1592,10 +1638,10 @@ export default function PosBillingView({
                     <strong style={{ fontSize: '0.80rem', color: '#0F172A', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {item.dish.name}
                     </strong>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
                       {item.selectedVariant === 'half' && (
                         <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
-                          Half
+                          {formatHalfLabel(item.dish.portion_half_label)}
                         </span>
                       )}
                       {item.dish.isCombo && (
@@ -1607,20 +1653,29 @@ export default function PosBillingView({
                         {currencySymbol}{formatPriceNumber(item.price)} each
                       </span>
                     </div>
+                    {Array.isArray(item.modifiers) && item.modifiers.length > 0 && (
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '3px' }}>
+                        {item.modifiers.map((m, mIdx) => (
+                          <span key={mIdx} style={{ fontSize: '0.62rem', background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                            + {m.name}{Number(m.price) > 0 ? ` (+${currencySymbol}${formatPriceNumber(m.price)})` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Quantity Stepper & Subtotal */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <button
-                        onClick={() => updateQuantity(item.dish.id, item.selectedVariant, -1)}
+                        onClick={() => updateQuantity(item.cartKey || item.dish.id, item.selectedVariant, -1)}
                         style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid #CBD5E1', background: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Minus size={11} />
                       </button>
                       <span style={{ fontSize: '0.78rem', fontWeight: 800, minWidth: '16px', textAlign: 'center' }}>{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.dish.id, item.selectedVariant, 1)}
+                        onClick={() => updateQuantity(item.cartKey || item.dish.id, item.selectedVariant, 1)}
                         style={{ width: '22px', height: '22px', borderRadius: '5px', border: 'none', background: '#059669', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Plus size={11} />
@@ -1632,7 +1687,7 @@ export default function PosBillingView({
                     </strong>
 
                     <button
-                      onClick={() => removeFromCart(item.dish.id, item.selectedVariant)}
+                      onClick={() => removeFromCart(item.cartKey || item.dish.id, item.selectedVariant)}
                       style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '2px' }}
                       title="Remove Item"
                     >
@@ -2155,6 +2210,195 @@ export default function PosBillingView({
           </div>
         </div>
       )}
+
+      {/* ========================================================
+          4. POS ADD-ONS & TOPPINGS CUSTOMIZATION MODAL
+         ======================================================== */}
+      {addonModalData && (() => {
+        const { dish: modalDish, variant: modalVariant, availableModifiers, selectedModifiers } = addonModalData;
+        const hasHalfOption = Boolean(modalDish.price_half && Number(modalDish.price_half) > 0);
+        const baseModalPrice = getDishBasePrice(modalDish, modalVariant);
+        const addonTotalPrice = selectedModifiers.reduce((sum, m) => sum + (Number(m.price) || 0), 0);
+        const finalModalPrice = baseModalPrice + addonTotalPrice;
+
+        const togglePosModifier = (mod) => {
+          setAddonModalData(prev => {
+            if (!prev) return null;
+            const exists = prev.selectedModifiers.some(m => m.name === mod.name);
+            return {
+              ...prev,
+              selectedModifiers: exists
+                ? prev.selectedModifiers.filter(m => m.name !== mod.name)
+                : [...prev.selectedModifiers, mod]
+            };
+          });
+        };
+
+        return (
+          <div
+            onClick={() => setAddonModalData(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.55)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 99998,
+              padding: '16px'
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '18px',
+                padding: '20px',
+                maxWidth: '420px',
+                width: '100%',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.22)',
+                border: '1px solid #E2E8F0',
+                boxSizing: 'border-box'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '12px' }}>
+                <div>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Customize Add-ons
+                  </span>
+                  <h3 style={{ margin: '2px 0 0 0', fontSize: '1.02rem', fontWeight: 900, color: '#0F172A' }}>
+                    {modalDish.name}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAddonModalData(null)}
+                  style={{ width: '30px', height: '30px', borderRadius: '50%', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {hasHalfOption && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setAddonModalData(prev => prev ? { ...prev, variant: 'half' } : null)}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '10px',
+                      border: modalVariant === 'half' ? '1.5px solid #059669' : '1px solid #CBD5E1',
+                      background: modalVariant === 'half' ? '#ECFDF5' : '#FFFFFF',
+                      color: modalVariant === 'half' ? '#065F46' : '#334155',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {formatHalfLabel(modalDish.portion_half_label)} • {curr}{formatPriceNumber(getDishBasePrice(modalDish, 'half'))}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddonModalData(prev => prev ? { ...prev, variant: 'full' } : null)}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '10px',
+                      border: modalVariant === 'full' ? '1.5px solid #059669' : '1px solid #CBD5E1',
+                      background: modalVariant === 'full' ? '#ECFDF5' : '#FFFFFF',
+                      color: modalVariant === 'full' ? '#065F46' : '#334155',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Full • {curr}{formatPriceNumber(getDishBasePrice(modalDish, 'full'))}
+                  </button>
+                </div>
+              )}
+
+              <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '10px', border: '1px solid #E2E8F0', maxHeight: '220px', overflowY: 'auto', marginBottom: '14px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', marginBottom: '8px', textTransform: 'uppercase' }}>
+                  Select Toppings / Add-ons (Optional)
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {availableModifiers.map((mod, mIdx) => {
+                    const checked = selectedModifiers.some(m => m.name === mod.name);
+                    return (
+                      <label
+                        key={mIdx}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          background: checked ? '#ECFDF5' : '#FFFFFF',
+                          border: checked ? '1.5px solid #059669' : '1px solid #E2E8F0',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => togglePosModifier(mod)}
+                            style={{ width: '15px', height: '15px', accentColor: '#059669', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{mod.name}</span>
+                        </div>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#059669' }}>
+                          +{curr}{formatPriceNumber(mod.price)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setAddonModalData(null)}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    addToCart(modalDish, modalVariant, selectedModifiers);
+                    setAddonModalData(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#059669',
+                    color: '#FFFFFF',
+                    fontSize: '0.86rem',
+                    fontWeight: 900,
+                    cursor: 'pointer'
+                  }}
+                >
+                  + Add to Bill ({curr}{formatPriceNumber(finalModalPrice)})
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

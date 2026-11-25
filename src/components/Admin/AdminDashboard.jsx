@@ -3962,6 +3962,7 @@ export default function AdminDashboard({
                     onUpdateStatus={handleUpdateStatus}
                     restaurantInfo={mergedRestaurantInfo}
                     settingsForm={settingsForm}
+                    modifiersEnabled={tenantCaps.modifiers_enabled !== false}
                     token={token}
                     currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                     onPrintBill={(order, mode) => handlePrintCustomerBill(order, mode || 'CASH')}

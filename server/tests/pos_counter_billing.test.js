@@ -379,6 +379,47 @@ async function runTestSuite() {
       assert.strictEqual(data.token_display, 'TK-01');
     });
 
+    // TEST 11: POS order preserves sanitized add-on modifiers & portion in saved order items
+    await testAsync('11. POS order preserves add-on modifiers and portion metadata cleanly', async () => {
+      const res = await fetch(`${baseUrl}/api/admin/pos-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
+          order_type: 'takeaway',
+          payment_method: 'cash',
+          items: [
+            {
+              dish_id: 21,
+              name: 'Paneer Tikka Pizza',
+              price: 250,
+              quantity: 2,
+              variant: 'full',
+              portion: '',
+              modifiers: [
+                { name: 'Extra Cheese', price: 40 },
+                { name: 'Jalapenos', price: 20 },
+                { name: '   ', price: 10 }
+              ]
+            }
+          ]
+        })
+      });
+
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.success, true);
+      const parsed = typeof data.order.items === 'string' ? JSON.parse(data.order.items) : data.order.items;
+      assert.strictEqual(parsed.length, 1);
+      assert.strictEqual(parsed[0].modifiers.length, 2);
+      assert.strictEqual(parsed[0].modifiers[0].name, 'Extra Cheese');
+      assert.strictEqual(Number(parsed[0].modifiers[0].price), 40);
+      assert.strictEqual(parsed[0].modifiers[1].name, 'Jalapenos');
+      assert.strictEqual(Number(data.order.subtotal_amount), 500);
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }
