@@ -464,11 +464,12 @@ export default function ComboModal({
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '6px',
                     background: 'var(--theme-card-bg, #FFFFFF)',
-                    border: '1.5px solid var(--theme-nav-active, var(--primary-emerald, #10B981))',
+                    border: '1.5px solid var(--primary-emerald, #10B981)',
                     borderRadius: 'var(--radius-pill)',
-                    padding: '2px 6px'
+                    padding: '3px 6px',
+                    flexShrink: 0
                   }}>
                     <button
                       type="button"
@@ -478,8 +479,9 @@ export default function ComboModal({
                         background: 'var(--bg-secondary, #F1F5F9)',
                         color: 'var(--text-dark, #0F172A)',
                         border: 'none',
-                        width: '26px',
-                        height: '26px',
+                        width: '28px',
+                        height: '28px',
+                        padding: 0,
                         borderRadius: '50%',
                         fontWeight: 900,
                         cursor: 'pointer',
@@ -487,7 +489,8 @@ export default function ComboModal({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        lineHeight: 1
+                        lineHeight: 1,
+                        flexShrink: 0
                       }}
                     >
                       −
@@ -503,8 +506,9 @@ export default function ComboModal({
                         background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                         color: '#FFFFFF',
                         border: 'none',
-                        width: '26px',
-                        height: '26px',
+                        width: '28px',
+                        height: '28px',
+                        padding: 0,
                         borderRadius: '50%',
                         fontWeight: 900,
                         cursor: 'pointer',
@@ -512,7 +516,8 @@ export default function ComboModal({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        lineHeight: 1
+                        lineHeight: 1,
+                        flexShrink: 0
                       }}
                     >
                       +

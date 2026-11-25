@@ -212,6 +212,7 @@ async function runModifiersPricingTests() {
     assert.ok(dishModalCode.includes('initialPortion') && dishModalCode.includes('modifiersEnabled') && dishModalCode.includes('addonOnly'), 'DishModal must respect initialPortion, modifiersEnabled, and addonOnly bottom-sheet mode');
     assert.ok(dishModalCode.includes('sheetSlideUp') && dishModalCode.includes('Decrease quantity') && dishModalCode.includes('zIndex: 10020'), 'DishModal addonOnly bottom sheet must use slide-up animation, quantity stepper, and layer above floating cart bar');
     assert.ok(appCode.includes('openDishCustomizationModal') && appCode.includes("selectedDishModalMode === 'addon'"), 'App.jsx must route menu card and Top Picks add-on clicks through openDishCustomizationModal in addon mode');
+    assert.ok(appCode.includes('setCartItems(prev =>') && appCode.includes('handleClearCart'), 'App.jsx cart quantity updates must use immutable functional state and support clearing cart');
     assert.ok(!dishModalCode.includes('toggleModifier(mod);'), 'DishModal label must rely on checkbox onChange without duplicate label onClick toggle');
 
     const posCode = fs.readFileSync(path.resolve(testDir, '../../src/components/Admin/views/PosBillingView.jsx'), 'utf8');

@@ -624,7 +624,7 @@ export default function App() {
 
   const handleAddToCart = (dish, portionType = 'full', selectedModifiers = [], quantity = 1) => {
     triggerHaptic('success');
-    const addQty = Math.max(1, parseInt(quantity, 10) || 1);
+    const addQty = Math.min(99, Math.max(1, parseInt(quantity, 10) || 1));
     const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
     const isHalf = portionType === 'half' && hasHalfPrice;
     
@@ -636,40 +636,44 @@ export default function App() {
       portionName = dish.portion.trim();
     }
 
-    const regularBasePrice = isHalf ? Math.round(Number(dish.price_half)) : Math.round(Number(dish.price));
+    const regularBasePrice = isHalf ? Math.round(Number(dish.price_half) || 0) : Math.round(Number(dish.price) || 0);
     let effectiveBasePrice = regularBasePrice;
     if ((dish.offer_price !== undefined && dish.offer_price !== null) && !isHalf) {
-      effectiveBasePrice = Math.round(Number(dish.offer_price));
+      effectiveBasePrice = Math.round(Number(dish.offer_price) || 0);
     }
 
-    const extraPrice = (selectedModifiers || []).reduce((acc, m) => acc + (Number(m.price) || 0), 0);
+    const normalizedMods = Array.isArray(selectedModifiers) ? selectedModifiers : [];
+    const extraPrice = normalizedMods.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
     const unitPrice = effectiveBasePrice + extraPrice;
     const regularUnitPrice = regularBasePrice + extraPrice;
     const discountAmount = Math.max(0, regularUnitPrice - unitPrice);
 
     // Unique cart key including selected modifiers
-    const modKey = (selectedModifiers || []).map(m => m.name).sort().join('_');
+    const modKey = normalizedMods.map(m => m.name).sort().join('_');
     const cartKey = `${dish.id}_${portionName || 'regular'}${modKey ? '_' + modKey : ''}`;
 
-    const existingIndex = cartItems.findIndex(i => i.key === cartKey);
-    if (existingIndex > -1) {
-      const updated = [...cartItems];
-      updated[existingIndex].quantity += addQty;
-      setCartItems(updated);
-    } else {
-      setCartItems([...cartItems, {
+    setCartItems(prev => {
+      const existingIndex = prev.findIndex(i => (i.key || i.dish?.id) === cartKey);
+      if (existingIndex > -1) {
+        return prev.map((item, idx) =>
+          idx === existingIndex
+            ? { ...item, quantity: Math.min(99, (Number(item.quantity) || 0) + addQty) }
+            : item
+        );
+      }
+      return [...prev, {
         key: cartKey,
         dish,
         portion: portionName,
         portion_type: isHalf ? 'half' : 'full',
-        modifiers: selectedModifiers || [],
+        modifiers: normalizedMods,
         price: unitPrice,
         regular_price: regularUnitPrice,
         discount_amount: discountAmount,
         offer_id: dish.offer_id || null,
         quantity: addQty
-      }]);
-    }
+      }];
+    });
   };
 
   const handleAddComboToCart = (combo) => {
@@ -678,17 +682,20 @@ export default function App() {
     try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
     const includesText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}${i.portion === 'half' ? ' (H)' : ''}`).join(' + ');
     const cartKey = `combo_${combo.id}`;
-    const regularPrice = Math.round(Number(combo.price));
-    const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null) ? Math.round(Number(combo.offer_price)) : regularPrice;
+    const regularPrice = Math.round(Number(combo.price) || 0);
+    const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null) ? Math.round(Number(combo.offer_price) || 0) : regularPrice;
     const discountAmount = Math.max(0, regularPrice - effectivePrice);
 
-    const existingIndex = cartItems.findIndex(i => i.key === cartKey);
-    if (existingIndex > -1) {
-      const updated = [...cartItems];
-      updated[existingIndex].quantity += 1;
-      setCartItems(updated);
-    } else {
-      setCartItems([...cartItems, {
+    setCartItems(prev => {
+      const existingIndex = prev.findIndex(i => (i.key || i.dish?.id) === cartKey);
+      if (existingIndex > -1) {
+        return prev.map((item, idx) =>
+          idx === existingIndex
+            ? { ...item, quantity: Math.min(99, (Number(item.quantity) || 0) + 1) }
+            : item
+        );
+      }
+      return [...prev, {
         key: cartKey,
         dish: { id: `combo_${combo.id}`, name: combo.name, image: combo.image },
         portion: 'Combo',
@@ -699,28 +706,33 @@ export default function App() {
         quantity: 1,
         isCombo: true,
         comboIncludes: includesText
-      }]);
-    }
+      }];
+    });
   };
 
   const handleRemoveFromCart = (cartKey) => {
     triggerHaptic('light');
-    setCartItems(cartItems.filter(i => (i.key || i.dish.id) !== cartKey));
+    setCartItems(prev => prev.filter(i => (i.key || i.dish?.id) !== cartKey));
   };
 
   const handleUpdateCartQuantity = (cartKey, delta) => {
     triggerHaptic('light');
-    const existingIndex = cartItems.findIndex(i => (i.key || i.dish.id) === cartKey);
-    if (existingIndex === -1) return;
+    setCartItems(prev => prev.reduce((acc, item) => {
+      if ((item.key || item.dish?.id) !== cartKey) {
+        acc.push(item);
+        return acc;
+      }
+      const nextQty = (Number(item.quantity) || 0) + delta;
+      if (nextQty > 0) {
+        acc.push({ ...item, quantity: Math.min(99, nextQty) });
+      }
+      return acc;
+    }, []));
+  };
 
-    const currentQty = cartItems[existingIndex].quantity;
-    if (delta < 0 && currentQty <= 1) {
-      setCartItems(cartItems.filter(i => (i.key || i.dish.id) !== cartKey));
-    } else {
-      const updated = [...cartItems];
-      updated[existingIndex].quantity = Math.max(1, currentQty + delta);
-      setCartItems(updated);
-    }
+  const handleClearCart = () => {
+    triggerHaptic('light');
+    setCartItems([]);
   };
 
   const [orderTableInput, setOrderTableInput] = useState(initialTableNum || '1');
@@ -3174,73 +3186,77 @@ export default function App() {
                               const comboQty = inCartCombo ? inCartCombo.quantity : 0;
                               if (comboQty > 0) {
                                 return (
-                                  <div
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '3px',
-                                      background: 'var(--theme-card-bg, #FFFFFF)',
-                                      border: '1.5px solid var(--theme-nav-active, var(--primary-emerald, #10B981))',
-                                      borderRadius: 'var(--radius-pill)',
-                                      padding: '2px 4px',
-                                      flexShrink: 0
-                                    }}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={() => handleUpdateCartQuantity(inCartCombo.key || inCartCombo.dish?.id, -1)}
-                                      aria-label="Decrease quantity"
+                                    <div
+                                      onClick={(e) => e.stopPropagation()}
                                       style={{
-                                        background: 'var(--bg-secondary, #F1F5F9)',
-                                        color: 'var(--text-dark, #0F172A)',
-                                        border: 'none',
-                                        width: '20px',
-                                        height: '20px',
-                                        borderRadius: '50%',
-                                        fontWeight: 900,
-                                        cursor: 'pointer',
-                                        fontSize: '0.8rem',
-                                        display: 'flex',
+                                        display: 'inline-flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center',
-                                        lineHeight: 1
+                                        gap: '3px',
+                                        background: 'var(--theme-card-bg, #FFFFFF)',
+                                        border: '1.5px solid var(--primary-emerald, #10B981)',
+                                        borderRadius: 'var(--radius-pill)',
+                                        padding: '2px 4px',
+                                        flexShrink: 0
                                       }}
                                     >
-                                      −
-                                    </button>
-                                    <span style={{
-                                      minWidth: '14px',
-                                      textAlign: 'center',
-                                      fontSize: '0.72rem',
-                                      fontWeight: 900,
-                                      color: 'var(--theme-price-color, var(--primary-emerald, #10B981))'
-                                    }}>
-                                      {comboQty}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleUpdateCartQuantity(inCartCombo.key || inCartCombo.dish?.id, 1)}
-                                      aria-label="Increase quantity"
-                                      style={{
-                                        background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                                        color: '#FFFFFF',
-                                        border: 'none',
-                                        width: '20px',
-                                        height: '20px',
-                                        borderRadius: '50%',
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateCartQuantity(inCartCombo.key || inCartCombo.dish?.id, -1)}
+                                        aria-label="Decrease quantity"
+                                        style={{
+                                          background: 'var(--bg-secondary, #F1F5F9)',
+                                          color: 'var(--text-dark, #0F172A)',
+                                          border: 'none',
+                                          width: '22px',
+                                          height: '22px',
+                                          padding: 0,
+                                          flexShrink: 0,
+                                          borderRadius: '50%',
+                                          fontWeight: 900,
+                                          cursor: 'pointer',
+                                          fontSize: '0.82rem',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          lineHeight: 1
+                                        }}
+                                      >
+                                        −
+                                      </button>
+                                      <span style={{
+                                        minWidth: '16px',
+                                        textAlign: 'center',
+                                        fontSize: '0.72rem',
                                         fontWeight: 900,
-                                        cursor: 'pointer',
-                                        fontSize: '0.8rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        lineHeight: 1
-                                      }}
-                                    >
-                                      +
-                                    </button>
-                                  </div>
+                                        color: 'var(--theme-price-color, var(--primary-emerald, #10B981))'
+                                      }}>
+                                        {comboQty}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateCartQuantity(inCartCombo.key || inCartCombo.dish?.id, 1)}
+                                        aria-label="Increase quantity"
+                                        style={{
+                                          background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                                          color: '#FFFFFF',
+                                          border: 'none',
+                                          width: '22px',
+                                          height: '22px',
+                                          padding: 0,
+                                          flexShrink: 0,
+                                          borderRadius: '50%',
+                                          fontWeight: 900,
+                                          cursor: 'pointer',
+                                          fontSize: '0.82rem',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          lineHeight: 1
+                                        }}
+                                      >
+                                        +
+                                      </button>
+                                    </div>
                                 );
                               }
                             }
@@ -3480,7 +3496,7 @@ export default function App() {
                                 alignItems: 'center',
                                 gap: '4px',
                                 background: 'var(--theme-card-bg, #FFFFFF)',
-                                border: '1.5px solid var(--theme-nav-active, var(--primary-emerald, #10B981))',
+                                border: '1.5px solid var(--primary-emerald, #10B981)',
                                 borderRadius: 'var(--radius-pill)',
                                 padding: '2px 4px',
                                 flexShrink: 0,
@@ -3497,6 +3513,8 @@ export default function App() {
                                   border: 'none',
                                   width: '22px',
                                   height: '22px',
+                                  padding: 0,
+                                  flexShrink: 0,
                                   borderRadius: '50%',
                                   fontWeight: 900,
                                   cursor: 'pointer',
@@ -3528,6 +3546,8 @@ export default function App() {
                                   border: 'none',
                                   width: '22px',
                                   height: '22px',
+                                  padding: 0,
+                                  flexShrink: 0,
                                   borderRadius: '50%',
                                   fontWeight: 900,
                                   cursor: 'pointer',
@@ -3788,16 +3808,20 @@ export default function App() {
 
       {/* 🛒 Cart Modal / Bottom Drawer */}
       {showCartDrawer && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.75)',
-          backdropFilter: 'blur(8px)',
-          zIndex: 10000,
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'center'
-        }}>
+        <div
+          onClick={() => setShowCartDrawer(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.72)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            animation: 'sheetBackdropFade 0.2s ease-out'
+          }}
+        >
           {(() => {
             const isAddon = Boolean(activeOrderId && activeOrderTrack && ['pending', 'accepted', 'kitchen', 'preparing', 'served'].includes(activeOrderTrack.status));
             const nextRound = (Number(activeOrderTrack?.current_round) || Number(activeOrderTrack?.round_number) || 1) + 1;
@@ -3808,531 +3832,640 @@ export default function App() {
             const cgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
             const sgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
             const grandTotal = isGst ? Math.round((subtotal + cgst + sgst) * 100) / 100 : subtotal;
+            const totalItemCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
 
             return (
-              <div style={{
-                background: 'var(--theme-modal-bg, #FFFFFF)',
-                borderRadius: '28px 28px 0 0',
-                maxWidth: '520px',
-                width: '100%',
-                padding: '24px 20px 36px 20px',
-                boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
-                border: '1.5px solid var(--theme-modal-border, transparent)',
-                maxHeight: '85vh',
-                display: 'flex',
-                flexDirection: 'column',
-                color: 'var(--text-dark)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
-                  <div>
-                    <strong style={{ fontSize: '1.1rem', color: 'var(--theme-price-color, var(--primary-emerald))', display: 'block' }}>
-                      {isAddon ? `🛒 Round ${nextRound} (Add-on Items)` : `🛒 My Order Items (${cartItems.reduce((acc, i) => acc + i.quantity, 0)})`}
-                    </strong>
-                    {isAddon && (
-                      <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800 }}>
-                        Active Session: {getDynamicSpaceLabel() || `Table ${effectiveTableNum || '1'}`}
-                      </span>
-                    )}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: 'var(--theme-modal-bg, #FFFFFF)',
+                  borderRadius: '24px 24px 0 0',
+                  maxWidth: '520px',
+                  width: '100%',
+                  boxShadow: '0 -12px 40px rgba(0,0,0,0.45)',
+                  border: '1.5px solid var(--theme-modal-border, var(--border-light, transparent))',
+                  borderBottom: 'none',
+                  maxHeight: '88vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  animation: 'sheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1)',
+                  color: 'var(--text-dark)'
+                }}
+              >
+                {/* Pinned Header */}
+                <div style={{
+                  padding: '10px 18px 12px',
+                  borderBottom: '1px solid var(--border-light)',
+                  flexShrink: 0,
+                  background: 'var(--theme-modal-bg, #FFFFFF)'
+                }}>
+                  <div style={{
+                    width: '38px',
+                    height: '4px',
+                    borderRadius: '9999px',
+                    background: '#CBD5E1',
+                    margin: '0 auto 10px'
+                  }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <strong style={{ fontSize: '1.05rem', color: 'var(--theme-price-color, var(--primary-emerald))', display: 'block' }}>
+                        {isAddon ? `🛒 Round ${nextRound} (Add-on Items)` : `🛒 My Order Items (${totalItemCount})`}
+                      </strong>
+                      {isAddon && (
+                        <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800 }}>
+                          Active Session: {getDynamicSpaceLabel() || `Table ${effectiveTableNum || '1'}`}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                      {cartItems.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClearCart}
+                          aria-label="Clear cart"
+                          style={{
+                            background: 'var(--bg-secondary, #F1F5F9)',
+                            color: '#DC2626',
+                            border: '1px solid var(--border-light, #E2E8F0)',
+                            borderRadius: '9999px',
+                            padding: '5px 10px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            lineHeight: 1
+                          }}
+                        >
+                          <Trash2 size={12} />
+                          <span>Clear</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        aria-label="Close cart"
+                        onClick={() => setShowCartDrawer(false)}
+                        style={{
+                          background: 'var(--bg-secondary, #F3F4F6)',
+                          color: 'var(--text-dark, #374151)',
+                          border: 'none',
+                          width: '32px',
+                          height: '32px',
+                          padding: 0,
+                          borderRadius: '50%',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: 1,
+                          flexShrink: 0
+                        }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
                   </div>
-                  <button onClick={() => setShowCartDrawer(false)} style={{ background: 'var(--bg-secondary, #F3F4F6)', color: 'var(--text-dark, #374151)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
                 </div>
 
-                {isAddon && (
-                  <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '8px 12px', borderRadius: '12px', marginBottom: '12px', fontSize: '0.78rem', color: '#065F46', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>🔄</span>
-                    <span>
-                      {(() => {
-                        const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
-                        const isCounter = activeType === 'counter' || String(effectiveTableNum).toLowerCase().includes('counter');
-                        const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum).toLowerCase().includes('screen') || String(effectiveTableNum).toLowerCase().includes('seat');
-                        const isRoom = activeType === 'room' || String(effectiveTableNum).toLowerCase().includes('room');
-                        if (isCounter) return <>These new items will be sent as <strong>Round {nextRound} Dispatch</strong> and added to your counter order.</>;
-                        if (isCin) return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running seat order/bill.</>;
-                        if (isRoom) return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running room order/bill.</>;
-                        return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running table bill.</>;
-                      })()}
-                    </span>
-                  </div>
-                )}
-
                 {cartItems.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)' }}>
+                  <div style={{ textAlign: 'center', padding: '44px 18px', color: 'var(--text-muted)' }}>
                     <MessageSquare size={40} color="#10B981" style={{ marginBottom: '10px', opacity: 0.6 }} />
                     <p style={{ fontSize: '0.95rem', margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-dark)' }}>Your order cart is empty.</p>
                     <p style={{ fontSize: '0.8rem', opacity: 0.75, margin: 0 }}>Tap <strong>"+ ADD"</strong> on any item to add items!</p>
                   </div>
                 ) : (
-                  <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                    {cartItems.map((item) => (
-                      <div key={item.key || item.dish.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', padding: '12px 14px', borderRadius: '16px', border: '1.5px solid var(--theme-card-border, var(--border-light))' }}>
-                        <div>
-                          <strong style={{ fontSize: '0.92rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {item.dish.name}
-                            {item.isCombo ? (
-                              <span style={{ background: '#D1FAE5', color: '#059669', fontSize: '0.68rem', padding: '2px 7px', borderRadius: '4px', border: '1px solid #6EE7B7', fontWeight: 900 }}>
-                                COMBO
-                              </span>
-                            ) : item.portion && (
-                              <span style={{ background: '#FEF3C7', color: '#B45309', fontSize: '0.72rem', padding: '2px 7px', borderRadius: '4px', border: '1px solid #FCD34D', fontWeight: 900 }}>
-                                {item.portion}
-                              </span>
-                            )}
-                          </strong>
-                          {item.isCombo && item.comboIncludes && (
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
-                              📦 {item.comboIncludes}
-                            </span>
-                          )}
-                          {item.modifiers && item.modifiers.length > 0 && (
-                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '3px', marginBottom: '2px' }}>
-                              {item.modifiers.map((m, mIdx) => (
-                                <span key={mIdx} style={{ fontSize: '0.68rem', background: 'var(--bg-secondary, #F1F5F9)', color: 'var(--text-dark, #334155)', padding: '1px 6px', borderRadius: '4px', border: '1px solid var(--border-light, #CBD5E1)', fontWeight: 700 }}>
-                                  + {m.name} (+{sym}{formatPriceNumber(m.price)})
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                            <span style={{ fontSize: '0.84rem', color: 'var(--gold-primary)', fontWeight: 800 }}>
-                              {sym}{formatPriceNumber(item.price)} x {item.quantity} = {sym}{formatPriceNumber(item.price * item.quantity)}
-                            </span>
-                            {item.regular_price && item.regular_price > item.price && (
-                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94A3B8)', textDecoration: 'line-through' }}>
-                                {sym}{formatPriceNumber(item.regular_price * item.quantity)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <button 
-                            type="button"
-                            onClick={() => handleUpdateCartQuantity(item.key || item.dish.id, -1)} 
-                            aria-label="Decrease quantity"
-                            style={{ 
-                              background: 'var(--bg-secondary, #F1F5F9)', 
-                              color: 'var(--text-dark, #0F172A)', 
-                              border: '1px solid var(--theme-card-border, #CBD5E1)', 
-                              width: '26px', 
-                              height: '26px', 
-                              borderRadius: '50%', 
-                              fontWeight: 900, 
-                              cursor: 'pointer', 
-                              fontSize: '0.9rem',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            −
-                          </button>
-                          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-dark)', minWidth: '18px', textAlign: 'center' }}>
-                            {item.quantity}
+                  <>
+                    {/* Scrollable Cart Items + Order Form Area */}
+                    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {isAddon && (
+                        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '8px 12px', borderRadius: '12px', fontSize: '0.78rem', color: '#065F46', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>🔄</span>
+                          <span>
+                            {(() => {
+                              const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                              const isCounter = activeType === 'counter' || String(effectiveTableNum).toLowerCase().includes('counter');
+                              const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum).toLowerCase().includes('screen') || String(effectiveTableNum).toLowerCase().includes('seat');
+                              const isRoom = activeType === 'room' || String(effectiveTableNum).toLowerCase().includes('room');
+                              if (isCounter) return <>These new items will be sent as <strong>Round {nextRound} Dispatch</strong> and added to your counter order.</>;
+                              if (isCin) return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running seat order/bill.</>;
+                              if (isRoom) return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running room order/bill.</>;
+                              return <>These new items will be sent as <strong>Round {nextRound} KOT</strong> and merged with your running table bill.</>;
+                            })()}
                           </span>
-                          <button 
-                            type="button"
-                            onClick={() => handleUpdateCartQuantity(item.key || item.dish.id, 1)} 
-                            aria-label="Increase quantity"
-                            style={{ 
-                              background: 'var(--theme-nav-active, var(--primary-emerald))', 
-                              color: '#FFFFFF', 
-                              border: 'none', 
-                              width: '26px', 
-                              height: '26px', 
-                              borderRadius: '50%', 
-                              fontWeight: 900, 
-                              cursor: 'pointer', 
-                              fontSize: '0.9rem',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            +
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => handleRemoveFromCart(item.key || item.dish.id)} 
-                            aria-label="Remove item"
-                            style={{ 
-                              background: '#FEE2E2', 
-                              color: '#DC2626', 
-                              border: 'none', 
-                              width: '26px', 
-                              height: '26px', 
-                              borderRadius: '50%', 
-                              fontWeight: 900, 
-                              cursor: 'pointer', 
-                              fontSize: '0.82rem',
-                              marginLeft: '2px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            ✕
-                          </button>
                         </div>
+                      )}
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {cartItems.map((item) => {
+                          const itemKey = item.key || item.dish.id;
+                          return (
+                            <div key={itemKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', padding: '12px', borderRadius: '14px', border: '1.5px solid var(--theme-card-border, var(--border-light))' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <strong style={{ fontSize: '0.9rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', lineHeight: 1.3 }}>
+                                  <span>{item.dish.name}</span>
+                                  {item.isCombo ? (
+                                    <span style={{ background: '#D1FAE5', color: '#059669', fontSize: '0.66rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid #6EE7B7', fontWeight: 900 }}>
+                                      COMBO
+                                    </span>
+                                  ) : item.portion && (
+                                    <span style={{ background: '#FEF3C7', color: '#B45309', fontSize: '0.68rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FCD34D', fontWeight: 900 }}>
+                                      {item.portion}
+                                    </span>
+                                  )}
+                                </strong>
+                                {item.isCombo && item.comboIncludes && (
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+                                    📦 {item.comboIncludes}
+                                  </span>
+                                )}
+                                {item.modifiers && item.modifiers.length > 0 && (
+                                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px', marginBottom: '2px' }}>
+                                    {item.modifiers.map((m, mIdx) => (
+                                      <span key={mIdx} style={{ fontSize: '0.68rem', background: 'var(--bg-secondary, #F1F5F9)', color: 'var(--text-dark, #334155)', padding: '1px 6px', borderRadius: '4px', border: '1px solid var(--border-light, #CBD5E1)', fontWeight: 700 }}>
+                                        + {m.name} (+{sym}{formatPriceNumber(m.price)})
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                                  <span style={{ fontSize: '0.82rem', color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))', fontWeight: 800 }}>
+                                    {sym}{formatPriceNumber(item.price)} x {item.quantity} = {sym}{formatPriceNumber(item.price * item.quantity)}
+                                  </span>
+                                  {item.regular_price && item.regular_price > item.price && (
+                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94A3B8)', textDecoration: 'line-through' }}>
+                                      {sym}{formatPriceNumber(item.regular_price * item.quantity)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                {/* Unified − qty + Stepper Pill */}
+                                <div style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '2px',
+                                  height: '32px',
+                                  padding: '2px',
+                                  borderRadius: '9999px',
+                                  background: 'var(--bg-secondary, #F8FAFC)',
+                                  border: '1.5px solid var(--primary-emerald, #059669)',
+                                  flexShrink: 0
+                                }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateCartQuantity(itemKey, -1)}
+                                    aria-label="Decrease quantity"
+                                    style={{
+                                      background: 'var(--theme-card-bg, #FFFFFF)',
+                                      color: 'var(--text-dark, #0F172A)',
+                                      border: '1px solid var(--border-light, #CBD5E1)',
+                                      width: '26px',
+                                      height: '26px',
+                                      padding: 0,
+                                      borderRadius: '50%',
+                                      fontWeight: 900,
+                                      cursor: 'pointer',
+                                      fontSize: '0.95rem',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: 1,
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    −
+                                  </button>
+                                  <span style={{ fontSize: '0.86rem', fontWeight: 900, color: 'var(--text-dark)', minWidth: '22px', textAlign: 'center', lineHeight: 1 }}>
+                                    {item.quantity}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateCartQuantity(itemKey, 1)}
+                                    aria-label="Increase quantity"
+                                    style={{
+                                      background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                                      color: '#FFFFFF',
+                                      border: 'none',
+                                      width: '26px',
+                                      height: '26px',
+                                      padding: 0,
+                                      borderRadius: '50%',
+                                      fontWeight: 900,
+                                      cursor: 'pointer',
+                                      fontSize: '0.95rem',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: 1,
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveFromCart(itemKey)}
+                                  aria-label="Remove item"
+                                  title="Remove item"
+                                  style={{
+                                    background: '#FEE2E2',
+                                    color: '#DC2626',
+                                    border: '1px solid #FECACA',
+                                    width: '28px',
+                                    height: '28px',
+                                    padding: 0,
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    lineHeight: 1,
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                )}
 
-                {cartItems.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto', borderTop: '1px solid var(--border-light)', paddingTop: '14px' }}>
-                    {/* 🛎️ Service Mode / Dining Choice (Available in both Initial & Add-on Rounds) */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {isCinemaVenue ? (
-                          <div style={{
-                            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(14, 165, 233, 0.18) 100%)',
-                            border: '1.5px solid #0284C7',
-                            borderRadius: '12px',
-                            padding: '8px 12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px'
-                          }}>
-                            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🎬</span>
-                            <div style={{ flex: 1 }}>
-                              <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>In-Seat Food Delivery</strong>
-                              <span style={{ fontSize: '0.72rem', color: '#0284C7', fontWeight: 600 }}>Food will be delivered directly to your cinema seat</span>
-                            </div>
-                          </div>
-                        ) : isHotelVenue ? (
-                          <div style={{
-                            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.18) 100%)',
-                            border: '1.5px solid #D97706',
-                            borderRadius: '12px',
-                            padding: '8px 12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px'
-                          }}>
-                            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🏨</span>
-                            <div style={{ flex: 1 }}>
-                              <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>In-Room Dining Service</strong>
-                              <span style={{ fontSize: '0.72rem', color: '#B45309', fontWeight: 600 }}>Food will be delivered directly to your guest room</span>
-                            </div>
-                          </div>
-                        ) : isCounterSpace ? (
-                          <div style={{
-                            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.18) 100%)',
-                            border: '1.5px solid #059669',
-                            borderRadius: '12px',
-                            padding: '8px 12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px'
-                          }}>
-                            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>⚡</span>
-                            <div style={{ flex: 1 }}>
-                              <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'block' }}>Takeaway Counter Pickup</strong>
-                              <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>Food will be packed. A Pickup Token will be assigned.</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            {/* 🍽️ Dine-In vs 📦 Takeaway Mode Toggle */}
-                            <div style={{
-                              display: 'flex',
-                              background: 'var(--bg-secondary, #F1F5F9)',
-                              padding: '3px',
-                              borderRadius: '12px',
-                              marginBottom: '2px',
-                              gap: '4px'
-                            }}>
-                              <button
-                                type="button"
-                                onClick={() => setOrderTypeChoice('dine_in')}
-                                style={{
-                                  flex: 1,
-                                  padding: '8px 10px',
-                                  borderRadius: '9px',
-                                  border: 'none',
-                                  fontSize: '0.80rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '6px',
-                                  transition: 'all 0.15s ease',
-                                  background: orderTypeChoice === 'dine_in' ? 'var(--theme-card-bg, #FFFFFF)' : 'transparent',
-                                  color: orderTypeChoice === 'dine_in' ? 'var(--text-dark, #0F172A)' : 'var(--text-muted, #64748B)',
-                                  boxShadow: orderTypeChoice === 'dine_in' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
-                                }}
-                              >
-                                <span>🍽️</span>
-                                <span>Dine-In</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setOrderTypeChoice('takeaway')}
-                                style={{
-                                  flex: 1,
-                                  padding: '8px 10px',
-                                  borderRadius: '9px',
-                                  border: 'none',
-                                  fontSize: '0.80rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '6px',
-                                  transition: 'all 0.15s ease',
-                                  background: orderTypeChoice === 'takeaway' ? 'var(--primary-emerald, #10B981)' : 'transparent',
-                                  color: orderTypeChoice === 'takeaway' ? '#FFFFFF' : 'var(--text-muted, #64748B)',
-                                  boxShadow: orderTypeChoice === 'takeaway' ? '0 1px 4px rgba(16,185,129,0.3)' : 'none'
-                                }}
-                              >
-                                <span>📦</span>
-                                <span>Takeaway / Parcel</span>
-                              </button>
-                            </div>
-
-                            {orderTypeChoice === 'takeaway' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border-light)', paddingTop: '12px' }}>
+                        {/* 🛎️ Service Mode / Dining Choice (Available in both Initial & Add-on Rounds) */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {isCinemaVenue ? (
                               <div style={{
-                                background: '#FFFBEB',
-                                border: '1px solid #FDE68A',
-                                borderRadius: '10px',
-                                padding: '6px 10px',
-                                fontSize: '0.74rem',
-                                color: '#92400E',
+                                background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(14, 165, 233, 0.18) 100%)',
+                                border: '1.5px solid #0284C7',
+                                borderRadius: '12px',
+                                padding: '8px 12px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '6px'
+                                gap: '10px'
                               }}>
-                                <span>📦</span>
-                                <span><strong>Takeaway Mode:</strong> Food will be packed. A Pickup Token will be assigned.</span>
+                                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🎬</span>
+                                <div style={{ flex: 1 }}>
+                                  <strong style={{ fontSize: '0.82rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>In-Seat Food Delivery</strong>
+                                  <span style={{ fontSize: '0.72rem', color: '#0284C7', fontWeight: 600 }}>Food will be delivered directly to your cinema seat</span>
+                                </div>
                               </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-
-                      {/* Customer Information (Table, Name, Mobile) - Locked for Add-on Rounds */}
-                      {!isAddon && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
-                              {(() => {
-                                const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
-                                const isCounter = activeType === 'counter' || String(effectiveTableNum || '').toLowerCase().includes('counter');
-                                const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
-                                const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
-                                const isCabin = activeType === 'cabin' || String(effectiveTableNum || '').toLowerCase().includes('cabin');
-                                const isVip = activeType === 'vip' || String(effectiveTableNum || '').toLowerCase().includes('vip');
-                                if (isCounter) {
-                                  return getDynamicSpaceLabel() ? 'SCANNED COUNTER 🔒' : 'COUNTER';
-                                }
-                                if (isCin) {
-                                  return getDynamicSpaceLabel() ? 'SCANNED SEAT 🔒' : 'SEAT';
-                                }
-                                if (isRoom) {
-                                  return getDynamicSpaceLabel() ? 'SCANNED ROOM 🔒' : 'ROOM';
-                                }
-                                if (isCabin) {
-                                  return getDynamicSpaceLabel() ? 'SCANNED CABIN 🔒' : 'CABIN';
-                                }
-                                if (isVip) {
-                                  return getDynamicSpaceLabel() ? 'SCANNED VIP LOUNGE 🔒' : 'VIP';
-                                }
-                                return getDynamicSpaceLabel() ? 'SCANNED TABLE 🔒' : 'TABLE';
-                              })()}
-                            </label>
-                            <input
-                              type="text"
-                              value={getDynamicSpaceLabel() || orderTableInput}
-                              onChange={(e) => {
-                                if (!effectiveTableNum) {
-                                  setOrderTableInput(e.target.value);
-                                }
-                              }}
-                              readOnly={Boolean(effectiveTableNum)}
-                              placeholder="e.g. 1"
-                              style={{
-                                width: '100%',
+                            ) : isHotelVenue ? (
+                              <div style={{
+                                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.18) 100%)',
+                                border: '1.5px solid #D97706',
+                                borderRadius: '12px',
                                 padding: '8px 12px',
-                                borderRadius: '10px',
-                                border: '1.5px solid #CBD5E1',
-                                fontSize: '0.82rem',
-                                fontWeight: 800,
-                                background: effectiveTableNum ? 'var(--bg-secondary, #F1F5F9)' : 'var(--theme-input-bg, #FFFFFF)',
-                                color: 'var(--text-dark, #0F172A)',
-                                cursor: effectiveTableNum ? 'not-allowed' : 'text'
-                              }}
-                            />
-                          </div>
-                          <div style={{ flex: 1.2 }}>
-                            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>YOUR NAME (OPTIONAL)</label>
-                            <input
-                              type="text"
-                              value={customerNameInput}
-                              onChange={(e) => setCustomerNameInput(e.target.value)}
-                              placeholder="e.g. Rahul"
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '0.86rem', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
-                            />
-                          </div>
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                              }}>
+                                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🏨</span>
+                                <div style={{ flex: 1 }}>
+                                  <strong style={{ fontSize: '0.82rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>In-Room Dining Service</strong>
+                                  <span style={{ fontSize: '0.72rem', color: '#B45309', fontWeight: 600 }}>Food will be delivered directly to your guest room</span>
+                                </div>
+                              </div>
+                            ) : isCounterSpace ? (
+                              <div style={{
+                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.18) 100%)',
+                                border: '1.5px solid #059669',
+                                borderRadius: '12px',
+                                padding: '8px 12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                              }}>
+                                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>⚡</span>
+                                <div style={{ flex: 1 }}>
+                                  <strong style={{ fontSize: '0.82rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>Takeaway Counter Pickup</strong>
+                                  <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>Food will be packed. A Pickup Token will be assigned.</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                {/* 🍽️ Dine-In vs 📦 Takeaway Mode Toggle */}
+                                <div style={{
+                                  display: 'flex',
+                                  background: 'var(--bg-secondary, #F1F5F9)',
+                                  padding: '3px',
+                                  borderRadius: '12px',
+                                  marginBottom: '2px',
+                                  gap: '4px'
+                                }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setOrderTypeChoice('dine_in')}
+                                    style={{
+                                      flex: 1,
+                                      padding: '8px 10px',
+                                      borderRadius: '9px',
+                                      border: 'none',
+                                      fontSize: '0.80rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '6px',
+                                      transition: 'all 0.15s ease',
+                                      background: orderTypeChoice === 'dine_in' ? 'var(--theme-card-bg, #FFFFFF)' : 'transparent',
+                                      color: orderTypeChoice === 'dine_in' ? 'var(--text-dark, #0F172A)' : 'var(--text-muted, #64748B)',
+                                      boxShadow: orderTypeChoice === 'dine_in' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
+                                    }}
+                                  >
+                                    <span>🍽️</span>
+                                    <span>Dine-In</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setOrderTypeChoice('takeaway')}
+                                    style={{
+                                      flex: 1,
+                                      padding: '8px 10px',
+                                      borderRadius: '9px',
+                                      border: 'none',
+                                      fontSize: '0.80rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '6px',
+                                      transition: 'all 0.15s ease',
+                                      background: orderTypeChoice === 'takeaway' ? 'var(--primary-emerald, #10B981)' : 'transparent',
+                                      color: orderTypeChoice === 'takeaway' ? '#FFFFFF' : 'var(--text-muted, #64748B)',
+                                      boxShadow: orderTypeChoice === 'takeaway' ? '0 1px 4px rgba(16,185,129,0.3)' : 'none'
+                                    }}
+                                  >
+                                    <span>📦</span>
+                                    <span>Takeaway / Parcel</span>
+                                  </button>
+                                </div>
+
+                                {orderTypeChoice === 'takeaway' && (
+                                  <div style={{
+                                    background: '#FFFBEB',
+                                    border: '1px solid #FDE68A',
+                                    borderRadius: '10px',
+                                    padding: '6px 10px',
+                                    fontSize: '0.74rem',
+                                    color: '#92400E',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                  }}>
+                                    <span>📦</span>
+                                    <span><strong>Takeaway Mode:</strong> Food will be packed. A Pickup Token will be assigned.</span>
+                                  </div>
+                                )}
+                              </>
+                            )}
                         </div>
 
-                        {/* 📞 Customer Mobile Number Input Field */}
-                        <div>
-                          <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
-                            📞 MOBILE NUMBER (OPTIONAL)
-                          </label>
-                          <input
-                            type="tel"
-                            maxLength="10"
-                            value={customerPhoneInput}
-                            onChange={(e) => setCustomerPhoneInput(e.target.value.replace(/\D/g, ''))}
-                            placeholder="e.g. 9876543210"
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '0.86rem', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🏷️ Authoritative Bill & GST Summary */}
-                    {isGst && (
-                      <div style={{
-                        background: 'var(--bg-card-soft, #F8FAFC)',
-                        borderRadius: '12px',
-                        padding: '10px 14px',
-                        border: '1.5px solid var(--border-light, #E2E8F0)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                        fontSize: '0.8rem'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted, #64748B)' }}>
-                          <span>Items Subtotal</span>
-                          <span>{sym}{formatPriceNumber(subtotal)}</span>
-                        </div>
-                        {(() => {
-                          const totalSavings = cartItems.reduce((sum, item) => sum + ((item.discount_amount || 0) * (item.quantity || 1)), 0);
-                          return totalSavings > 0 ? (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669', fontWeight: 600 }}>
-                              <span>🎉 Offer Savings</span>
-                              <span>-{sym}{formatPriceNumber(totalSavings)}</span>
+                        {/* Customer Information (Table, Name, Mobile) - Locked for Add-on Rounds */}
+                        {!isAddon && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
+                                  {(() => {
+                                    const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                                    const isCounter = activeType === 'counter' || String(effectiveTableNum || '').toLowerCase().includes('counter');
+                                    const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
+                                    const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
+                                    const isCabin = activeType === 'cabin' || String(effectiveTableNum || '').toLowerCase().includes('cabin');
+                                    const isVip = activeType === 'vip' || String(effectiveTableNum || '').toLowerCase().includes('vip');
+                                    if (isCounter) {
+                                      return getDynamicSpaceLabel() ? 'SCANNED COUNTER 🔒' : 'COUNTER';
+                                    }
+                                    if (isCin) {
+                                      return getDynamicSpaceLabel() ? 'SCANNED SEAT 🔒' : 'SEAT';
+                                    }
+                                    if (isRoom) {
+                                      return getDynamicSpaceLabel() ? 'SCANNED ROOM 🔒' : 'ROOM';
+                                    }
+                                    if (isCabin) {
+                                      return getDynamicSpaceLabel() ? 'SCANNED CABIN 🔒' : 'CABIN';
+                                    }
+                                    if (isVip) {
+                                      return getDynamicSpaceLabel() ? 'SCANNED VIP LOUNGE 🔒' : 'VIP';
+                                    }
+                                    return getDynamicSpaceLabel() ? 'SCANNED TABLE 🔒' : 'TABLE';
+                                  })()}
+                                </label>
+                                <input
+                                  type="text"
+                                  value={getDynamicSpaceLabel() || orderTableInput}
+                                  onChange={(e) => {
+                                    if (!effectiveTableNum) {
+                                      setOrderTableInput(e.target.value);
+                                    }
+                                  }}
+                                  readOnly={Boolean(effectiveTableNum)}
+                                  placeholder="e.g. 1"
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    borderRadius: '10px',
+                                    border: '1.5px solid var(--border-light, #CBD5E1)',
+                                    fontSize: '0.82rem',
+                                    fontWeight: 800,
+                                    background: effectiveTableNum ? 'var(--bg-secondary, #F1F5F9)' : 'var(--theme-input-bg, #FFFFFF)',
+                                    color: 'var(--text-dark, #0F172A)',
+                                    cursor: effectiveTableNum ? 'not-allowed' : 'text'
+                                  }}
+                                />
+                              </div>
+                              <div style={{ flex: 1.2 }}>
+                                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>YOUR NAME (OPTIONAL)</label>
+                                <input
+                                  type="text"
+                                  value={customerNameInput}
+                                  onChange={(e) => setCustomerNameInput(e.target.value)}
+                                  placeholder="e.g. Rahul"
+                                  style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '0.86rem', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
+                                />
+                              </div>
                             </div>
-                          ) : null;
+
+                            {/* 📞 Customer Mobile Number Input Field */}
+                            <div>
+                              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
+                                📞 MOBILE NUMBER (OPTIONAL)
+                              </label>
+                              <input
+                                type="tel"
+                                maxLength="10"
+                                value={customerPhoneInput}
+                                onChange={(e) => setCustomerPhoneInput(e.target.value.replace(/\D/g, ''))}
+                                placeholder="e.g. 9876543210"
+                                style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '0.86rem', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 🏷️ Authoritative Bill & GST Summary */}
+                        {isGst && (
+                          <div style={{
+                            background: 'var(--bg-card-soft, #F8FAFC)',
+                            borderRadius: '12px',
+                            padding: '10px 14px',
+                            border: '1.5px solid var(--border-light, #E2E8F0)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                            fontSize: '0.8rem'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted, #64748B)' }}>
+                              <span>Items Subtotal</span>
+                              <span>{sym}{formatPriceNumber(subtotal)}</span>
+                            </div>
+                            {(() => {
+                              const totalSavings = cartItems.reduce((sum, item) => sum + ((item.discount_amount || 0) * (item.quantity || 1)), 0);
+                              return totalSavings > 0 ? (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669', fontWeight: 600 }}>
+                                  <span>🎉 Offer Savings</span>
+                                  <span>-{sym}{formatPriceNumber(totalSavings)}</span>
+                                </div>
+                              ) : null;
+                            })()}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted, #64748B)' }}>
+                              <span>CGST (2.5%)</span>
+                              <span>{sym}{formatPriceNumber(cgst)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted, #64748B)' }}>
+                              <span>SGST (2.5%)</span>
+                              <span>{sym}{formatPriceNumber(sgst)}</span>
+                            </div>
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              fontWeight: 800,
+                              color: 'var(--text-dark, #0F172A)',
+                              borderTop: '1px dashed var(--border-light, #CBD5E1)',
+                              paddingTop: '4px',
+                              marginTop: '2px'
+                            }}>
+                              <span>Grand Total (Inc. 5% GST)</span>
+                              <span>{sym}{formatPriceNumber(grandTotal)}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Vertical-specific Reassurance Callout */}
+                        {(() => {
+                          const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                          const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
+                          const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
+
+                          if (isCin) {
+                            return (
+                              <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '8px 12px', fontSize: '0.76rem', color: '#B45309', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>🍿</span>
+                                <span><strong>Cinema Seat Express:</strong> Hot popcorn & drinks will be delivered right to your seat.</span>
+                              </div>
+                            );
+                          }
+                          if (isRoom) {
+                            return (
+                              <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '8px 12px', fontSize: '0.76rem', color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>🛎️</span>
+                                <span><strong>In-Room Dining:</strong> Freshly prepared and delivered straight to your room door.</span>
+                              </div>
+                            );
+                          }
+                          return null;
                         })()}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted, #64748B)' }}>
-                          <span>CGST (2.5%)</span>
-                          <span>{sym}{formatPriceNumber(cgst)}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted, #64748B)' }}>
-                          <span>SGST (2.5%)</span>
-                          <span>{sym}{formatPriceNumber(sgst)}</span>
-                        </div>
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          fontWeight: 800,
-                          color: 'var(--text-dark, #0F172A)',
-                          borderTop: '1px dashed var(--border-light, #CBD5E1)',
-                          paddingTop: '4px',
-                          marginTop: '2px'
-                        }}>
-                          <span>Grand Total (Inc. 5% GST)</span>
-                          <span>{sym}{formatPriceNumber(grandTotal)}</span>
-                        </div>
                       </div>
-                    )}
+                    </div>
 
-                    {/* Vertical-specific Reassurance Callout */}
-                    {(() => {
-                      const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
-                      const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
-                      const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
+                    {/* Pinned Sticky Checkout Footer */}
+                    <div style={{
+                      padding: '12px 18px calc(16px + env(safe-area-inset-bottom, 0px))',
+                      borderTop: '1px solid var(--border-light)',
+                      background: 'var(--theme-modal-bg, #FFFFFF)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      flexShrink: 0
+                    }}>
+                      {isDirectOrderingActive && (
+                        <button
+                          type="button"
+                          onClick={handleSendDirectOrder}
+                          disabled={placingOrder}
+                          style={{
+                            width: '100%',
+                            background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                            color: '#FFFFFF',
+                            padding: '14px 18px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontWeight: 900,
+                            fontSize: '0.96rem',
+                            border: 'none',
+                            cursor: placingOrder ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            boxShadow: 'var(--theme-shadow, 0 6px 20px rgba(0, 0, 0, 0.3))',
+                            opacity: placingOrder ? 0.7 : 1
+                          }}
+                        >
+                          <Sparkles size={18} color="#FDE047" />
+                          <span>
+                            {placingOrder
+                              ? 'Placing Order...'
+                              : isAddon
+                                ? (orderTypeChoice === 'takeaway'
+                                    ? `📦 Place Round ${nextRound} Parcel Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
+                                    : `⚡ Confirm & Place Round ${nextRound} Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`)
+                                : (() => {
+                                    const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                                    const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
+                                    const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
+                                    if (isCin) return `🍿 Deliver to Seat Now (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                    if (isRoom) return `🛎️ Place In-Room Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                    return `⚡ Confirm & Place Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                  })()}
+                          </span>
+                        </button>
+                      )}
 
-                      if (isCin) {
-                        return (
-                          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '8px 12px', fontSize: '0.76rem', color: '#B45309', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>🍿</span>
-                            <span><strong>Cinema Seat Express:</strong> Hot popcorn & drinks will be delivered right to your seat.</span>
-                          </div>
-                        );
-                      }
-                      if (isRoom) {
-                        return (
-                          <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '8px 12px', fontSize: '0.76rem', color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>🛎️</span>
-                            <span><strong>In-Room Dining:</strong> Freshly prepared and delivered straight to your room door.</span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-
-                    {isDirectOrderingActive && (
-                      <button
-                        onClick={handleSendDirectOrder}
-                        disabled={placingOrder}
-                        style={{
-                          width: '100%',
-                          background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                          color: '#FFFFFF',
-                          padding: '14px 18px',
-                          borderRadius: 'var(--radius-pill)',
-                          fontWeight: 900,
-                          fontSize: '0.96rem',
-                          border: 'none',
-                          cursor: placingOrder ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          boxShadow: 'var(--theme-shadow, 0 6px 20px rgba(0, 0, 0, 0.3))',
-                          opacity: placingOrder ? 0.7 : 1
-                        }}
-                      >
-                        <Sparkles size={18} color="#FDE047" />
-                        <span>
-                          {placingOrder
-                            ? 'Placing Order...'
-                            : isAddon
-                              ? (orderTypeChoice === 'takeaway'
-                                  ? `📦 Place Round ${nextRound} Parcel Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
-                                  : `⚡ Confirm & Place Round ${nextRound} Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`)
-                              : (() => {
-                                  const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
-                                  const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
-                                  const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
-                                  if (isCin) return `🍿 Deliver to Seat Now (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
-                                  if (isRoom) return `🛎️ Place In-Room Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
-                                  return `⚡ Confirm & Place Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
-                                })()}
-                        </span>
-                      </button>
-                    )}
-
-                    {info && info.whatsapp_enabled !== false && (
-                      <button
-                        onClick={handleSendWhatsAppOrder}
-                        style={{
-                          width: '100%',
-                          background: '#25D366',
-                          color: '#FFFFFF',
-                          padding: '12px 18px',
-                          borderRadius: 'var(--radius-pill)',
-                          fontWeight: 800,
-                          fontSize: '0.86rem',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          boxShadow: '0 4px 14px rgba(37, 211, 102, 0.3)'
-                        }}
-                      >
-                        <MessageSquare size={16} />
-                        <span>Order via WhatsApp ({sym}{cartTotal})</span>
-                      </button>
-                    )}
-                  </div>
+                      {info && info.whatsapp_enabled !== false && (
+                        <button
+                          type="button"
+                          onClick={handleSendWhatsAppOrder}
+                          style={{
+                            width: '100%',
+                            background: '#25D366',
+                            color: '#FFFFFF',
+                            padding: '12px 18px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontWeight: 800,
+                            fontSize: '0.86rem',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            boxShadow: '0 4px 14px rgba(37, 211, 102, 0.3)'
+                          }}
+                        >
+                          <MessageSquare size={16} />
+                          <span>Order via WhatsApp ({sym}{formatPriceNumber(cartTotal)})</span>
+                        </button>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             );
