@@ -36,7 +36,9 @@ import {
   cancelSubscription, 
   changePlan, 
   createCashfreeSubscription,
-  verifyCashfreeSubscription 
+  verifyCashfreeSubscription,
+  fetchDishes,
+  fetchCategories
 } from '../../../api/client';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
@@ -238,9 +240,74 @@ export default function BillingView({
   const maxScreens = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_screens ?? (subData?.permissions?.max_screens || 9999));
   const maxSeats = isUnlimitedPlan ? 9999 : (resolvedCaps?.max_seats ?? (subData?.permissions?.max_seats || 9999));
 
-  const dishesCount = Array.isArray(dishes) ? dishes.length : 0;
-  const categoriesCount = Array.isArray(categories) ? categories.length : 0;
-  const combosCount = Array.isArray(combos) ? combos.length : 0;
+  // Internal fallback count state in case props are empty or not yet loaded
+  const [internalDishesCount, setInternalDishesCount] = useState(0);
+  const [internalCategoriesCount, setInternalCategoriesCount] = useState(0);
+  const [internalCombosCount, setInternalCombosCount] = useState(0);
+
+  useEffect(() => {
+    if (Array.isArray(dishes) && dishes.length > 0) {
+      setInternalDishesCount(dishes.length);
+      return;
+    }
+    const activeSlug = settingsForm?.slug || restaurantInfo?.slug || '';
+    try {
+      if (activeSlug) {
+        const cachedDishes = JSON.parse(localStorage.getItem(`admin_cache_${activeSlug}_dishes`) || '[]');
+        if (Array.isArray(cachedDishes) && cachedDishes.length > 0) {
+          setInternalDishesCount(cachedDishes.length);
+        }
+      }
+    } catch (e) {}
+
+    if (token) {
+      fetchDishes({ adminView: true, token, slug: activeSlug }).then(d => {
+        if (Array.isArray(d)) setInternalDishesCount(d.length);
+      }).catch(() => {});
+    }
+  }, [dishes, token, settingsForm?.slug, restaurantInfo?.slug]);
+
+  useEffect(() => {
+    if (Array.isArray(categories) && categories.length > 0) {
+      setInternalCategoriesCount(categories.length);
+      return;
+    }
+    const activeSlug = settingsForm?.slug || restaurantInfo?.slug || '';
+    try {
+      if (activeSlug) {
+        const cachedCats = JSON.parse(localStorage.getItem(`admin_cache_${activeSlug}_categories`) || '[]');
+        if (Array.isArray(cachedCats) && cachedCats.length > 0) {
+          setInternalCategoriesCount(cachedCats.length);
+        }
+      }
+    } catch (e) {}
+
+    if (token) {
+      fetchCategories({ adminView: true, token, slug: activeSlug }).then(c => {
+        if (Array.isArray(c)) setInternalCategoriesCount(c.length);
+      }).catch(() => {});
+    }
+  }, [categories, token, settingsForm?.slug, restaurantInfo?.slug]);
+
+  useEffect(() => {
+    if (Array.isArray(combos) && combos.length > 0) {
+      setInternalCombosCount(combos.length);
+      return;
+    }
+    const activeSlug = settingsForm?.slug || restaurantInfo?.slug || '';
+    try {
+      if (activeSlug) {
+        const cachedCombos = JSON.parse(localStorage.getItem(`admin_cache_${activeSlug}_combos`) || '[]');
+        if (Array.isArray(cachedCombos) && cachedCombos.length > 0) {
+          setInternalCombosCount(cachedCombos.length);
+        }
+      }
+    } catch (e) {}
+  }, [combos, settingsForm?.slug, restaurantInfo?.slug]);
+
+  const dishesCount = Array.isArray(dishes) && dishes.length > 0 ? dishes.length : internalDishesCount;
+  const categoriesCount = Array.isArray(categories) && categories.length > 0 ? categories.length : internalCategoriesCount;
+  const combosCount = Array.isArray(combos) && combos.length > 0 ? combos.length : internalCombosCount;
   const tablesCount = Number(totalTablesCount || restaurantInfo?.total_tables || 0);
   const roomsCount = Number(restaurantInfo?.total_rooms ?? settingsForm?.total_rooms ?? 0);
   const screensCount = Number(restaurantInfo?.total_screens ?? settingsForm?.total_screens ?? (isCinema ? 1 : 0));
@@ -788,15 +855,15 @@ export default function BillingView({
                   <span style={{
                     fontSize: '0.68rem',
                     fontWeight: 900,
-                    color: isComplimentary ? '#7E22CE' : (currentPlanTier === 'enterprise' ? '#7E22CE' : (currentPlanTier === 'basic' ? '#0284C7' : '#B45309')),
-                    background: isComplimentary ? '#FAF5FF' : (currentPlanTier === 'enterprise' ? '#FAF5FF' : (currentPlanTier === 'basic' ? '#F0F9FF' : '#FEF3C7')),
-                    border: `1px solid ${isComplimentary ? '#E9D5FF' : (currentPlanTier === 'enterprise' ? '#E9D5FF' : (currentPlanTier === 'basic' ? '#BAE6FD' : '#FDE68A'))}`,
+                    color: currentPlanTier === 'enterprise' ? '#7E22CE' : (currentPlanTier === 'basic' ? '#0284C7' : '#B45309'),
+                    background: currentPlanTier === 'enterprise' ? '#FAF5FF' : (currentPlanTier === 'basic' ? '#F0F9FF' : '#FEF3C7'),
+                    border: `1px solid ${currentPlanTier === 'enterprise' ? '#E9D5FF' : (currentPlanTier === 'basic' ? '#BAE6FD' : '#FDE68A')}`,
                     padding: '3px 10px',
                     borderRadius: '20px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.04em'
                   }}>
-                    {isComplimentary ? '👑 VIP COMPLIMENTARY ACCESS' : (currentPlanTier === 'enterprise' ? '🚀 ENTERPRISE' : currentPlanTier === 'basic' ? '⚡ BASIC STARTER' : '👑 PRO LUXURY')}
+                    {currentPlanTier === 'enterprise' ? '🚀 ENTERPRISE' : currentPlanTier === 'basic' ? '⚡ BASIC STARTER' : '👑 PRO LUXURY'}
                   </span>
                   <div style={{
                     background: statusConfig.bg,
@@ -902,7 +969,7 @@ export default function BillingView({
                   }}
                 >
                   <Sparkles size={15} />
-                  <span>Upgrade / Change Plan</span>
+                  <span>{currentPlanTier === 'enterprise' && isLifetimeVip ? 'Explore All Plans & Features' : 'Upgrade / Change Plan'}</span>
                 </button>
 
                 {autoRenewEnabled && !isComplimentary && (

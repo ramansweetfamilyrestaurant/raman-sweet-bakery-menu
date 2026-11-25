@@ -242,7 +242,11 @@ export default function SetupView({
   onUpgrade,
   onNavigate,
   onOptimizeDatabase,
-  initialDrawer = null
+  initialDrawer = null,
+  dishes = [],
+  categories = [],
+  combos = [],
+  totalTablesCount = 0
 }) {
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
   const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'restaurant' | 'operations' | 'menu-billing' | 'security' | 'advanced'
@@ -5402,12 +5406,17 @@ export default function SetupView({
         <BillingView
           restaurantInfo={restaurantInfo}
           settingsForm={settingsForm}
+          dishes={dishes}
+          categories={categories}
+          combos={combos}
+          totalTablesCount={totalTablesCount}
           token={token}
           capabilities={capabilities}
           currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
           onUpgrade={onUpgrade || (() => onNavigate && onNavigate('subscription'))}
+          onOpenBillingModal={onOpenBillingModal}
           onNavigate={onNavigate || (() => { })}
-          onRefreshInfo={() => loadSubscriptionStatus()}
+          onRefreshInfo={onRefreshInfo || (() => { })}
         />
       </div>
     );

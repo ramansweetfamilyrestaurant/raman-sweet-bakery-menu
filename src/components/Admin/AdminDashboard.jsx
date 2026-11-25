@@ -4161,6 +4161,10 @@ export default function AdminDashboard({
                   initialDrawer={initialSetupDrawer}
                   restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
                   capabilities={tenantCaps}
+                  dishes={safeDishes}
+                  categories={safeCategories}
+                  combos={combos}
+                  totalTablesCount={totalTablesCount}
                   onUpgrade={() => {
                     setActiveTab('billing');
                   }}
