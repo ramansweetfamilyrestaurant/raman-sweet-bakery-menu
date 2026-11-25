@@ -46,8 +46,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [grantModalResto, setGrantModalResto] = useState(null);
   const [revokeModalResto, setRevokeModalResto] = useState(null);
   const VALID_SUPER_VIEWS = ['overview', 'tenants', 'billing', 'plans', 'operations', 'activity', 'settings', 'communication', 'tickets'];
-  const [selectedTenant360, setSelectedTenant360] = useState(null);
-  const [activeView, setActiveView] = useState(() => {
+  const getSuperViewFromUrl = () => {
     if (typeof window === 'undefined') return 'overview';
     try {
       const tabParam = new URLSearchParams(window.location.search).get('tab');
@@ -55,9 +54,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       if (tabParam && VALID_SUPER_VIEWS.includes(tabParam)) return tabParam;
     } catch {}
     return 'overview';
-  }); // 'overview', 'tenants', 'billing', 'plans', 'operations', 'activity', 'settings', 'communication'
+  };
+  const [selectedTenant360, setSelectedTenant360] = useState(null);
+  const [activeView, setActiveView] = useState(getSuperViewFromUrl); // 'overview', 'tenants', 'billing', 'plans', 'operations', 'activity', 'settings', 'communication'
+  const latestSuperViewRef = useRef(activeView);
+  latestSuperViewRef.current = activeView;
+  const pendingSuperHistorySyncRef = useRef(false);
 
   useEffect(() => {
+    if (pendingSuperHistorySyncRef.current) {
+      pendingSuperHistorySyncRef.current = false;
+      return;
+    }
     if (typeof window === 'undefined') return;
     try {
       const url = new URL(window.location.href);
@@ -72,6 +80,18 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       }
     } catch {}
   }, [activeView]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncSuperViewFromHistory = () => {
+      const nextView = getSuperViewFromUrl();
+      if (latestSuperViewRef.current === nextView) return;
+      pendingSuperHistorySyncRef.current = true;
+      setActiveView(nextView);
+    };
+    window.addEventListener('popstate', syncSuperViewFromHistory);
+    return () => window.removeEventListener('popstate', syncSuperViewFromHistory);
+  }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMobileMoreDrawer, setShowMobileMoreDrawer] = useState(false);
   const [billingFilter, setBillingFilter] = useState('all');

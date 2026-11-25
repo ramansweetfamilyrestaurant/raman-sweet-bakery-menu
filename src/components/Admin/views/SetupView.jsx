@@ -243,6 +243,8 @@ export default function SetupView({
   onNavigate,
   onOptimizeDatabase,
   initialDrawer = null,
+  controlledSubPage,
+  onSubPageChange,
   dishes = [],
   categories = [],
   combos = [],
@@ -251,14 +253,19 @@ export default function SetupView({
   const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
   const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'restaurant' | 'operations' | 'menu-billing' | 'security' | 'advanced'
   const VALID_SETUP_SECTIONS = ['profile', 'menu-preferences', 'orders-devices', 'subscription', 'location', 'security', 'database'];
-  const [activeSubPage, setActiveSubPage] = useState(() => {
-    if (initialDrawer === 'profile') return 'profile';
-    if (initialDrawer === 'menu-preferences') return 'menu-preferences';
-    if (initialDrawer === 'devices' || initialDrawer === 'orders-devices') return 'orders-devices';
-    if (initialDrawer === 'subscription' || initialDrawer === 'billing') return 'subscription';
-    if (initialDrawer === 'location' || initialDrawer === 'gps') return 'location';
-    if (initialDrawer === 'security' || initialDrawer === 'credentials') return 'security';
-    if (initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize') return 'database';
+  const resolveDrawerToSubPage = (drawerVal) => {
+    if (drawerVal === 'profile') return 'profile';
+    if (drawerVal === 'menu-preferences') return 'menu-preferences';
+    if (drawerVal === 'devices' || drawerVal === 'orders-devices') return 'orders-devices';
+    if (drawerVal === 'subscription' || drawerVal === 'billing') return 'subscription';
+    if (drawerVal === 'location' || drawerVal === 'gps') return 'location';
+    if (drawerVal === 'security' || drawerVal === 'credentials') return 'security';
+    if (drawerVal === 'database' || drawerVal === 'database-tools' || drawerVal === 'optimize') return 'database';
+    return null;
+  };
+  const [localSubPage, setLocalSubPage] = useState(() => {
+    const mapped = resolveDrawerToSubPage(initialDrawer);
+    if (mapped) return mapped;
     if (typeof window !== 'undefined') {
       try {
         const secParam = new URLSearchParams(window.location.search).get('section');
@@ -267,23 +274,14 @@ export default function SetupView({
     }
     return null;
   });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const url = new URL(window.location.href);
-      if (url.searchParams.get('tab') !== 'settings') return;
-      if (activeSubPage && VALID_SETUP_SECTIONS.includes(activeSubPage)) {
-        if (url.searchParams.get('section') !== activeSubPage) {
-          url.searchParams.set('section', activeSubPage);
-          window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-        }
-      } else if (url.searchParams.has('section')) {
-        url.searchParams.delete('section');
-        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-      }
-    } catch {}
-  }, [activeSubPage]);
+  const activeSubPage = controlledSubPage !== undefined ? controlledSubPage : localSubPage;
+  const setActiveSubPage = (nextPage) => {
+    if (onSubPageChange) {
+      onSubPageChange(nextPage);
+    } else {
+      setLocalSubPage(nextPage);
+    }
+  };
   const [openDrawer, setOpenDrawer] = useState(
     (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing' || initialDrawer === 'location' || initialDrawer === 'gps' || initialDrawer === 'security' || initialDrawer === 'credentials' || initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize') ? null : initialDrawer
   ); // 'menu', 'cinema'

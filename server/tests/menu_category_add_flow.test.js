@@ -200,6 +200,7 @@ async function runTests() {
       assert.ok(appCode.includes('saveInlineCatalogEntity'), 'App.jsx inline dish and category saves must use shared helper and await reload');
       assert.ok(appCode.includes("id: 'uncategorized'"), 'App.jsx uncategorized bucket must have explicit id');
       assert.ok(appCode.includes('searchSuffix') && dashboardCode.includes('getInitialAdminTabFromUrl'), 'Admin route normalization must preserve ?tab= query across page reloads');
+      assert.ok(dashboardCode.includes('getInitialSetupSectionFromUrl') && dashboardCode.includes('latestNavStateRef') && dashboardCode.includes('pendingHistorySyncRef'), 'AdminDashboard must sync activeSubPage alongside activeTab on popstate without getting stuck or overwriting restored URL sections');
     });
 
     await testAsync('6. Authoritative Pure Veg resolution does not lock egg/nonveg businesses or bakeries by business_type alone', async () => {

@@ -68,6 +68,20 @@ const VALID_ADMIN_TABS = new Set([
   'qr-generator', 'billing', 'subscription', 'notifications', 'support', 'settings'
 ]);
 
+const VALID_SETUP_SECTIONS = new Set([
+  'profile', 'menu-preferences', 'orders-devices', 'subscription', 'location', 'security', 'database'
+]);
+
+const normalizeSetupSection = (raw) => {
+  if (!raw) return null;
+  if (raw === 'devices') return 'orders-devices';
+  if (raw === 'billing') return 'subscription';
+  if (raw === 'gps') return 'location';
+  if (raw === 'credentials') return 'security';
+  if (raw === 'database-tools' || raw === 'optimize') return 'database';
+  return VALID_SETUP_SECTIONS.has(raw) ? raw : null;
+};
+
 const getInitialAdminTabFromUrl = () => {
   if (typeof window === 'undefined') return 'home';
   try {
@@ -77,6 +91,14 @@ const getInitialAdminTabFromUrl = () => {
     }
   } catch {}
   return 'home';
+};
+
+const getInitialSetupSectionFromUrl = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return normalizeSetupSection(new URLSearchParams(window.location.search).get('section'));
+  } catch {}
+  return null;
 };
 
 export default function AdminDashboard({
@@ -121,16 +143,33 @@ export default function AdminDashboard({
   const [paymentModalPlan, setPaymentModalPlan] = useState(null);
   const [activeTab, setActiveTab] = useState(getInitialAdminTabFromUrl); // 'home', 'orders', 'dishes', 'analytics', 'settings'
   const [initialSetupDrawer, setInitialSetupDrawer] = useState(null);
+  const [activeSubPage, setActiveSubPage] = useState(() => (
+    getInitialAdminTabFromUrl() === 'settings' ? getInitialSetupSectionFromUrl() : null
+  ));
+  const latestNavStateRef = useRef({ tab: activeTab, section: activeSubPage });
+  latestNavStateRef.current = { tab: activeTab, section: activeSubPage };
+  const pendingHistorySyncRef = useRef(false);
 
   useEffect(() => {
-    if (activeTab !== 'settings' && initialSetupDrawer) {
-      setInitialSetupDrawer(null);
+    if (pendingHistorySyncRef.current) {
+      pendingHistorySyncRef.current = false;
+      return;
+    }
+    if (activeTab !== 'settings') {
+      if (initialSetupDrawer) setInitialSetupDrawer(null);
+      if (activeSubPage !== null) setActiveSubPage(null);
     }
     if (typeof window === 'undefined') return;
     try {
       const url = new URL(window.location.href);
       let changed = false;
-      if (activeTab !== 'settings' && url.searchParams.has('section')) {
+      const desiredSection = (activeTab === 'settings' && activeSubPage && VALID_SETUP_SECTIONS.has(activeSubPage)) ? activeSubPage : null;
+      if (desiredSection) {
+        if (url.searchParams.get('section') !== desiredSection) {
+          url.searchParams.set('section', desiredSection);
+          changed = true;
+        }
+      } else if (url.searchParams.has('section')) {
         url.searchParams.delete('section');
         changed = true;
       }
@@ -147,13 +186,20 @@ export default function AdminDashboard({
         window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
       }
     } catch {}
-  }, [activeTab]);
+  }, [activeTab, activeSubPage]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const syncTabFromHistory = () => {
       const nextTab = getInitialAdminTabFromUrl();
-      setActiveTab(prev => (prev === nextTab ? prev : nextTab));
+      const nextSection = nextTab === 'settings' ? getInitialSetupSectionFromUrl() : null;
+      if (latestNavStateRef.current.tab === nextTab && latestNavStateRef.current.section === nextSection) {
+        return;
+      }
+      pendingHistorySyncRef.current = true;
+      setInitialSetupDrawer(null);
+      setActiveTab(nextTab);
+      setActiveSubPage(nextSection);
     };
     window.addEventListener('popstate', syncTabFromHistory);
     return () => window.removeEventListener('popstate', syncTabFromHistory);
@@ -3968,6 +4014,8 @@ export default function AdminDashboard({
                   onReturnToMenu={onReturnToMenu}
                   onNavigateToSetup={(drawer = null) => {
                     setInitialSetupDrawer(drawer);
+                    const sec = normalizeSetupSection(drawer);
+                    setActiveSubPage(sec);
                     setActiveTab('settings');
                   }}
                   currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
@@ -4010,6 +4058,8 @@ export default function AdminDashboard({
                   token={token}
                   onNavigateToSetup={(drawer = null) => {
                     setInitialSetupDrawer(drawer);
+                    const sec = normalizeSetupSection(drawer);
+                    setActiveSubPage(sec);
                     setActiveTab('settings');
                   }}
                   onOpenDayClosing={() => setShowDayClosingModal(true)}
@@ -4211,7 +4261,10 @@ export default function AdminDashboard({
                   capabilities={tenantCaps}
                   token={token}
                   onNavigate={(tab, drawer = null) => {
-                    if (drawer) setInitialSetupDrawer(drawer);
+                    if (drawer) {
+                      setInitialSetupDrawer(drawer);
+                      setActiveSubPage(normalizeSetupSection(drawer));
+                    }
                     setActiveTab(tab);
                   }}
                   onBackToDashboard={() => setActiveTab('home')}
@@ -4228,7 +4281,10 @@ export default function AdminDashboard({
                   capabilities={tenantCaps}
                   token={token}
                   onNavigate={(tab, drawer = null) => {
-                    if (drawer) setInitialSetupDrawer(drawer);
+                    if (drawer) {
+                      setInitialSetupDrawer(drawer);
+                      setActiveSubPage(normalizeSetupSection(drawer));
+                    }
                     setActiveTab(tab);
                   }}
                   onBackToDashboard={() => setActiveTab('home')}
@@ -4240,6 +4296,11 @@ export default function AdminDashboard({
               {activeTab === 'settings' && (
                 <SetupView
                   initialDrawer={initialSetupDrawer}
+                  controlledSubPage={activeSubPage}
+                  onSubPageChange={(nextSection) => {
+                    if (!nextSection && initialSetupDrawer) setInitialSetupDrawer(null);
+                    setActiveSubPage(nextSection);
+                  }}
                   restaurantInfo={mergedRestaurantInfo}
                   capabilities={tenantCaps}
                   dishes={safeDishes}
@@ -4299,6 +4360,8 @@ export default function AdminDashboard({
                   onReturnToMenu={onReturnToMenu}
                   onNavigateToSetup={(drawer = null) => {
                     setInitialSetupDrawer(drawer);
+                    const sec = normalizeSetupSection(drawer);
+                    setActiveSubPage(sec);
                     setActiveTab('settings');
                   }}
                   currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
