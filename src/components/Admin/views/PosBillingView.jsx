@@ -61,6 +61,8 @@ export default function PosBillingView({
   const [isTokensQueueCollapsed, setIsTokensQueueCollapsed] = useState(false);
 
   const searchInputRef = useRef(null);
+  const billSessionIdRef = useRef(null);
+  const lastUpiUriRef = useRef(null);
 
   // Active Counter Tokens Queue (orders currently being prepared or ready for customer pickup)
   const activeTokensQueue = useMemo(() => {
@@ -240,6 +242,8 @@ export default function PosBillingView({
     setPaymentMethod('cash');
     setCashTendered('');
     setUpiQrDataUrl(null);
+    billSessionIdRef.current = null;
+    lastUpiUriRef.current = null;
   };
 
   // Cart Totals calculation
@@ -275,33 +279,60 @@ export default function PosBillingView({
     return Array.from(set).sort((a, b) => a - b).slice(0, 4);
   }, [grandTotal]);
 
-  // Generate Dynamic UPI QR when payment method is UPI
+  const posUpiId = restaurantInfo?.upi_id || settingsForm?.upi_id || '';
+  const posPayeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name || '';
+
+  // Generate Dynamic UPI QR when payment method is UPI (stable per active bill session)
   useEffect(() => {
-    if (paymentMethod !== 'upi' || grandTotal <= 0) {
+    if (grandTotal <= 0) {
+      billSessionIdRef.current = null;
+      lastUpiUriRef.current = null;
       setUpiQrDataUrl(null);
       return;
     }
 
-    const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
-    const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
-    if (!upiId) return;
+    if (paymentMethod !== 'upi' || !posUpiId) {
+      lastUpiUriRef.current = null;
+      setUpiQrDataUrl(null);
+      return;
+    }
+
+    if (!billSessionIdRef.current) {
+      billSessionIdRef.current = `POS_${Date.now().toString().slice(-4)}`;
+    }
 
     const uri = buildUpiPaymentUri({
-      upiId,
-      payeeName,
+      upiId: posUpiId,
+      payeeName: posPayeeName,
       amount: grandTotal,
-      invoiceId: `POS_${Date.now().toString().slice(-4)}`,
+      invoiceId: billSessionIdRef.current,
       spaceLabel: orderType === 'takeaway' ? 'Counter' : `Table ${tableNumber}`
     });
 
-    if (uri) {
-      QRCode.toDataURL(uri, {
-        width: 180,
-        margin: 1,
-        color: { dark: '#0F172A', light: '#FFFFFF' }
-      }).then(url => setUpiQrDataUrl(url)).catch(() => { });
+    if (!uri) {
+      lastUpiUriRef.current = null;
+      setUpiQrDataUrl(null);
+      return;
     }
-  }, [paymentMethod, grandTotal, restaurantInfo, settingsForm, orderType, tableNumber]);
+
+    if (lastUpiUriRef.current === uri) return;
+
+    let cancelled = false;
+    QRCode.toDataURL(uri, {
+      width: 180,
+      margin: 1,
+      color: { dark: '#0F172A', light: '#FFFFFF' }
+    }).then((url) => {
+      if (!cancelled) {
+        lastUpiUriRef.current = uri;
+        setUpiQrDataUrl(url);
+      }
+    }).catch(() => { });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentMethod, grandTotal, posUpiId, posPayeeName, orderType, tableNumber]);
 
   // Handle Order Submit (Receive Payment & Print)
   const handleSubmitOrder = async () => {

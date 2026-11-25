@@ -94,4 +94,25 @@ describe('UPI QR Code Billing & Payment Specifications', () => {
     assert.ok(setupCode.includes('deviceUpiId'), 'SetupView must have deviceUpiId state');
     assert.ok(setupCode.includes('setDeviceUpiId(upiId)'), 'SetupView must synchronize deviceUpiId with settingsForm');
   });
+
+  test('PosBillingView.jsx keeps UPI QR stable per active bill session without Date.now churn', () => {
+    const posViewPath = path.resolve(__dirname, '../../src/components/Admin/views/PosBillingView.jsx');
+    const posCode = fs.readFileSync(posViewPath, 'utf8');
+    const dashboardCode = fs.readFileSync(adminDashboardPath, 'utf8');
+
+    assert.ok(posCode.includes('billSessionIdRef'), 'PosBillingView must maintain a stable billSessionIdRef per bill session');
+    assert.ok(posCode.includes('lastUpiUriRef'), 'PosBillingView must deduplicate QR generation via lastUpiUriRef');
+    assert.ok(
+      !posCode.includes('invoiceId: `POS_${Date.now().toString().slice(-4)}`'),
+      'PosBillingView must NOT evaluate Date.now() directly inside buildUpiPaymentUri effect'
+    );
+    assert.ok(
+      posCode.includes('[paymentMethod, grandTotal, posUpiId, posPayeeName, orderType, tableNumber]'),
+      'UPI QR effect must depend only on primitive values, not unstable restaurantInfo/settingsForm object references'
+    );
+    assert.ok(
+      dashboardCode.includes('mergedRestaurantInfo'),
+      'AdminDashboard must memoize mergedRestaurantInfo instead of creating inline objects on every poll'
+    );
+  });
 });

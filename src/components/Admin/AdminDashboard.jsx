@@ -3190,6 +3190,10 @@ export default function AdminDashboard({
 
   const safeDishes = Array.isArray(dishes) ? dishes : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
+  const mergedRestaurantInfo = useMemo(() => ({
+    ...(restaurantInfo || {}),
+    ...(settingsForm || {})
+  }), [restaurantInfo, settingsForm]);
 
   const filteredDishes = safeDishes.filter(d => {
     if (!d) return false;
@@ -3870,7 +3874,7 @@ export default function AdminDashboard({
               {/* HOME VIEW (Business Command Center) */}
               {activeTab === 'home' && (
                 <HomeView
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   analyticsData={analyticsData}
                   orders={orders}
                   serviceRequests={serviceRequests}
@@ -3918,7 +3922,7 @@ export default function AdminDashboard({
                   onResolveServiceRequest={handleResolveServiceRequest}
                   onApprovePresenceRequest={handleApprovePresenceRequest}
                   onRejectPresenceRequest={handleRejectPresenceRequest}
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   onPrintQR={handlePrintQR}
                   onDirectPrint={handleDirectBluetoothPrint}
                   onPreviewPrint={handlePreviewPrint}
@@ -3956,7 +3960,7 @@ export default function AdminDashboard({
                     combos={combos}
                     orders={orders}
                     onUpdateStatus={handleUpdateStatus}
-                    restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                    restaurantInfo={mergedRestaurantInfo}
                     settingsForm={settingsForm}
                     token={token}
                     currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
@@ -3986,7 +3990,7 @@ export default function AdminDashboard({
                   categories={safeCategories}
                   dishes={safeDishes}
                   orders={orders}
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   onViewOrders={() => setActiveTab('orders')}
                 />
               )}
@@ -4021,7 +4025,7 @@ export default function AdminDashboard({
                   onToggleBadge={handleToggleBadge}
                   onRefreshData={loadData}
                   onReturnToMenu={onReturnToMenu}
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   analyticsData={analyticsData}
                   currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                   maxDishes={tenantCaps.max_dishes}
@@ -4045,7 +4049,7 @@ export default function AdminDashboard({
                   onPrintAllQRs={handlePrintAllQRs}
                   settingsForm={settingsForm}
                   token={token}
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   capabilities={tenantCaps}
                   onReturnToMenu={onReturnToMenu}
                   onBackToSetup={(drawer = null) => {
@@ -4064,7 +4068,7 @@ export default function AdminDashboard({
               {/* OFFERS & PROMOTIONS VIEW */}
               {activeTab === 'offers' && (
                 <OffersView
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   settingsForm={settingsForm}
                   dishes={dishes}
                   combos={combos}
@@ -4081,7 +4085,7 @@ export default function AdminDashboard({
               {/* CUSTOMERS & GUEST INSIGHTS VIEW */}
               {activeTab === 'customers' && (
                 <CustomersView
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   settingsForm={settingsForm}
                   orders={orders}
                   token={token}
@@ -4097,7 +4101,7 @@ export default function AdminDashboard({
               {/* BILLING & SUBSCRIPTION VIEW (FULL-PAGE WORKSPACE) */}
               {(activeTab === 'billing' || activeTab === 'subscription') && (
                 <BillingView
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   settingsForm={settingsForm}
                   dishes={safeDishes}
                   categories={safeCategories}
@@ -4125,7 +4129,7 @@ export default function AdminDashboard({
                   orders={orders}
                   serviceRequests={serviceRequests}
                   dishes={safeDishes}
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   settingsForm={settingsForm}
                   capabilities={tenantCaps}
                   token={token}
@@ -4142,7 +4146,7 @@ export default function AdminDashboard({
               {/* HELP & SUPPORT CENTER VIEW */}
               {activeTab === 'support' && (
                 <SupportView
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   settingsForm={settingsForm}
                   capabilities={tenantCaps}
                   token={token}
@@ -4159,7 +4163,7 @@ export default function AdminDashboard({
               {activeTab === 'settings' && (
                 <SetupView
                   initialDrawer={initialSetupDrawer}
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   capabilities={tenantCaps}
                   dishes={safeDishes}
                   categories={safeCategories}
@@ -4200,7 +4204,7 @@ export default function AdminDashboard({
               {/* SAFE FALLBACK FOR UNRECOGNIZED / INVALID TABS */}
               {!['home', 'orders', 'floor-map', 'service-requests', 'kds', 'analytics', 'dishes', 'categories', 'combos', 'qr-generator', 'offers', 'customers', 'billing', 'subscription', 'notifications', 'support', 'settings', 'pos'].includes(activeTab) && (
                 <HomeView
-                  restaurantInfo={{ ...(restaurantInfo || {}), ...(settingsForm || {}) }}
+                  restaurantInfo={mergedRestaurantInfo}
                   analyticsData={analyticsData}
                   orders={orders}
                   serviceRequests={serviceRequests}
