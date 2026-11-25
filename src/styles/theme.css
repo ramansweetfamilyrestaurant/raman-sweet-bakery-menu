@@ -56,6 +56,8 @@
   --theme-badge-bg: #FAF8F5;
   --theme-badge-text: #1C1917;
   --dock-btn-text: #0A2315;
+  --theme-btn-text: #FFFFFF;
+  --theme-nav-active-text: #FFFFFF;
 }
 
 /* ========== MULTI-TENANT BRAND THEME PRESETS ========== */
@@ -108,6 +110,8 @@
   --accent-coral: #F43F5E;
   --shadow-menu: 0 4px 16px rgba(10, 35, 21, 0.08);
   --dock-btn-text: #0A2315;
+  --theme-btn-text: #FFFFFF;
+  --theme-nav-active-text: #FFFFFF;
 }
 
 /* Theme 2: Emerald Mint & Teal */
@@ -439,11 +443,11 @@
   --border-light: rgba(34, 211, 238, 0.3);
   --theme-divider: rgba(34, 211, 238, 0.2);
   --theme-nav-bg: #131B2E;
-  --theme-nav-active: linear-gradient(135deg, #0891B2 0%, #0E7490 100%);
+  --theme-nav-active: linear-gradient(135deg, #22D3EE 0%, #0891B2 100%);
   --theme-badge-bg: #1E293B;
   --theme-badge-text: #22D3EE;
   --theme-price-color: #22D3EE;
-  --theme-btn-gradient: linear-gradient(135deg, #0891B2 0%, #06B6D4 100%);
+  --theme-btn-gradient: linear-gradient(135deg, #22D3EE 0%, #06B6D4 100%);
   --theme-btn-secondary-bg: linear-gradient(135deg, #1E293B 0%, #334155 100%);
   --theme-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   --text-primary: #F8FAFC;
@@ -458,6 +462,8 @@
   --theme-modal-border: rgba(34, 211, 238, 0.4);
   --theme-modal-header: #0B0F19;
   --dock-btn-text: #020617;
+  --theme-btn-text: #020617;
+  --theme-nav-active-text: #020617;
 }
 
 * {
@@ -715,6 +721,12 @@ img {
 
 .float-slow {
   animation: floatAnim 4s infinite ease-in-out;
+}
+
+.theme-choice-btn:focus-visible {
+  outline: 2px solid #D4AF37;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.2);
 }
 
 /* Landing Page Mobile Utility Rules */

@@ -18,13 +18,14 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
       <div 
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#FFFFFF',
+          background: 'var(--theme-modal-bg, #FFFFFF)',
+          color: 'var(--text-dark)',
           borderRadius: 'var(--radius-lg)',
           width: '100%',
           maxWidth: '460px',
           maxHeight: '90vh',
           boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--border-light)',
+          border: '1.5px solid var(--theme-modal-border, var(--border-light))',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -34,7 +35,7 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
       >
         {/* Header */}
         <div style={{
-          background: 'linear-gradient(135deg, #0A2315 0%, #123722 100%)',
+          background: 'var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #123722 100%))',
           color: '#FFFFFF',
           padding: '20px',
           position: 'relative'
@@ -135,7 +136,7 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
                   alignItems: 'center',
                   gap: '8px',
                   background: 'var(--primary-emerald)',
-                  color: '#FFFFFF',
+                  color: 'var(--theme-btn-text, #FFFFFF)',
                   padding: '8px 18px',
                   borderRadius: 'var(--radius-pill)',
                   fontSize: '0.84rem',

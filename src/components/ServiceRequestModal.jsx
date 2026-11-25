@@ -154,7 +154,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
           style={{
             width: '100%',
             background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-            color: '#FFFFFF',
+            color: 'var(--theme-btn-text, #FFFFFF)',
             padding: '13px',
             borderRadius: 'var(--radius-pill)',
             fontWeight: 900,

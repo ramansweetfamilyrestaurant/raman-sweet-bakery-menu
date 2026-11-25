@@ -198,7 +198,7 @@ export default function SearchBar({
                   padding: '5px 12px',
                   borderRadius: 'var(--radius-pill)',
                   background: isSelected ? 'var(--theme-nav-active, var(--primary-emerald))' : 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
-                  color: isSelected ? '#FFFFFF' : 'var(--text-dark)',
+                  color: isSelected ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
                   border: isSelected ? '1.5px solid var(--gold-bright)' : '1px solid var(--theme-card-border, var(--border-light))',
                   whiteSpace: 'nowrap',
                   transition: 'var(--transition-fast)',
@@ -239,7 +239,7 @@ export default function SearchBar({
             {activeFilterLabel && (
               <span style={{
                 background: 'var(--theme-nav-active, var(--primary-emerald))',
-                color: '#FFFFFF',
+                color: 'var(--theme-nav-active-text, #FFFFFF)',
                 padding: '1px 8px',
                 borderRadius: '10px',
                 fontSize: '0.68rem',

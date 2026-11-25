@@ -396,7 +396,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                     onClick={(e) => handleAddAction(e, 'full')}
                     style={{
                       background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
-                      color: '#FFFFFF',
+                      color: 'var(--theme-btn-text, #FFFFFF)',
                       border: 'none',
                       padding: '4px 12px',
                       borderRadius: 'var(--radius-pill)',
@@ -417,7 +417,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                   onClick={(e) => handleAddAction(e, 'full')}
                   style={{
                     background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
-                    color: '#FFFFFF',
+                    color: 'var(--theme-btn-text, #FFFFFF)',
                     border: 'none',
                     padding: '4px 14px',
                     borderRadius: 'var(--radius-pill)',

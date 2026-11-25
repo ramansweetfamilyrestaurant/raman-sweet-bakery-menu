@@ -16,6 +16,7 @@ import {
 } from '../middleware/rateLimiters.js';
 import { JWT_SECRET } from '../config/jwt.js';
 import { isAuthoritativeComplimentaryTenant } from '../services/subscriptionState.js';
+import { resolvePlanAllowedThemes } from '../config/themes.js';
 import { exchangeAuthCode } from '../services/authCodeService.js';
 import { checkExpiredSubscriptions } from '../subscriptionCron.js';
 import { verifyQrToken, normalizeSpaceType, normalizeSpaceNumber, validateSpaceCapacity, generateRestaurantQrSecret } from '../utils/qrSecurity.js';
@@ -778,7 +779,7 @@ router.get('/menu-bundle', async (req, res) => {
       dual_printer_enabled: dualPrinterEnabled,
       custom_domain: resto.custom_domain || '',
       theme_color: resto.theme_color || 'gold',
-      allowed_themes: isComplimentary ? 'ALL' : (saasP.allowed_themes || (planTierKey === 'basic' ? 'gold' : planTierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL')),
+      allowed_themes: isComplimentary ? 'ALL' : resolvePlanAllowedThemes(saasP, planTierKey),
       kds_pin_configured: Boolean(resto.kds_pin_hash),
       latitude: resto.latitude !== undefined && resto.latitude !== null ? Number(resto.latitude) : null,
       longitude: resto.longitude !== undefined && resto.longitude !== null ? Number(resto.longitude) : null,
@@ -979,7 +980,7 @@ router.get('/info', async (req, res) => {
       dual_printer_enabled: dualPrinterEnabled,
       max_combos: maxCombos,
       theme_color: resto.theme_color || 'gold',
-      allowed_themes: isComplimentary ? 'ALL' : (saasPlan.allowed_themes || (planTierKey === 'basic' ? 'gold' : planTierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL')),
+      allowed_themes: isComplimentary ? 'ALL' : resolvePlanAllowedThemes(saasPlan, planTierKey),
       scan_count: resto.scan_count || 0,
       latitude: resto.latitude !== undefined && resto.latitude !== null ? Number(resto.latitude) : null,
       longitude: resto.longitude !== undefined && resto.longitude !== null ? Number(resto.longitude) : null,

@@ -104,7 +104,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 padding: '3px 9px',
                 borderRadius: 'var(--radius-pill)',
                 background: selectedPortion === 'half' ? 'var(--primary-emerald)' : 'transparent',
-                color: selectedPortion === 'half' ? '#FFFFFF' : 'var(--primary-emerald)'
+                color: selectedPortion === 'half' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--primary-emerald)'
               }}
             >
               Half {formatPriceNumber(dish.price_half)}
@@ -121,7 +121,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 padding: '3px 9px',
                 borderRadius: 'var(--radius-pill)',
                 background: selectedPortion === 'full' ? 'var(--primary-emerald)' : 'transparent',
-                color: selectedPortion === 'full' ? '#FFFFFF' : 'var(--primary-emerald)'
+                color: selectedPortion === 'full' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--primary-emerald)'
               }}
             >
               Full {formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}

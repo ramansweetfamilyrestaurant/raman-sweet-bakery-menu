@@ -38,6 +38,12 @@ import {
   resolveBusinessProfile,
   resolveBannerBadge
 } from '../config/businessTaxonomy.js';
+import {
+  isValidThemeKey,
+  resolveThemeKey,
+  resolvePlanAllowedThemes,
+  isThemeAllowedForPlan
+} from '../config/themes.js';
 
 let sharpModule = null;
 async function getSharp() {
@@ -346,7 +352,8 @@ router.get('/me', authenticateToken, async (req, res) => {
     const tierKey = (restos[0]?.plan_tier || 'pro').toLowerCase();
     const planRows = await query('SELECT allowed_themes, theme_color FROM saas_plans WHERE LOWER(key) = $1', [tierKey]);
     const saasPlan = planRows[0] || {};
-    const allowedThemes = saasPlan.allowed_themes || (tierKey === 'basic' ? 'gold' : tierKey === 'pro' ? 'gold,emerald,crimson,navy' : 'ALL');
+    const isComplimentaryResto = restos[0] ? isAuthoritativeComplimentaryTenant(restos[0]) : false;
+    const allowedThemes = isComplimentaryResto ? 'ALL' : resolvePlanAllowedThemes(saasPlan, tierKey);
 
     const { kds_pin_hash, qr_secret, ...safeRestoObj } = (restos[0] || {});
     const resto = restos[0] ? {
@@ -1667,6 +1674,49 @@ const handleUpdateSettings = async (req, res) => {
       }
     }
 
+    let cleanTheme = undefined;
+    if (theme_color !== undefined && theme_color !== null) {
+      const rawTheme = String(theme_color).trim();
+      if (rawTheme !== '') {
+        if (!isValidThemeKey(rawTheme)) {
+          return res.status(400).json({ error: 'Invalid luxury theme selected.' });
+        }
+        cleanTheme = resolveThemeKey(rawTheme);
+
+        if (req.user?.role !== 'superadmin') {
+          const themeRestoRows = await query(
+            'SELECT plan_tier, subscription_type, mandate_status, plan_expires_at, plan_price, theme_color FROM restaurants WHERE id = $1',
+            [targetId]
+          );
+          if (!themeRestoRows || themeRestoRows.length === 0) {
+            return res.status(404).json({ error: 'Restaurant not found' });
+          }
+          const currentResto = themeRestoRows[0];
+          const currentDbTheme = resolveThemeKey(currentResto.theme_color || 'gold');
+          const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
+
+          if (cleanTheme === currentDbTheme) {
+            cleanTheme = null;
+          } else if (!isComplimentary) {
+            const currentPlanTier = (currentResto.plan_tier || 'basic').toLowerCase();
+            const themePlanRows = await query('SELECT allowed_themes FROM saas_plans WHERE LOWER(key) = $1', [currentPlanTier]);
+            const allowedThemes = resolvePlanAllowedThemes(themePlanRows?.[0], currentPlanTier);
+            if (!isThemeAllowedForPlan(cleanTheme, allowedThemes)) {
+              return res.status(403).json({
+                success: false,
+                error: 'feature_locked',
+                feature: 'allowed_themes',
+                allowed_themes: allowedThemes,
+                message: 'This luxury theme is not included in your current SaaS plan. Please upgrade your plan to unlock additional themes.'
+              });
+            }
+          }
+        }
+      } else {
+        cleanTheme = null;
+      }
+    }
+
     const visJson = typeof filters_visibility === 'object' ? JSON.stringify(filters_visibility) : filters_visibility;
 
     const processedLogo = logo !== undefined ? await processExternalImageUrl(logo, targetId, 'logos') : null;
@@ -2060,7 +2110,7 @@ const handleUpdateSettings = async (req, res) => {
         resto_type !== undefined ? resto_type : null,
         whatsapp_number !== undefined ? whatsapp_number : null,
         whatsapp_enabled !== undefined ? (whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0) : null,
-        theme_color !== undefined ? theme_color : null,
+        cleanTheme !== undefined ? cleanTheme : null,
         latitude !== undefined && latitude !== null ? Number(latitude) : null,
         longitude !== undefined && longitude !== null ? Number(longitude) : null,
         max_distance_meters !== undefined ? Number(max_distance_meters) : null,
@@ -2168,7 +2218,7 @@ const handleUpdateSettings = async (req, res) => {
             resto_type !== undefined ? resto_type : null,
             whatsapp_number !== undefined ? whatsapp_number : null,
             whatsapp_enabled !== undefined ? (whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0) : null,
-            theme_color !== undefined ? theme_color : null,
+            cleanTheme !== undefined ? cleanTheme : null,
             latitude !== undefined && latitude !== null ? Number(latitude) : null,
             longitude !== undefined && longitude !== null ? Number(longitude) : null,
             max_distance_meters !== undefined ? Number(max_distance_meters) : null,

@@ -34,7 +34,7 @@ export default function CategoryNav({ categories, selectedCategory, onSelectCate
             background: selectedCategory === 'all' 
               ? 'var(--theme-nav-active, var(--primary-emerald))' 
               : 'var(--theme-nav-bg, var(--bg-card, #FFFFFF))',
-            color: selectedCategory === 'all' ? '#FFFFFF' : 'var(--text-dark)',
+            color: selectedCategory === 'all' ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
             border: selectedCategory === 'all' 
               ? '1.5px solid var(--gold-bright)' 
               : '1px solid var(--theme-card-border, var(--border-light))',
@@ -67,7 +67,7 @@ export default function CategoryNav({ categories, selectedCategory, onSelectCate
                 background: isSelected 
                   ? 'var(--theme-nav-active, var(--primary-emerald))' 
                   : 'var(--theme-nav-bg, var(--bg-card, #FFFFFF))',
-                color: isSelected ? '#FFFFFF' : 'var(--text-dark)',
+                color: isSelected ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
                 border: isSelected 
                   ? '1.5px solid var(--gold-bright)' 
                   : '1px solid var(--theme-card-border, var(--border-light))',

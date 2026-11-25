@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Navigation, Store, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, AlertCircle, Sparkles, Search, ExternalLink, Compass, Map, Lock, ShieldCheck } from 'lucide-react';
 import { uploadImage, updateTenantSettings, completeOnboarding } from '../../api/client';
 import LocationPickerModal from '../Common/LocationPickerModal';
-import { THEME_LIST } from '../../constants/themes';
+import { THEME_LIST, resolveTheme, isThemeAllowedForPlan } from '../../constants/themes';
+import { resolveTenantCapabilities } from '../../utils/planCapabilities';
 import {
   BUSINESS_TYPES,
   FOOD_TYPES,
@@ -625,43 +626,63 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   🎨 Choose Menu Luxury Theme
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
-                  {THEME_LIST.map(t => {
-                    const isSelected = (formData.theme_color || 'gold') === t.key;
-                    return (
-                      <div
-                        key={t.key}
-                        onClick={() => setFormData(prev => ({ ...prev, theme_color: t.key }))}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '8px 10px',
-                          borderRadius: '10px',
-                          border: isSelected ? `2px solid ${t.accent}` : '1px solid rgba(255,255,255,0.12)',
-                          background: isSelected ? 'rgba(223, 186, 103, 0.15)' : 'rgba(255,255,255,0.03)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <span style={{
-                          width: '18px',
-                          height: '18px',
-                          borderRadius: '50%',
-                          background: t.color,
-                          border: `2.5px solid ${t.accent}`,
-                          flexShrink: 0
-                        }} />
-                        <div style={{ minWidth: 0 }}>
-                          <strong style={{ fontSize: '0.74rem', color: isSelected ? '#DFBA67' : '#FFFFFF', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {t.name.split(' ')[0]}
-                          </strong>
-                          <span style={{ fontSize: '0.64rem', color: '#94A3B8', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {t.desc.split('/')[0]}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {(() => {
+                    const allowedThemesStr = resolveTenantCapabilities(restaurantInfo)?.allowed_themes || restaurantInfo?.allowed_themes || 'ALL';
+                    const activeThemeKey = resolveTheme(formData.theme_color).key;
+                    return THEME_LIST.map(t => {
+                      const isAllowed = isThemeAllowedForPlan(t.key, allowedThemesStr);
+                      const isSelected = activeThemeKey === t.key;
+                      return (
+                        <button
+                          key={t.key}
+                          type="button"
+                          className="theme-choice-btn"
+                          aria-pressed={isAllowed ? isSelected : undefined}
+                          aria-label={!isAllowed ? `${t.name} - Plan upgrade required` : t.name}
+                          onClick={() => {
+                            if (!isAllowed) {
+                              setErrorMsg(`'${t.name}' theme requires a higher plan. You can upgrade anytime after setup.`);
+                              return;
+                            }
+                            setErrorMsg('');
+                            setFormData(prev => ({ ...prev, theme_color: t.key }));
+                          }}
+                          style={{
+                            width: '100%',
+                            textAlign: 'left',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 10px',
+                            borderRadius: '10px',
+                            border: isSelected ? `2px solid ${t.accent}` : '1px solid rgba(255,255,255,0.12)',
+                            background: isSelected ? 'rgba(223, 186, 103, 0.15)' : (isAllowed ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)'),
+                            opacity: isAllowed ? 1 : 0.6,
+                            cursor: isAllowed ? 'pointer' : 'not-allowed',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            background: t.color,
+                            border: `2.5px solid ${t.accent}`,
+                            flexShrink: 0
+                          }} />
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <strong style={{ fontSize: '0.74rem', color: isSelected ? '#DFBA67' : '#FFFFFF', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name.split(' ')[0]}</span>
+                              {!isAllowed && <Lock size={11} color="#FBBF24" style={{ flexShrink: 0 }} />}
+                            </strong>
+                            <span style={{ fontSize: '0.64rem', color: '#94A3B8', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {!isAllowed ? 'Plan Upgrade' : t.desc.split('/')[0]}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
 

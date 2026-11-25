@@ -1,4 +1,4 @@
-﻿// Canonical Luxury Brand Theme Registry for TouchQR
+// Canonical Luxury Brand Theme Registry for TouchQR
 export const CUSTOMER_MENU_THEMES = {
   gold: {
     id: 'gold',
@@ -96,7 +96,7 @@ export const DEFAULT_THEME = 'gold';
 export function resolveTheme(themeInput) {
   if (!themeInput) return CUSTOMER_MENU_THEMES.gold;
   const key = String(themeInput).toLowerCase().trim();
-  if (CUSTOMER_MENU_THEMES[key]) {
+  if (Object.prototype.hasOwnProperty.call(CUSTOMER_MENU_THEMES, key)) {
     return CUSTOMER_MENU_THEMES[key];
   }
   if (key === 'cyber') return CUSTOMER_MENU_THEMES.dark;
@@ -107,5 +107,19 @@ export function resolveTheme(themeInput) {
 export function isValidTheme(themeKey) {
   if (!themeKey) return false;
   const key = String(themeKey).toLowerCase().trim();
-  return Boolean(CUSTOMER_MENU_THEMES[key] || key === 'cyber' || key === 'default');
+  return Object.prototype.hasOwnProperty.call(CUSTOMER_MENU_THEMES, key) || key === 'cyber' || key === 'default';
+}
+
+export function isThemeAllowedForPlan(themeKey, allowedThemesStr) {
+  const targetKey = resolveTheme(themeKey).key;
+  if (!allowedThemesStr) return true;
+  const raw = String(allowedThemesStr).trim();
+  if (!raw || raw.toUpperCase() === 'ALL') return true;
+  const allowedKeys = raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item !== '' && isValidTheme(item))
+    .map((item) => resolveTheme(item).key);
+  if (allowedKeys.length === 0) return targetKey === DEFAULT_THEME;
+  return allowedKeys.includes(targetKey);
 }

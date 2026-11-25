@@ -1,4 +1,5 @@
 import { resolveBusinessProfile, getAvailableSpaceTypesForBusiness } from '../config/businessTaxonomy.js';
+import { classifyPlanTier, resolvePlanAllowedThemes } from '../config/themes.js';
 
 /**
  * CANONICAL SUBSCRIPTION STATE MACHINE & RESOLUTION HELPER
@@ -370,8 +371,7 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
   const isCatering = businessType === 'catering';
 
   const isValTrue = (val, def = true) => (val !== undefined && val !== null ? (val === 1 || val === true || val === '1' || val === 'true') : def);
-  const isUnlimitedPlan = tierKey.includes('enterprise') || tierKey.includes('vip') || tierKey === 'vip_ultra' || tierKey === 'vip_ultra_plan';
-  const isBasicPlan = tierKey === 'basic' || tierKey.endsWith('_basic') || tierKey.endsWith('basic');
+  const { isUnlimitedPlan, isBasicPlan } = classifyPlanTier(tierKey);
 
   // Option B: Quotas strictly respect the granted plan tier and preserve explicit limits
   const maxDishes = isUnlimitedPlan ? 9999 : ((resto?.max_dishes !== undefined && resto?.max_dishes !== null) ? Number(resto.max_dishes) : ((plan.max_dishes !== undefined && plan.max_dishes !== null) ? Number(plan.max_dishes) : ((plan.dish_limit !== undefined && plan.dish_limit !== null) ? Number(plan.dish_limit) : (isBasicPlan ? 50 : 500))));
@@ -442,7 +442,7 @@ export function resolveAuthoritativeEntitlements({ resto, sub = null, saasPlan =
     watermark_removal_enabled: isValTrue(plan.watermark_removal_enabled, true),
     custom_domain_enabled: isValTrue(plan.custom_domain_enabled, isUnlimitedPlan),
     staff_roles_enabled: isValTrue(plan.staff_roles_enabled, true),
-    allowed_themes: (plan.allowed_themes || (isBasicPlan ? 'gold' : !isUnlimitedPlan ? 'gold,emerald,crimson,navy' : 'ALL'))
+    allowed_themes: resolvePlanAllowedThemes(plan, tierKey)
   };
 
   const feature_matrix = {

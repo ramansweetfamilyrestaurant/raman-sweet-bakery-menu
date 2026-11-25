@@ -7,6 +7,7 @@ import { getSpaceConfig } from '../../utils/businessTaxonomy';
 import { resolveTenantCapabilities } from '../../utils/planCapabilities';
 import { soundManager, unlockNotificationSound, playKitchenSiren, stopKitchenSiren, playPresenceAlert, playWaiterAlert, subscribeAudioState, isNotificationSoundReady } from '../../utils/soundManager';
 import { getCurrencySymbol, formatPriceNumber } from '../../utils/currencyHelper';
+import { resolveTheme } from '../../constants/themes';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
 import ComboFormModal from './ComboFormModal';
@@ -2380,9 +2381,7 @@ export default function AdminDashboard({
   // Sync active luxury brand theme with document attribute
   useEffect(() => {
     const currentTheme = settingsForm?.theme_color || restaurantInfo?.theme_color || 'gold';
-    if (currentTheme) {
-      document.documentElement.setAttribute('data-theme', currentTheme);
-    }
+    document.documentElement.setAttribute('data-theme', resolveTheme(currentTheme).key);
   }, [settingsForm?.theme_color, restaurantInfo?.theme_color]);
 
   useEffect(() => {
@@ -3241,7 +3240,7 @@ export default function AdminDashboard({
 
       setSettingsSavedMsg(true);
       if (payload.theme_color) {
-        document.documentElement.setAttribute('data-theme', payload.theme_color);
+        document.documentElement.setAttribute('data-theme', resolveTheme(payload.theme_color).key);
       }
       await loadData();
       setTimeout(() => setSettingsSavedMsg(false), 3000);

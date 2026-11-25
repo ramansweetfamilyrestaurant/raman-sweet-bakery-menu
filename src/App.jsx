@@ -2500,7 +2500,7 @@ export default function App() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: '#0A2315',
+        background: 'var(--header-gradient, #0A2315)',
         color: '#FFFFFF',
         display: 'flex',
         alignItems: 'center',
@@ -2510,11 +2510,11 @@ export default function App() {
       }}>
         <div style={{
           maxWidth: '420px',
-          background: '#FFFFFF',
-          color: '#1C1917',
+          background: 'var(--theme-modal-bg, #FFFFFF)',
+          color: 'var(--text-dark, #1C1917)',
           borderRadius: '24px',
           padding: '36px 24px',
-          border: '2px solid #D4AF37',
+          border: '2px solid var(--gold-bright, #D4AF37)',
           boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
         }}>
           <div style={{
@@ -2531,7 +2531,7 @@ export default function App() {
             <ShieldAlert size={32} />
           </div>
 
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0A2315', marginBottom: '8px' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary-emerald, #0A2315)', marginBottom: '8px' }}>
             {info.name}
           </h2>
           <div style={{
@@ -2547,7 +2547,7 @@ export default function App() {
             SUBSCRIPTION SUSPENDED
           </div>
 
-          <p style={{ fontSize: '0.86rem', color: '#666157', marginBottom: '24px', lineHeight: 1.4 }}>
+          <p style={{ fontSize: '0.86rem', color: 'var(--text-muted, #666157)', marginBottom: '24px', lineHeight: 1.4 }}>
             The Digital Menu service for this business is currently suspended or past subscription renewal. Please contact business administration.
           </p>
 
@@ -2557,8 +2557,8 @@ export default function App() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              background: '#0A2315',
-              color: '#DFBA67',
+              background: 'var(--theme-btn-gradient, #0A2315)',
+              color: 'var(--theme-btn-text, #DFBA67)',
               padding: '12px 24px',
               borderRadius: '9999px',
               fontWeight: 800,
@@ -2906,7 +2906,7 @@ export default function App() {
               padding: '4px 10px',
               borderRadius: 'var(--radius-pill)',
               background: layoutMode === 'list' ? 'var(--primary-emerald)' : 'transparent',
-              color: layoutMode === 'list' ? '#FFFFFF' : 'var(--text-muted)',
+              color: layoutMode === 'list' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
               fontSize: '0.75rem',
               fontWeight: 700,
               display: 'flex',
@@ -2930,7 +2930,7 @@ export default function App() {
               padding: '4px 10px',
               borderRadius: 'var(--radius-pill)',
               background: layoutMode === 'grid' ? 'var(--primary-emerald)' : 'transparent',
-              color: layoutMode === 'grid' ? '#FFFFFF' : 'var(--text-muted)',
+              color: layoutMode === 'grid' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
               fontSize: '0.75rem',
               fontWeight: 700,
               display: 'flex',
@@ -2978,17 +2978,17 @@ export default function App() {
           <div style={{
             textAlign: 'center',
             padding: '60px 20px',
-            background: '#FFFFFF',
+            background: 'var(--theme-modal-bg, #FFFFFF)',
             borderRadius: '24px',
             border: '1.5px solid #FEE2E2',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
+            boxShadow: 'var(--theme-shadow, 0 10px 30px rgba(0,0,0,0.06))',
             margin: '20px 0'
           }}>
             <div style={{ fontSize: '4rem', marginBottom: '14px' }}>❌</div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#DC2626', margin: '0 0 8px 0' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#EF4444', margin: '0 0 8px 0' }}>
               Business / Outlet Not Found
             </h2>
-            <p style={{ fontSize: '0.88rem', color: '#64748B', maxWidth: '420px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted, #64748B)', maxWidth: '420px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
               Yeh outlet ab platform par active nahi hai ya iska link delete kar diya gaya hai.
             </p>
             <button
@@ -2997,12 +2997,12 @@ export default function App() {
                 padding: '12px 26px',
                 borderRadius: '9999px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-                color: '#FFD700',
+                background: 'var(--theme-btn-gradient, linear-gradient(135deg, #0A2315 0%, #164E2A 100%))',
+                color: 'var(--theme-btn-text, #FFD700)',
                 fontWeight: 900,
                 fontSize: '0.88rem',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(10,35,21,0.25)'
+                boxShadow: 'var(--theme-shadow, 0 4px 14px rgba(10,35,21,0.25))'
               }}
             >
               🏠 Go to Main Platform
@@ -3012,17 +3012,17 @@ export default function App() {
           <div style={{
             textAlign: 'center',
             padding: '60px 20px',
-            background: '#FFFFFF',
+            background: 'var(--theme-modal-bg, #FFFFFF)',
             borderRadius: '24px',
-            border: '1.5px solid #FEF3C7',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
+            border: '1.5px solid var(--theme-modal-border, #FEF3C7)',
+            boxShadow: 'var(--theme-shadow, 0 10px 30px rgba(0,0,0,0.06))',
             margin: '20px 0'
           }}>
             <div style={{ fontSize: '4rem', marginBottom: '14px' }}>🔒</div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#B45309', margin: '0 0 8px 0' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#F59E0B', margin: '0 0 8px 0' }}>
               Business Temporarily Offline
             </h2>
-            <p style={{ fontSize: '0.88rem', color: '#64748B', maxWidth: '420px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted, #64748B)', maxWidth: '420px', margin: '0 auto 20px auto', lineHeight: 1.5 }}>
               <strong>{info?.name || 'Yeh outlet'}</strong> ki digital menu service filhal suspended hai. Kripya business owner se sampark karein.
             </p>
           </div>
@@ -3057,7 +3057,7 @@ export default function App() {
                   padding: '9px 20px',
                   borderRadius: 'var(--radius-pill)',
                   background: 'var(--theme-btn-gradient, var(--gold-gradient))',
-                  color: 'var(--dock-btn-text, #0A2315)',
+                  color: 'var(--theme-btn-text, #FFFFFF)',
                   border: 'none',
                   fontWeight: 800,
                   fontSize: '0.82rem',
@@ -3253,7 +3253,7 @@ export default function App() {
                                         aria-label="Increase quantity"
                                         style={{
                                           background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                                          color: '#FFFFFF',
+                                          color: 'var(--theme-btn-text, #FFFFFF)',
                                           border: 'none',
                                           width: '22px',
                                           height: '22px',
@@ -3295,7 +3295,7 @@ export default function App() {
                                 }}
                                 style={{
                                   background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                                  color: '#FFFFFF',
+                                  color: 'var(--theme-btn-text, #FFFFFF)',
                                   border: 'none',
                                   padding: '4px 9px',
                                   borderRadius: 'var(--radius-pill)',
@@ -3557,7 +3557,7 @@ export default function App() {
                                 aria-label="Increase combo quantity"
                                 style={{
                                   background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                                  color: '#FFFFFF',
+                                  color: 'var(--theme-btn-text, #FFFFFF)',
                                   border: 'none',
                                   width: '22px',
                                   height: '22px',
@@ -3588,7 +3588,7 @@ export default function App() {
                             }}
                             style={{
                               background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                              color: '#FFFFFF',
+                              color: 'var(--theme-btn-text, #FFFFFF)',
                               border: 'none',
                               padding: '5px 8px',
                               borderRadius: 'var(--radius-pill)',
@@ -3716,7 +3716,7 @@ export default function App() {
                 style={{
                   width: '100%',
                   background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                  color: '#FFFFFF',
+                  color: 'var(--theme-btn-text, #FFFFFF)',
                   padding: '12px 20px',
                   borderRadius: 'var(--radius-pill)',
                   fontWeight: 900,
@@ -3738,7 +3738,7 @@ export default function App() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '1rem', fontWeight: 900, color: '#FFFFFF' }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--theme-btn-text, #FFFFFF)' }}>
                     {(() => {
                       const sym = getCurrencySymbol(info?.currency_symbol);
                       const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -4063,7 +4063,7 @@ export default function App() {
                                     aria-label="Increase quantity"
                                     style={{
                                       background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                                      color: '#FFFFFF',
+                                      color: 'var(--theme-btn-text, #FFFFFF)',
                                       border: 'none',
                                       width: '26px',
                                       height: '26px',
@@ -4215,7 +4215,7 @@ export default function App() {
                                       gap: '6px',
                                       transition: 'all 0.15s ease',
                                       background: orderTypeChoice === 'takeaway' ? 'var(--primary-emerald, #10B981)' : 'transparent',
-                                      color: orderTypeChoice === 'takeaway' ? '#FFFFFF' : 'var(--text-muted, #64748B)',
+                                      color: orderTypeChoice === 'takeaway' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted, #64748B)',
                                       boxShadow: orderTypeChoice === 'takeaway' ? '0 1px 4px rgba(16,185,129,0.3)' : 'none'
                                     }}
                                   >
@@ -4420,7 +4420,7 @@ export default function App() {
                           style={{
                             width: '100%',
                             background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                            color: '#FFFFFF',
+                            color: 'var(--theme-btn-text, #FFFFFF)',
                             padding: '14px 18px',
                             borderRadius: 'var(--radius-pill)',
                             fontWeight: 900,
@@ -4620,7 +4620,7 @@ export default function App() {
               style={{
                 width: '100%',
                 background: 'var(--theme-btn-gradient, linear-gradient(135deg, #EAB308 0%, #CA8A04 100%))',
-                color: '#FFFFFF',
+                color: 'var(--theme-btn-text, #FFFFFF)',
                 padding: '13px',
                 borderRadius: 'var(--radius-pill)',
                 fontWeight: 900,
@@ -4722,7 +4722,7 @@ export default function App() {
                   fontSize: '0.94rem',
                   fontWeight: 700,
                   background: selectedCategory === 'all' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
-                  color: selectedCategory === 'all' ? '#FFFFFF' : 'var(--primary-emerald)',
+                  color: selectedCategory === 'all' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--primary-emerald)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -4749,7 +4749,7 @@ export default function App() {
                       fontSize: '0.94rem',
                       fontWeight: 700,
                       background: String(selectedCategory) === String(cat.id) ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
-                      color: String(selectedCategory) === String(cat.id) ? '#FFFFFF' : 'var(--text-dark)',
+                      color: String(selectedCategory) === String(cat.id) ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-dark)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',

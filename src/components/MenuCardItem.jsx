@@ -280,7 +280,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 padding: '2px 8px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'half' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
-                color: portionMode === 'half' ? '#FFFFFF' : 'var(--text-muted)',
+                color: portionMode === 'half' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
                 border: portionMode === 'half' ? '1px solid var(--primary-emerald)' : '1px solid var(--border-light)',
                 cursor: 'pointer'
               }}
@@ -300,7 +300,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 padding: '2px 8px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'full' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
-                color: portionMode === 'full' ? '#FFFFFF' : 'var(--text-muted)',
+                color: portionMode === 'full' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
                 border: portionMode === 'full' ? '1px solid var(--primary-emerald)' : '1px solid var(--border-light)',
                 cursor: 'pointer'
               }}
@@ -438,7 +438,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               }}
               style={{
                 background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
-                color: '#FFFFFF',
+                color: 'var(--theme-btn-text, #FFFFFF)',
                 border: 'none',
                 padding: '4px 10px',
                 borderRadius: 'var(--radius-pill)',

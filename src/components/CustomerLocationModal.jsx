@@ -338,7 +338,7 @@ export default function CustomerLocationModal({
               position: 'absolute',
               top: '16px',
               right: '16px',
-              background: '#F1F5F9',
+              background: 'var(--bg-secondary, #F1F5F9)',
               border: 'none',
               borderRadius: '50%',
               width: '32px',
@@ -347,7 +347,7 @@ export default function CustomerLocationModal({
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              color: '#64748B'
+              color: 'var(--text-muted, #64748B)'
             }}
           >
             <X size={16} />
@@ -374,7 +374,7 @@ export default function CustomerLocationModal({
               <MapPin size={32} />
             </div>
 
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)', margin: '0 0 6px 0' }}>
               Verify your location
             </h3>
 
@@ -394,7 +394,7 @@ export default function CustomerLocationModal({
               </span>
             )}
 
-            <p style={{ fontSize: '0.86rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 20px 0' }}>
+            <p style={{ fontSize: '0.86rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, margin: '0 0 20px 0' }}>
               {spaceType === 'room'
                 ? 'To place an order from this room, we need to verify that you are currently at the hotel.'
                 : spaceType === 'cinema_seat' || spaceType === 'cinema'
@@ -433,7 +433,7 @@ export default function CustomerLocationModal({
                   marginTop: '12px',
                   background: 'none',
                   border: 'none',
-                  color: '#64748B',
+                  color: 'var(--text-muted, #64748B)',
                   fontSize: '0.80rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -465,11 +465,11 @@ export default function CustomerLocationModal({
               <Compass size={32} className="animate-spin" />
             </div>
 
-            <h3 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+            <h3 style={{ fontSize: '1.20rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)', margin: '0 0 8px 0' }}>
               {status === 'requesting_location' ? 'Acquiring GPS location...' : 'Verifying premises boundary...'}
             </h3>
 
-            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 18px 0' }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, margin: '0 0 18px 0' }}>
               {status === 'requesting_location'
                 ? 'Please tap "Allow" if your browser displays a permission prompt.'
                 : 'Validating premises ordering boundary with server...'}
@@ -479,8 +479,8 @@ export default function CustomerLocationModal({
               width: '100%',
               padding: '12px',
               borderRadius: '12px',
-              background: '#F8FAFC',
-              border: '1px solid #E2E8F0',
+              background: 'var(--bg-secondary, #F8FAFC)',
+              border: '1px solid var(--theme-card-border, #E2E8F0)',
               fontSize: '0.80rem',
               color: '#0284C7',
               fontWeight: 800,
@@ -518,7 +518,7 @@ export default function CustomerLocationModal({
               Location Verified!
             </h3>
 
-            <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5, margin: 0 }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted, #475569)', lineHeight: 1.5, margin: 0 }}>
               You are on premises. Digital ordering is now enabled.
             </p>
           </>
@@ -543,11 +543,11 @@ export default function CustomerLocationModal({
               <AlertCircle size={32} />
             </div>
 
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#991B1B', margin: '0 0 8px 0' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#EF4444', margin: '0 0 8px 0' }}>
               You appear to be outside the ordering area.
             </h3>
 
-            <p style={{ fontSize: '0.82rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
               {errorMsg || 'Orders can only be placed while physically present at the premises.'}
             </p>
 
@@ -559,8 +559,8 @@ export default function CustomerLocationModal({
                 padding: '13px 20px',
                 borderRadius: '14px',
                 border: 'none',
-                background: '#0F172A',
-                color: '#FFFFFF',
+                background: 'var(--theme-btn-gradient, #0F172A)',
+                color: 'var(--theme-btn-text, #FFFFFF)',
                 fontWeight: 900,
                 fontSize: '0.90rem',
                 cursor: 'pointer',
@@ -595,28 +595,28 @@ export default function CustomerLocationModal({
               <Smartphone size={32} />
             </div>
 
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 6px 0' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)', margin: '0 0 6px 0' }}>
               Check Location Services
             </h3>
 
-            <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5, margin: '0 0 14px 0' }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted, #475569)', lineHeight: 1.5, margin: '0 0 14px 0' }}>
               {errorMsg || "Couldn't get your current location. Please make sure Location Services are turned on, then try again."}
             </p>
 
             <div style={{
-              background: '#F8FAFC',
-              border: '1px solid #E2E8F0',
+              background: 'var(--bg-secondary, #F8FAFC)',
+              border: '1px solid var(--theme-card-border, #E2E8F0)',
               borderRadius: '14px',
               padding: '12px 14px',
               fontSize: '0.78rem',
-              color: '#334155',
+              color: 'var(--text-dark, #334155)',
               lineHeight: 1.5,
               textAlign: 'left',
               marginBottom: '16px',
               width: '100%',
               boxSizing: 'border-box'
             }}>
-              <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>📱 How to turn on:</strong>
+              <strong style={{ display: 'block', color: 'var(--text-dark, #0F172A)', marginBottom: '4px' }}>📱 How to turn on:</strong>
               • <strong>Android:</strong> Swipe down notification bar from the top of your screen and tap the <strong>Location / GPS</strong> tile.<br />
               • <strong>iPhone:</strong> Open <strong>Settings ➔ Privacy & Security ➔ Location Services</strong> and toggle <strong>ON</strong>.
             </div>
@@ -666,11 +666,11 @@ export default function CustomerLocationModal({
               <Lock size={32} />
             </div>
 
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)', margin: '0 0 8px 0' }}>
               Location permission is required for live ordering
             </h3>
 
-            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
               To place an order from {tableLabel || `this ${terminology.spaceLabel.toLowerCase()}`}, please grant location access when prompted by your browser.
             </p>
 
@@ -718,24 +718,24 @@ export default function CustomerLocationModal({
               <Lock size={32} />
             </div>
 
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)', margin: '0 0 8px 0' }}>
               Location permission is blocked
             </h3>
 
             <div style={{
-              background: '#F8FAFC',
-              border: '1px solid #E2E8F0',
+              background: 'var(--bg-secondary, #F8FAFC)',
+              border: '1px solid var(--theme-card-border, #E2E8F0)',
               borderRadius: '14px',
               padding: '12px 14px',
               fontSize: '0.78rem',
-              color: '#334155',
+              color: 'var(--text-dark, #334155)',
               lineHeight: 1.5,
               textAlign: 'left',
               marginBottom: '16px',
               width: '100%',
               boxSizing: 'border-box'
             }}>
-              <strong style={{ display: 'block', color: '#0F172A', marginBottom: '4px' }}>🔒 How to unblock in browser:</strong>
+              <strong style={{ display: 'block', color: 'var(--text-dark, #0F172A)', marginBottom: '4px' }}>🔒 How to unblock in browser:</strong>
               1. Tap the 🔒 <strong>Lock</strong> or ⓘ icon in your browser address bar (top).<br />
               2. Tap <strong>Permissions ➔ Location</strong> and select <strong>Allow</strong>.<br />
               3. Tap <strong>Try Again</strong> below.
@@ -785,11 +785,11 @@ export default function CustomerLocationModal({
               <AlertCircle size={32} />
             </div>
 
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)', margin: '0 0 8px 0' }}>
               Location verification timed out
             </h3>
 
-            <p style={{ fontSize: '0.82rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
               Getting your location is taking longer than expected. Please check your connection and Location Services, then try again.
             </p>
 
@@ -801,8 +801,8 @@ export default function CustomerLocationModal({
                 padding: '13px 20px',
                 borderRadius: '14px',
                 border: 'none',
-                background: '#0F172A',
-                color: '#FFFFFF',
+                background: 'var(--theme-btn-gradient, #0F172A)',
+                color: 'var(--theme-btn-text, #FFFFFF)',
                 fontWeight: 900,
                 fontSize: '0.90rem',
                 cursor: 'pointer',
@@ -837,11 +837,11 @@ export default function CustomerLocationModal({
               <Compass size={32} />
             </div>
 
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)', margin: '0 0 8px 0' }}>
               Low GPS Accuracy
             </h3>
 
-            <p style={{ fontSize: '0.82rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
               {errorMsg || `GPS signal accuracy is too weak${accuracyVal ? ` (±${accuracyVal}m)` : ''}. Please move closer to a window or ensure High Accuracy Location is enabled.`}
             </p>
 
@@ -889,11 +889,11 @@ export default function CustomerLocationModal({
               <AlertCircle size={32} />
             </div>
 
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)', margin: '0 0 8px 0' }}>
               Invalid {terminology.spaceLabel} QR
             </h3>
 
-            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 18px 0' }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, margin: '0 0 18px 0' }}>
               {errorMsg || `This QR code is incomplete or has been changed. Please scan the QR code at your ${terminology.spaceLabel.toLowerCase()} again.`}
             </p>
 
@@ -904,8 +904,8 @@ export default function CustomerLocationModal({
                 padding: '13px 20px',
                 borderRadius: '14px',
                 border: 'none',
-                background: '#0F172A',
-                color: '#FFFFFF',
+                background: 'var(--theme-btn-gradient, #0F172A)',
+                color: 'var(--theme-btn-text, #FFFFFF)',
                 fontWeight: 900,
                 fontSize: '0.90rem',
                 cursor: 'pointer'
@@ -935,11 +935,11 @@ export default function CustomerLocationModal({
               <AlertCircle size={32} />
             </div>
 
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: '0 0 8px 0' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)', margin: '0 0 8px 0' }}>
               Location Verification Error
             </h3>
 
-            <p style={{ fontSize: '0.82rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
               {errorMsg || "We couldn't get your current location. Please make sure Location Services are turned on and try again."}
             </p>
 
@@ -951,8 +951,8 @@ export default function CustomerLocationModal({
                 padding: '13px 20px',
                 borderRadius: '14px',
                 border: 'none',
-                background: '#0F172A',
-                color: '#FFFFFF',
+                background: 'var(--theme-btn-gradient, #0F172A)',
+                color: 'var(--theme-btn-text, #FFFFFF)',
                 fontWeight: 900,
                 fontSize: '0.90rem',
                 cursor: 'pointer',

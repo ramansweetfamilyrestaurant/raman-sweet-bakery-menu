@@ -500,7 +500,7 @@ export default function PresenceVerificationModal({
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '18px',
-          borderBottom: '1.5px solid #F1F5F9',
+          borderBottom: '1.5px solid var(--theme-divider, #F1F5F9)',
           paddingBottom: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -514,7 +514,7 @@ export default function PresenceVerificationModal({
               <ShieldCheck size={22} />
             </div>
             <div>
-              <strong style={{ fontSize: '1.02rem', color: '#0F172A', display: 'block' }}>
+              <strong style={{ fontSize: '1.02rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>
                 {modalTitle}
               </strong>
               <span style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 800 }}>
@@ -525,14 +525,14 @@ export default function PresenceVerificationModal({
           <button
             onClick={handleCancelAndClose}
             style={{
-              background: '#F1F5F9',
+              background: 'var(--bg-secondary, #F1F5F9)',
               border: 'none',
               width: '32px',
               height: '32px',
               borderRadius: '50%',
               cursor: 'pointer',
               fontWeight: 900,
-              color: '#64748B',
+              color: 'var(--text-muted, #64748B)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -560,10 +560,10 @@ export default function PresenceVerificationModal({
             }}>
               <MapPin size={32} />
             </div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-dark, #0F172A)', marginBottom: '8px' }}>
               {confirmSubtitle}
             </h3>
-            <p style={{ fontSize: '0.86rem', color: '#64748B', lineHeight: 1.5, marginBottom: '20px' }}>
+            <p style={{ fontSize: '0.86rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, marginBottom: '20px' }}>
               To ensure orders are delivered to the correct location, please confirm you are present at <strong>{currentLabel}</strong>.
             </p>
 
@@ -599,8 +599,8 @@ export default function PresenceVerificationModal({
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: '#F8FAFC',
-                    color: '#334155',
+                    background: 'var(--bg-secondary, #F8FAFC)',
+                    color: 'var(--text-dark, #334155)',
                     border: '1.5px solid #E2E8F0',
                     borderRadius: '14px',
                     fontWeight: 700,
@@ -639,10 +639,10 @@ export default function PresenceVerificationModal({
             }}>
               <Compass size={36} style={{ animation: 'spin 4s linear infinite' }} />
             </div>
-            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: 'var(--text-dark, #0F172A)', marginBottom: '8px' }}>
               Acquiring GPS location...
             </h3>
-            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, marginBottom: '18px' }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, marginBottom: '18px' }}>
               Connecting to satellites to confirm dining presence at <strong>{currentLabel}</strong>.
             </p>
             <div style={{
@@ -651,7 +651,7 @@ export default function PresenceVerificationModal({
               padding: '10px 14px',
               border: '1px solid #E2E8F0',
               fontSize: '0.78rem',
-              color: '#475569',
+              color: 'var(--text-muted, #475569)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -672,7 +672,7 @@ export default function PresenceVerificationModal({
                   borderRadius: '12px',
                   background: '#F8FAFC',
                   border: '1.5px solid #E2E8F0',
-                  color: '#475569',
+                  color: 'var(--text-muted, #475569)',
                   fontSize: '0.82rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -707,10 +707,10 @@ export default function PresenceVerificationModal({
             }}>
               <AlertCircle size={32} />
             </div>
-            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: 'var(--text-dark, #0F172A)', marginBottom: '8px' }}>
               Location Verification Required
             </h3>
-            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, marginBottom: '16px' }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, marginBottom: '16px' }}>
               {errorMessage || 'Unable to verify presence via device GPS.'}
             </p>
 
@@ -802,10 +802,10 @@ export default function PresenceVerificationModal({
             }}>
               <UserCheck size={36} />
             </div>
-            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: 'var(--text-dark, #0F172A)', marginBottom: '8px' }}>
               Contacting on-site staff...
             </h3>
-            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5 }}>
               Sending verification request for <strong>{currentLabel}</strong>.
             </p>
           </div>
@@ -830,10 +830,10 @@ export default function PresenceVerificationModal({
             }}>
               <Clock size={34} style={{ animation: 'spin 12s linear infinite' }} />
             </div>
-            <h3 style={{ fontSize: '1.14rem', fontWeight: 800, color: '#0F172A', marginBottom: '6px' }}>
+            <h3 style={{ fontSize: '1.14rem', fontWeight: 800, color: 'var(--text-dark, #0F172A)', marginBottom: '6px' }}>
               Verification Sent to Staff
             </h3>
-            <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.5, marginBottom: '14px' }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #475569)', lineHeight: 1.5, marginBottom: '14px' }}>
               Please ask any staff member or attendant to confirm your presence at <strong>{currentLabel}</strong>.
             </p>
 
@@ -842,7 +842,7 @@ export default function PresenceVerificationModal({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              background: '#F1F5F9',
+              background: 'var(--bg-secondary, #F1F5F9)',
               padding: '6px 14px',
               borderRadius: '20px',
               fontSize: '0.82rem',
@@ -861,8 +861,8 @@ export default function PresenceVerificationModal({
                   style={{
                     width: '100%',
                     padding: '11px',
-                    background: '#F8FAFC',
-                    color: '#334155',
+                    background: 'var(--bg-secondary, #F8FAFC)',
+                    color: 'var(--text-dark, #334155)',
                     border: '1.5px solid #CBD5E1',
                     borderRadius: '12px',
                     fontWeight: 700,
@@ -916,10 +916,10 @@ export default function PresenceVerificationModal({
             }}>
               <XCircle size={32} />
             </div>
-            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: 'var(--text-dark, #0F172A)', marginBottom: '8px' }}>
               Verification Not Approved
             </h3>
-            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, marginBottom: '18px' }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, marginBottom: '18px' }}>
               {rejectionReason || (isCin ? 'The staff could not confirm presence for this seat request.' : isHot ? 'The staff could not confirm presence for this room request.' : 'The staff could not confirm presence for this table request.')}
             </p>
 
@@ -954,8 +954,8 @@ export default function PresenceVerificationModal({
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: '#F8FAFC',
-                    color: '#334155',
+                    background: 'var(--bg-secondary, #F8FAFC)',
+                    color: 'var(--text-dark, #334155)',
                     border: '1.5px solid #E2E8F0',
                     borderRadius: '14px',
                     fontWeight: 700,
@@ -993,10 +993,10 @@ export default function PresenceVerificationModal({
             }}>
               <Clock size={32} />
             </div>
-            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: 'var(--text-dark, #0F172A)', marginBottom: '8px' }}>
               Request Expired
             </h3>
-            <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, marginBottom: '18px' }}>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted, #64748B)', lineHeight: 1.5, marginBottom: '18px' }}>
               The verification request timed out. Please ask staff again or verify via GPS.
             </p>
 
@@ -1030,8 +1030,8 @@ export default function PresenceVerificationModal({
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: '#F8FAFC',
-                    color: '#334155',
+                    background: 'var(--bg-secondary, #F8FAFC)',
+                    color: 'var(--text-dark, #334155)',
                     border: '1.5px solid #E2E8F0',
                     borderRadius: '14px',
                     fontWeight: 700,
@@ -1070,7 +1070,7 @@ export default function PresenceVerificationModal({
             }}>
               <CheckCircle2 size={40} />
             </div>
-            <h3 style={{ fontSize: '1.18rem', fontWeight: 900, color: '#0F172A', marginBottom: '6px' }}>
+            <h3 style={{ fontSize: '1.18rem', fontWeight: 900, color: 'var(--text-dark, #0F172A)', marginBottom: '6px' }}>
               Presence Confirmed!
             </h3>
             <p style={{ fontSize: '0.86rem', color: '#059669', fontWeight: 700, marginBottom: '14px' }}>
@@ -1084,7 +1084,7 @@ export default function PresenceVerificationModal({
               padding: '6px 14px',
               borderRadius: '20px',
               fontSize: '0.78rem',
-              color: '#64748B'
+              color: 'var(--text-muted, #64748B)'
             }}>
               <Sparkles size={14} color="#EAB308" />
               <span>{orderPlacingText}</span>

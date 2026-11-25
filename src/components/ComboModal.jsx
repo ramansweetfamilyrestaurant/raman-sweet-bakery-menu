@@ -504,7 +504,7 @@ export default function ComboModal({
                       aria-label="Increase quantity"
                       style={{
                         background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                        color: '#FFFFFF',
+                        color: 'var(--theme-btn-text, #FFFFFF)',
                         border: 'none',
                         width: '28px',
                         height: '28px',
@@ -535,7 +535,7 @@ export default function ComboModal({
                       borderRadius: '8px',
                       border: 'none',
                       background: 'var(--theme-btn-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
-                      color: '#FFFFFF',
+                      color: 'var(--theme-btn-text, #FFFFFF)',
                       fontSize: '0.84rem',
                       fontWeight: 800,
                       cursor: 'pointer',
@@ -562,7 +562,7 @@ export default function ComboModal({
                   borderRadius: '8px',
                   border: 'none',
                   background: 'var(--theme-btn-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
-                  color: '#FFFFFF',
+                  color: 'var(--theme-btn-text, #FFFFFF)',
                   fontSize: '0.86rem',
                   fontWeight: 800,
                   cursor: 'pointer',

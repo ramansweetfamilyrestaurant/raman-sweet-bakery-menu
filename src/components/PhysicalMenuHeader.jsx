@@ -7,7 +7,7 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
   const terminology = getBusinessTerminology(info || {});
   return (
     <header style={{
-      background: 'var(--primary-emerald)',
+      background: 'var(--header-gradient, var(--primary-emerald))',
       color: '#FFFFFF',
       padding: '24px 16px 28px',
       borderBottom: '3px solid var(--gold-bright)',
@@ -20,7 +20,7 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
         border: '2px double var(--gold-bright)',
         padding: '20px 16px 24px',
         borderRadius: 'var(--radius-md)',
-        background: 'linear-gradient(180deg, #091F13 0%, #123722 100%)',
+        background: 'var(--header-gradient, linear-gradient(180deg, #091F13 0%, #123722 100%))',
         position: 'relative',
         textAlign: 'center'
       }}>
@@ -73,7 +73,7 @@ export default function PhysicalMenuHeader({ info, categories, selectedCategory,
           border: '2px solid var(--gold-bright)',
           padding: '2px',
           margin: '0 auto 12px',
-          background: '#091F13',
+          background: 'var(--theme-primary-dark, #091F13)',
           boxShadow: '0 0 20px rgba(212, 175, 55, 0.4)'
         }}>
           <img 

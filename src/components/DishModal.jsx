@@ -232,7 +232,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 position: 'absolute',
                 bottom: '10px',
                 left: '10px',
-                background: 'rgba(255, 255, 255, 0.95)',
+                background: 'var(--theme-modal-bg, rgba(255, 255, 255, 0.95))',
                 backdropFilter: 'blur(6px)',
                 border: '1.5px solid var(--veg-green-border)',
                 borderRadius: 'var(--radius-pill)',
@@ -402,7 +402,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                     fontWeight: 800,
                     border: selectedPortion === 'half' ? '1.5px solid var(--gold-bright)' : '1px solid var(--border-light, var(--gold-border))',
                     background: selectedPortion === 'half' ? 'var(--primary-emerald)' : 'var(--theme-card-bg, #FFFFFF)',
-                    color: selectedPortion === 'half' ? '#FFFFFF' : 'var(--text-dark)',
+                    color: selectedPortion === 'half' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-dark)',
                     transition: 'var(--transition-fast)'
                   }}
                 >
@@ -421,7 +421,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                     fontWeight: 800,
                     border: selectedPortion === 'full' ? '1.5px solid var(--gold-bright)' : '1px solid var(--border-light, var(--gold-border))',
                     background: selectedPortion === 'full' ? 'var(--primary-emerald)' : 'var(--theme-card-bg, #FFFFFF)',
-                    color: selectedPortion === 'full' ? '#FFFFFF' : 'var(--text-dark)',
+                    color: selectedPortion === 'full' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-dark)',
                     transition: 'var(--transition-fast)'
                   }}
                 >
@@ -501,7 +501,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                         justifyContent: 'space-between',
                         padding: '9px 12px',
                         borderRadius: '10px',
-                        background: isSelected ? 'var(--theme-card-bg, #FFFFFF)' : (addonOnly ? 'var(--theme-card-bg, #FFFFFF)' : 'rgba(255,255,255,0.6)'),
+                        background: isSelected ? 'var(--theme-card-bg, #FFFFFF)' : 'var(--bg-secondary, #F8FAFC)',
                         border: isSelected ? '1.5px solid var(--primary-emerald, #059669)' : (addonOnly ? '1px solid var(--border-light, #CBD5E1)' : '1px solid var(--gold-border)'),
                         cursor: 'pointer',
                         transition: 'var(--transition-fast)'
@@ -668,7 +668,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
               </div>
             ) : !addonOnly && (
               <div>
-                <span style={{ fontSize: '0.7rem', color: '#6B7280', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #6B7280)', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>
                   Total (incl. add-ons)
                 </span>
                 <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)' }}>
@@ -689,7 +689,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   padding: '12px 18px',
                   borderRadius: 'var(--radius-pill)',
                   background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
-                  color: '#FFFFFF',
+                  color: 'var(--theme-btn-text, #FFFFFF)',
                   fontWeight: 900,
                   fontSize: '0.92rem',
                   border: 'none',

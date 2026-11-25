@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { THEME_LIST } from '../../../constants/themes';
 import { 
   Building2, 
   FileText, 
@@ -1178,14 +1179,9 @@ Need assistance? Reply directly to this message.`;
                   onChange={e => setFormData({ ...formData, theme_color: e.target.value })}
                   style={{ width: '100%', minHeight: '44px', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.86rem', fontWeight: 700, outline: 'none', background: '#FFFFFF', boxSizing: 'border-box' }}
                 >
-                  <option value="gold">👑 Gold & Forest Green (Signature Luxury)</option>
-                  <option value="emerald">💎 Emerald Mint & Teal (Eco & Veg Bistro)</option>
-                  <option value="crimson">🍷 Ruby Crimson & Amber (Royal Fine-Dine)</option>
-                  <option value="navy">🌌 Midnight Navy & Sapphire (Modern Lounge)</option>
-                  <option value="amber">🍯 Royal Amber & Warm Artisan (Bakery & Cafe)</option>
-                  <option value="purple">🔮 Imperial Velvet & Amethyst (VIP Lounge)</option>
-                  <option value="rose">🌸 Champagne Rose & Pink Gold (Chic Patisserie)</option>
-                  <option value="dark">⚡ Obsidian Cyber & Neon Cyan (Pub / Late Night)</option>
+                  {THEME_LIST.map(t => (
+                    <option key={t.key} value={t.key}>{t.name} ({t.desc})</option>
+                  ))}
                 </select>
               </div>
             </div>
