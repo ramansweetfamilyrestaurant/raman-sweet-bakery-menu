@@ -577,8 +577,10 @@ export default function App() {
   // Modals
   const [selectedDishModal, setSelectedDishModal] = useState(null);
   const [selectedDishInitialPortion, setSelectedDishInitialPortion] = useState(null);
-  const openDishCustomizationModal = (dish, initialPortion = null) => {
+  const [selectedDishModalMode, setSelectedDishModalMode] = useState('detail');
+  const openDishCustomizationModal = (dish, initialPortion = null, modalMode = 'detail') => {
     setSelectedDishInitialPortion(initialPortion || null);
+    setSelectedDishModalMode(modalMode === 'addon' ? 'addon' : 'detail');
     setSelectedDishModal(dish);
   };
   const [selectedComboModal, setSelectedComboModal] = useState(null);
@@ -620,8 +622,9 @@ export default function App() {
   const [combos, setCombos] = useState([]);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
 
-  const handleAddToCart = (dish, portionType = 'full', selectedModifiers = []) => {
+  const handleAddToCart = (dish, portionType = 'full', selectedModifiers = [], quantity = 1) => {
     triggerHaptic('success');
+    const addQty = Math.max(1, parseInt(quantity, 10) || 1);
     const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
     const isHalf = portionType === 'half' && hasHalfPrice;
     
@@ -651,7 +654,7 @@ export default function App() {
     const existingIndex = cartItems.findIndex(i => i.key === cartKey);
     if (existingIndex > -1) {
       const updated = [...cartItems];
-      updated[existingIndex].quantity += 1;
+      updated[existingIndex].quantity += addQty;
       setCartItems(updated);
     } else {
       setCartItems([...cartItems, {
@@ -664,7 +667,7 @@ export default function App() {
         regular_price: regularUnitPrice,
         discount_amount: discountAmount,
         offer_id: dish.offer_id || null,
-        quantity: 1
+        quantity: addQty
       }]);
     }
   };
@@ -3253,7 +3256,7 @@ export default function App() {
                                     const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
                                     const hasModifiers = info?.modifiers_enabled !== false && getValidDishModifiers(item.modifiers).length > 0;
                                     if (hasHalf || hasModifiers) {
-                                      openDishCustomizationModal(item);
+                                      openDishCustomizationModal(item, null, 'addon');
                                     } else {
                                       handleAddToCart(item, 'full');
                                     }
@@ -3627,7 +3630,7 @@ export default function App() {
                       currencySymbol={getCurrencySymbol(info?.currency_symbol)}
                       filtersVisibility={info?.filters_visibility}
                       modifiersEnabled={info?.modifiers_enabled !== false}
-                      onClick={(clickedDish, initialPortion) => openDishCustomizationModal(clickedDish, initialPortion)}
+                      onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                     />
                   ))}
@@ -3646,7 +3649,7 @@ export default function App() {
                       currencySymbol={getCurrencySymbol(info?.currency_symbol)}
                       filtersVisibility={info?.filters_visibility}
                       modifiersEnabled={info?.modifiers_enabled !== false}
-                      onClick={(clickedDish, initialPortion) => openDishCustomizationModal(clickedDish, initialPortion)}
+                      onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                     />
                   ))}
@@ -4625,7 +4628,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Customer Dish Detail Modal */}
+      {/* Customer Dish Detail / Add-on Customization Modal */}
       {selectedDishModal && (
         <DishModal
           dish={selectedDishModal}
@@ -4633,10 +4636,12 @@ export default function App() {
           currencySymbol={getCurrencySymbol(info?.currency_symbol)}
           initialPortion={selectedDishInitialPortion}
           modifiersEnabled={info?.modifiers_enabled !== false}
+          addonOnly={selectedDishModalMode === 'addon'}
           onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
           onClose={() => {
             setSelectedDishModal(null);
             setSelectedDishInitialPortion(null);
+            setSelectedDishModalMode('detail');
           }}
         />
       )}

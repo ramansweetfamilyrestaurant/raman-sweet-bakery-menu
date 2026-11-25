@@ -521,6 +521,16 @@ img {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes sheetSlideUp {
+  from { opacity: 0.5; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sheetBackdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

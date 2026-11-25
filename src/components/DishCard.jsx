@@ -18,7 +18,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
     e.stopPropagation();
     triggerHaptic('medium');
     if (hasModifiers && onClick) {
-      onClick(dish, portion);
+      onClick(dish, portion, 'addon');
     } else {
       onAddToCart(dish, portion);
     }

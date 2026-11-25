@@ -431,7 +431,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 triggerHaptic('medium');
                 const chosenPortion = hasHalfPrice ? portionMode : 'full';
                 if (hasModifiers && onClick) {
-                  onClick(dish, chosenPortion);
+                  onClick(dish, chosenPortion, 'addon');
                 } else {
                   onAddToCart(dish, chosenPortion);
                 }

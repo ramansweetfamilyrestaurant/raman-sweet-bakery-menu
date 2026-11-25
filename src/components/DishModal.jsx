@@ -4,7 +4,7 @@ import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 import { getValidDishModifiers } from '../utils/billingHelper';
 
-export default function DishModal({ dish, onClose, onAddToCart, currencySymbol = '₹', lang = 'en', initialPortion = null, modifiersEnabled = true }) {
+export default function DishModal({ dish, onClose, onAddToCart, currencySymbol = '₹', lang = 'en', initialPortion = null, modifiersEnabled = true, addonOnly = false }) {
   if (!dish) return null;
 
   const symbol = getCurrencySymbol(currencySymbol);
@@ -18,6 +18,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
 
   const availableModifiers = modifiersEnabled === false ? [] : getValidDishModifiers(dish?.modifiers);
   const [selectedModifiers, setSelectedModifiers] = useState([]);
+  const [quantity, setQuantity] = useState(1);
 
   const toggleModifier = (mod) => {
     if (selectedModifiers.some(m => m.name === mod.name)) {
@@ -35,6 +36,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
   const extraModifiersPrice = selectedModifiers.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
   const activePrice = basePrice + extraModifiersPrice;
   const regularActivePrice = regularBasePrice + extraModifiersPrice;
+  const totalPrice = activePrice * quantity;
 
   const formatHalfLabel = (lbl) => {
     if (!lbl || lbl === 'Half Portion' || lbl === 'Half') {
@@ -62,118 +64,214 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
       position: 'fixed',
       inset: 0,
       zIndex: 3000,
-      background: 'rgba(10, 35, 21, 0.8)',
-      backdropFilter: 'blur(10px)',
+      background: addonOnly ? 'rgba(10, 25, 16, 0.65)' : 'rgba(10, 35, 21, 0.8)',
+      backdropFilter: addonOnly ? 'blur(4px)' : 'blur(10px)',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: addonOnly ? 'flex-end' : 'center',
       justifyContent: 'center',
-      padding: '12px'
+      padding: addonOnly ? 0 : '12px',
+      animation: addonOnly ? 'sheetBackdropFade 0.2s ease-out' : undefined
     }} onClick={onClose}>
       <div 
         onClick={(e) => e.stopPropagation()}
         style={{
           background: 'var(--theme-modal-bg, #FFFFFF)',
-          borderRadius: 'var(--radius-lg)',
+          borderRadius: addonOnly ? '22px 22px 0 0' : 'var(--radius-lg)',
           overflow: 'hidden',
           width: '100%',
           maxWidth: '520px',
-          maxHeight: '88vh',
-          boxShadow: 'var(--shadow-lg)',
-          border: '2px solid var(--theme-modal-border, var(--gold-bright))',
+          maxHeight: addonOnly ? '82vh' : '88vh',
+          boxShadow: addonOnly ? '0 -12px 36px rgba(0, 0, 0, 0.28)' : 'var(--shadow-lg)',
+          border: addonOnly ? '1.5px solid var(--theme-modal-border, var(--gold-border))' : '2px solid var(--theme-modal-border, var(--gold-bright))',
+          borderBottom: addonOnly ? 'none' : undefined,
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          animation: 'fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          animation: addonOnly ? 'sheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1)' : 'fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
           color: 'var(--text-dark)'
         }}
       >
-        {/* Close Button */}
-        <button
-          className="price-pill-btn"
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            zIndex: 10,
-            background: 'rgba(0, 0, 0, 0.6)',
-            color: '#FFFFFF',
-            border: '1px solid rgba(255,255,255,0.4)',
-            borderRadius: '50%',
-            width: '34px',
-            height: '34px',
-            minHeight: 'unset',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            backdropFilter: 'blur(4px)'
-          }}
-        >
-          <X size={18} />
-        </button>
-
-        {/* Dish High-Res Photo Header */}
-        <div style={{
-          width: '100%',
-          height: 'min(210px, 30vh)',
-          background: 'var(--gold-soft)',
-          position: 'relative',
-          flexShrink: 0
-        }}>
-          <img
-            src={imageSrc}
-            alt={dish.name}
-            onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover'
-            }}
-          />
-          
-          {/* FSSAI 100% Pure Veg Badge Overlay */}
+        {addonOnly ? (
+          /* Compact Bottom-Sheet Header for Quick Add-on Customization */
           <div style={{
-            position: 'absolute',
-            bottom: '10px',
-            left: '10px',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(6px)',
-            border: '1.5px solid var(--veg-green-border)',
-            borderRadius: 'var(--radius-pill)',
-            padding: '4px 10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.18)'
+            padding: '10px 16px 12px',
+            borderBottom: '1px solid var(--border-light, #E2E8F0)',
+            background: 'var(--theme-modal-bg, #FFFFFF)',
+            flexShrink: 0
           }}>
-            <span style={{
-              width: '10px',
-              height: '10px',
-              border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '2px'
-            }}>
-              <span style={{
-                width: '4px',
-                height: '4px',
-                borderRadius: '50%',
-                backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
-              }} />
-            </span>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-              {dish.type === 'nonveg' ? 'Non-Veg' : dish.type === 'egg' ? 'Contains Egg' : '100% Pure Veg'}
-            </span>
+            <div style={{
+              width: '38px',
+              height: '4px',
+              borderRadius: '9999px',
+              background: '#CBD5E1',
+              margin: '0 auto 10px'
+            }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                <img
+                  src={imageSrc}
+                  alt={displayName}
+                  onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '10px',
+                    objectFit: 'cover',
+                    border: '1px solid var(--border-light, #E2E8F0)',
+                    flexShrink: 0
+                  }}
+                />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{
+                      width: '10px',
+                      height: '10px',
+                      border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '2px',
+                      flexShrink: 0
+                    }}>
+                      <span style={{
+                        width: '4px',
+                        height: '4px',
+                        borderRadius: '50%',
+                        backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
+                      }} />
+                    </span>
+                    <h3 style={{
+                      margin: 0,
+                      fontSize: '0.96rem',
+                      fontWeight: 800,
+                      color: 'var(--text-dark)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {displayName}
+                    </h3>
+                  </div>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--primary-emerald)' }}>
+                    {lang === 'hi' ? 'अपनी पसंद चुनें' : 'Customize your order'} • {symbol}{formatPriceNumber(basePrice)}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                aria-label={lang === 'hi' ? 'बंद करें' : 'Close'}
+                onClick={onClose}
+                style={{
+                  background: 'var(--bg-secondary, #F1F5F9)',
+                  color: 'var(--text-dark, #334155)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Close Button */}
+            <button
+              className="price-pill-btn"
+              onClick={onClose}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                zIndex: 10,
+                background: 'rgba(0, 0, 0, 0.6)',
+                color: '#FFFFFF',
+                border: '1px solid rgba(255,255,255,0.4)',
+                borderRadius: '50%',
+                width: '34px',
+                height: '34px',
+                minHeight: 'unset',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                backdropFilter: 'blur(4px)'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            {/* Dish High-Res Photo Header */}
+            <div style={{
+              width: '100%',
+              height: 'min(210px, 30vh)',
+              background: 'var(--gold-soft)',
+              position: 'relative',
+              flexShrink: 0
+            }}>
+              <img
+                src={imageSrc}
+                alt={dish.name}
+                onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+              
+              {/* FSSAI 100% Pure Veg Badge Overlay */}
+              <div style={{
+                position: 'absolute',
+                bottom: '10px',
+                left: '10px',
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(6px)',
+                border: '1.5px solid var(--veg-green-border)',
+                borderRadius: 'var(--radius-pill)',
+                padding: '4px 10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.18)'
+              }}>
+                <span style={{
+                  width: '10px',
+                  height: '10px',
+                  border: dish.type === 'nonveg' ? '1.5px solid #DC2626' : dish.type === 'egg' ? '1.5px solid #D97706' : '1.5px solid var(--veg-green)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '2px'
+                }}>
+                  <span style={{
+                    width: '4px',
+                    height: '4px',
+                    borderRadius: '50%',
+                    backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
+                  }} />
+                </span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                  {dish.type === 'nonveg' ? 'Non-Veg' : dish.type === 'egg' ? 'Contains Egg' : '100% Pure Veg'}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Scrollable Content Body */}
         <div style={{
-          padding: '16px 18px',
+          padding: addonOnly ? '14px 16px 16px' : '16px 18px',
           overflowY: 'auto'
         }}>
+          {!addonOnly && (
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -276,6 +374,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
               </div>
             )}
           </div>
+          )}
 
           {/* Interactive Half / Full Portion Selector */}
           {hasHalfPrice ? (
@@ -331,7 +430,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             </div>
           ) : null}
 
-          {((!hasHalfPrice && dish.portion && dish.portion.trim() && !dish.portion.toLowerCase().includes('portion')) || (dish.taste_profile && String(dish.taste_profile).trim())) && (
+          {!addonOnly && (( !hasHalfPrice && dish.portion && dish.portion.trim() && !dish.portion.toLowerCase().includes('portion')) || (dish.taste_profile && String(dish.taste_profile).trim())) && (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {!hasHalfPrice && dish.portion && dish.portion.trim() && !dish.portion.toLowerCase().includes('portion') && (
                 <span style={{
@@ -365,15 +464,29 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
           {/* Interactive Custom Add-on Modifiers & Toppings */}
           {availableModifiers.length > 0 && (
             <div style={{
-              background: 'var(--bg-champagne)',
-              border: '1.5px solid var(--gold-border)',
+              background: addonOnly ? '#F8FAFC' : 'var(--bg-champagne)',
+              border: addonOnly ? '1.5px solid #E2E8F0' : '1.5px solid var(--gold-border)',
               borderRadius: 'var(--radius-md)',
-              padding: '10px 14px',
+              padding: addonOnly ? '12px' : '10px 14px',
               marginBottom: '14px'
             }}>
-              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--primary-emerald)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
-                {lang === 'hi' ? '➕ अतिरिक्त टॉपिंग्स / ऐड-ऑन्स चुनें:' : '➕ Choose Add-ons & Extra Toppings:'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', gap: '8px' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--primary-emerald)', textTransform: 'uppercase' }}>
+                  {lang === 'hi' ? '➕ अतिरिक्त टॉपिंग्स / ऐड-ऑन्स चुनें:' : '➕ Choose Add-ons & Extra Toppings'}
+                </span>
+                <span style={{
+                  fontSize: '0.66rem',
+                  fontWeight: 750,
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  background: selectedModifiers.length > 0 ? '#DCFCE7' : '#E2E8F0',
+                  color: selectedModifiers.length > 0 ? '#15803D' : '#475569'
+                }}>
+                  {selectedModifiers.length > 0
+                    ? `${selectedModifiers.length} ${lang === 'hi' ? 'चुना' : 'selected'}`
+                    : (lang === 'hi' ? 'वैकल्पिक' : 'Optional')}
+                </span>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {availableModifiers.map((mod, idx) => {
                   const isSelected = selectedModifiers.some(m => m.name === mod.name);
@@ -385,10 +498,10 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '8px 12px',
-                        borderRadius: 'var(--radius-sm)',
-                        background: isSelected ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
-                        border: isSelected ? '1.5px solid var(--gold-bright)' : '1px solid var(--gold-border)',
+                        padding: '9px 12px',
+                        borderRadius: '10px',
+                        background: isSelected ? '#FFFFFF' : (addonOnly ? '#FFFFFF' : 'rgba(255,255,255,0.6)'),
+                        border: isSelected ? '1.5px solid var(--primary-emerald, #059669)' : (addonOnly ? '1px solid #CBD5E1' : '1px solid var(--gold-border)'),
                         cursor: 'pointer',
                         transition: 'var(--transition-fast)'
                       }}
@@ -414,99 +527,155 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             </div>
           )}
 
-          {/* Description */}
-          <p style={{
-            fontSize: '0.92rem',
-            color: 'var(--text-dark)',
-            lineHeight: 1.6,
-            marginBottom: '20px'
-          }}>
-            {displayDesc || (lang === 'hi' ? 'ताजा और शुद्ध सामग्री से निर्मित प्रामाणिक व्यंजन।' : 'Prepared fresh using fine quality ingredients & authentic traditional recipes.')}
-          </p>
-
-          {/* Ingredients List */}
-          {ingredientsList.length > 0 && (
-            <div style={{
-              background: 'var(--bg-champagne, var(--bg-card-soft))',
-              border: '1px solid var(--gold-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '14px 16px',
-              marginBottom: '20px'
-            }}>
-              <h4 style={{
-                fontSize: '0.8rem',
-                fontWeight: 800,
-                color: 'var(--primary-emerald)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.8px',
-                marginBottom: '8px'
+          {!addonOnly && (
+            <>
+              {/* Description */}
+              <p style={{
+                fontSize: '0.92rem',
+                color: 'var(--text-dark)',
+                lineHeight: 1.6,
+                marginBottom: '20px'
               }}>
-                Key Ingredients & Preparation
-              </h4>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {ingredientsList.map((ing, i) => (
-                  <span key={i} style={{
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    color: 'var(--text-dark)',
-                    background: 'var(--theme-card-bg, #FFFFFF)',
-                    border: '1px solid var(--gold-border)',
-                    padding: '4px 10px',
-                    borderRadius: 'var(--radius-pill)'
+                {displayDesc || (lang === 'hi' ? 'ताजा और शुद्ध सामग्री से निर्मित प्रामाणिक व्यंजन।' : 'Prepared fresh using fine quality ingredients & authentic traditional recipes.')}
+              </p>
+
+              {/* Ingredients List */}
+              {ingredientsList.length > 0 && (
+                <div style={{
+                  background: 'var(--bg-champagne, var(--bg-card-soft))',
+                  border: '1px solid var(--gold-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '14px 16px',
+                  marginBottom: '20px'
+                }}>
+                  <h4 style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
+                    color: 'var(--primary-emerald)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.8px',
+                    marginBottom: '8px'
                   }}>
-                    ✓ {ing}
-                  </span>
-                ))}
+                    Key Ingredients & Preparation
+                  </h4>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {ingredientsList.map((ing, i) => (
+                      <span key={i} style={{
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        color: 'var(--text-dark)',
+                        background: 'var(--theme-card-bg, #FFFFFF)',
+                        border: '1px solid var(--gold-border)',
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-pill)'
+                      }}>
+                        ✓ {ing}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Availability Footer */}
+              <div style={{
+                background: 'var(--gold-soft)',
+                borderRadius: 'var(--radius-md)',
+                padding: '10px 14px',
+                border: '1px solid var(--gold-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '14px'
+              }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--primary-emerald)', fontWeight: 600 }}>
+                  Availability Status
+                </span>
+                <span style={{
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  color: dish.available !== false ? 'var(--veg-green)' : '#EF4444'
+                }}>
+                  {dish.available !== false ? '● Available Fresh Now' : '● Currently Out of Stock'}
+                </span>
               </div>
-            </div>
+            </>
           )}
 
-          {/* Availability Footer */}
-          <div style={{
-            background: 'var(--gold-soft)',
-            borderRadius: 'var(--radius-md)',
-            padding: '10px 14px',
-            border: '1px solid var(--gold-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '14px'
-          }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--primary-emerald)', fontWeight: 600 }}>
-              Availability Status
-            </span>
-            <span style={{
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              color: dish.available !== false ? 'var(--veg-green)' : '#EF4444'
-            }}>
-              {dish.available !== false ? '● Available Fresh Now' : '● Currently Out of Stock'}
-            </span>
-          </div>
-
-          {/* Action Bar (Dynamic Total + Add to Order Button or View-Only Close) */}
+          {/* Action Bar (Compact Stepper in Add-on Sheet OR Detail Total + Add Button) */}
           <div style={{
             paddingTop: '12px',
-            borderTop: '1.5px solid var(--gold-border)',
+            borderTop: addonOnly ? '1px solid var(--border-light, #E2E8F0)' : '1.5px solid var(--gold-border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '12px'
           }}>
-            <div>
-              <span style={{ fontSize: '0.7rem', color: '#6B7280', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>
-                Total (incl. add-ons)
-              </span>
-              <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)' }}>
-                {symbol}{formatPriceNumber(activePrice)}
-              </span>
-            </div>
+            {addonOnly && dish.available !== false && onAddToCart ? (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                border: '1.5px solid #CBD5E1',
+                borderRadius: 'var(--radius-pill)',
+                background: '#F8FAFC',
+                height: '42px',
+                padding: '0 4px',
+                flexShrink: 0
+              }}>
+                <button
+                  type="button"
+                  aria-label="Decrease quantity"
+                  disabled={quantity <= 1}
+                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                  style={{
+                    width: '30px',
+                    height: '32px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: quantity <= 1 ? '#94A3B8' : 'var(--text-dark)',
+                    fontSize: '1rem',
+                    fontWeight: 900,
+                    cursor: quantity <= 1 ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  −
+                </button>
+                <span style={{ minWidth: '22px', textAlign: 'center', fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Increase quantity"
+                  onClick={() => setQuantity(q => Math.min(20, q + 1))}
+                  style={{
+                    width: '30px',
+                    height: '32px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--primary-emerald)',
+                    fontSize: '1rem',
+                    fontWeight: 900,
+                    cursor: 'pointer'
+                  }}
+                >
+                  +
+                </button>
+              </div>
+            ) : !addonOnly && (
+              <div>
+                <span style={{ fontSize: '0.7rem', color: '#6B7280', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>
+                  Total (incl. add-ons)
+                </span>
+                <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)' }}>
+                  {symbol}{formatPriceNumber(activePrice)}
+                </span>
+              </div>
+            )}
 
             {dish.available !== false && onAddToCart ? (
               <button
                 type="button"
                 onClick={() => {
-                  onAddToCart(dish, selectedPortion, selectedModifiers);
+                  onAddToCart(dish, selectedPortion, selectedModifiers, quantity);
                   if (onClose) onClose();
                 }}
                 style={{
@@ -528,7 +697,11 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 }}
               >
                 <span>➕</span>
-                <span>{lang === 'hi' ? 'ऑर्डर में जोड़ें' : 'Add to Order'} • {symbol}{formatPriceNumber(activePrice)}</span>
+                <span>
+                  {addonOnly
+                    ? `${lang === 'hi' ? 'कार्ट में जोड़ें' : 'Add Item'} • ${symbol}${formatPriceNumber(totalPrice)}`
+                    : `${lang === 'hi' ? 'ऑर्डर में जोड़ें' : 'Add to Order'} • ${symbol}${formatPriceNumber(activePrice)}`}
+                </span>
               </button>
             ) : (
               <button
