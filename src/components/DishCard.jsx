@@ -2,21 +2,27 @@ import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
+import { getValidDishModifiers } from '../utils/billingHelper';
 import { triggerHaptic } from '../utils/haptics';
 
-export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹', lang = 'en', filtersVisibility }) {
+export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹', lang = 'en', filtersVisibility, modifiersEnabled = true }) {
   const symbol = getCurrencySymbol(currencySymbol);
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
   const imageSrc = getDishImageUrl(dish.image);
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
   const displayDesc = (lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description;
-  const hasModifiers = Boolean(
-    dish.modifiers && (
-      (Array.isArray(dish.modifiers) && dish.modifiers.length > 0) ||
-      (typeof dish.modifiers === 'string' && dish.modifiers.length > 4 && dish.modifiers !== '[]')
-    )
-  );
+  const hasModifiers = modifiersEnabled !== false && getValidDishModifiers(dish?.modifiers).length > 0;
+
+  const handleAddAction = (e, portion) => {
+    e.stopPropagation();
+    triggerHaptic('medium');
+    if (hasModifiers && onClick) {
+      onClick(dish, portion);
+    } else {
+      onAddToCart(dish, portion);
+    }
+  };
 
   return (
     <article 
@@ -368,11 +374,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               hasHalfPrice ? (
                 <>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      triggerHaptic('medium');
-                      onAddToCart(dish, 'half');
-                    }}
+                    onClick={(e) => handleAddAction(e, 'half')}
                     style={{
                       background: 'var(--theme-btn-secondary-bg, linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%))',
                       color: 'var(--theme-text-primary, #92400E)',
@@ -391,11 +393,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                     + Half
                   </button>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      triggerHaptic('medium');
-                      onAddToCart(dish, 'full');
-                    }}
+                    onClick={(e) => handleAddAction(e, 'full')}
                     style={{
                       background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
                       color: '#FFFFFF',
@@ -416,11 +414,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                 </>
               ) : (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerHaptic('medium');
-                    onAddToCart(dish, 'full');
-                  }}
+                  onClick={(e) => handleAddAction(e, 'full')}
                   style={{
                     background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
                     color: '#FFFFFF',

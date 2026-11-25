@@ -21,6 +21,7 @@ import { resolveImageUrl } from './utils/imageHelper';
 import { isValidQrTokenFormat, normalizeSpaceType, normalizeSpaceNumber } from './utils/qrSecurity';
 import { resolveTheme, DEFAULT_THEME } from './constants/themes';
 import { getCurrencySymbol, formatPriceNumber, formatPrice } from './utils/currencyHelper';
+import { getValidDishModifiers } from './utils/billingHelper';
 import { triggerHaptic } from './utils/haptics';
 
 // Robust Lazy Loading with automatic retry on new production deploys
@@ -575,6 +576,11 @@ export default function App() {
 
   // Modals
   const [selectedDishModal, setSelectedDishModal] = useState(null);
+  const [selectedDishInitialPortion, setSelectedDishInitialPortion] = useState(null);
+  const openDishCustomizationModal = (dish, initialPortion = null) => {
+    setSelectedDishInitialPortion(initialPortion || null);
+    setSelectedDishModal(dish);
+  };
   const [selectedComboModal, setSelectedComboModal] = useState(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showCategoryDrawer, setShowCategoryDrawer] = useState(false);
@@ -3069,7 +3075,7 @@ export default function App() {
                         key={`offer-${item._type}-${item.id}-${idx}`}
                         onClick={() => {
                           if (item._type === 'dish') {
-                            setSelectedDishModal(item);
+                            openDishCustomizationModal(item);
                           } else {
                             setSelectedComboModal(item);
                           }
@@ -3235,14 +3241,9 @@ export default function App() {
                                     handleAddComboToCart(item);
                                   } else {
                                     const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
-                                    const hasModifiers = Boolean(
-                                      item.modifiers && (
-                                        (Array.isArray(item.modifiers) && item.modifiers.length > 0) ||
-                                        (typeof item.modifiers === 'string' && item.modifiers.length > 4 && item.modifiers !== '[]')
-                                      )
-                                    );
+                                    const hasModifiers = info?.modifiers_enabled !== false && getValidDishModifiers(item.modifiers).length > 0;
                                     if (hasHalf || hasModifiers) {
-                                      setSelectedDishModal(item);
+                                      openDishCustomizationModal(item);
                                     } else {
                                       handleAddToCart(item, 'full');
                                     }
@@ -3615,7 +3616,8 @@ export default function App() {
                       lang={lang}
                       currencySymbol={getCurrencySymbol(info?.currency_symbol)}
                       filtersVisibility={info?.filters_visibility}
-                      onClick={() => setSelectedDishModal(dish)}
+                      modifiersEnabled={info?.modifiers_enabled !== false}
+                      onClick={(clickedDish, initialPortion) => openDishCustomizationModal(clickedDish, initialPortion)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                     />
                   ))}
@@ -3633,7 +3635,8 @@ export default function App() {
                       lang={lang}
                       currencySymbol={getCurrencySymbol(info?.currency_symbol)}
                       filtersVisibility={info?.filters_visibility}
-                      onClick={() => setSelectedDishModal(dish)}
+                      modifiersEnabled={info?.modifiers_enabled !== false}
+                      onClick={(clickedDish, initialPortion) => openDishCustomizationModal(clickedDish, initialPortion)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                     />
                   ))}
@@ -4618,8 +4621,13 @@ export default function App() {
           dish={selectedDishModal}
           lang={lang}
           currencySymbol={getCurrencySymbol(info?.currency_symbol)}
+          initialPortion={selectedDishInitialPortion}
+          modifiersEnabled={info?.modifiers_enabled !== false}
           onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
-          onClose={() => setSelectedDishModal(null)}
+          onClose={() => {
+            setSelectedDishModal(null);
+            setSelectedDishInitialPortion(null);
+          }}
         />
       )}
 

@@ -46,6 +46,17 @@ export function safeParseModifiers(rawModifiers) {
 }
 
 /**
+ * Return valid non-empty dish add-on modifiers from an array or JSON string.
+ * @param {Array|string|null} rawModifiers
+ * @returns {Array}
+ */
+export function getValidDishModifiers(rawModifiers) {
+  return safeParseModifiers(rawModifiers).filter(
+    (m) => m && typeof m === 'object' && String(m.name || '').trim() !== ''
+  );
+}
+
+/**
  * Calculates authoritative consolidated bill details for a target order and its session.
  * Ensures consistent line-item aggregation, GST computation, and inclusion/exclusion rules
  * between the Admin UI Payment Modal and generated print invoices.

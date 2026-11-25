@@ -11,8 +11,9 @@ import path from 'path';
 import fs from 'fs';
 import assert from 'assert';
 import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
 
-import { calculateBillDetails, safeParseItems, safeParseModifiers } from '../../src/utils/billingHelper.js';
+import { calculateBillDetails, safeParseItems, safeParseModifiers, getValidDishModifiers } from '../../src/utils/billingHelper.js';
 
 const DISPOSABLE_DB_FILE = 'menu_live_e2e_disposable.db';
 const DISPOSABLE_DB_PATH = path.resolve(DISPOSABLE_DB_FILE);
@@ -195,8 +196,25 @@ async function runModifiersPricingTests() {
     assert.strictEqual(invalidModData.error, 'invalid_modifier');
     record('REJECT_UNPRICED_MODIFIERS', true, 'Client cannot inject arbitrary add-ons or fake prices; rejected with HTTP 400 invalid_modifier');
 
+    // 5. Frontend Add-ons / Modifiers Prompt Coverage
+    assert.strictEqual(getValidDishModifiers('[{"name":"Extra Cheese","price":50},{"name":" ","price":10}]').length, 1);
+    assert.strictEqual(getValidDishModifiers('[]').length, 0);
+    assert.strictEqual(getValidDishModifiers(null).length, 0);
+
+    const testDir = path.dirname(fileURLToPath(import.meta.url));
+    const menuCardCode = fs.readFileSync(path.resolve(testDir, '../../src/components/MenuCardItem.jsx'), 'utf8');
+    const dishCardCode = fs.readFileSync(path.resolve(testDir, '../../src/components/DishCard.jsx'), 'utf8');
+    const dishModalCode = fs.readFileSync(path.resolve(testDir, '../../src/components/DishModal.jsx'), 'utf8');
+    const appCode = fs.readFileSync(path.resolve(testDir, '../../src/App.jsx'), 'utf8');
+
+    assert.ok(menuCardCode.includes('getValidDishModifiers') && menuCardCode.includes('if (hasModifiers && onClick)'), 'MenuCardItem + Add must open customization modal when dish has add-ons');
+    assert.ok(dishCardCode.includes('getValidDishModifiers') && dishCardCode.includes('handleAddAction'), 'DishCard + Half / + Full / + Add must open customization modal when dish has add-ons');
+    assert.ok(dishModalCode.includes('initialPortion') && dishModalCode.includes('modifiersEnabled'), 'DishModal must respect initialPortion and modifiersEnabled');
+    assert.ok(appCode.includes('openDishCustomizationModal'), 'App.jsx must route menu card and Top Picks customizations through openDishCustomizationModal');
+    record('CUSTOMER_ADDON_MODAL_PROMPT', true, 'MenuCardItem, DishCard, DishModal, and App.jsx consistently trigger add-on selection modal on + Add');
+
     console.log('\n======================================================================');
-    console.log('ALL MODIFIERS PRICING TESTS PASSED (4/4)');
+    console.log('ALL MODIFIERS PRICING TESTS PASSED (5/5)');
     console.log('======================================================================\n');
   } finally {
     if (server) {

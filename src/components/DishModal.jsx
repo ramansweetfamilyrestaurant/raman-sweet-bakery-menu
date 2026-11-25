@@ -2,27 +2,21 @@ import React, { useState } from 'react';
 import { X, ShieldCheck, Sparkles, Clock, Utensils, CheckCircle } from 'lucide-react';
 import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
+import { getValidDishModifiers } from '../utils/billingHelper';
 
-export default function DishModal({ dish, onClose, onAddToCart, currencySymbol = '₹', lang = 'en' }) {
+export default function DishModal({ dish, onClose, onAddToCart, currencySymbol = '₹', lang = 'en', initialPortion = null, modifiersEnabled = true }) {
   if (!dish) return null;
 
   const symbol = getCurrencySymbol(currencySymbol);
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
   const displayDesc = (lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
-  const [selectedPortion, setSelectedPortion] = useState(hasHalfPrice ? 'half' : 'full');
+  const resolvedInitialPortion = (hasHalfPrice && (initialPortion === 'half' || initialPortion === 'full'))
+    ? initialPortion
+    : (hasHalfPrice ? 'half' : 'full');
+  const [selectedPortion, setSelectedPortion] = useState(resolvedInitialPortion);
 
-  const parseDishModifiers = () => {
-    if (!dish?.modifiers) return [];
-    if (Array.isArray(dish.modifiers)) return dish.modifiers;
-    try {
-      const parsed = JSON.parse(dish.modifiers);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  };
-  const availableModifiers = parseDishModifiers();
+  const availableModifiers = modifiersEnabled === false ? [] : getValidDishModifiers(dish?.modifiers);
   const [selectedModifiers, setSelectedModifiers] = useState([]);
 
   const toggleModifier = (mod) => {

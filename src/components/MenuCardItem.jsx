@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
+import { getValidDishModifiers } from '../utils/billingHelper';
 import { triggerHaptic } from '../utils/haptics';
 
-export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol, filtersVisibility }) {
+export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol, filtersVisibility, modifiersEnabled = true }) {
   const symbol = getCurrencySymbol(currencySymbol);
   const isAvailable = dish.available !== false;
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
-  const hasModifiers = Boolean(
-    dish.modifiers && (
-      (Array.isArray(dish.modifiers) && dish.modifiers.length > 0) ||
-      (typeof dish.modifiers === 'string' && dish.modifiers.trim().length > 2 && dish.modifiers !== '[]')
-    )
-  );
+  const hasModifiers = modifiersEnabled !== false && getValidDishModifiers(dish?.modifiers).length > 0;
   const imageSrc = getDishImageUrl(dish.image);
 
   const [portionMode, setPortionMode] = useState(hasHalfPrice ? 'half' : 'full');
@@ -433,7 +429,12 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               onClick={(e) => {
                 e.stopPropagation();
                 triggerHaptic('medium');
-                onAddToCart(dish, hasHalfPrice ? portionMode : 'full');
+                const chosenPortion = hasHalfPrice ? portionMode : 'full';
+                if (hasModifiers && onClick) {
+                  onClick(dish, chosenPortion);
+                } else {
+                  onAddToCart(dish, chosenPortion);
+                }
               }}
               style={{
                 background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
