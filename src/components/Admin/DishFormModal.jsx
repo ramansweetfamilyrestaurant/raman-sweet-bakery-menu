@@ -39,7 +39,7 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
   const [descriptionHi, setDescriptionHi] = useState(dish?.description_hi || '');
   const [price, setPrice] = useState(dish?.price !== undefined && dish?.price !== null ? dish.price : '');
   const [priceHalf, setPriceHalf] = useState(dish?.price_half !== undefined && dish?.price_half !== null ? dish.price_half : '');
-  const [hasHalf, setHasHalf] = useState(Boolean(dish?.price_half !== undefined && dish?.price_half !== null && dish?.price_half !== '' && modifiersEnabled !== false));
+  const [hasHalf, setHasHalf] = useState(Boolean(dish?.price_half !== undefined && dish?.price_half !== null && dish?.price_half !== ''));
   const [portionHalfLabel, setPortionHalfLabel] = useState(dish?.portion_half_label || 'Half');
   const [portionFullLabel, setPortionFullLabel] = useState(dish?.portion_full_label || 'Full');
   
@@ -137,7 +137,7 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
       return;
     }
 
-    if (hasHalf && modifiersEnabled !== false) {
+    if (hasHalf) {
       if (priceHalf === '' || priceHalf === null) {
         setActiveTab('pricing');
         setError('Half price is required when half portion is enabled.');
@@ -163,6 +163,7 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
     }
 
     if (image && !image.startsWith('http://') && !image.startsWith('https://') && !image.startsWith('/api/') && !image.startsWith('/uploads/')) {
+      setActiveTab('basic');
       setError('Please enter a valid image URL (must start with http://, https://, or local paths).');
       return;
     }
@@ -183,15 +184,15 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
         description_hi: descriptionHi.trim(),
         image,
         price: Number(price),
-        price_half: (modifiersEnabled !== false && hasHalf && priceHalf !== '' && priceHalf !== null) ? Number(priceHalf) : null,
+        price_half: (hasHalf && priceHalf !== '' && priceHalf !== null) ? Number(priceHalf) : null,
         portion,
-        portion_half_label: (modifiersEnabled !== false && hasHalf) ? (portionHalfLabel || 'Half') : '',
-        portion_full_label: (modifiersEnabled !== false && hasHalf) ? (portionFullLabel || 'Full') : '',
+        portion_half_label: hasHalf ? (portionHalfLabel || 'Half') : '',
+        portion_full_label: hasHalf ? (portionFullLabel || 'Full') : '',
         modifiers: cleanModifiers,
         badge,
         ingredients,
         taste_profile: tasteProfile,
-        type,
+        type: isPureVegResto ? 'veg' : type,
         available
       });
       setTempUploadedImages([]);
@@ -219,12 +220,12 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
         className="dish-modal-container"
         style={{
           background: '#FFFFFF',
-          borderRadius: '20px',
+          borderRadius: '18px',
           width: '100%',
-          maxWidth: '540px',
+          maxWidth: '550px',
           maxHeight: '92vh',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          border: '1px solid #E2E8F0',
+          boxShadow: '0 24px 48px -12px rgba(10, 35, 21, 0.35), 0 0 0 1px rgba(10, 35, 21, 0.16)',
+          border: 'none',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -238,28 +239,51 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
           }
           .dish-tab-btn {
             flex: 1;
-            padding: 7px 6px;
-            font-size: 0.70rem;
-            font-weight: 650;
-            border: none;
-            background: transparent;
+            padding: 7px 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            border: 1.5px solid #CBD5E1;
+            background: rgba(255, 255, 255, 0.72);
             cursor: pointer;
             display: flex;
             align-items: center;
-            justifyContent: center;
-            gap: 4px;
-            transition: all 0.2s ease;
-            border-radius: 7px;
-            color: #64748B;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.18s ease;
+            border-radius: 9px;
+            color: #475569;
             white-space: nowrap;
             height: 36px;
             min-width: 0;
           }
+          .dish-tab-btn:not(.active):hover {
+            background: #FFFFFF;
+            border-color: #94A3B8;
+            color: #0F172A;
+          }
           .dish-tab-btn.active {
             background: #FFFFFF;
             color: #0A2315;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            font-weight: 750;
+            border: 1.5px solid #0A2315;
+            box-shadow: 0 2px 6px rgba(10, 35, 21, 0.10);
+            font-weight: 800;
+          }
+          .dish-modal-field {
+            width: 100%;
+            padding: 8px 11px;
+            border-radius: 9px;
+            border: 1.5px solid #CBD5E1;
+            font-size: 0.82rem;
+            outline: none;
+            box-sizing: border-box;
+            background: #FFFFFF;
+            color: #0F172A;
+            line-height: 1.35;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+          }
+          .dish-modal-field:focus {
+            border-color: #0A2315 !important;
+            box-shadow: 0 0 0 3px rgba(10, 35, 21, 0.08) !important;
           }
           @media (max-width: 600px) {
             .dish-modal-container {
@@ -286,13 +310,13 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
 
         {/* Compact Header */}
         <div style={{
-          padding: '12px 16px',
+          padding: '13px 16px',
           background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
           color: '#FFFFFF',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+          borderBottom: '1px solid rgba(212, 175, 55, 0.25)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
             <Sparkles size={15} color="#D4AF37" />
@@ -300,13 +324,13 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
               {dish ? `Edit ${itemLabel} Details` : `Add New ${itemLabel}`}
             </h3>
           </div>
-          <button 
-            onClick={handleCancelClose} 
+          <button
+            onClick={handleCancelClose}
             type="button"
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.12)', 
-              border: 'none', 
-              color: '#FFFFFF', 
+            style={{
+              background: 'rgba(255, 255, 255, 0.14)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              color: '#FFFFFF',
               cursor: 'pointer',
               width: '28px',
               height: '28px',
@@ -324,15 +348,15 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
         {/* Compact Segmented Tabs */}
         <div style={{
           background: '#F1F5F9',
-          padding: '3px',
+          padding: '8px 10px',
           display: 'flex',
-          gap: '3px',
-          borderBottom: '1px solid #E2E8F0'
+          gap: '6px',
+          borderBottom: '1px solid #CBD5E1'
         }}>
           <button
             type="button"
             className={`dish-tab-btn ${activeTab === 'basic' ? 'active' : ''}`}
-            onClick={() => setActiveTab('basic')}
+            onClick={() => { setError(''); setActiveTab('basic'); }}
           >
             <Utensils size={12} color={activeTab === 'basic' ? '#0A2315' : '#64748B'} />
             <span>1. Basic Info</span>
@@ -341,30 +365,30 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
           <button
             type="button"
             className={`dish-tab-btn ${activeTab === 'pricing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('pricing')}
+            onClick={() => { setError(''); setActiveTab('pricing'); }}
           >
             <Sliders size={12} color={activeTab === 'pricing' ? '#0A2315' : '#64748B'} />
             <span>2. Pricing & Half</span>
             {(hasHalf || modifiers.length > 0) && (
-              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#D4AF37' }} />
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#D4AF37', flexShrink: 0 }} />
             )}
           </button>
 
           <button
             type="button"
             className={`dish-tab-btn ${activeTab === 'details' ? 'active' : ''}`}
-            onClick={() => setActiveTab('details')}
+            onClick={() => { setError(''); setActiveTab('details'); }}
           >
             <Sparkles size={12} color={activeTab === 'details' ? '#0A2315' : '#64748B'} />
             <span>3. More Details</span>
-            {(nameHi || badge || tasteProfile) && (
-              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10B981' }} />
+            {(nameHi || descriptionHi || badge || tasteProfile || ingredients || portion) && (
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', flexShrink: 0 }} />
             )}
           </button>
         </div>
 
         {/* Form Body with Smooth Scrolling */}
-        <form onSubmit={handleSubmit} className="dish-modal-body-form" style={{ padding: '14px 16px', overflowY: 'auto', flex: 1, margin: 0 }}>
+        <form onSubmit={handleSubmit} noValidate className="dish-modal-body-form" style={{ padding: '14px 16px', overflowY: 'auto', flex: 1, margin: 0 }}>
           {error && (
             <div style={{
               background: '#FEE2E2',
@@ -386,9 +410,9 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
 
           {/* TAB 1: BASIC INFO */}
           {activeTab === 'basic' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Category & Diet Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '10px', alignItems: 'start' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                     Category *
@@ -397,18 +421,10 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
                     required
+                    className="dish-modal-field"
                     style={{
-                      width: '100%',
-                      padding: '8px 11px',
-                      borderRadius: '8px',
-                      border: '1.5px solid #CBD5E1',
-                      fontSize: '0.80rem',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      background: '#FFFFFF',
-                      color: '#0F172A',
-                      cursor: 'pointer',
-                      lineHeight: 1.35
+                      height: '38px',
+                      cursor: 'pointer'
                     }}
                   >
                     <option value="" disabled>
@@ -424,44 +440,62 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                   <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                     Dietary Preference *
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
-                    {[
-                      { id: 'veg', label: 'Veg', bg: '#F0FDF4', color: '#16A34A', dot: '#16A34A' },
-                      { id: 'nonveg', label: 'Non-Veg', bg: '#FDF2F2', color: '#DC2626', dot: '#DC2626' },
-                      { id: 'egg', label: 'Egg', bg: '#FFFBEB', color: '#D97706', dot: '#D97706' }
-                    ].map(d => {
-                      const isSel = type === d.id;
-                      return (
-                        <button
-                          key={d.id}
-                          type="button"
-                          onClick={() => setType(d.id)}
-                          style={{
-                            padding: '7px 2px',
-                            height: '38px',
-                            borderRadius: '7px',
-                            fontSize: '0.70rem',
-                            fontWeight: 700,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '3px',
-                            background: isSel ? d.bg : '#F8FAFC',
-                            color: isSel ? d.color : '#64748B',
-                            border: isSel ? `1.5px solid ${d.color}` : '1.5px solid #E2E8F0',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: d.dot }} />
-                          <span>{d.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {isPureVegResto && (
-                    <span style={{ fontSize: '0.64rem', color: '#15803D', display: 'block', marginTop: '4px', fontWeight: 600 }}>
-                      🟢 Synced with Pure Veg Business Profile
-                    </span>
+                  {isPureVegResto ? (
+                    <div style={{
+                      height: '38px',
+                      padding: '0 10px',
+                      borderRadius: '9px',
+                      background: '#F0FDF4',
+                      border: '1.5px solid #86EFAC',
+                      color: '#15803D',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.74rem',
+                      fontWeight: 750,
+                      boxSizing: 'border-box'
+                    }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A34A' }} />
+                        <span>Pure Veg</span>
+                      </span>
+                      <span style={{ fontSize: '0.64rem', color: '#166534', fontWeight: 650 }}>Profile Lock</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px' }}>
+                      {[
+                        { id: 'veg', label: 'Veg', bg: '#F0FDF4', color: '#16A34A', dot: '#16A34A' },
+                        { id: 'nonveg', label: 'Non-Veg', bg: '#FDF2F2', color: '#DC2626', dot: '#DC2626' },
+                        { id: 'egg', label: 'Egg', bg: '#FFFBEB', color: '#D97706', dot: '#D97706' }
+                      ].map(d => {
+                        const isSel = type === d.id;
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => setType(d.id)}
+                            style={{
+                              padding: '0 4px',
+                              height: '38px',
+                              borderRadius: '9px',
+                              fontSize: '0.70rem',
+                              fontWeight: 700,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              background: isSel ? d.bg : '#F8FAFC',
+                              color: isSel ? d.color : '#64748B',
+                              border: isSel ? `1.5px solid ${d.color}` : '1.5px solid #CBD5E1',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: d.dot }} />
+                            <span>{d.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
@@ -484,7 +518,8 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '3px'
+                      gap: '3px',
+                      padding: 0
                     }}
                   >
                     <Globe size={11} color="#64748B" />
@@ -497,220 +532,200 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Paneer Butter Masala"
-                  style={{
-                    width: '100%',
-                    padding: '8px 11px',
-                    borderRadius: '8px',
-                    border: '1.5px solid #CBD5E1',
-                    fontSize: '0.82rem',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    color: '#0F172A',
-                    lineHeight: 1.35
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#0A2315'}
-                  onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+                  className="dish-modal-field"
                 />
               </div>
 
-              {/* Full Price & Quick Half Toggle */}
+              {/* Price & Quick Half Portion Card */}
               <div style={{
                 background: '#F8FAFC',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: '1px solid #E2E8F0',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: '1.5px solid #CBD5E1',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '10px'
+                flexDirection: 'column',
+                gap: '8px'
               }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>
-                    Price ({currencySymbol}) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="250"
-                    style={{
-                      width: '100%',
-                      padding: '7px 10px',
-                      borderRadius: '6px',
-                      border: '1.5px solid #CBD5E1',
-                      fontSize: '0.86rem',
-                      fontWeight: 750,
-                      color: '#16A34A',
-                      boxSizing: 'border-box',
-                      outline: 'none',
-                      lineHeight: 1.35
-                    }}
-                  />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 750, color: '#334155' }}>
+                    Pricing ({currencySymbol}) *
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type="checkbox"
+                      id="quickHasHalf"
+                      checked={hasHalf}
+                      onChange={(e) => setHasHalf(e.target.checked)}
+                      style={{ cursor: 'pointer', accentColor: '#0A2315', width: '15px', height: '15px' }}
+                    />
+                    <label htmlFor="quickHasHalf" style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+                      Half Portion
+                    </label>
+                  </div>
                 </div>
 
-                {modifiersEnabled !== false && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
-                      <input
-                        type="checkbox"
-                        id="quickHasHalf"
-                        checked={hasHalf}
-                        onChange={(e) => {
-                          setHasHalf(e.target.checked);
-                          if (e.target.checked && !priceHalf) setActiveTab('pricing');
-                        }}
-                        style={{ cursor: 'pointer', accentColor: '#0A2315', width: '15px', height: '15px' }}
-                      />
-                      <label htmlFor="quickHasHalf" style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
-                        Half Portion
-                      </label>
-                    </div>
+                <div style={{ display: 'grid', gridTemplateColumns: hasHalf ? '1fr 1fr' : '1fr', gap: '8px' }}>
+                  <div>
                     {hasHalf && (
+                      <label style={{ display: 'block', fontSize: '0.66rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>
+                        Full Price ({currencySymbol}) *
+                      </label>
+                    )}
+                    <input
+                      type="number"
+                      required
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="e.g. 250"
+                      className="dish-modal-field"
+                      style={{ fontWeight: 750, color: '#0A2315' }}
+                    />
+                  </div>
+
+                  {hasHalf && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.66rem', fontWeight: 700, color: '#B45309', marginBottom: '3px' }}>
+                        Half Price ({currencySymbol}) *
+                      </label>
+                      <input
+                        type="number"
+                        value={priceHalf}
+                        onChange={(e) => setPriceHalf(e.target.value)}
+                        placeholder="e.g. 140"
+                        className="dish-modal-field"
+                        style={{ borderColor: '#DFBA67', fontWeight: 750, color: '#B45309' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Compact Image Upload & Stock Card */}
+              <div style={{
+                background: '#F8FAFC',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: '1.5px dashed #CBD5E1',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <img
+                      src={getDishImageUrl(image)}
+                      alt="Preview"
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '8px',
+                        objectFit: 'cover',
+                        border: '1.5px solid #CBD5E1',
+                        background: '#FFFFFF',
+                        flexShrink: 0
+                      }}
+                      onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        background: '#0A2315',
+                        color: '#FFFFFF',
+                        padding: '6px 12px',
+                        borderRadius: '7px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        minWidth: '104px',
+                        justifyContent: 'center'
+                      }}>
+                        <Upload size={11} color="#D4AF37" />
+                        <span>{uploading ? 'Uploading...' : (image ? 'Change Photo' : 'Upload Photo')}</span>
+                        <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+                      </label>
                       <button
                         type="button"
-                        onClick={() => setActiveTab('pricing')}
-                        style={{ background: 'none', border: 'none', color: '#D97706', fontSize: '0.68rem', fontWeight: 750, cursor: 'pointer', padding: 0 }}
+                        onClick={() => setShowUrlInput(!showUrlInput)}
+                        style={{ background: 'none', border: 'none', color: '#475569', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'left' }}
                       >
-                        {priceHalf ? `Half: ${currencySymbol}${priceHalf} ✏️` : 'Set Half Price ⚠️'}
+                        {showUrlInput ? 'Hide URL input' : 'Or paste image URL'}
                       </button>
-                    )}
+                    </div>
                   </div>
+
+                  {/* Compact Availability Toggle */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    <span style={{ fontSize: '0.70rem', fontWeight: 750, color: available ? '#16A34A' : '#64748B' }}>
+                      {available ? '● In Stock' : '○ Out of Stock'}
+                    </span>
+                    <div
+                      onClick={() => setAvailable(!available)}
+                      style={{
+                        width: '34px',
+                        height: '18px',
+                        borderRadius: '9px',
+                        background: available ? '#10B981' : '#CBD5E1',
+                        position: 'relative',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s',
+                        display: 'inline-flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div style={{
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        background: '#FFFFFF',
+                        position: 'absolute',
+                        left: available ? '18px' : '2px',
+                        transition: 'left 0.2s',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                      }} />
+                    </div>
+                  </div>
+                </div>
+
+                {showUrlInput && (
+                  <input
+                    type="text"
+                    value={image}
+                    onChange={(e) => setImage(e.target.value)}
+                    placeholder="Paste direct image URL (https://...)"
+                    className="dish-modal-field"
+                    style={{ fontSize: '0.76rem', padding: '7px 10px' }}
+                  />
                 )}
               </div>
-
-              {/* Compact Image Upload & Stock Row */}
-              <div style={{
-                background: '#FAFAFA',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: '1px dashed #CBD5E1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '10px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <img
-                    src={getDishImageUrl(image)}
-                    alt="Preview"
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '7px',
-                      objectFit: 'cover',
-                      border: '1px solid #E2E8F0',
-                      background: '#FFFFFF'
-                    }}
-                    onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <label style={{
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      background: '#0A2315',
-                      color: '#FFFFFF',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      fontSize: '0.72rem',
-                      fontWeight: 650,
-                      minWidth: '100px',
-                      justifyContent: 'center'
-                    }}>
-                      <Upload size={11} color="#D4AF37" />
-                      <span>{uploading ? 'Uploading...' : (image ? 'Change Photo' : 'Upload Photo')}</span>
-                      <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowUrlInput(!showUrlInput)}
-                      style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.68rem', cursor: 'pointer', padding: 0, textAlign: 'left', marginTop: '2px' }}
-                    >
-                      {showUrlInput ? 'Hide URL input' : 'Or paste URL'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Compact Availability Toggle */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 750, color: available ? '#16A34A' : '#94A3B8' }}>
-                    {available ? '● In Stock' : '○ Out of Stock'}
-                  </span>
-                  <div
-                    onClick={() => setAvailable(!available)}
-                    style={{
-                      width: '30px',
-                      height: '16px',
-                      borderRadius: '8px',
-                      background: available ? '#10B981' : '#CBD5E1',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.2s',
-                      display: 'inline-flex',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <div style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      background: '#FFFFFF',
-                      position: 'absolute',
-                      left: available ? '16px' : '2px',
-                      transition: 'left 0.2s',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
-                    }} />
-                  </div>
-                </div>
-              </div>
-
-              {showUrlInput && (
-                <input
-                  type="text"
-                  value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  placeholder="Paste direct image URL (https://...)"
-                  style={{
-                    width: '100%',
-                    padding: '7px 10px',
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.76rem',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    color: '#0F172A'
-                  }}
-                />
-              )}
             </div>
           )}
 
           {/* TAB 2: PORTION PRICING & MODIFIERS */}
           {activeTab === 'pricing' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Half Portion Pricing Card */}
               <div style={{
                 background: '#FDFBF7',
-                padding: '10px 12px',
-                borderRadius: '8px',
-                border: '1px solid #DFBA67'
+                padding: '12px',
+                borderRadius: '10px',
+                border: '1.5px solid #DFBA67'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '0.76rem', fontWeight: 750, color: '#0A2315', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Sliders size={12} color="#D4AF37" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 750, color: '#0A2315', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Sliders size={12} color="#B45309" />
                     Half / Full Portion Pricing
                   </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <input
                       type="checkbox"
                       id="enableHalfBox"
                       checked={hasHalf}
                       onChange={(e) => setHasHalf(e.target.checked)}
-                      style={{ cursor: 'pointer', accentColor: '#0A2315' }}
+                      style={{ cursor: 'pointer', accentColor: '#0A2315', width: '15px', height: '15px' }}
                     />
-                    <label htmlFor="enableHalfBox" style={{ fontSize: '0.70rem', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>
+                    <label htmlFor="enableHalfBox" style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
                       Enable Half
                     </label>
                   </div>
@@ -718,7 +733,7 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
 
                 <div style={{ display: 'grid', gridTemplateColumns: hasHalf ? '1fr 1fr' : '1fr', gap: '8px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#64748B', marginBottom: '2px' }}>
+                    <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>
                       Full Price ({currencySymbol}) *
                     </label>
                     <input
@@ -726,25 +741,15 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                       required
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
-                      placeholder="250"
-                      style={{
-                        width: '100%',
-                        padding: '7px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid #CBD5E1',
-                        fontSize: '0.84rem',
-                        fontWeight: 750,
-                        color: '#16A34A',
-                        boxSizing: 'border-box',
-                        outline: 'none',
-                        lineHeight: 1.35
-                      }}
+                      placeholder="e.g. 250"
+                      className="dish-modal-field"
+                      style={{ fontWeight: 750, color: '#0A2315' }}
                     />
                   </div>
 
                   {hasHalf && (
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#D97706', marginBottom: '2px' }}>
+                      <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#B45309', marginBottom: '3px' }}>
                         Half Price ({currencySymbol}) *
                       </label>
                       <input
@@ -752,28 +757,18 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                         required={hasHalf}
                         value={priceHalf}
                         onChange={(e) => setPriceHalf(e.target.value)}
-                        placeholder="140"
-                        style={{
-                          width: '100%',
-                          padding: '7px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #DFBA67',
-                          fontSize: '0.84rem',
-                          fontWeight: 750,
-                          color: '#D97706',
-                          boxSizing: 'border-box',
-                          outline: 'none',
-                          lineHeight: 1.35
-                        }}
+                        placeholder="e.g. 140"
+                        className="dish-modal-field"
+                        style={{ borderColor: '#DFBA67', fontWeight: 750, color: '#B45309' }}
                       />
                     </div>
                   )}
                 </div>
 
                 {hasHalf && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.66rem', color: '#64748B', marginBottom: '2px' }}>
+                      <label style={{ display: 'block', fontSize: '0.66rem', color: '#475569', fontWeight: 650, marginBottom: '3px' }}>
                         Full Label (Optional)
                       </label>
                       <input
@@ -781,11 +776,12 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                         value={portionFullLabel}
                         onChange={(e) => setPortionFullLabel(e.target.value)}
                         placeholder="Full"
-                        style={{ width: '100%', padding: '6px 8px', borderRadius: '5px', border: '1px solid #CBD5E1', fontSize: '0.74rem', boxSizing: 'border-box', outline: 'none' }}
+                        className="dish-modal-field"
+                        style={{ padding: '6px 9px', fontSize: '0.76rem' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.66rem', color: '#64748B', marginBottom: '2px' }}>
+                      <label style={{ display: 'block', fontSize: '0.66rem', color: '#475569', fontWeight: 650, marginBottom: '3px' }}>
                         Half Label (Optional)
                       </label>
                       <input
@@ -793,7 +789,8 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                         value={portionHalfLabel}
                         onChange={(e) => setPortionHalfLabel(e.target.value)}
                         placeholder="Half"
-                        style={{ width: '100%', padding: '6px 8px', borderRadius: '5px', border: '1px solid #CBD5E1', fontSize: '0.74rem', boxSizing: 'border-box', outline: 'none' }}
+                        className="dish-modal-field"
+                        style={{ padding: '6px 9px', fontSize: '0.76rem' }}
                       />
                     </div>
                   </div>
@@ -801,14 +798,14 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
               </div>
 
               {/* Add-ons / Modifiers */}
-              {modifiersEnabled !== false && (
+              {modifiersEnabled !== false ? (
                 <div style={{
                   background: '#F8FAFC',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #E2E8F0'
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #CBD5E1'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span style={{ fontSize: '0.76rem', fontWeight: 750, color: '#0A2315' }}>
                       Add-ons / Custom Toppings ({modifiers.length})
                     </span>
@@ -816,12 +813,12 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                       type="button"
                       onClick={handleAddModifier}
                       style={{
-                        padding: '4px 8px',
-                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        borderRadius: '7px',
                         background: '#0A2315',
                         color: '#FFFFFF',
-                        fontSize: '0.68rem',
-                        fontWeight: 650,
+                        fontSize: '0.70rem',
+                        fontWeight: 700,
                         border: 'none',
                         cursor: 'pointer'
                       }}
@@ -831,30 +828,33 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                   </div>
 
                   {modifiers.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {modifiers.map((mod, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FFFFFF', padding: '4px 6px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FFFFFF', padding: '6px 8px', borderRadius: '8px', border: '1.5px solid #E2E8F0' }}>
                           <input
                             type="text"
                             placeholder="e.g. Extra Cheese"
                             value={mod.name}
                             onChange={(e) => handleUpdateModifier(idx, 'name', e.target.value)}
-                            style={{ flex: 2, padding: '5px 8px', borderRadius: '4px', border: '1px solid #E2E8F0', fontSize: '0.76rem', outline: 'none' }}
+                            className="dish-modal-field"
+                            style={{ flex: 2, padding: '6px 8px', fontSize: '0.78rem' }}
                           />
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flex: 1 }}>
-                            <span style={{ fontSize: '0.70rem', fontWeight: 750, color: '#64748B' }}>+{currencySymbol}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: '88px' }}>
+                            <span style={{ fontSize: '0.74rem', fontWeight: 750, color: '#475569' }}>+{currencySymbol}</span>
                             <input
                               type="number"
                               placeholder="30"
                               value={mod.price}
                               onChange={(e) => handleUpdateModifier(idx, 'price', e.target.value)}
-                              style={{ width: '100%', padding: '5px 6px', borderRadius: '4px', border: '1px solid #E2E8F0', fontSize: '0.76rem', fontWeight: 750, outline: 'none' }}
+                              className="dish-modal-field"
+                              style={{ padding: '6px 8px', fontSize: '0.78rem', fontWeight: 750 }}
                             />
                           </div>
                           <button
                             type="button"
                             onClick={() => handleRemoveModifier(idx)}
-                            style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', borderRadius: '4px', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            style={{ background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            title="Remove add-on"
                           >
                             ✕
                           </button>
@@ -862,10 +862,21 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                       ))}
                     </div>
                   ) : (
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', fontStyle: 'italic' }}>
-                      No add-on toppings added yet (e.g. Extra Butter, Cheese).
+                    <span style={{ fontSize: '0.70rem', color: '#64748B', display: 'block' }}>
+                      Add optional toppings or extras (e.g. Extra Cheese +₹30) that customers can choose when adding to cart.
                     </span>
                   )}
+                </div>
+              ) : (
+                <div style={{
+                  background: '#F8FAFC',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1.5px dashed #CBD5E1',
+                  fontSize: '0.72rem',
+                  color: '#64748B'
+                }}>
+                  Add-on modifiers are currently turned off in your plan or menu preferences.
                 </div>
               )}
             </div>
@@ -873,10 +884,10 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
 
           {/* TAB 3: MORE DETAILS (Hindi, Description, Taste, Badges) */}
           {activeTab === 'details' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {/* Hindi Name */}
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                   <Globe size={11} color="#64748B" />
                   Hindi {itemLabel} Name (हिंदी नाम)
                 </label>
@@ -885,26 +896,17 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                   value={nameHi}
                   onChange={(e) => setNameHi(e.target.value)}
                   placeholder="उदा. पनीर बटर मसाला"
-                  style={{
-                    width: '100%',
-                    padding: '7px 10px',
-                    borderRadius: '7px',
-                    border: '1.5px solid #CBD5E1',
-                    fontSize: '0.80rem',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    lineHeight: 1.35
-                  }}
+                  className="dish-modal-field"
                 />
               </div>
 
               {/* Badges */}
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                   <Tag size={11} color="#64748B" />
                   Highlight Tag / Badge
                 </label>
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {[
                     { label: '🔥 Must Try', val: 'Must Try' },
                     { label: '⭐ Bestseller', val: 'Bestseller' },
@@ -917,14 +919,14 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                         type="button"
                         onClick={() => setBadge(isB ? '' : b.val)}
                         style={{
-                          fontSize: '0.68rem',
-                          fontWeight: 650,
-                          padding: '4px 9px',
-                          height: '30px',
-                          borderRadius: '100px',
+                          fontSize: '0.70rem',
+                          fontWeight: 700,
+                          padding: '5px 11px',
+                          height: '32px',
+                          borderRadius: '9999px',
                           background: isB ? '#FDF2F2' : '#F8FAFC',
                           color: isB ? '#DC2626' : '#475569',
-                          border: `1px solid ${isB ? '#FCA5A5' : '#CBD5E1'}`,
+                          border: `1.5px solid ${isB ? '#FCA5A5' : '#CBD5E1'}`,
                           cursor: 'pointer'
                         }}
                       >
@@ -937,11 +939,11 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
 
               {/* Taste Profile */}
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                   <Flame size={11} color="#EA580C" />
                   Taste Profile / Spiciness
                 </label>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '6px' }}>
                   {[
                     { label: '🌶️ Mild', val: 'Mild' },
                     { label: '🌶️🌶️ Medium', val: 'Medium Spicy' },
@@ -955,14 +957,14 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                         type="button"
                         onClick={() => setTasteProfile(isTp ? '' : tp.val)}
                         style={{
-                          fontSize: '0.66rem',
-                          fontWeight: 650,
-                          padding: '3px 8px',
-                          height: '28px',
-                          borderRadius: '100px',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          padding: '4px 10px',
+                          height: '30px',
+                          borderRadius: '9999px',
                           background: isTp ? '#FFF7ED' : '#F8FAFC',
                           color: isTp ? '#EA580C' : '#475569',
-                          border: `1px solid ${isTp ? '#FDBA74' : '#CBD5E1'}`,
+                          border: `1.5px solid ${isTp ? '#FDBA74' : '#CBD5E1'}`,
                           cursor: 'pointer'
                         }}
                       >
@@ -976,26 +978,45 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                   value={tasteProfile}
                   onChange={(e) => setTasteProfile(e.target.value)}
                   placeholder="Or enter custom taste (e.g. Rich Gravy, Crispy)"
-                  style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.74rem', boxSizing: 'border-box', outline: 'none' }}
+                  className="dish-modal-field"
+                  style={{ padding: '7px 10px', fontSize: '0.76rem' }}
                 />
               </div>
 
-              {/* Description & Portion */}
+              {/* Description & Hindi Description */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, color: '#334155', marginBottom: '2px' }}>
-                    Description
+                  <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                    Description (English)
                   </label>
                   <textarea
                     rows="2"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Short summary..."
-                    style={{ width: '100%', minHeight: '60px', maxHeight: '72px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.74rem', resize: 'none', boxSizing: 'border-box', outline: 'none' }}
+                    className="dish-modal-field"
+                    style={{ minHeight: '60px', maxHeight: '76px', padding: '7px 9px', fontSize: '0.76rem', resize: 'none' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, color: '#334155', marginBottom: '2px' }}>
+                  <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                    Hindi Description (विवरण)
+                  </label>
+                  <textarea
+                    rows="2"
+                    value={descriptionHi}
+                    onChange={(e) => setDescriptionHi(e.target.value)}
+                    placeholder="हिंदी में संक्षिप्त विवरण..."
+                    className="dish-modal-field"
+                    style={{ minHeight: '60px', maxHeight: '76px', padding: '7px 9px', fontSize: '0.76rem', resize: 'none' }}
+                  />
+                </div>
+              </div>
+
+              {/* Portion Size & Ingredients */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '8px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
                     Portion Size
                   </label>
                   <input
@@ -1003,64 +1024,107 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                     value={portion}
                     onChange={(e) => setPortion(e.target.value)}
                     placeholder="Serves 1-2 • 300g"
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.74rem', boxSizing: 'border-box', outline: 'none' }}
+                    className="dish-modal-field"
+                    style={{ padding: '7px 9px', fontSize: '0.76rem' }}
                   />
                 </div>
-              </div>
-
-              {/* Ingredients */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, color: '#334155', marginBottom: '2px' }}>
-                  Ingredients (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={ingredients}
-                  onChange={(e) => setIngredients(e.target.value)}
-                  placeholder="Paneer, Cashews, Cream, Butter"
-                  style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.74rem', boxSizing: 'border-box', outline: 'none' }}
-                />
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.70rem', fontWeight: 700, color: '#334155', marginBottom: '3px' }}>
+                    Ingredients (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={ingredients}
+                    onChange={(e) => setIngredients(e.target.value)}
+                    placeholder="Paneer, Cashews, Cream"
+                    className="dish-modal-field"
+                    style={{ padding: '7px 9px', fontSize: '0.76rem' }}
+                  />
+                </div>
               </div>
             </div>
           )}
 
-          {/* Sticky Compact Action Buttons */}
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '14px' }}>
-            <button
-              type="button"
-              onClick={handleCancelClose}
-              style={{
-                padding: '8px 14px',
-                height: '42px',
-                borderRadius: '8px',
-                border: '1.5px solid #CBD5E1',
-                background: '#FFFFFF',
-                color: '#475569',
-                fontSize: '0.74rem',
-                fontWeight: 650,
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || uploading}
-              style={{
-                padding: '8px 16px',
-                height: '42px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
-                color: '#FFFFFF',
-                border: '1px solid #D4AF37',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                boxShadow: '0 2px 6px rgba(10, 35, 21, 0.18)',
-                cursor: (saving || uploading) ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {saving ? 'Saving...' : (dish ? `✓ Update ${itemLabel}` : `✓ Save ${itemLabel}`)}
-            </button>
+          {/* Compact Step & Save Action Footer */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', borderTop: '1px solid #CBD5E1', paddingTop: '12px', marginTop: '14px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={handleCancelClose}
+                style={{
+                  padding: '0 14px',
+                  height: '38px',
+                  borderRadius: '9px',
+                  border: '1.5px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              {activeTab !== 'basic' && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(activeTab === 'details' ? 'pricing' : 'basic')}
+                  style={{
+                    padding: '0 12px',
+                    height: '38px',
+                    borderRadius: '9px',
+                    border: '1.5px solid #CBD5E1',
+                    background: '#F8FAFC',
+                    color: '#0F172A',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ← Back
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+              {activeTab !== 'details' && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(activeTab === 'basic' ? 'pricing' : 'details')}
+                  style={{
+                    padding: '0 13px',
+                    height: '38px',
+                    borderRadius: '9px',
+                    border: '1.5px solid #0A2315',
+                    background: '#F0FDF4',
+                    color: '#0A2315',
+                    fontSize: '0.74rem',
+                    fontWeight: 750,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {activeTab === 'basic' ? 'Next: Pricing →' : 'Next: Details →'}
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={saving || uploading}
+                style={{
+                  padding: '0 16px',
+                  height: '38px',
+                  borderRadius: '9px',
+                  background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
+                  color: '#FFFFFF',
+                  border: '1.5px solid #0A2315',
+                  fontSize: '0.76rem',
+                  fontWeight: 750,
+                  boxShadow: '0 2px 8px rgba(10, 35, 21, 0.22)',
+                  cursor: (saving || uploading) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {saving ? 'Saving...' : (dish ? `✓ Update ${itemLabel}` : `✓ Save ${itemLabel}`)}
+              </button>
+            </div>
           </div>
         </form>
       </div>

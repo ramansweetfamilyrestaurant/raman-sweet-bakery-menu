@@ -329,9 +329,11 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 </button>
               </div>
             </div>
-          ) : (
-            dish.portion && dish.portion.trim() && !dish.portion.toLowerCase().includes('portion') ? (
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          ) : null}
+
+          {((!hasHalfPrice && dish.portion && dish.portion.trim() && !dish.portion.toLowerCase().includes('portion')) || (dish.taste_profile && String(dish.taste_profile).trim())) && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {!hasHalfPrice && dish.portion && dish.portion.trim() && !dish.portion.toLowerCase().includes('portion') && (
                 <span style={{
                   fontSize: '0.78rem',
                   fontWeight: 700,
@@ -343,8 +345,21 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 }}>
                   📦 {dish.portion}
                 </span>
-              </div>
-            ) : null
+              )}
+              {dish.taste_profile && String(dish.taste_profile).trim() && (
+                <span style={{
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  color: '#C2410C',
+                  background: '#FFF7ED',
+                  border: '1px solid #FDBA74',
+                  padding: '3px 10px',
+                  borderRadius: 'var(--radius-pill)'
+                }}>
+                  🌶️ {dish.taste_profile}
+                </span>
+              )}
+            </div>
           )}
 
           {/* Interactive Custom Add-on Modifiers & Toppings */}

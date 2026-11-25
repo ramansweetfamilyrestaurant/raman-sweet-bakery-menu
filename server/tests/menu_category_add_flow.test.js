@@ -178,6 +178,13 @@ async function runTests() {
       assert.ok(dashboardCode.includes('defaultCategoryId={selectedCatFilter'), 'AdminDashboard must pass active selectedCatFilter into DishFormModal');
 
       assert.ok(dishModalCode.includes("defaultCategoryId = ''"), 'DishFormModal must accept defaultCategoryId');
+      assert.ok(dishModalCode.includes('noValidate'), 'DishFormModal must use noValidate so multi-tab submit validates across unmounted tabs cleanly');
+      assert.ok(dishModalCode.includes('Next: Pricing'), 'DishFormModal must provide Next step navigation across tabs');
+      assert.ok(dishModalCode.includes('dish-modal-field'), 'DishFormModal must use unified field styling and focus borders');
+      assert.ok(dishModalCode.includes('descriptionHi'), 'DishFormModal Tab 3 must expose Hindi description input');
+
+      const custDishModalCode = fs.readFileSync(path.join(rootDir, 'src/components/DishModal.jsx'), 'utf8');
+      assert.ok(custDishModalCode.includes('dish.taste_profile'), 'Customer DishModal must display taste_profile when present');
       assert.ok(appCode.includes('saveInlineCatalogEntity'), 'App.jsx inline dish and category saves must use shared helper and await reload');
       assert.ok(appCode.includes("id: 'uncategorized'"), 'App.jsx uncategorized bucket must have explicit id');
     });

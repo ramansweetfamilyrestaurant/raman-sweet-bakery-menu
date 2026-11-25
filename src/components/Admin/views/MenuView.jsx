@@ -202,6 +202,7 @@ export default function MenuView({
         (d.description || '').toLowerCase().includes(q) || 
         (d.description_hi || '').toLowerCase().includes(q) || 
         (d.ingredients || '').toLowerCase().includes(q) ||
+        (d.taste_profile || '').toLowerCase().includes(q) ||
         (d.badge || '').toLowerCase().includes(q);
         
       const matchesCat = selectedCatFilter === 'all' || 

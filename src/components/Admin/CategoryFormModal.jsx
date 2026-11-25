@@ -144,17 +144,17 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
       padding: '12px',
       boxSizing: 'border-box'
     }} onClick={onClose}>
-      <div 
+      <div
         onClick={(e) => e.stopPropagation()}
         className="cat-modal-container"
         style={{
           background: '#FFFFFF',
-          borderRadius: '20px',
+          borderRadius: '18px',
           width: '100%',
-          maxWidth: '440px',
+          maxWidth: '450px',
           maxHeight: '92vh',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          border: '1px solid #E2E8F0',
+          boxShadow: '0 24px 48px -12px rgba(10, 35, 21, 0.35), 0 0 0 1px rgba(10, 35, 21, 0.16)',
+          border: 'none',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -165,6 +165,23 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
           @keyframes modalSlideIn {
             from { transform: translateY(16px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
+          }
+          .cat-modal-field {
+            width: 100%;
+            padding: 8px 11px;
+            border-radius: 9px;
+            border: 1.5px solid #CBD5E1;
+            font-size: 0.82rem;
+            outline: none;
+            box-sizing: border-box;
+            background: #FFFFFF;
+            color: #0F172A;
+            line-height: 1.35;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+          }
+          .cat-modal-field:focus {
+            border-color: #0A2315 !important;
+            box-shadow: 0 0 0 3px rgba(10, 35, 21, 0.08) !important;
           }
           @media (max-width: 600px) {
             .cat-modal-container {
@@ -178,20 +195,20 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
             .cat-modal-body-form input,
             .cat-modal-body-form select {
               font-size: 14px !important;
-              padding: 8px 11px !important;
+              padding: 8px 10px !important;
             }
           }
         `}} />
 
         {/* Modal Header */}
         <div style={{
-          padding: '12px 16px',
+          padding: '13px 16px',
           background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
           color: '#FFFFFF',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+          borderBottom: '1px solid rgba(212, 175, 55, 0.25)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
             <FolderOpen size={15} color="#D4AF37" />
@@ -199,13 +216,13 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
               {category ? 'Edit Category' : 'Create New Category'}
             </h3>
           </div>
-          <button 
+          <button
             onClick={onClose}
             type="button"
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.12)', 
-              border: 'none', 
-              color: '#FFFFFF', 
+            style={{
+              background: 'rgba(255, 255, 255, 0.14)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              color: '#FFFFFF',
               cursor: 'pointer',
               width: '28px',
               height: '28px',
@@ -253,19 +270,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={`e.g. ${suggestions[0]?.name || 'Specialties'}`}
-                style={{
-                  width: '100%',
-                  padding: '8px 11px',
-                  borderRadius: '8px',
-                  border: '1.5px solid #CBD5E1',
-                  fontSize: '0.82rem',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  color: '#0F172A',
-                  lineHeight: 1.35
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#0A2315'}
-                onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+                className="cat-modal-field"
               />
 
               {!category && suggestions && suggestions.length > 0 && (
@@ -320,19 +325,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
                 value={nameHi}
                 onChange={(e) => setNameHi(e.target.value)}
                 placeholder={`उदा. ${suggestions[0]?.nameHi || 'विशेष व्यंजन'}`}
-                style={{
-                  width: '100%',
-                  padding: '8px 11px',
-                  borderRadius: '8px',
-                  border: '1.5px solid #CBD5E1',
-                  fontSize: '0.82rem',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  color: '#0F172A',
-                  lineHeight: 1.35
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#0A2315'}
-                onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+                className="cat-modal-field"
               />
             </div>
 
@@ -347,19 +340,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
                 placeholder="0"
-                style={{
-                  width: '100%',
-                  padding: '8px 11px',
-                  borderRadius: '8px',
-                  border: '1.5px solid #CBD5E1',
-                  fontSize: '0.82rem',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  color: '#0F172A',
-                  lineHeight: 1.35
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#0A2315'}
-                onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+                className="cat-modal-field"
               />
             </div>
 
@@ -371,22 +352,23 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
               
               <div style={{ 
                 display: 'flex', 
-                gap: '10px', 
-                alignItems: 'center', 
+                flexDirection: 'column',
+                gap: '8px', 
                 background: '#F8FAFC',
-                padding: '7px 10px',
-                borderRadius: '8px',
-                border: '1px dashed #CBD5E1'
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: '1.5px dashed #CBD5E1'
               }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <div style={{
                   width: '48px',
                   height: '48px',
-                  borderRadius: '7px',
+                  borderRadius: '8px',
                   overflow: 'hidden',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  border: '1px solid #E2E8F0',
+                  border: '1.5px solid #CBD5E1',
                   background: '#FFFFFF',
                   flexShrink: 0
                 }}>
@@ -402,20 +384,20 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <label style={{
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '5px',
                       background: '#0A2315',
                       color: '#FFFFFF',
                       padding: '6px 12px',
-                      borderRadius: '6px',
+                      borderRadius: '7px',
                       fontSize: '0.72rem',
-                      fontWeight: 650,
-                      minWidth: '100px',
+                      fontWeight: 700,
+                      minWidth: '104px',
                       justifyContent: 'center'
                     }}>
                       <Upload size={11} color="#D4AF37" />
@@ -429,12 +411,12 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
                         onClick={() => setImage('')}
                         style={{
                           background: '#FEE2E2',
-                          border: 'none',
+                          border: '1px solid #FECACA',
                           color: '#DC2626',
-                          padding: '5px 8px',
-                          borderRadius: '6px',
+                          padding: '5px 9px',
+                          borderRadius: '7px',
                           fontSize: '0.70rem',
-                          fontWeight: 650,
+                          fontWeight: 700,
                           cursor: 'pointer'
                         }}
                       >
@@ -445,12 +427,12 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
                   <button
                     type="button"
                     onClick={() => setShowUrlInput(!showUrlInput)}
-                    style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.68rem', cursor: 'pointer', padding: 0, textAlign: 'left', marginTop: '2px' }}
+                    style={{ background: 'none', border: 'none', color: '#475569', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'left' }}
                   >
-                    {showUrlInput ? 'Hide URL input' : 'Or paste URL'}
+                    {showUrlInput ? 'Hide URL input' : 'Or paste image URL'}
                   </button>
                 </div>
-              </div>
+                </div>
 
               {showUrlInput && (
                 <input
@@ -458,36 +440,28 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
                   value={image}
                   onChange={(e) => setImage(e.target.value)}
                   placeholder="Paste direct image URL (https://...)"
-                  style={{
-                    width: '100%',
-                    padding: '7px 10px',
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '0.76rem',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    marginTop: '6px',
-                    color: '#0F172A'
-                  }}
+                  className="cat-modal-field"
+                  style={{ fontSize: '0.76rem', padding: '7px 10px' }}
                 />
               )}
+              </div>
             </div>
           </div>
 
           {/* Sticky Action Buttons */}
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '14px' }}>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #CBD5E1', paddingTop: '12px', marginTop: '14px' }}>
             <button
               type="button"
               onClick={onClose}
               style={{
-                padding: '8px 14px',
-                height: '42px',
-                borderRadius: '8px',
+                padding: '0 14px',
+                height: '38px',
+                borderRadius: '9px',
                 border: '1.5px solid #CBD5E1',
                 background: '#FFFFFF',
                 color: '#475569',
                 fontSize: '0.74rem',
-                fontWeight: 650,
+                fontWeight: 700,
                 cursor: 'pointer'
               }}
             >
@@ -497,15 +471,15 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
               type="submit"
               disabled={saving || uploading}
               style={{
-                padding: '8px 16px',
-                height: '42px',
-                borderRadius: '8px',
+                padding: '0 16px',
+                height: '38px',
+                borderRadius: '9px',
                 background: 'linear-gradient(135deg, #0A2315 0%, #143A24 100%)',
                 color: '#FFFFFF',
-                border: '1px solid #D4AF37',
+                border: '1.5px solid #0A2315',
                 fontSize: '0.76rem',
-                fontWeight: 700,
-                boxShadow: '0 2px 6px rgba(10, 35, 21, 0.18)',
+                fontWeight: 750,
+                boxShadow: '0 2px 8px rgba(10, 35, 21, 0.22)',
                 cursor: (saving || uploading) ? 'not-allowed' : 'pointer'
               }}
             >
