@@ -1667,33 +1667,61 @@ export default function PosBillingView({
                   </div>
 
                   {/* Quantity Stepper & Subtotal */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      background: '#FFFFFF',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '9999px',
+                      padding: '2px',
+                      flexShrink: 0
+                    }}>
                       <button
+                        type="button"
+                        aria-label="Decrease quantity"
                         onClick={() => updateCartQuantityByKey(item.cartKey, -1)}
-                        style={{ width: '22px', height: '22px', borderRadius: '5px', border: '1px solid #CBD5E1', background: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ width: '24px', height: '24px', padding: 0, borderRadius: '50%', border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                       >
                         <Minus size={11} />
                       </button>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 800, minWidth: '16px', textAlign: 'center' }}>{item.quantity}</span>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 800, minWidth: '18px', textAlign: 'center', color: '#0F172A' }}>{item.quantity}</span>
                       <button
+                        type="button"
+                        aria-label="Increase quantity"
                         onClick={() => updateCartQuantityByKey(item.cartKey, 1)}
-                        style={{ width: '22px', height: '22px', borderRadius: '5px', border: 'none', background: '#059669', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ width: '24px', height: '24px', padding: 0, borderRadius: '50%', border: 'none', background: '#059669', color: '#FFFFFF', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                       >
                         <Plus size={11} />
                       </button>
                     </div>
 
-                    <strong style={{ fontSize: '0.82rem', color: '#0F172A', minWidth: '55px', textAlign: 'right' }}>
+                    <strong style={{ fontSize: '0.82rem', color: '#0F172A', minWidth: '52px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {currencySymbol}{formatPriceNumber(item.price * item.quantity)}
                     </strong>
 
                     <button
+                      type="button"
+                      aria-label="Remove Item"
                       onClick={() => removeCartItemByKey(item.cartKey)}
-                      style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '2px' }}
+                      style={{
+                        width: '26px',
+                        height: '26px',
+                        padding: 0,
+                        borderRadius: '50%',
+                        background: '#FEE2E2',
+                        border: '1px solid #FECACA',
+                        color: '#DC2626',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
                       title="Remove Item"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>

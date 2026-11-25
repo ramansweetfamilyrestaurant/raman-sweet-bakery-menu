@@ -772,9 +772,19 @@ export default function App() {
       const comboText = (item.isCombo && item.comboIncludes)
         ? `\n   ↳ Included: ${item.comboIncludes}`
         : '';
-      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${itemPrice}${comboText}${modText}\n`;
+      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${formatPriceNumber(itemPrice)}${comboText}${modText}\n`;
     });
-    msg += `\n*Total Amount:* ${sym}${grandTotal}`;
+    const isGst = Boolean(info?.gst_enabled);
+    if (isGst) {
+      const cgst = Math.round(grandTotal * 0.025 * 100) / 100;
+      const sgst = Math.round(grandTotal * 0.025 * 100) / 100;
+      const finalWithGst = Math.round((grandTotal + cgst + sgst) * 100) / 100;
+      msg += `\n*Subtotal:* ${sym}${formatPriceNumber(grandTotal)}`;
+      msg += `\n*GST (5%):* ${sym}${formatPriceNumber(cgst + sgst)}`;
+      msg += `\n*Grand Total:* ${sym}${formatPriceNumber(finalWithGst)}`;
+    } else {
+      msg += `\n*Total Amount:* ${sym}${formatPriceNumber(grandTotal)}`;
+    }
     if (customerNameInput) {
       msg += `\n👤 *Customer Name:* ${customerNameInput}`;
     }
@@ -3957,14 +3967,15 @@ export default function App() {
                         </div>
                       )}
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flexShrink: 0 }}>
                         {cartItems.map((item) => {
                           const itemKey = item.key || item.dish.id;
+                          const itemDisplayName = (lang === 'hi' && item.dish?.name_hi) ? item.dish.name_hi : item.dish?.name;
                           return (
-                            <div key={itemKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', padding: '12px', borderRadius: '14px', border: '1.5px solid var(--theme-card-border, var(--border-light))' }}>
+                            <div key={itemKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexShrink: 0, background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', padding: '12px', borderRadius: '14px', border: '1.5px solid var(--theme-card-border, var(--border-light))' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <strong style={{ fontSize: '0.9rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', lineHeight: 1.3 }}>
-                                  <span>{item.dish.name}</span>
+                                  <span>{itemDisplayName}</span>
                                   {item.isCombo ? (
                                     <span style={{ background: '#D1FAE5', color: '#059669', fontSize: '0.66rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid #6EE7B7', fontWeight: 900 }}>
                                       COMBO
@@ -4096,7 +4107,7 @@ export default function App() {
                         })}
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border-light)', paddingTop: '12px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border-light)', paddingTop: '12px', flexShrink: 0 }}>
                         {/* 🛎️ Service Mode / Dining Choice (Available in both Initial & Add-on Rounds) */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {isCinemaVenue ? (
