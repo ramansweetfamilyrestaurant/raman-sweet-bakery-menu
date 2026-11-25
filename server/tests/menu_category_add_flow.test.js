@@ -182,7 +182,13 @@ async function runTests() {
       assert.ok(dishModalCode.includes("defaultCategoryId = ''"), 'DishFormModal must accept defaultCategoryId');
       assert.ok(dishModalCode.includes('noValidate'), 'DishFormModal must use noValidate so multi-tab submit validates across unmounted tabs cleanly');
       assert.ok(dishModalCode.includes('dish-tab-btn'), 'DishFormModal must keep top segmented tab navigation');
-      assert.ok(!dishModalCode.includes('Next: Pricing'), 'DishFormModal footer must stay compact with Cancel and Save buttons only');
+      assert.ok(
+        dishModalCode.includes("activeTab !== 'details'") &&
+        dishModalCode.includes('Next: Pricing →') &&
+        dishModalCode.includes('Next: Details →') &&
+        dishModalCode.includes('← Back'),
+        'DishFormModal footer must show Next on early steps and Save only on the final details step'
+      );
       assert.ok(dishModalCode.includes('dish-modal-field'), 'DishFormModal must use unified field styling and focus borders');
       assert.ok(dishModalCode.includes('descriptionHi'), 'DishFormModal Tab 3 must expose Hindi description input');
 
