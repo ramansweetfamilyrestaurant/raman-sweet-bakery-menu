@@ -186,8 +186,11 @@ async function runTests() {
         dishModalCode.includes("activeTab !== 'details'") &&
         dishModalCode.includes('Next: Pricing →') &&
         dishModalCode.includes('Next: Details →') &&
-        dishModalCode.includes('← Back'),
-        'DishFormModal footer must show Next on early steps and Save only on the final details step'
+        dishModalCode.includes('← Back') &&
+        dishModalCode.includes('key="wizard-next-btn"') &&
+        dishModalCode.includes('key="wizard-save-btn"') &&
+        dishModalCode.includes('handleNextStep'),
+        'DishFormModal footer must validate step-by-step, keep Next and Save keys distinct, and show Save only on the final details step'
       );
       assert.ok(dishModalCode.includes('dish-modal-field'), 'DishFormModal must use unified field styling and focus borders');
       assert.ok(dishModalCode.includes('descriptionHi'), 'DishFormModal Tab 3 must expose Hindi description input');

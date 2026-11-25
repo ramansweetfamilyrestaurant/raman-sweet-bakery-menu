@@ -4631,6 +4631,7 @@ export default function App() {
       {/* Customer Dish Detail / Add-on Customization Modal */}
       {selectedDishModal && (
         <DishModal
+          key={`${selectedDishModal.id}_${selectedDishModalMode}_${selectedDishInitialPortion || 'default'}`}
           dish={selectedDishModal}
           lang={lang}
           currencySymbol={getCurrencySymbol(info?.currency_symbol)}

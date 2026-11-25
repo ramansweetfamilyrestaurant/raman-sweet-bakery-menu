@@ -118,51 +118,84 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
     }
   };
 
+  const validateFields = (scope = 'all') => {
+    const trimmedName = name.trim();
+    if (scope === 'basic' || scope === 'all') {
+      if (!trimmedName || price === '' || price === null || categoryId === '' || categoryId === null) {
+        setActiveTab('basic');
+        setError(`Category, ${itemLabel} Name, and Full Price are required.`);
+        return false;
+      }
+
+      if (isNaN(Number(price)) || Number(price) < 0) {
+        setActiveTab('basic');
+        setError('Full price must be a valid non-negative number.');
+        return false;
+      }
+
+      if (image && !image.startsWith('http://') && !image.startsWith('https://') && !image.startsWith('/api/') && !image.startsWith('/uploads/')) {
+        setActiveTab('basic');
+        setError('Please enter a valid image URL (must start with http://, https://, or local paths).');
+        return false;
+      }
+    }
+
+    if (scope === 'pricing' || scope === 'all') {
+      if (price === '' || price === null || isNaN(Number(price)) || Number(price) < 0) {
+        setActiveTab('pricing');
+        setError('Full price must be a valid non-negative number.');
+        return false;
+      }
+
+      if (hasHalf) {
+        if (priceHalf === '' || priceHalf === null) {
+          setActiveTab('pricing');
+          setError('Half price is required when half portion is enabled.');
+          return false;
+        }
+        if (isNaN(Number(priceHalf)) || Number(priceHalf) < 0) {
+          setActiveTab('pricing');
+          setError('Half price must be a valid non-negative number.');
+          return false;
+        }
+        if (Number(priceHalf) > Number(price)) {
+          setActiveTab('pricing');
+          setError('Half price cannot be greater than full price.');
+          return false;
+        }
+      }
+
+      const hasInvalidModifier = modifiers.some(m => m.name && m.name.trim() !== '' && (isNaN(Number(m.price)) || Number(m.price) < 0));
+      if (hasInvalidModifier) {
+        setActiveTab('pricing');
+        setError('Add-on prices must be valid non-negative numbers.');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleNextStep = () => {
+    setError('');
+    if (activeTab === 'basic') {
+      if (!validateFields('basic')) return;
+      setActiveTab('pricing');
+    } else if (activeTab === 'pricing') {
+      if (!validateFields('pricing')) return;
+      setActiveTab('details');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (activeTab !== 'details') {
+      handleNextStep();
+      return;
+    }
+
+    if (!validateFields('all')) return;
     const trimmedName = name.trim();
-    if (!trimmedName || price === '' || price === null || categoryId === '' || categoryId === null) {
-      setActiveTab('basic');
-      setError(`Category, ${itemLabel} Name, and Full Price are required.`);
-      return;
-    }
-
-    if (isNaN(Number(price)) || Number(price) < 0) {
-      setActiveTab('basic');
-      setError('Full price must be a valid non-negative number.');
-      return;
-    }
-
-    if (hasHalf) {
-      if (priceHalf === '' || priceHalf === null) {
-        setActiveTab('pricing');
-        setError('Half price is required when half portion is enabled.');
-        return;
-      }
-      if (isNaN(Number(priceHalf)) || Number(priceHalf) < 0) {
-        setActiveTab('pricing');
-        setError('Half price must be a valid non-negative number.');
-        return;
-      }
-      if (Number(priceHalf) > Number(price)) {
-        setActiveTab('pricing');
-        setError('Half price cannot be greater than full price.');
-        return;
-      }
-    }
-
-    const hasInvalidModifier = modifiers.some(m => m.name && m.name.trim() !== '' && (isNaN(Number(m.price)) || Number(m.price) < 0));
-    if (hasInvalidModifier) {
-      setActiveTab('pricing');
-      setError('Add-on prices must be valid non-negative numbers.');
-      return;
-    }
-
-    if (image && !image.startsWith('http://') && !image.startsWith('https://') && !image.startsWith('/api/') && !image.startsWith('/uploads/')) {
-      setActiveTab('basic');
-      setError('Please enter a valid image URL (must start with http://, https://, or local paths).');
-      return;
-    }
 
     setSaving(true);
     setError('');
@@ -1134,12 +1167,10 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
 
             {activeTab !== 'details' ? (
               <button
+                key="wizard-next-btn"
                 type="button"
                 className="dish-modal-focus-btn"
-                onClick={() => {
-                  setError('');
-                  setActiveTab(activeTab === 'basic' ? 'pricing' : 'details');
-                }}
+                onClick={handleNextStep}
                 style={{
                   padding: '0 18px',
                   height: '38px',
@@ -1157,6 +1188,7 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
               </button>
             ) : (
               <button
+                key="wizard-save-btn"
                 type="submit"
                 className="dish-modal-focus-btn"
                 disabled={saving || uploading}

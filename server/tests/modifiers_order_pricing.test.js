@@ -210,7 +210,7 @@ async function runModifiersPricingTests() {
     assert.ok(menuCardCode.includes('getValidDishModifiers') && menuCardCode.includes('if (hasModifiers && onClick)'), 'MenuCardItem + Add must open customization modal when dish has add-ons');
     assert.ok(dishCardCode.includes('getValidDishModifiers') && dishCardCode.includes('handleAddAction'), 'DishCard + Half / + Full / + Add must open customization modal when dish has add-ons');
     assert.ok(dishModalCode.includes('initialPortion') && dishModalCode.includes('modifiersEnabled') && dishModalCode.includes('addonOnly'), 'DishModal must respect initialPortion, modifiersEnabled, and addonOnly bottom-sheet mode');
-    assert.ok(dishModalCode.includes('sheetSlideUp') && dishModalCode.includes('Decrease quantity'), 'DishModal addonOnly bottom sheet must use slide-up animation and quantity stepper');
+    assert.ok(dishModalCode.includes('sheetSlideUp') && dishModalCode.includes('Decrease quantity') && dishModalCode.includes('zIndex: 10020'), 'DishModal addonOnly bottom sheet must use slide-up animation, quantity stepper, and layer above floating cart bar');
     assert.ok(appCode.includes('openDishCustomizationModal') && appCode.includes("selectedDishModalMode === 'addon'"), 'App.jsx must route menu card and Top Picks add-on clicks through openDishCustomizationModal in addon mode');
     assert.ok(!dishModalCode.includes('toggleModifier(mod);'), 'DishModal label must rely on checkbox onChange without duplicate label onClick toggle');
 

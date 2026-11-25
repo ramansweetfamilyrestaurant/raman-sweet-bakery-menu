@@ -63,7 +63,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
     <div style={{
       position: 'fixed',
       inset: 0,
-      zIndex: 3000,
+      zIndex: 10020,
       background: addonOnly ? 'rgba(10, 25, 16, 0.65)' : 'rgba(10, 35, 21, 0.8)',
       backdropFilter: addonOnly ? 'blur(4px)' : 'blur(10px)',
       display: 'flex',
@@ -268,8 +268,9 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
 
         {/* Scrollable Content Body */}
         <div style={{
-          padding: addonOnly ? '14px 16px 16px' : '16px 18px',
-          overflowY: 'auto'
+          padding: addonOnly ? '14px 16px' : '16px 18px',
+          overflowY: 'auto',
+          flex: 1
         }}>
           {!addonOnly && (
           <div style={{
@@ -464,11 +465,11 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
           {/* Interactive Custom Add-on Modifiers & Toppings */}
           {availableModifiers.length > 0 && (
             <div style={{
-              background: addonOnly ? '#F8FAFC' : 'var(--bg-champagne)',
-              border: addonOnly ? '1.5px solid #E2E8F0' : '1.5px solid var(--gold-border)',
+              background: addonOnly ? 'var(--bg-secondary, #F8FAFC)' : 'var(--bg-champagne)',
+              border: addonOnly ? '1.5px solid var(--border-light, #E2E8F0)' : '1.5px solid var(--gold-border)',
               borderRadius: 'var(--radius-md)',
               padding: addonOnly ? '12px' : '10px 14px',
-              marginBottom: '14px'
+              marginBottom: addonOnly ? '4px' : '14px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', gap: '8px' }}>
                 <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--primary-emerald)', textTransform: 'uppercase' }}>
@@ -479,8 +480,8 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   fontWeight: 750,
                   padding: '2px 8px',
                   borderRadius: '9999px',
-                  background: selectedModifiers.length > 0 ? '#DCFCE7' : '#E2E8F0',
-                  color: selectedModifiers.length > 0 ? '#15803D' : '#475569'
+                  background: selectedModifiers.length > 0 ? '#DCFCE7' : 'var(--theme-badge-bg, #E2E8F0)',
+                  color: selectedModifiers.length > 0 ? '#15803D' : 'var(--theme-badge-text, #475569)'
                 }}>
                   {selectedModifiers.length > 0
                     ? `${selectedModifiers.length} ${lang === 'hi' ? 'चुना' : 'selected'}`
@@ -500,8 +501,8 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                         justifyContent: 'space-between',
                         padding: '9px 12px',
                         borderRadius: '10px',
-                        background: isSelected ? '#FFFFFF' : (addonOnly ? '#FFFFFF' : 'rgba(255,255,255,0.6)'),
-                        border: isSelected ? '1.5px solid var(--primary-emerald, #059669)' : (addonOnly ? '1px solid #CBD5E1' : '1px solid var(--gold-border)'),
+                        background: isSelected ? 'var(--theme-card-bg, #FFFFFF)' : (addonOnly ? 'var(--theme-card-bg, #FFFFFF)' : 'rgba(255,255,255,0.6)'),
+                        border: isSelected ? '1.5px solid var(--primary-emerald, #059669)' : (addonOnly ? '1px solid var(--border-light, #CBD5E1)' : '1px solid var(--gold-border)'),
                         cursor: 'pointer',
                         transition: 'var(--transition-fast)'
                       }}
@@ -601,10 +602,15 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             </>
           )}
 
-          {/* Action Bar (Compact Stepper in Add-on Sheet OR Detail Total + Add Button) */}
+          {/* Close Scrollable Content Body */}
+        </div>
+
+          {/* Sticky Bottom Action Bar (Stepper in Add-on Sheet OR Detail Total + Add Button) */}
           <div style={{
-            paddingTop: '12px',
+            padding: addonOnly ? '12px 16px calc(14px + env(safe-area-inset-bottom, 0px))' : '12px 18px 16px',
             borderTop: addonOnly ? '1px solid var(--border-light, #E2E8F0)' : '1.5px solid var(--gold-border)',
+            background: 'var(--theme-modal-bg, #FFFFFF)',
+            flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -614,9 +620,9 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                border: '1.5px solid #CBD5E1',
+                border: '1.5px solid var(--border-light, #CBD5E1)',
                 borderRadius: 'var(--radius-pill)',
-                background: '#F8FAFC',
+                background: 'var(--bg-secondary, #F8FAFC)',
                 height: '42px',
                 padding: '0 4px',
                 flexShrink: 0
@@ -728,7 +734,6 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
               </button>
             )}
           </div>
-        </div>
       </div>
     </div>
   );
