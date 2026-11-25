@@ -146,6 +146,7 @@ export default function AdminDashboard({
   const [activeSubPage, setActiveSubPage] = useState(() => (
     getInitialAdminTabFromUrl() === 'settings' ? getInitialSetupSectionFromUrl() : null
   ));
+  const [historyRestoreSeq, setHistoryRestoreSeq] = useState(0);
   const latestNavStateRef = useRef({ tab: activeTab, section: activeSubPage });
   latestNavStateRef.current = { tab: activeTab, section: activeSubPage };
   const pendingHistorySyncRef = useRef(false);
@@ -193,17 +194,24 @@ export default function AdminDashboard({
     const syncTabFromHistory = () => {
       const nextTab = getInitialAdminTabFromUrl();
       const nextSection = nextTab === 'settings' ? getInitialSetupSectionFromUrl() : null;
+      setHistoryRestoreSeq(n => n + 1);
+      setInitialSetupDrawer(null);
       if (latestNavStateRef.current.tab === nextTab && latestNavStateRef.current.section === nextSection) {
         return;
       }
       pendingHistorySyncRef.current = true;
-      setInitialSetupDrawer(null);
       setActiveTab(nextTab);
       setActiveSubPage(nextSection);
     };
     window.addEventListener('popstate', syncTabFromHistory);
     return () => window.removeEventListener('popstate', syncTabFromHistory);
   }, []);
+
+  const handleNavigateToSetup = (drawer = null) => {
+    setInitialSetupDrawer(drawer);
+    setActiveSubPage(normalizeSetupSection(drawer));
+    setActiveTab('settings');
+  };
   const [categories, setCategories] = useState(() => getInitialAdminState('categories', []));
   const [dishes, setDishes] = useState(() => getInitialAdminState('dishes', []));
   const [announcements, setAnnouncements] = useState(() => { try { const cached = localStorage.getItem('touchqr_cached_announcements'); return cached ? JSON.parse(cached) : []; } catch { return []; } });
@@ -4012,12 +4020,7 @@ export default function AdminDashboard({
                   onOpenAddDish={() => setDishModalData('new')}
                   onOpenAddCategory={() => setCatModalData('new')}
                   onReturnToMenu={onReturnToMenu}
-                  onNavigateToSetup={(drawer = null) => {
-                    setInitialSetupDrawer(drawer);
-                    const sec = normalizeSetupSection(drawer);
-                    setActiveSubPage(sec);
-                    setActiveTab('settings');
-                  }}
+                  onNavigateToSetup={handleNavigateToSetup}
                   currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                 />
               )}
@@ -4056,12 +4059,7 @@ export default function AdminDashboard({
                   capabilities={tenantCaps}
                   settingsForm={settingsForm}
                   token={token}
-                  onNavigateToSetup={(drawer = null) => {
-                    setInitialSetupDrawer(drawer);
-                    const sec = normalizeSetupSection(drawer);
-                    setActiveSubPage(sec);
-                    setActiveTab('settings');
-                  }}
+                  onNavigateToSetup={handleNavigateToSetup}
                   onOpenDayClosing={() => setShowDayClosingModal(true)}
                   ordersEnabled={isDirectOrderingEnabled}
                 />
@@ -4296,6 +4294,7 @@ export default function AdminDashboard({
               {activeTab === 'settings' && (
                 <SetupView
                   initialDrawer={initialSetupDrawer}
+                  historyRestoreSeq={historyRestoreSeq}
                   controlledSubPage={activeSubPage}
                   onSubPageChange={(nextSection) => {
                     if (!nextSection && initialSetupDrawer) setInitialSetupDrawer(null);
@@ -4334,7 +4333,7 @@ export default function AdminDashboard({
                   }}
                   onNavigate={(tab) => {
                     setInitialSetupDrawer(null);
-                    setActiveTab(tab);
+                    setActiveTab(tab === 'qr-codes' ? 'qr-generator' : tab);
                   }}
                 />
               )}
@@ -4358,12 +4357,7 @@ export default function AdminDashboard({
                   onOpenAddDish={() => setDishModalData('new')}
                   onOpenAddCategory={() => setCatModalData('new')}
                   onReturnToMenu={onReturnToMenu}
-                  onNavigateToSetup={(drawer = null) => {
-                    setInitialSetupDrawer(drawer);
-                    const sec = normalizeSetupSection(drawer);
-                    setActiveSubPage(sec);
-                    setActiveTab('settings');
-                  }}
+                  onNavigateToSetup={handleNavigateToSetup}
                   currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                 />
               )}

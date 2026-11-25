@@ -243,6 +243,7 @@ export default function SetupView({
   onNavigate,
   onOptimizeDatabase,
   initialDrawer = null,
+  historyRestoreSeq = 0,
   controlledSubPage,
   onSubPageChange,
   dishes = [],
@@ -283,7 +284,7 @@ export default function SetupView({
     }
   };
   const [openDrawer, setOpenDrawer] = useState(
-    (initialDrawer === 'profile' || initialDrawer === 'menu-preferences' || initialDrawer === 'devices' || initialDrawer === 'orders-devices' || initialDrawer === 'subscription' || initialDrawer === 'billing' || initialDrawer === 'location' || initialDrawer === 'gps' || initialDrawer === 'security' || initialDrawer === 'credentials' || initialDrawer === 'database' || initialDrawer === 'database-tools' || initialDrawer === 'optimize') ? null : initialDrawer
+    resolveDrawerToSubPage(initialDrawer) ? null : initialDrawer
   ); // 'menu', 'cinema'
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -808,10 +809,58 @@ export default function SetupView({
   };
 
   useEffect(() => {
-    if (initialDrawer) {
+    if (!initialDrawer) return;
+    const mappedSubPage = resolveDrawerToSubPage(initialDrawer);
+    if (mappedSubPage) {
+      setOpenDrawer(null);
+      setActiveSubPage(mappedSubPage);
+    } else {
       setOpenDrawer(initialDrawer);
     }
   }, [initialDrawer]);
+
+  const lastHistoryRestoreSeqRef = useRef(historyRestoreSeq);
+  useEffect(() => {
+    if (historyRestoreSeq === lastHistoryRestoreSeqRef.current) return;
+    lastHistoryRestoreSeqRef.current = historyRestoreSeq;
+    if (historyRestoreSeq > 0) {
+      setOpenDrawer(null);
+    }
+  }, [historyRestoreSeq]);
+
+  const renderCustomDomainField = () => {
+    const isCustomDomainPlanAllowed = Boolean(
+      settingsForm?.custom_domain_enabled === 1 ||
+      settingsForm?.custom_domain_enabled === true ||
+      settingsForm?.custom_domain_enabled === '1' ||
+      restaurantInfo?.custom_domain_enabled === 1 ||
+      restaurantInfo?.custom_domain_enabled === true ||
+      restaurantInfo?.custom_domain_enabled === '1' ||
+      restaurantInfo?.permissions?.custom_domain_enabled === true
+    );
+    if (!isCustomDomainPlanAllowed) return null;
+
+    return (
+      <div>
+        <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em', flexWrap: 'wrap' }}>
+          <span>🌐 Custom Menu Domain (CNAME):</span>
+          <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
+            INCLUDED IN PLAN
+          </span>
+        </label>
+        <input
+          type="text"
+          placeholder="e.g. menu.yourrestaurant.com"
+          value={settingsForm.custom_domain || ''}
+          onChange={(e) => setSettingsForm({ ...settingsForm, custom_domain: e.target.value })}
+          style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box', background: '#FFFFFF', color: '#0F172A' }}
+        />
+        <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px' }}>
+          Point CNAME record in GoDaddy to: <strong style={{ color: '#059669' }}>cname.vercel-dns.com</strong>
+        </div>
+      </div>
+    );
+  };
 
   // Business Vertical & Canonical Service Model Detection
   const profile = resolveBusinessProfile(settingsForm || restaurantInfo || {});
@@ -2358,10 +2407,17 @@ export default function SetupView({
                 </div>
               </div>
 
-              {onNavigate && (
+              {(isCinema || onNavigate) && (
                 <button
                   type="button"
-                  onClick={() => onNavigate(isCinema ? 'cinema' : 'qr-codes')}
+                  onClick={() => {
+                    if (isCinema) {
+                      setActiveSubPage(null);
+                      setOpenDrawer('cinema');
+                    } else if (onNavigate) {
+                      onNavigate('qr-generator');
+                    }
+                  }}
                   style={{
                     background: '#064E3B',
                     color: '#FFFFFF',
@@ -2913,6 +2969,14 @@ export default function SetupView({
                 <ChevronRight size={16} color="#94A3B8" />
               </div>
             </div>
+            {(() => {
+              const customDomainField = renderCustomDomainField();
+              return customDomainField ? (
+                <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #EAE5DF' }}>
+                  {customDomainField}
+                </div>
+              ) : null;
+            })()}
           </div>
         </div>
 
@@ -10961,46 +11025,6 @@ export default function SetupView({
               />
             </div>
 
-            {/* Hotel Guest Rooms (Drawer View) */}
-            {isHotel && (
-              <div style={{
-                background: '#F0FDF4',
-                border: '1px solid #86EFAC',
-                borderRadius: '12px',
-                padding: '12px 14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '8px'
-              }}>
-                <div>
-                  <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>🏨 Hotel Guest Rooms</span>
-                  </label>
-                  <span style={{ fontSize: '0.68rem', color: '#166534', display: 'block', marginTop: '2px' }}>
-                    {Number(settingsForm.total_rooms) || 0} active rooms configured. Managed in QR Standees.
-                  </span>
-                </div>
-                {onNavigate && (
-                  <button
-                    type="button"
-                    onClick={() => onNavigate('qr-codes')}
-                    style={{
-                      background: '#15803D',
-                      color: '#FFFFFF',
-                      fontSize: '0.70rem',
-                      fontWeight: 800,
-                      padding: '5px 10px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Manage Rooms →
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
           {/* 2. MENU BRANDING */}
@@ -11580,40 +11604,7 @@ export default function SetupView({
         </div>
 
         {/* Custom Menu Domain (CNAME) - Only displayed if custom_domain_enabled on plan */}
-        {(() => {
-          const isCustomDomainPlanAllowed = Boolean(
-            settingsForm?.custom_domain_enabled === 1 ||
-            settingsForm?.custom_domain_enabled === true ||
-            settingsForm?.custom_domain_enabled === '1' ||
-            restaurantInfo?.custom_domain_enabled === 1 ||
-            restaurantInfo?.custom_domain_enabled === true ||
-            restaurantInfo?.custom_domain_enabled === '1' ||
-            restaurantInfo?.permissions?.custom_domain_enabled === true
-          );
-
-          if (!isCustomDomainPlanAllowed) return null;
-
-          return (
-            <div>
-              <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                🌐 Custom Menu Domain (CNAME):
-                <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: '#DCFCE7', color: '#15803D', fontWeight: 800 }}>
-                  INCLUDED IN PLAN
-                </span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. menu.yourrestaurant.com"
-                value={settingsForm.custom_domain || ''}
-                onChange={(e) => setSettingsForm({ ...settingsForm, custom_domain: e.target.value })}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-              />
-              <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '4px' }}>
-                Point CNAME record in GoDaddy to: <strong style={{ color: '#059669' }}>cname.vercel-dns.com</strong>
-              </div>
-            </div>
-          );
-        })()}
+        {renderCustomDomainField()}
       </form>
     </AdminDrawer>
 
