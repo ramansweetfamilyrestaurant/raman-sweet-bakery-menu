@@ -45,8 +45,33 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
   const [copiedId, setCopiedId] = useState(null);
   const [grantModalResto, setGrantModalResto] = useState(null);
   const [revokeModalResto, setRevokeModalResto] = useState(null);
+  const VALID_SUPER_VIEWS = ['overview', 'tenants', 'billing', 'plans', 'operations', 'activity', 'settings', 'communication', 'tickets'];
   const [selectedTenant360, setSelectedTenant360] = useState(null);
-  const [activeView, setActiveView] = useState('overview'); // 'overview', 'tenants', 'billing', 'plans', 'operations', 'activity', 'settings', 'communication'
+  const [activeView, setActiveView] = useState(() => {
+    if (typeof window === 'undefined') return 'overview';
+    try {
+      const tabParam = new URLSearchParams(window.location.search).get('tab');
+      if (tabParam === 'shops' || tabParam === 'tenants') return 'tenants';
+      if (tabParam && VALID_SUPER_VIEWS.includes(tabParam)) return tabParam;
+    } catch {}
+    return 'overview';
+  }); // 'overview', 'tenants', 'billing', 'plans', 'operations', 'activity', 'settings', 'communication'
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (activeView === 'overview') {
+        if (url.searchParams.has('tab')) {
+          url.searchParams.delete('tab');
+          window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+        }
+      } else if (url.searchParams.get('tab') !== activeView) {
+        url.searchParams.set('tab', activeView);
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      }
+    } catch {}
+  }, [activeView]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMobileMoreDrawer, setShowMobileMoreDrawer] = useState(false);
   const [billingFilter, setBillingFilter] = useState('all');

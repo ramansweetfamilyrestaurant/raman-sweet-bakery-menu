@@ -1427,10 +1427,15 @@ export default function App() {
       const hash = window.location.hash.toLowerCase();
 
       // If someone types bare /admin without restaurant slug
+      const searchSuffix = window.location.search || '';
+      const safeStoredToken = (t) => (t && t !== 'undefined' && t !== 'null') ? t : '';
+      const liveAdminToken = safeStoredToken(localStorage.getItem('touchqr_admin_token')) || adminToken;
+      const liveSuperToken = safeStoredToken(localStorage.getItem('saas_super_token')) || superToken;
+
       if (path === '/admin' || path === '/admin/') {
         let storedSlug = localStorage.getItem('touchqr_admin_slug');
         if (storedSlug && storedSlug !== 'undefined' && storedSlug !== 'null') {
-          window.history.replaceState({}, '', `/${storedSlug}/admin`);
+          window.history.replaceState({}, '', `/${storedSlug}/admin${searchSuffix}`);
         }
       }
 
@@ -1483,13 +1488,13 @@ export default function App() {
         setView('contact');
         document.title = 'TouchQR - Contact & Support';
       } else if (isSuperAdmin) {
-        if (superToken) {
+        if (liveSuperToken) {
           setView('super-admin-dashboard');
         } else {
           setView('super-admin-login');
         }
       } else if (isBilling) {
-        if (adminToken) {
+        if (liveAdminToken) {
           setView('billing');
         } else {
           window.history.replaceState({}, '', '/register');
@@ -1510,7 +1515,7 @@ export default function App() {
         let effectiveSlug = currentSlug || storedSlug;
         if (effectiveSlug === 'undefined' || effectiveSlug === 'null') effectiveSlug = '';
 
-        if (adminToken) {
+        if (liveAdminToken) {
           if (urlSlug && storedSlug && urlSlug.toLowerCase() !== storedSlug.toLowerCase()) {
             console.warn(`URL slug '${urlSlug}' does not match stored admin token slug '${storedSlug}'. Prompting fresh login for '${urlSlug}'.`);
             localStorage.removeItem('touchqr_admin_token');
@@ -1530,18 +1535,18 @@ export default function App() {
             setView('admin-setup');
             const setupUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin/setup` : '/admin/setup';
             if (window.location.pathname !== setupUrl) {
-              window.history.replaceState({}, '', setupUrl);
+              window.history.replaceState({}, '', `${setupUrl}${searchSuffix}`);
             }
           } else {
             setView('admin-dashboard');
             const cleanUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin` : '/admin';
             if (window.location.pathname !== cleanUrl) {
-              window.history.replaceState({}, '', cleanUrl);
+              window.history.replaceState({}, '', `${cleanUrl}${searchSuffix}`);
             }
           }
 
           // Fetch fresh tenant info to accurately evaluate onboarding & mandate status
-          fetchRestaurantInfo({ token: adminToken, slug: effectiveSlug }).then(freshInfo => {
+          fetchRestaurantInfo({ token: liveAdminToken, slug: effectiveSlug }).then(freshInfo => {
             if (freshInfo) {
               setInfo(freshInfo);
               const freshOnboardingComplete = (freshInfo.onboarding_completed !== false && freshInfo.onboarding_completed !== 0 && freshInfo.onboarding_completed !== 'false');
@@ -1550,14 +1555,14 @@ export default function App() {
                 setView('admin-setup');
                 const setupUrl = (effectiveSlug && effectiveSlug !== 'undefined' && effectiveSlug !== 'null') ? `/${effectiveSlug}/admin/setup` : '/admin/setup';
                 if (window.location.pathname !== setupUrl) {
-                  window.history.replaceState({}, '', setupUrl);
+                  window.history.replaceState({}, '', `${setupUrl}${window.location.search || ''}`);
                 }
               }
             }
           }).catch(() => {});
 
           // Silent Mandate Verification in Background
-          checkMandateGating(adminToken, effectiveSlug).then(mandateActive => {
+          checkMandateGating(liveAdminToken, effectiveSlug).then(mandateActive => {
             if (!mandateActive) {
               window.history.replaceState({}, '', '/billing');
               setView('billing');

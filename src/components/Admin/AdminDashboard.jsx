@@ -62,6 +62,23 @@ const safeParseModifiers = (rawModifiers) => {
   return [];
 };
 
+const VALID_ADMIN_TABS = new Set([
+  'home', 'orders', 'floor-map', 'service-requests', 'kds', 'pos',
+  'dishes', 'categories', 'combos', 'analytics', 'customers', 'offers',
+  'qr-generator', 'billing', 'subscription', 'notifications', 'support', 'settings'
+]);
+
+const getInitialAdminTabFromUrl = () => {
+  if (typeof window === 'undefined') return 'home';
+  try {
+    const tabParam = new URLSearchParams(window.location.search).get('tab');
+    if (tabParam && VALID_ADMIN_TABS.has(tabParam)) {
+      return tabParam;
+    }
+  } catch {}
+  return 'home';
+};
+
 export default function AdminDashboard({
   token,
   username,
@@ -102,8 +119,24 @@ export default function AdminDashboard({
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentModalPlan, setPaymentModalPlan] = useState(null);
-  const [activeTab, setActiveTab] = useState('home'); // 'home', 'orders', 'dishes', 'analytics', 'settings'
+  const [activeTab, setActiveTab] = useState(getInitialAdminTabFromUrl); // 'home', 'orders', 'dishes', 'analytics', 'settings'
   const [initialSetupDrawer, setInitialSetupDrawer] = useState(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (activeTab === 'home') {
+        if (url.searchParams.has('tab')) {
+          url.searchParams.delete('tab');
+          window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+        }
+      } else if (url.searchParams.get('tab') !== activeTab) {
+        url.searchParams.set('tab', activeTab);
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      }
+    } catch {}
+  }, [activeTab]);
   const [categories, setCategories] = useState(() => getInitialAdminState('categories', []));
   const [dishes, setDishes] = useState(() => getInitialAdminState('dishes', []));
   const [announcements, setAnnouncements] = useState(() => { try { const cached = localStorage.getItem('touchqr_cached_announcements'); return cached ? JSON.parse(cached) : []; } catch { return []; } });
