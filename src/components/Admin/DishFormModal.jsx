@@ -347,13 +347,27 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
             .dish-modal-body-form input:not([type="checkbox"]):not([type="file"]),
             .dish-modal-body-form select,
             .dish-modal-body-form textarea {
-              font-size: 14px !important;
+              font-size: 16px !important;
+              min-height: 38px !important;
               padding: 8px 11px !important;
             }
             .dish-tab-btn {
               padding: 6px 4px !important;
               font-size: 0.68rem !important;
               height: 34px !important;
+              overflow: hidden;
+            }
+            .dish-tab-btn > span {
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+          }
+          @media (max-width: 480px) {
+            .dish-cat-diet-grid {
+              grid-template-columns: minmax(0, 1fr) !important;
+            }
+            .dish-modifier-row {
+              flex-wrap: wrap !important;
             }
           }
         `}} />
@@ -462,7 +476,7 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
           {activeTab === 'basic' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Category & Diet Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '10px', alignItems: 'start' }}>
+              <div className="dish-cat-diet-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1fr)', gap: '10px', alignItems: 'start' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                     Category *
@@ -905,14 +919,14 @@ export default function DishFormModal({ dish, defaultCategoryId = '', categories
                   {modifiers.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {modifiers.map((mod, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FFFFFF', padding: '6px 8px', borderRadius: '8px', border: '1.5px solid #E2E8F0' }}>
+                        <div className="dish-modifier-row" key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FFFFFF', padding: '6px 8px', borderRadius: '8px', border: '1.5px solid #E2E8F0' }}>
                           <input
                             type="text"
                             placeholder="e.g. Extra Cheese"
                             value={mod.name}
                             onChange={(e) => handleUpdateModifier(idx, 'name', e.target.value)}
                             className="dish-modal-field"
-                            style={{ flex: 2, padding: '6px 8px', fontSize: '0.78rem' }}
+                            style={{ flex: '2 1 130px', minWidth: 0, padding: '6px 8px', fontSize: '0.78rem' }}
                           />
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: '88px' }}>
                             <span style={{ fontSize: '0.74rem', fontWeight: 750, color: '#475569' }}>+{currencySymbol}</span>

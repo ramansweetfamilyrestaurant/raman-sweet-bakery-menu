@@ -367,7 +367,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
         maxWidth: '960px',
         width: '100%',
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',
         gap: '24px',
         alignItems: 'center',
         zIndex: 2
@@ -551,8 +551,8 @@ export default function RegisterPage({ onRegisterSuccess }) {
             </div>
 
             {/* Password & Confirm Password Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '10px' }}>
+              <div style={{ minWidth: 0 }}>
                 <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
                   PASSWORD *
                 </label>
@@ -565,7 +565,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                     value={formData.owner_password}
                     onChange={e => setFormData({ ...formData, owner_password: e.target.value })}
                     style={{
-                      width: '100%', padding: '10px 10px 10px 32px', borderRadius: '12px',
+                      width: '100%', boxSizing: 'border-box', padding: '10px 10px 10px 32px', borderRadius: '12px',
                       border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
                       color: '#FFFFFF', fontSize: '0.82rem', outline: 'none'
                     }}
@@ -573,7 +573,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                 </div>
               </div>
 
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#DFBA67', marginBottom: '4px' }}>
                   CONFIRM *
                 </label>
@@ -586,7 +586,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                     value={formData.confirm_password}
                     onChange={e => setFormData({ ...formData, confirm_password: e.target.value })}
                     style={{
-                      width: '100%', padding: '10px 10px 10px 32px', borderRadius: '12px',
+                      width: '100%', boxSizing: 'border-box', padding: '10px 10px 10px 32px', borderRadius: '12px',
                       border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
                       color: '#FFFFFF', fontSize: '0.82rem', outline: 'none'
                     }}
@@ -600,7 +600,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
               <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
                 BUSINESS INDUSTRY & CATEGORY *
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '6px', marginBottom: '10px' }}>
                 {[
                   { id: 'restaurant', biz: 'restaurant', label: '🍽️ Restaurant', defaultPlan: 'pro' },
                   { id: 'hotel', biz: 'hotel_resort', label: '🏨 Hotel', defaultPlan: 'hotel_pro' },
@@ -672,7 +672,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                 })) : defaultFallbackPlans;
 
                 return (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '6px' }}>
                     {plansToDisplay.map((p) => (
                       <div
                         key={p.key}

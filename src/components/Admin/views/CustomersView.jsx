@@ -396,7 +396,7 @@ export default function CustomersView({
         }
         @media (max-width: 900px) {
           .guest-main-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: minmax(0, 1fr) !important;
           }
           .desktop-table-container {
             display: none !important;
@@ -404,18 +404,35 @@ export default function CustomersView({
           .mobile-cards-container {
             display: flex !important;
           }
+          .guest-details-sheet-backdrop {
+            align-items: flex-end !important;
+          }
           .guest-details-sheet-panel {
             width: 100% !important;
             max-width: 100% !important;
             border-radius: 20px 20px 0 0 !important;
-            bottom: 0 !important;
-            top: auto !important;
-            height: 85vh !important;
+            height: 85dvh !important;
+            max-height: 85dvh !important;
             animation: slideUpSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+          }
+          .guest-sheet-footer {
+            padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
           }
           @keyframes slideUpSheet {
             from { transform: translateY(100%); }
             to { transform: translateY(0); }
+          }
+        }
+        @media (max-width: 768px) {
+          .guest-timeframe-select {
+            font-size: 0.80rem !important;
+            min-height: 36px !important;
+            height: 36px !important;
+          }
+          .guest-search-input {
+            font-size: 0.85rem !important;
+            min-height: 40px !important;
+            height: 40px !important;
           }
         }
         @media (min-width: 901px) {
@@ -488,7 +505,7 @@ export default function CustomersView({
           }}>
             <ShieldCheck size={16} color="#064E3B" />
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                 <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                   Data Retention
                 </span>
@@ -705,6 +722,8 @@ export default function CustomersView({
             alignItems: 'center',
             gap: '6px',
             overflowX: 'auto',
+            maxWidth: '100%',
+            minWidth: 0,
             paddingBottom: '2px',
             scrollbarWidth: 'none'
           }}>
@@ -744,6 +763,7 @@ export default function CustomersView({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Calendar size={14} color="#64748B" />
             <select
+              className="guest-timeframe-select"
               value={timeframeFilter}
               onChange={(e) => setTimeframeFilter(e.target.value)}
               style={{
@@ -770,6 +790,7 @@ export default function CustomersView({
         <div style={{ position: 'relative', width: '100%' }}>
           <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
           <input
+            className="guest-search-input"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -777,7 +798,7 @@ export default function CustomersView({
             style={{
               width: '100%',
               height: '38px',
-              padding: '0 12px 0 36px',
+              padding: '0 34px 0 36px',
               borderRadius: '10px',
               border: '1px solid #E2E8F0',
               background: '#F8FAF8',
@@ -826,6 +847,7 @@ export default function CustomersView({
           border: '1px solid #EAE5DF',
           boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
           overflow: 'hidden',
+          minWidth: 0,
           display: 'flex',
           flexDirection: 'column'
         }}>
@@ -959,7 +981,7 @@ export default function CustomersView({
                               {guest.isIdentified ? guest.displayName.charAt(0).toUpperCase() : '#'}
                             </div>
                             <div style={{ minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                                 <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>
                                   {guest.displayName}
                                 </strong>
@@ -1156,6 +1178,8 @@ export default function CustomersView({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '8px',
                     background: '#FAF8F5',
                     borderRadius: '8px',
                     padding: '8px 10px',
@@ -1246,11 +1270,11 @@ export default function CustomersView({
               </span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.70rem', color: '#475569' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                 <CheckCircle2 size={12} color="#059669" />
                 <span>Zero customer password / account requirements</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                 <CheckCircle2 size={12} color="#059669" />
                 <span>Isolated to your business profile</span>
               </div>
@@ -1537,7 +1561,9 @@ export default function CustomersView({
                   padding: '12px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <Phone size={18} color="#064E3B" />
@@ -1636,7 +1662,7 @@ export default function CustomersView({
                       >
                         {/* Order Top: ID + Status + Total */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                             <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               {ord.token_display ? `Token ${ord.token_display}` : (ord.table_number ? `Table ${ord.table_number}` : 'Order')}
                             </strong>
@@ -1657,7 +1683,7 @@ export default function CustomersView({
                         </div>
 
                         {/* Order Meta: Location + Time */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.68rem', color: '#64748B', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', fontSize: '0.68rem', color: '#64748B', marginBottom: '8px' }}>
                           <span>📍 {formatOrderLocation(ord, restaurantInfo)}</span>
                           <span>•</span>
                           <span>🕒 {formatActivityTime(ordTime)}</span>
@@ -1675,9 +1701,9 @@ export default function CustomersView({
                             gap: '4px'
                           }}>
                             {items.map((it, iIdx) => (
-                              <div key={iIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#334155' }}>
-                                <span>{it.quantity || it.qty || 1}x {it.name || it.dish_name}</span>
-                                <span style={{ fontWeight: 700 }}>
+                              <div key={iIdx} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '0.72rem', color: '#334155' }}>
+                                <span style={{ minWidth: 0 }}>{it.quantity || it.qty || 1}x {it.name || it.dish_name}</span>
+                                <span style={{ fontWeight: 700, flexShrink: 0 }}>
                                   {sym}{formatPriceNumber((Number(it.price || 0)) * (Number(it.quantity || it.qty || 1)))}
                                 </span>
                               </div>
@@ -1705,7 +1731,7 @@ export default function CustomersView({
             </div>
 
             {/* Sheet Footer */}
-            <div style={{
+            <div className="guest-sheet-footer" style={{
               padding: '14px 20px',
               borderTop: '1px solid #EAE5DF',
               background: '#FFFFFF',

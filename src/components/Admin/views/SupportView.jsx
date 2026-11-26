@@ -628,8 +628,8 @@ export default function SupportView({
           type="button"
           onClick={() => setSupportTab('guides')}
           style={{
-            flex: '1 1 0',
-            minWidth: '150px',
+            flex: '1 0 auto',
+            minWidth: 'max-content',
             height: '38px',
             padding: '0 14px',
             borderRadius: '10px',
@@ -656,8 +656,8 @@ export default function SupportView({
           type="button"
           onClick={() => setSupportTab('tickets')}
           style={{
-            flex: '1 1 0',
-            minWidth: '150px',
+            flex: '1 0 auto',
+            minWidth: 'max-content',
             height: '38px',
             padding: '0 14px',
             borderRadius: '10px',
@@ -1134,7 +1134,7 @@ export default function SupportView({
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
                     <div>
                       <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
                         Category *
@@ -1144,11 +1144,12 @@ export default function SupportView({
                         onChange={(e) => setSupportCategory(e.target.value)}
                         style={{
                           width: '100%',
+                          minHeight: '38px',
                           height: '38px',
                           borderRadius: '10px',
                           border: '1px solid #CBD5E1',
                           padding: '0 10px',
-                          fontSize: '0.78rem',
+                          fontSize: '0.82rem',
                           color: '#0F172A',
                           background: '#FAF8F5',
                           outline: 'none',
@@ -1176,11 +1177,12 @@ export default function SupportView({
                         onChange={(e) => setSupportPriority(e.target.value)}
                         style={{
                           width: '100%',
+                          minHeight: '38px',
                           height: '38px',
                           borderRadius: '10px',
                           border: '1px solid #CBD5E1',
                           padding: '0 10px',
-                          fontSize: '0.78rem',
+                          fontSize: '0.82rem',
                           color: '#0F172A',
                           background: '#FAF8F5',
                           outline: 'none',
@@ -1501,8 +1503,8 @@ export default function SupportView({
               }}>
                 <ShieldCheck size={24} />
               </div>
-              <div>
-                <strong style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <span>TouchQR System Status</span>
                   <span style={{
                     fontSize: '0.68rem',
@@ -1556,7 +1558,7 @@ export default function SupportView({
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
               gap: '12px'
             }}>
               {[
@@ -1631,7 +1633,7 @@ export default function SupportView({
           <div style={{
             background: '#FFFFFF',
             borderRadius: '20px',
-            maxWidth: '520px',
+            maxWidth: '520px', maxHeight: '90dvh', overflowY: 'auto',
             width: '100%',
             padding: '24px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
@@ -1640,7 +1642,7 @@ export default function SupportView({
             flexDirection: 'column',
             gap: '14px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {activeGuide.icon}
@@ -1674,7 +1676,7 @@ export default function SupportView({
               ))}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => setActiveGuide(null)}
@@ -1739,11 +1741,11 @@ export default function SupportView({
               borderBottom: '1px solid #EAE5DF',
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'flex-start',
+              alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px',
               background: '#FAF8F5'
             }}>
-              <div style={{ minWidth: 0, flex: 1, paddingRight: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <div style={{ minWidth: 0, flex: '1 1 200px', paddingRight: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '4px' }}>
                   <span style={{
                     fontFamily: 'monospace',
                     fontSize: '0.74rem',

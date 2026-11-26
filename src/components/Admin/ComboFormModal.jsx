@@ -187,6 +187,8 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
             color: #64748B;
             white-space: nowrap;
             height: 36px;
+            min-width: 0;
+            overflow: hidden;
           }
           .combo-tab-btn.active {
             background: #FFFFFF;
@@ -206,11 +208,11 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
             .combo-modal-body-form input:not(.combo-dish-search-input),
             .combo-modal-body-form select,
             .combo-modal-body-form textarea {
-              font-size: 14px !important;
+              font-size: 16px !important;
               padding: 8px 11px !important;
             }
             .combo-modal-body-form input.combo-dish-search-input {
-              font-size: 14px !important;
+              font-size: 16px !important;
               padding-left: 40px !important;
               padding-right: 12px !important;
               padding-top: 9px !important;
@@ -339,8 +341,8 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
               </div>
 
               {/* Price + Badge Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+                <div style={{ minWidth: 0 }}>
                   <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                     Combo Price (₹) *
                   </label>

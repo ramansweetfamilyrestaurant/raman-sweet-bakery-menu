@@ -212,7 +212,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
             }
             .cat-modal-body-form input:not([type="file"]),
             .cat-modal-body-form select {
-              font-size: 14px !important;
+              font-size: 16px !important;
               padding: 8px 10px !important;
             }
           }

@@ -393,22 +393,22 @@ export default function MenuView({
     const hasHalfPrice = !isNaN(rawHalfPrice) && rawHalfPrice > 0;
 
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', flexWrap: 'nowrap', maxWidth: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', flexWrap: 'wrap', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         {hasHalfPrice ? (
           /* Dual Portion Segmented Pill for dishes with Full/Half portions */
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             background: '#F8FAFC',
             border: '1px solid #E2E8F0',
             borderRadius: '5px',
             padding: '2px 5px',
             gap: '4px',
-            height: '24px',
+            minHeight: '24px',
             boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
             maxWidth: '100%',
-            boxSizing: 'border-box',
-            flexShrink: 0
+            boxSizing: 'border-box'
           }}>
             {/* Full portion */}
             <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '2px' }}>
@@ -2202,8 +2202,8 @@ export default function MenuView({
                         marginTop: '4px',
                         paddingTop: '4px',
                         borderTop: '1px solid #F1F5F9',
-                        flexWrap: 'nowrap',
-                        gap: '3px',
+                        flexWrap: 'wrap',
+                        gap: '4px',
                         minWidth: 0
                       }}>
                         {renderDishPrice(dish, 'card')}
@@ -3070,7 +3070,7 @@ export default function MenuView({
             gap: '12px',
             boxShadow: '0 2px 6px rgba(147, 51, 234, 0.04)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: '1 1 220px' }}>
               <div style={{
                 width: '44px',
                 height: '44px',
@@ -3085,8 +3085,8 @@ export default function MenuView({
               }}>
                 🍱
               </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                     Value Meal Combos
                   </h3>
@@ -3157,7 +3157,7 @@ export default function MenuView({
             /* Combos Grid */
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))',
               gap: '16px'
             }}>
               {filteredCombos.map(combo => {
@@ -3854,7 +3854,7 @@ export default function MenuView({
                 <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
                   📦 Inventory & Stock Status
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
                   {[
                     { id: 'all', label: 'All Items' },
                     { id: 'available', label: `In Stock (${counts.available}) 🟢` },
@@ -3890,7 +3890,7 @@ export default function MenuView({
                 <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
                   ⭐ Highlights & Badges
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
                   {[
                     { id: 'must_try', label: `Must Try (${counts.must_try})`, icon: '🔥' },
                     { id: 'bestseller', label: `Bestseller (${counts.bestseller})`, icon: '⭐' },
@@ -3931,7 +3931,7 @@ export default function MenuView({
                 <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
                   💰 Price Range
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: '6px' }}>
                   {[
                     { id: 'all', label: 'All Prices' },
                     { id: 'under_100', label: `< ${curr}100` },
@@ -4014,7 +4014,8 @@ export default function MenuView({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: '12px',
+              flexWrap: 'wrap',
+              gap: '10px',
               background: '#F8FAFC',
               borderBottomLeftRadius: '24px',
               borderBottomRightRadius: '24px'

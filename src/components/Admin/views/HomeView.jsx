@@ -520,7 +520,7 @@ export default function HomeView({
         }
         @media (max-width: 1100px) {
           .home-main-wrapper {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: minmax(0, 1fr) !important;
           }
           .home-kpi-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -528,11 +528,42 @@ export default function HomeView({
         }
         @media (max-width: 680px) {
           .home-dual-col {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: minmax(0, 1fr) !important;
           }
           .home-kpi-grid {
-            grid-template-columns: 1fr 1fr !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 10px !important;
+          }
+          .home-kpi-card {
+            padding: 12px !important;
+            gap: 10px !important;
+            min-width: 0;
+            overflow-wrap: anywhere;
+          }
+          .home-kpi-card > div:first-child {
+            width: 34px !important;
+            height: 34px !important;
+            border-radius: 10px !important;
+          }
+          .home-kpi-card > div:nth-child(2) > div:nth-child(2) {
+            font-size: clamp(1.12rem, 4.4vw, 1.35rem) !important;
+          }
+          .home-plan-actions {
+            align-items: flex-start !important;
+            width: 100%;
+          }
+        }
+        @media (max-width: 380px) {
+          .home-kpi-card {
+            padding: 10px !important;
+            gap: 8px !important;
+          }
+          .home-kpi-card > div:first-child {
+            width: 30px !important;
+            height: 30px !important;
+          }
+          .home-quick-actions-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
           }
         }
       `}</style>
@@ -542,7 +573,7 @@ export default function HomeView({
          ======================================================== */}
       <div className="home-kpi-grid">
         {/* KPI 1: Today's Sales */}
-        <div style={{
+        <div className="home-kpi-card" style={{
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
@@ -977,9 +1008,9 @@ export default function HomeView({
                         </div>
 
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', fontWeight: 700, color: '#0F172A', marginBottom: '3px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '0.76rem', fontWeight: 700, color: '#0F172A', marginBottom: '3px' }}>
                             <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</span>
-                            <span style={{ color: '#64748B', fontWeight: 500, fontSize: '0.70rem' }}>{dish.sold} {dish.sold === 1 ? 'order' : 'orders'}</span>
+                            <span style={{ color: '#64748B', fontWeight: 500, fontSize: '0.70rem', flexShrink: 0, whiteSpace: 'nowrap' }}>{dish.sold} {dish.sold === 1 ? 'order' : 'orders'}</span>
                           </div>
                           <div style={{ width: '100%', height: '5px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
                             <div style={{ width: `${Math.round((dish.sold / maxSold) * 100)}%`, height: '100%', background: '#0D3823', borderRadius: '4px' }} />
@@ -1076,9 +1107,9 @@ export default function HomeView({
                             <IconComponent size={16} />
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <strong style={{ fontSize: '0.78rem', color: '#0F172A' }}>{act.title}</strong>
-                              <span style={{ fontSize: '0.68rem', color: '#94A3B8' }}>{act.time}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                              <strong style={{ fontSize: '0.78rem', color: '#0F172A', minWidth: 0 }}>{act.title}</strong>
+                              <span style={{ fontSize: '0.68rem', color: '#94A3B8', flexShrink: 0, whiteSpace: 'nowrap' }}>{act.time}</span>
                             </div>
                             <span style={{ fontSize: '0.72rem', color: '#64748B' }}>{act.subtitle}</span>
                           </div>
@@ -1139,9 +1170,9 @@ export default function HomeView({
                 Quick Actions
               </h3>
 
-              <div style={{
+              <div className="home-quick-actions-grid" style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                 gap: '10px'
               }}>
                 <button
@@ -1391,7 +1422,7 @@ export default function HomeView({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+              <div className="home-plan-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
                 <span style={{
                   fontSize: '0.68rem',
                   fontWeight: 800,

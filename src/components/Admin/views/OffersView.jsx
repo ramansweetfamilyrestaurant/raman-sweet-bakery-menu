@@ -688,6 +688,25 @@ export default function OffersView({
             grid-template-columns: 1fr !important;
           }
         }
+        @media (max-width: 768px) {
+          .offers-compact-input, .offers-compact-select {
+            font-size: 0.82rem !important;
+            min-height: 38px !important;
+            height: 38px !important;
+          }
+          .offers-datetime-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          .offers-step2-search-row {
+            flex-wrap: wrap !important;
+          }
+          .offers-step2-search-row > input,
+          .offers-step2-search-row > select {
+            flex: 1 1 100% !important;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+        }
         @media (max-width: 640px) {
           .offers-header-container {
             padding: 12px 14px !important;
@@ -701,6 +720,9 @@ export default function OffersView({
           }
           .offer-row-card {
             padding: 12px 12px !important;
+          }
+          .offers-discount-type-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
           }
         }
       `}</style>
@@ -887,9 +909,10 @@ export default function OffersView({
         gap: '10px'
       }}>
         {/* Search */}
-        <div style={{ position: 'relative', minWidth: '220px', flex: 1 }}>
+        <div style={{ position: 'relative', minWidth: '180px', flex: '1 1 200px' }}>
           <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
           <input
+            className="offers-compact-input"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -910,7 +933,7 @@ export default function OffersView({
         </div>
 
         {/* Filter Chips */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', maxWidth: '100%', minWidth: 0, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
           {[
             { id: 'all', label: 'All' },
             { id: 'active', label: 'Active' },
@@ -996,7 +1019,7 @@ export default function OffersView({
 
             return (
               <div key={offer.id} className="offer-row-card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: '1 1 210px' }}>
                   <div style={{
                     width: '36px',
                     height: '36px',
@@ -1415,7 +1438,7 @@ export default function OffersView({
                     <label style={{ fontSize: '0.76rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
                       Discount Type
                     </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                    <div className="offers-discount-type-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
                       {[
                         { id: 'percentage', label: '% OFF', desc: 'Percentage Discount' },
                         { id: 'flat', label: currencySym ? `${currencySym} Flat OFF` : 'Flat OFF', desc: 'Fixed Amount Discount' },
@@ -1519,14 +1542,16 @@ export default function OffersView({
                   </div>
 
                   {/* Search & Category Filter */}
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className="offers-step2-search-row" style={{ display: 'flex', gap: '8px' }}>
                     <input
+                      className="offers-compact-input"
                       type="text"
                       value={itemSearchQuery}
                       onChange={(e) => setItemSearchQuery(e.target.value)}
                       placeholder={modalItemTypeTab === 'combos' ? 'Search combos...' : `Search ${terminology.dishSingular?.toLowerCase() || 'item'}...`}
                       style={{
                         flex: 1,
+                        minWidth: 0,
                         height: '36px',
                         borderRadius: '8px',
                         border: '1px solid #CBD5E1',
@@ -1539,10 +1564,12 @@ export default function OffersView({
                     />
                     {modalItemTypeTab === 'dishes' && (
                       <select
+                        className="offers-compact-select"
                         value={itemCategoryFilter}
                         onChange={(e) => setItemCategoryFilter(e.target.value)}
                         style={{
                           height: '36px',
+                          maxWidth: '180px',
                           borderRadius: '8px',
                           border: '1px solid #CBD5E1',
                           padding: '0 8px',
@@ -1690,29 +1717,31 @@ export default function OffersView({
                     </label>
 
                     {!formAlwaysActive && (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <div>
+                      <div className="offers-datetime-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
+                        <div style={{ minWidth: 0 }}>
                           <label style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', marginBottom: '2px' }}>Start Time</label>
                           <input
+                            className="offers-compact-input"
                             type="datetime-local"
                             value={formStartsAt}
                             onChange={(e) => {
                               setFormStartsAt(e.target.value);
                               setStartsAtDirty(true);
                             }}
-                            style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '0.74rem' }}
+                            style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '0.74rem', boxSizing: 'border-box' }}
                           />
                         </div>
-                        <div>
+                        <div style={{ minWidth: 0 }}>
                           <label style={{ fontSize: '0.70rem', color: '#64748B', display: 'block', marginBottom: '2px' }}>End Time</label>
                           <input
+                            className="offers-compact-input"
                             type="datetime-local"
                             value={formEndsAt}
                             onChange={(e) => {
                               setFormEndsAt(e.target.value);
                               setEndsAtDirty(true);
                             }}
-                            style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '0.74rem' }}
+                            style={{ width: '100%', height: '36px', borderRadius: '8px', border: '1px solid #CBD5E1', padding: '0 8px', fontSize: '0.74rem', boxSizing: 'border-box' }}
                           />
                         </div>
                       </div>

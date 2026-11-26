@@ -538,6 +538,15 @@ export default function ReviewView({
             padding-right: 0 !important;
             padding-bottom: 12px !important;
           }
+          .reviews-tone-lang-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .reviews-compact-select, .reviews-compact-input {
+            font-size: 0.84rem !important;
+            min-height: 38px !important;
+          }
         }
       `}</style>
 
@@ -583,7 +592,7 @@ export default function ReviewView({
         flexWrap: 'wrap',
         gap: '12px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', minWidth: 0, flex: '1 1 240px' }}>
           {onBackToSetup && (
             <button
               type="button"
@@ -608,8 +617,8 @@ export default function ReviewView({
               <span>Settings</span>
             </button>
           )}
-          <div>
-            <h2 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ minWidth: 0, flex: '1 1 180px' }}>
+            <h2 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
               <Star size={18} color="#D97706" fill="#D97706" />
               <span>Customer Reviews & AI Assistant</span>
             </h2>
@@ -1022,8 +1031,8 @@ export default function ReviewView({
                     }}
                   >
                     {/* Author & Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 180px' }}>
                         <div style={{
                           width: '30px',
                           height: '30px',
@@ -1034,11 +1043,12 @@ export default function ReviewView({
                           fontSize: '0.72rem',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          flexShrink: 0
                         }}>
                           {rev.avatar}
                         </div>
-                        <div>
+                        <div style={{ minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'block' }}>{rev.author}</strong>
                             <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#D97706', background: '#FEF3C7', padding: '1px 5px', borderRadius: '4px', border: '1px solid #FDE68A' }}>SAMPLE</span>
@@ -1183,7 +1193,7 @@ export default function ReviewView({
               ))}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
               <span style={{ fontSize: '0.74rem', color: '#D97706', fontWeight: 800 }}>
                 ● 12 reviews currently need attention
               </span>
@@ -1222,8 +1232,8 @@ export default function ReviewView({
             gap: '14px',
             position: 'relative'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ minWidth: 0 }}>
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Sparkles size={18} color="#059669" />
                   <span>AI Auto-Reply Assistant</span>
@@ -1255,6 +1265,7 @@ export default function ReviewView({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexWrap: 'wrap',
                 gap: '10px'
               }}>
                 <div>
@@ -1309,12 +1320,13 @@ export default function ReviewView({
               </div>
 
               {/* Tone & Language Dropdowns */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div className="reviews-tone-lang-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
                 <div>
                   <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
                     Reply Tone
                   </label>
                   <select
+                    className="reviews-compact-select"
                     value={selectedTone}
                     disabled={!isAiPlanEnabled}
                     onChange={(e) => {
@@ -1335,6 +1347,7 @@ export default function ReviewView({
                     Reply Language
                   </label>
                   <select
+                    className="reviews-compact-select"
                     value={selectedLanguage}
                     disabled={!isAiPlanEnabled}
                     onChange={(e) => {
@@ -1646,10 +1659,7 @@ export default function ReviewView({
       {showConnectModal && (
         <div style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
+          inset: 0,
           background: 'rgba(15, 23, 42, 0.65)',
           backdropFilter: 'blur(4px)',
           zIndex: 9999,
@@ -1664,6 +1674,8 @@ export default function ReviewView({
             borderRadius: '20px',
             maxWidth: '480px',
             width: '100%',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
             padding: '24px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
             boxSizing: 'border-box',
@@ -1671,8 +1683,8 @@ export default function ReviewView({
             flexDirection: 'column',
             gap: '14px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #EAE5DF', paddingBottom: '10px' }}>
-              <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', borderBottom: '1px solid #EAE5DF', paddingBottom: '10px' }}>
+              <div style={{ minWidth: 0 }}>
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
                   Connect Google Reviews
                 </h3>
@@ -1683,7 +1695,7 @@ export default function ReviewView({
               <button
                 type="button"
                 onClick={() => setShowConnectModal(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', flexShrink: 0 }}
               >
                 <X size={20} />
               </button>
@@ -1695,6 +1707,7 @@ export default function ReviewView({
                   Google Review URL *
                 </label>
                 <input
+                  className="reviews-compact-input"
                   type="url"
                   required
                   value={googleUrlInput}

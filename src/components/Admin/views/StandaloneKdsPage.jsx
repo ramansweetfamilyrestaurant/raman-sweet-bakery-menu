@@ -1591,12 +1591,12 @@ export default function StandaloneKdsPage({ slug = '' }) {
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(8px, 3vw, 14px)', marginBottom: '24px' }}>
             {[0, 1, 2, 3].map(idx => (
               <div
                 key={idx}
                 style={{
-                  width: '52px', height: '56px', borderRadius: '14px',
+                  width: 'clamp(44px, 13vw, 52px)', height: '56px', borderRadius: '14px', flexShrink: 0,
                   background: '#1E293B', border: pinInput.length === idx ? '2px solid #38BDF8' : '1px solid #334155',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '1.6rem', fontWeight: 900, color: '#F8FAFC',

@@ -428,8 +428,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
             justifyContent: 'center',
             gap: '8px',
             marginTop: '20px',
-            flexWrap: 'nowrap',
-            overflowX: 'auto',
+            flexWrap: 'wrap',
             padding: '4px 0'
           }}>
             <div style={{
@@ -526,8 +525,8 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '14px' }}>
+                <div style={{ minWidth: 0 }}>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>
                     Phone Number *
                   </label>
@@ -584,8 +583,8 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                 {fieldErrors.address && <p style={{ color: '#FCA5A5', fontSize: '0.74rem', margin: '4px 0 0' }}>{fieldErrors.address}</p>}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: '10px' }}>
+                <div style={{ minWidth: 0 }}>
                   <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#94A3B8', marginBottom: '4px' }}>City</label>
                   <input
                     type="text"
@@ -801,8 +800,8 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '14px' }}>
+                <div style={{ minWidth: 0 }}>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '6px' }}>Latitude</label>
                   <input
                     type="number"
@@ -1019,9 +1018,9 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                 </div>
 
                 {/* Sub-Concept Selector (Dine-In Only) + Food Dietary Type */}
-                <div style={{ display: 'grid', gridTemplateColumns: isDineIn ? '1fr 1fr' : '1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isDineIn ? 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' : 'minmax(0, 1fr)', gap: '12px' }}>
                   {isDineIn && (
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '4px' }}>
                         Outlet Concept (Optional)
                       </label>
@@ -1113,13 +1112,13 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginTop: '12px' }}>
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    padding: '12px 22px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.2)',
+                    padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.2)',
                     background: 'rgba(255,255,255,0.06)', color: '#E2E8F0', fontWeight: 700, fontSize: '0.86rem', cursor: 'pointer'
                   }}
                 >
@@ -1130,8 +1129,8 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   onClick={handleCompleteSetup}
                   disabled={saving}
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    padding: '14px 32px', borderRadius: '14px', border: 'none',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flex: '1 1 200px',
+                    padding: '14px 20px', borderRadius: '14px', border: 'none',
                     background: 'linear-gradient(135deg, #15803D 0%, #22C55E 100%)',
                     color: '#FFFFFF', fontWeight: 900, fontSize: '0.94rem', cursor: 'pointer',
                     boxShadow: '0 4px 20px rgba(34, 197, 94, 0.4)'

@@ -621,12 +621,15 @@ export default function PosBillingView({
         }
         /* TABLET PORTRAIT & MOBILE SCREENS (<= 900px) */
         @media (max-width: 900px) {
+          .pos-grid-container {
+            padding-bottom: 84px !important;
+          }
           .pos-dishes-grid {
             grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
             gap: 10px;
           }
           .pos-grid-container {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr);
           }
           .pos-cart-panel {
             display: none !important;
@@ -638,7 +641,7 @@ export default function PosBillingView({
             max-width: 520px !important;
             margin: 0 auto !important;
             z-index: 1050 !important;
-            max-height: 85vh !important;
+            max-height: 85dvh !important;
             overflow-y: auto !important;
             border-radius: 20px 20px 0 0 !important;
             box-shadow: 0 -8px 30px rgba(0,0,0,0.3) !important;
@@ -648,6 +651,10 @@ export default function PosBillingView({
             display: flex !important;
             flex-direction: column !important;
             animation: posSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          }
+          .pos-cart-items-scroll {
+            min-height: 140px !important;
+            flex: 1 0 auto !important;
           }
           .pos-mobile-cart-bar {
             display: flex !important;
@@ -685,6 +692,36 @@ export default function PosBillingView({
           }
           .pos-mobile-close-btn {
             display: inline-flex !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .pos-compact-input, .pos-compact-select {
+            font-size: 0.82rem !important;
+            min-height: 36px !important;
+            height: 36px !important;
+          }
+          .pos-cash-input {
+            font-size: 0.85rem !important;
+            min-height: 32px !important;
+            height: 32px !important;
+          }
+        }
+        @media (max-width: 420px) {
+          .pos-customer-inputs-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          .pos-cart-item-row {
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+          }
+          .pos-cart-item-controls {
+            width: 100%;
+            justify-content: flex-end !important;
+          }
+        }
+        @media (max-width: 360px) {
+          .pos-dishes-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
           }
         }
         @keyframes posSlideUp {
@@ -729,7 +766,7 @@ export default function PosBillingView({
             <Receipt size={19} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
               <h1 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
                 Counter Quick POS
               </h1>
@@ -787,8 +824,8 @@ export default function PosBillingView({
           padding: '10px 14px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isTokensQueueCollapsed ? '0' : '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: isTokensQueueCollapsed ? '0' : '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', minWidth: 0 }}>
               <span style={{ fontSize: '1rem' }}>⚡</span>
               <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800 }}>
                 Active Tokens in Queue ({activeTokensQueue.length})
@@ -797,7 +834,7 @@ export default function PosBillingView({
                 • Track kitchen prep & handover food
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
               <button
                 onClick={() => setIsTokensQueueCollapsed(prev => !prev)}
                 style={{
@@ -1456,7 +1493,7 @@ export default function PosBillingView({
                 {cart.reduce((s, it) => s + it.quantity, 0)} items
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
               {cart.length > 0 && (
                 <button
                   onClick={clearCart}
@@ -1542,13 +1579,15 @@ export default function PosBillingView({
 
           {/* If Dine-In selected, Table Selector */}
           {orderType === 'dine_in' && (
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', background: '#F0FDF4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
-              <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#166534' }}>Select Table:</span>
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', background: '#F0FDF4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
+              <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#166534', flexShrink: 0, whiteSpace: 'nowrap' }}>Select Table:</span>
               <select
+                className="pos-compact-select"
                 value={tableNumber}
                 onChange={e => setTableNumber(e.target.value)}
                 style={{
-                  flex: 1,
+                  flex: '1 1 120px',
+                  minWidth: 0,
                   padding: '5px 8px',
                   borderRadius: '6px',
                   border: '1px solid #86EFAC',
@@ -1567,10 +1606,11 @@ export default function PosBillingView({
           )}
 
           {/* Optional Customer Name / Phone Inputs */}
-          <div style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <div style={{ position: 'relative' }}>
+          <div className="pos-customer-inputs-grid" style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
+            <div style={{ position: 'relative', minWidth: 0 }}>
               <User size={13} color="#94A3B8" style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)' }} />
               <input
+                className="pos-compact-input"
                 type="text"
                 value={customerName}
                 onChange={e => setCustomerName(e.target.value)}
@@ -1586,9 +1626,10 @@ export default function PosBillingView({
                 }}
               />
             </div>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', minWidth: 0 }}>
               <Phone size={13} color="#94A3B8" style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)' }} />
               <input
+                className="pos-compact-input"
                 type="text"
                 value={customerPhone}
                 onChange={e => setCustomerPhone(e.target.value)}
@@ -1625,18 +1666,20 @@ export default function PosBillingView({
             ) : (
               cart.map((item, idx) => (
                 <div
+                  className="pos-cart-item-row"
                   key={item.cartKey || `${item.dish.id}_${item.selectedVariant}_${idx}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    gap: '6px',
                     padding: '8px 10px',
                     borderRadius: '8px',
                     background: '#F8FAFC',
                     border: '1px solid #F1F5F9'
                   }}
                 >
-                  <div style={{ flex: 1, minWidth: 0, paddingRight: '6px' }}>
+                  <div style={{ flex: '1 1 130px', minWidth: 0, paddingRight: '6px' }}>
                     <strong style={{ fontSize: '0.80rem', color: '#0F172A', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {item.dish.name}
                     </strong>
@@ -1667,7 +1710,7 @@ export default function PosBillingView({
                   </div>
 
                   {/* Quantity Stepper & Subtotal */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <div className="pos-cart-item-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                     <div style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1858,6 +1901,7 @@ export default function PosBillingView({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 700 }}>{curr}</span>
                   <input
+                    className="pos-cash-input"
                     type="number"
                     value={cashTendered}
                     onChange={(e) => setCashTendered(e.target.value)}
@@ -2088,9 +2132,11 @@ export default function PosBillingView({
           <div style={{
             background: '#FFFFFF',
             borderRadius: '20px',
-            padding: '30px 24px',
+            padding: '24px 20px',
             maxWidth: '420px',
             width: '100%',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
             textAlign: 'center',
             boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
             boxSizing: 'border-box'
@@ -2173,7 +2219,7 @@ export default function PosBillingView({
 
             {/* Print and Next Customer Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
                 <button
                   onClick={() => {
                     if (onPrintBill) onPrintBill(successOrder.order, successOrder.order.payment_method?.toUpperCase());
@@ -2287,6 +2333,8 @@ export default function PosBillingView({
                 padding: '20px',
                 maxWidth: '420px',
                 width: '100%',
+                maxHeight: '90dvh',
+                overflowY: 'auto',
                 boxShadow: '0 20px 40px rgba(0,0,0,0.22)',
                 border: '1px solid #E2E8F0',
                 boxSizing: 'border-box'
@@ -2311,7 +2359,7 @@ export default function PosBillingView({
               </div>
 
               {hasHalfOption && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', marginBottom: '12px' }}>
                   <button
                     type="button"
                     onClick={() => setAddonModalData(prev => prev ? { ...prev, variant: 'half' } : null)}
@@ -2369,7 +2417,7 @@ export default function PosBillingView({
                           cursor: 'pointer'
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                           <input
                             type="checkbox"
                             checked={checked}
@@ -2387,7 +2435,7 @@ export default function PosBillingView({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => setAddonModalData(null)}

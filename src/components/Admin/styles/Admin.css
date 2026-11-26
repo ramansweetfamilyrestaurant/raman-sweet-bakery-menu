@@ -710,19 +710,26 @@
     border-radius: 6px !important;
   }
   .catalog-sort-select {
-    height: 26px !important;
-    padding: 0 18px 0 6px !important;
-    font-size: 0.65rem !important;
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 0 20px 0 7px !important;
+    font-size: 0.72rem !important;
     font-weight: 700 !important;
-    max-width: 96px !important;
+    max-width: 112px !important;
     width: auto !important;
     min-width: 0 !important;
     border-radius: 8px !important;
   }
   .catalog-sort-icon {
-    right: 4px !important;
+    right: 5px !important;
     width: 10px !important;
     height: 10px !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 900px) {
+  .desktop-summary-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
@@ -751,10 +758,11 @@
     padding: 12px 10px !important;
   }
   .catalog-sort-select {
-    height: 25px !important;
-    padding: 0 16px 0 5px !important;
-    font-size: 0.64rem !important;
-    max-width: 90px !important;
+    min-height: 28px !important;
+    height: 28px !important;
+    padding: 0 18px 0 6px !important;
+    font-size: 0.70rem !important;
+    max-width: 100px !important;
   }
 }
 
@@ -785,10 +793,11 @@
     font-size: 0.60rem !important;
   }
   .catalog-sort-select {
-    height: 24px !important;
-    padding: 0 15px 0 4px !important;
-    font-size: 0.60rem !important;
-    max-width: 82px !important;
+    min-height: 26px !important;
+    height: 26px !important;
+    padding: 0 16px 0 5px !important;
+    font-size: 0.68rem !important;
+    max-width: 90px !important;
   }
 }
 
@@ -839,7 +848,8 @@
     justify-self: end !important;
   }
   .menu-page-size-select {
-    height: 40px !important;
+    min-height: 36px !important;
+    height: 36px !important;
     font-size: 12px !important;
     padding: 0 10px !important;
     border-radius: 8px !important;
@@ -855,9 +865,10 @@
     grid-area: pages !important;
     justify-self: center !important;
     display: flex !important;
+    flex-wrap: wrap !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 6px !important;
+    gap: 5px !important;
     width: 100% !important;
   }
   .menu-page-btn {
@@ -997,12 +1008,12 @@
   font-size: 0.82rem;
 }
 
-/* Add Space Dropdown Menu - Left-aligned on mobile to prevent clipping, right-aligned on desktop */
+/* Add Space Dropdown Menu - Anchored right on larger screens & prevents horizontal overflow */
 .standee-add-dropdown {
   position: absolute;
   top: 100%;
-  left: 0;
-  right: auto;
+  left: auto;
+  right: 0;
   margin-top: 4px;
   background: #FFFFFF;
   border-radius: 8px;
@@ -1010,14 +1021,15 @@
   border: 1px solid #E2E8F0;
   z-index: 50;
   min-width: 175px;
+  max-width: calc(100vw - 32px);
   padding: 4px 0;
   box-sizing: border-box;
 }
 
-@media (min-width: 1025px) {
+@media (max-width: 520px) {
   .standee-add-dropdown {
-    left: auto;
-    right: 0;
+    left: 0;
+    right: auto;
   }
 }
 
@@ -1033,6 +1045,37 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+.standee-delete-modal {
+  max-height: 90dvh !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
+}
+
+.standee-toast-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .standee-toast-notification {
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 12px !important;
+    right: 12px !important;
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .standee-quick-count-input {
+    font-size: 0.92rem !important;
+    min-height: 36px !important;
+    height: 36px !important;
+  }
 }
 
 .standee-export-actions {

@@ -795,7 +795,7 @@ export default function NotificationView({
 
                           {/* Content Body */}
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingRight: isUnread ? '16px' : '0', marginBottom: '2px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                 <strong style={{ fontSize: '0.86rem', color: '#0F172A', fontWeight: isUnread ? 900 : 700 }}>
                                   {notif.title}
@@ -984,6 +984,8 @@ export default function NotificationView({
             borderRadius: '20px',
             maxWidth: '480px',
             width: '100%',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
             padding: '24px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
             boxSizing: 'border-box',
@@ -991,12 +993,12 @@ export default function NotificationView({
             flexDirection: 'column',
             gap: '14px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {renderTypeIcon(selectedNotif.type)}
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
                     {selectedNotif.title}
                   </h3>
@@ -1008,7 +1010,7 @@ export default function NotificationView({
               <button
                 type="button"
                 onClick={() => setSelectedNotif(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', flexShrink: 0 }}
               >
                 <X size={20} />
               </button>
@@ -1075,6 +1077,8 @@ export default function NotificationView({
             borderRadius: '20px',
             maxWidth: '480px',
             width: '100%',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
             padding: '24px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
             boxSizing: 'border-box',
@@ -1082,7 +1086,7 @@ export default function NotificationView({
             flexDirection: 'column',
             gap: '14px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #EAE5DF', paddingBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', borderBottom: '1px solid #EAE5DF', paddingBottom: '10px' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
                   Notification Preferences

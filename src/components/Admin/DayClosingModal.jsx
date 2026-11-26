@@ -276,13 +276,14 @@ export default function DayClosingModal({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: '10px',
           background: '#F8FAFC',
           borderTopLeftRadius: '20px',
           borderTopRightRadius: '20px'
         }}>
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.25rem' }}>{isCinema ? '🎬' : isHotel ? '🏨' : '🌙'}</span>
+              <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>{isCinema ? '🎬' : isHotel ? '🏨' : '🌙'}</span>
               <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900 }}>
                 {isCinema
                   ? 'Cinema Concessions & Seat Shift Closing'
@@ -311,7 +312,8 @@ export default function DayClosingModal({
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              color: '#64748B'
+              color: '#64748B',
+              flexShrink: 0
             }}
           >
             <X size={18} />
@@ -322,9 +324,11 @@ export default function DayClosingModal({
         <div style={{
           display: 'flex',
           borderBottom: '1px solid #E2E8F0',
-          padding: '0 20px',
+          padding: '0 16px',
           background: '#FFFFFF',
-          gap: '16px'
+          gap: '16px',
+          overflowX: 'auto',
+          scrollbarWidth: 'none'
         }}>
           <button
             onClick={() => setActiveTab('summary')}
@@ -339,7 +343,9 @@ export default function DayClosingModal({
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
             <span>Daily Audit & Reconciliation</span>
@@ -357,10 +363,12 @@ export default function DayClosingModal({
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
-            <History size={15} />
+            <History size={15} style={{ flexShrink: 0 }} />
             <span>Past Closings History ({historyList.length})</span>
           </button>
         </div>
@@ -374,13 +382,15 @@ export default function DayClosingModal({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
                 background: '#F1F5F9',
                 padding: '8px 12px',
                 borderRadius: '12px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Calendar size={16} color="#475569" />
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>Closing Date:</span>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', minWidth: 0 }}>
+                  <Calendar size={16} color="#475569" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>Closing Date:</span>
                   <input
                     type="date"
                     value={selectedDate}
@@ -430,17 +440,18 @@ export default function DayClosingModal({
               ) : (
                 <>
                   {/* KPI HIGHLIGHTS */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
                     <div style={{
                       background: 'linear-gradient(135deg, #064E3B 0%, #047857 100%)',
                       borderRadius: '14px',
                       padding: '14px',
-                      color: '#FFFFFF'
+                      color: '#FFFFFF',
+                      minWidth: 0
                     }}>
                       <div style={{ fontSize: '0.72rem', opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         Total Gross Sales
                       </div>
-                      <div style={{ fontSize: '1.4rem', fontWeight: 900, marginTop: '2px' }}>
+                      <div style={{ fontSize: 'clamp(1.1rem, 4.2vw, 1.4rem)', fontWeight: 900, marginTop: '2px', overflowWrap: 'anywhere' }}>
                         {currency}{summary.gross_sales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </div>
                       <div style={{ fontSize: '0.72rem', opacity: 0.9, marginTop: '4px' }}>
@@ -672,7 +683,7 @@ export default function DayClosingModal({
                     flexDirection: 'column',
                     gap: '12px'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {isMatched ? (
                           <CheckCircle2 size={18} color="#15803D" />
@@ -695,7 +706,7 @@ export default function DayClosingModal({
                       </span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', alignItems: 'end' }}>
                       <div>
                         <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
                           Physical Cash Counted in Drawer ({currency})
@@ -768,7 +779,7 @@ export default function DayClosingModal({
                   </div>
 
                   {/* CLOSING AUDIT ATTRIBUTION */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
                     <div>
                       <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
                         Closed By (Cashier Name)
@@ -837,7 +848,7 @@ export default function DayClosingModal({
                   )}
 
                   {/* ACTION BUTTONS */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', marginTop: '6px' }}>
                     <button
                       type="button"
                       onClick={handlePrintSlip}

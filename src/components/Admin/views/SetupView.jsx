@@ -2347,8 +2347,8 @@ export default function SetupView({
           boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
           boxSizing: 'border-box'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: '1 1 200px' }}>
               <button
                 type="button"
                 onClick={() => setActiveSubPage(null)}
@@ -2696,7 +2696,7 @@ export default function SetupView({
               <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
                 Food Type <span style={{ color: '#EF4444' }}>*</span>
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: '8px' }}>
                 {[
                   { id: 'pure_veg', label: 'Vegetarian', icon: '🟢', sub: 'Pure Veg' },
                   { id: 'veg_nonveg', label: 'Both', icon: '🥗', sub: 'Veg & Non-Veg' },
@@ -3707,6 +3707,8 @@ export default function SetupView({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #EAE5DF',
@@ -3715,7 +3717,7 @@ export default function SetupView({
           boxSizing: 'border-box',
           width: '100%'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: '1 1 200px' }}>
             <button
               type="button"
               onClick={() => setActiveSubPage(null)}
@@ -4180,7 +4182,7 @@ export default function SetupView({
             overflow: 'hidden',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))'
           }}>
             {/* Item 1 */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
@@ -4241,7 +4243,7 @@ export default function SetupView({
             overflow: 'hidden',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))'
           }}>
             {/* Must Try */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #F1F5F9', minHeight: '52px' }}>
@@ -4874,7 +4876,7 @@ export default function SetupView({
                   <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Run Diagnostics & Sample Receipts
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
                     <button
                       type="button"
                       onClick={handlePrintSampleThermalBill}
@@ -4936,6 +4938,8 @@ export default function SetupView({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #EAE5DF',
@@ -4944,7 +4948,7 @@ export default function SetupView({
           boxSizing: 'border-box',
           width: '100%'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: '1 1 200px' }}>
             <button
               type="button"
               onClick={() => setActiveSubPage(null)}
@@ -5079,13 +5083,13 @@ export default function SetupView({
           flexDirection: 'column',
           gap: '14px'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: '1 1 200px' }}>
               <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', border: '1px solid #EDE9FE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Monitor size={19} />
               </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                   <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 800 }}>
                     Kitchen Display System (KDS)
                   </strong>
@@ -5843,7 +5847,7 @@ export default function SetupView({
         {/* 2. PREMIUM TABS */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
           gap: '6px',
           background: '#FAF8F5',
           padding: '4px',
@@ -6698,8 +6702,8 @@ export default function SetupView({
               </div>
 
               {/* Latitude & Longitude Inputs */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '10px' }}>
+                <div style={{ minWidth: 0 }}>
                   <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                     Latitude
                   </label>
@@ -6900,7 +6904,7 @@ export default function SetupView({
                 </div>
 
                 {/* Quick Presets */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(68px, 1fr))', gap: '8px', marginBottom: '12px' }}>
                   {[
                     { label: '100 m', val: 100 },
                     { label: '250 m', val: 250 },
@@ -7340,21 +7344,23 @@ export default function SetupView({
         {hasUnsavedLocation ? (
           <div style={{
             position: 'fixed',
-            bottom: '20px',
+            bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1050,
             maxWidth: '680px',
-            width: 'calc(100% - 32px)',
+            width: 'calc(100% - 24px)',
             background: '#FFFFFF',
             borderRadius: '16px',
             border: '1px solid #EAE5DF',
-            padding: '12px 18px',
+            padding: '12px 16px',
             boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '12px',
+            flexWrap: 'wrap',
+            gap: '10px',
+            boxSizing: 'border-box',
             animation: 'fadeIn 0.2s ease-out'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -7362,7 +7368,7 @@ export default function SetupView({
               <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>Unsaved changes</span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
               <button
                 type="button"
                 onClick={handleDiscardLocationChanges}
@@ -7780,6 +7786,7 @@ export default function SetupView({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexWrap: 'wrap',
                 padding: '12px 14px',
                 background: '#FAF8F5',
                 borderRadius: '12px',
@@ -7867,6 +7874,7 @@ export default function SetupView({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
                   padding: '12px 14px',
                   background: '#FAF8F5',
                   borderRadius: '12px',
@@ -7916,6 +7924,7 @@ export default function SetupView({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
                   gap: '12px'
                 }}>
                   <div>
@@ -7999,13 +8008,14 @@ export default function SetupView({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
                   padding: '12px 14px',
                   background: '#FAF8F5',
                   borderRadius: '12px',
                   border: '1px solid #EAE5DF',
                   gap: '12px'
                 }}>
-                  <div>
+                  <div style={{ minWidth: 0, flex: '1 1 180px' }}>
                     <strong style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 800, display: 'block' }}>
                       Session Timeout
                     </strong>
@@ -8018,10 +8028,11 @@ export default function SetupView({
                     onChange={(e) => setSecSessionTimeout(e.target.value)}
                     style={{
                       padding: '6px 10px',
+                      minHeight: '36px',
                       borderRadius: '8px',
                       border: '1px solid #CBD5E1',
                       background: '#FFFFFF',
-                      fontSize: '0.76rem',
+                      fontSize: '0.82rem',
                       fontWeight: 700,
                       color: '#0F172A'
                     }}
@@ -8314,6 +8325,8 @@ export default function SetupView({
               padding: '24px',
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
               boxSizing: 'border-box',
+              maxHeight: '90dvh',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
               gap: '14px'
@@ -8410,6 +8423,8 @@ export default function SetupView({
               padding: '24px',
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
               boxSizing: 'border-box',
+              maxHeight: '90dvh',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
               gap: '14px'
@@ -8560,6 +8575,8 @@ export default function SetupView({
               padding: '24px',
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
               boxSizing: 'border-box',
+              maxHeight: '90dvh',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
               gap: '14px'
@@ -8658,6 +8675,8 @@ export default function SetupView({
               padding: '24px',
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
               boxSizing: 'border-box',
+              maxHeight: '90dvh',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
               gap: '14px'
@@ -9389,6 +9408,8 @@ export default function SetupView({
               padding: '24px',
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
               boxSizing: 'border-box',
+              maxHeight: '90dvh',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
               gap: '14px'
@@ -9843,6 +9864,11 @@ export default function SetupView({
           .settings-header-card {
             padding: 14px 16px !important;
           }
+          .setup-progress-popover {
+            left: 0 !important;
+            right: auto !important;
+            max-width: calc(100vw - 32px) !important;
+          }
         }
       `}</style>
 
@@ -9940,12 +9966,16 @@ export default function SetupView({
 
               {/* Floating Interactive Checklist Menu */}
               {showProgressMenu && (
-                <div style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 8px)',
-                  right: 0,
-                  width: '290px',
-                  background: '#FFFFFF',
+                <div
+                  className="setup-progress-popover"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    width: '290px',
+                    maxWidth: 'calc(100vw - 32px)',
+                    boxSizing: 'border-box',
+                    background: '#FFFFFF',
                   borderRadius: '16px',
                   border: '1px solid #EAE5DF',
                   boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
@@ -11852,8 +11882,8 @@ export default function SetupView({
                     <strong style={{ fontSize: '0.84rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       🖨️ Main Receipt Printer (KOT & Billing)
                     </strong>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '8px' }}>
+                      <div style={{ minWidth: 0 }}>
                         <label style={{ fontSize: '0.70rem', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '3px' }}>
                           PAPER WIDTH:
                         </label>
@@ -13082,6 +13112,9 @@ export default function SetupView({
                 borderRadius: '16px',
                 width: '100%',
                 maxWidth: '420px',
+                maxHeight: '90dvh',
+                overflowY: 'auto',
+                boxSizing: 'border-box',
                 padding: '24px',
                 boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
                 display: 'flex',
@@ -13119,6 +13152,7 @@ export default function SetupView({
                         borderRadius: '8px',
                         border: '1px solid #CBD5E1',
                         fontWeight: 800,
+                        boxSizing: 'border-box',
                         background: editingScreen ? '#F1F5F9' : '#FFFFFF'
                       }}
                       placeholder="e.g. 1"
@@ -13139,7 +13173,7 @@ export default function SetupView({
                       maxLength={100}
                       value={screenForm.name}
                       onChange={(e) => setScreenForm({ ...screenForm, name: e.target.value })}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800 }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, boxSizing: 'border-box' }}
                       placeholder="e.g. Audi 1 - Dolby Atmos"
                     />
                   </div>
@@ -13194,14 +13228,14 @@ export default function SetupView({
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
       }}>
         <div style={{
-          background: '#FFFFFF', borderRadius: '20px', maxWidth: '440px', width: '100%',
+          background: '#FFFFFF', borderRadius: '20px', maxWidth: '440px', width: '100%', maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box',
           padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', animation: 'fadeIn 0.2s ease-out'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
             <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <AlertTriangle size={22} />
             </div>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0F172A' }}>Turn off auto-renew?</h3>
               <span style={{ fontSize: '0.76rem', color: '#64748B' }}>Your current billing period remains active</span>
             </div>
@@ -13211,7 +13245,7 @@ export default function SetupView({
             Your service will remain fully active until the current billing period ends. After that, your account will switch to the free view-only plan without recurring charges.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
             <button
               type="button"
               disabled={actionLoading}
@@ -13322,7 +13356,7 @@ export default function SetupView({
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
                   <button
                     type="button"
                     disabled={actionLoading}

@@ -851,8 +851,8 @@ export default function QrGeneratorView({
       {toastMessage && (
         <div style={{
           position: 'fixed',
-          bottom: '24px',
-          right: '24px',
+          bottom: 'calc(76px + env(safe-area-inset-bottom, 0px))', left: '12px', maxWidth: '420px', marginLeft: 'auto', boxSizing: 'border-box',
+          right: '12px',
           background: '#0F172A',
           color: '#FFFFFF',
           padding: '12px 20px',
@@ -1491,7 +1491,7 @@ export default function QrGeneratorView({
 
                 {!isCinema ? (
                   <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', padding: '6px 12px', borderRadius: '12px', border: '1.5px solid #CBD5E1' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', maxWidth: '100%', boxSizing: 'border-box', background: '#FFFFFF', padding: '8px 12px', borderRadius: '12px', border: '1.5px solid #CBD5E1' }}>
                       <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
                         {isHotel ? 'Total Rooms:' : 'Total Tables:'}
                       </span>
@@ -1501,7 +1501,7 @@ export default function QrGeneratorView({
                         max="500"
                         value={quickCount}
                         onChange={(e) => setQuickCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                        style={{ width: '64px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.92rem', textAlign: 'center' }}
+                        style={{ width: '64px', minHeight: '36px', height: '36px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontWeight: 800, fontSize: '0.92rem', textAlign: 'center', boxSizing: 'border-box' }}
                       />
                       <button
                         type="button"
@@ -1742,7 +1742,7 @@ export default function QrGeneratorView({
             </button>
           </div>
           {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
             <div>
               <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Live Standee Preview
@@ -2402,12 +2402,12 @@ export default function QrGeneratorView({
             onClick={(e) => e.stopPropagation()}
             style={{
               width: '100%',
-              maxWidth: '460px',
+              maxWidth: '460px', maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box',
               background: '#FFFFFF',
               borderRadius: '20px',
               border: '1px solid #CBD5E1',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-              overflow: 'hidden'
+              overflowX: 'hidden'
             }}
           >
             {/* Modal Header */}
@@ -2506,7 +2506,7 @@ export default function QrGeneratorView({
                   padding: '10px 14px',
                   borderRadius: '10px',
                   background: '#F0FDF4',
-                  border: '1px solid #BBF7D0',
+                  border: '1px solid #BBF7D0', flexWrap: 'wrap',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -2545,7 +2545,7 @@ export default function QrGeneratorView({
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'flex-end',
+              justifyContent: 'flex-end', flexWrap: 'wrap',
               gap: '10px',
               padding: '14px 20px',
               borderTop: '1px solid #F1F5F9',

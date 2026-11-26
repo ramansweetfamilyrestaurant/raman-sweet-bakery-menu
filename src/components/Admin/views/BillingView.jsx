@@ -572,7 +572,7 @@ export default function BillingView({
         }
         @media (max-width: 900px) {
           .billing-main-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: minmax(0, 1fr) !important;
           }
           .billing-desktop-table {
             display: none !important;
@@ -581,7 +581,24 @@ export default function BillingView({
             display: flex !important;
           }
           .plans-grid-container {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .plans-grid-container {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          .billing-hero-price-box {
+            width: 100%;
+            text-align: left !important;
+            box-sizing: border-box;
+          }
+          .billing-modal-card {
+            padding: 18px !important;
+          }
+          .billing-modal-actions > button {
+            flex: 1 1 120px;
+            justify-content: center;
           }
         }
         @media (min-width: 901px) {
@@ -893,7 +910,7 @@ export default function BillingView({
               </div>
 
               {/* Price Display */}
-              <div style={{ textAlign: 'right', background: '#F8FAFC', padding: '12px 18px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+              <div className="billing-hero-price-box" style={{ textAlign: 'right', background: '#F8FAFC', padding: '12px 18px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
                 <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#064E3B', lineHeight: 1 }}>
                   {isComplimentary ? '₹0' : `₹${formatPriceNumber(currentPlanPrice)}`}
                   {!isComplimentary && <span style={{ fontSize: '0.80rem', fontWeight: 600, color: '#64748B' }}> / month</span>}
@@ -1024,7 +1041,7 @@ export default function BillingView({
             padding: '20px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Layers size={18} color="#064E3B" />
                 <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
@@ -1688,7 +1705,7 @@ export default function BillingView({
           justifyContent: 'center',
           padding: '16px'
         }}>
-          <div style={{
+          <div className="billing-modal-card" style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             maxWidth: '440px',
@@ -1697,7 +1714,10 @@ export default function BillingView({
             boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '14px'
+            gap: '14px',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
+            boxSizing: 'border-box'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1712,7 +1732,7 @@ export default function BillingView({
               Your current {currentPlanTier.toUpperCase()} plan will remain <strong>fully active until {formattedRenewalDate}</strong>. After this date, your subscription will not renew automatically.
             </p>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+            <div className="billing-modal-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
               <button
                 type="button"
                 onClick={() => setShowAutoRenewModal(false)}
@@ -1771,7 +1791,7 @@ export default function BillingView({
           justifyContent: 'center',
           padding: '16px'
         }}>
-          <div style={{
+          <div className="billing-modal-card" style={{
             background: '#FFFFFF',
             borderRadius: '16px',
             maxWidth: '540px',
@@ -1781,12 +1801,13 @@ export default function BillingView({
             display: 'flex',
             flexDirection: 'column',
             gap: '14px',
-            maxHeight: '90vh',
-            overflowY: 'auto'
+            maxHeight: '90dvh',
+            overflowY: 'auto',
+            boxSizing: 'border-box'
           }}>
             {/* Invoice Top */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #EAE5DF', paddingBottom: '12px' }}>
-              <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', borderBottom: '1px solid #EAE5DF', paddingBottom: '12px' }}>
+              <div style={{ minWidth: 0 }}>
                 <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>
                   TouchQR Official Tax Invoice
                 </span>
@@ -1797,21 +1818,21 @@ export default function BillingView({
               <button
                 type="button"
                 onClick={() => setSelectedInvoice(null)}
-                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', flexShrink: 0 }}
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Bill Details */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#475569' }}>
-              <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', fontSize: '0.74rem', color: '#475569' }}>
+              <div style={{ minWidth: 0 }}>
                 <strong>Billed To:</strong>
                 <div>{restaurantInfo?.name || 'Business Partner'}</div>
                 <div>Ph: {restaurantInfo?.phone || 'N/A'}</div>
                 {restaurantInfo?.gstin_number && <div>GSTIN: {restaurantInfo.gstin_number}</div>}
               </div>
-              <div style={{ textAlign: 'right' }}>
+              <div style={{ minWidth: 0 }}>
                 <strong>Issuer:</strong>
                 <div>TouchQR Technologies</div>
                 <div>Date: {parseSafeDate(selectedInvoice.paid_at || selectedInvoice.created_at)?.toLocaleDateString('en-IN') || 'Recent'}</div>
@@ -1821,18 +1842,18 @@ export default function BillingView({
 
             {/* Line Items Table */}
             <div style={{ background: '#FAF8F5', borderRadius: '10px', border: '1px solid #EAE5DF', padding: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', fontWeight: 800, color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '0.76rem', fontWeight: 800, color: '#0F172A', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px', marginBottom: '6px' }}>
                 <span>Description</span>
                 <span>Amount</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#334155' }}>
-                <span>TouchQR {currentPlanTier.toUpperCase()} SaaS Monthly Subscription</span>
-                <strong style={{ color: '#064E3B' }}>₹{formatPriceNumber(selectedInvoice.amount)}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '0.74rem', color: '#334155' }}>
+                <span style={{ minWidth: 0 }}>TouchQR {currentPlanTier.toUpperCase()} SaaS Monthly Subscription</span>
+                <strong style={{ color: '#064E3B', flexShrink: 0 }}>₹{formatPriceNumber(selectedInvoice.amount)}</strong>
               </div>
             </div>
 
             {/* Print & Close Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+            <div className="billing-modal-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
               <button
                 type="button"
                 onClick={() => handlePrintInvoice(selectedInvoice)}

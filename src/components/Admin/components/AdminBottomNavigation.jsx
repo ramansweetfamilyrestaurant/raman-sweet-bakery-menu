@@ -26,14 +26,15 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
           bottom: 0,
           left: 0,
           right: 0,
-          height: '62px',
+          minHeight: '62px',
+          paddingTop: '6px',
           background: '#FFFFFF',
           borderTop: '1px solid #E2E8F0',
           boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.04)',
           zIndex: 1000,
           alignItems: 'center',
           justifyContent: 'space-around',
-          paddingBottom: 'env(safe-area-inset-bottom)',
+          paddingBottom: 'calc(6px + env(safe-area-inset-bottom, 0px))',
           boxSizing: 'border-box',
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
         }}
@@ -61,9 +62,10 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
                 border: 'none',
                 cursor: 'pointer',
                 flex: 1,
+                minWidth: 0,
                 height: '100%',
                 position: 'relative',
-                padding: 0
+                padding: '0 2px'
               }}
             >
               <div style={{ position: 'relative', display: 'inline-flex' }}>
@@ -105,7 +107,7 @@ export default function AdminBottomNavigation({ activeTab, setActiveTab, pending
                   </span>
                 )}
               </div>
-              <span style={{ fontSize: '0.68rem', fontWeight: isActive ? 800 : 600 }}>
+              <span style={{ fontSize: '0.66rem', fontWeight: isActive ? 800 : 600, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                 {label}
               </span>
             </button>

@@ -525,7 +525,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           </label>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))',
             gap: '8px',
             background: 'rgba(0,0,0,0.4)',
             padding: '4px',

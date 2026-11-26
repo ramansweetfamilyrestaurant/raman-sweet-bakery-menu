@@ -3750,7 +3750,7 @@ export default function AdminDashboard({
         }}>
           <div style={{
             background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
-            padding: '36px 24px', maxWidth: '500px', width: '100%', textAlign: 'center', color: '#FFFFFF',
+            padding: '28px 20px', maxWidth: '500px', width: '100%', maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box', textAlign: 'center', color: '#FFFFFF',
             boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
           }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '14px' }}>🔒</div>
@@ -4015,20 +4015,20 @@ export default function AdminDashboard({
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
                   color: theme.textColor,
-                  padding: '11px 20px',
+                  padding: '11px clamp(12px, 3vw, 20px)',
                   fontSize: '0.83rem',
                   fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: '14px',
+                  gap: '10px',
                   borderBottom: `1px solid ${theme.border}`,
                   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.16)',
                   position: 'relative',
                   zIndex: 50,
                   opacity: isBeingDismissed ? 0 : 1,
                   transform: isBeingDismissed ? 'translateY(-12px)' : 'translateY(0)',
-                  maxHeight: isBeingDismissed ? '0px' : '100px',
+                  maxHeight: isBeingDismissed ? '0px' : '260px',
                   overflow: 'hidden',
                   transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
@@ -4083,7 +4083,7 @@ export default function AdminDashboard({
                     lineHeight: 1.45,
                     fontWeight: 600,
                     flex: 1,
-                    minWidth: '220px'
+                    minWidth: 'min(220px, 100%)'
                   }}>
                     {renderMessageContent(currentNotice.message)}
                   </div>
@@ -4786,7 +4786,7 @@ export default function AdminDashboard({
         }} onClick={() => setComboLimitModalInfo(null)}>
           <div onClick={e => e.stopPropagation()} style={{
             background: '#111827', border: '2px solid #F59E0B', borderRadius: '24px',
-            padding: '32px 24px', maxWidth: '440px', width: '100%',
+            padding: '28px 20px', maxWidth: '440px', width: '100%', maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box',
             color: '#FFFFFF', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', textAlign: 'center'
           }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>🔒</div>
@@ -4842,7 +4842,10 @@ export default function AdminDashboard({
             borderRadius: '20px',
             maxWidth: '440px',
             width: '100%',
-            padding: '24px',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
+            boxSizing: 'border-box',
+            padding: '22px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
             display: 'flex',
             flexDirection: 'column',
@@ -5021,7 +5024,10 @@ export default function AdminDashboard({
               borderRadius: '20px',
               maxWidth: '380px',
               width: '100%',
-              padding: '24px',
+              maxHeight: '90dvh',
+              overflowY: 'auto',
+              boxSizing: 'border-box',
+              padding: '22px',
               boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
               textAlign: 'center'
             }}>
@@ -5182,8 +5188,8 @@ export default function AdminDashboard({
               <X size={18} />
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #1F2937', paddingBottom: '14px' }}>
-              <span style={{ fontSize: '2rem' }}>📖</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #1F2937', paddingBottom: '14px', paddingRight: '38px' }}>
+              <span style={{ fontSize: '2rem', flexShrink: 0 }}>📖</span>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67' }}>
                   TouchQR Owner Guide & Help Center
@@ -5281,7 +5287,7 @@ export default function AdminDashboard({
         }}>
           <div style={{
             background: '#111827', border: '2px solid #0EA5E9', borderRadius: '24px',
-            padding: '24px', maxWidth: '540px', width: '100%', color: '#FFFFFF',
+            padding: '24px', maxWidth: '540px', width: '100%', maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box', color: '#FFFFFF',
             boxShadow: '0 25px 60px rgba(0,0,0,0.9)', position: 'relative'
           }}>
             <button
@@ -5296,7 +5302,7 @@ export default function AdminDashboard({
               <X size={18} />
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #1F2937', paddingBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #1F2937', paddingBottom: '14px', paddingRight: '38px' }}>
               <span style={{ fontSize: '2rem' }}>🖨️</span>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#38BDF8' }}>
@@ -5444,9 +5450,10 @@ export default function AdminDashboard({
       {/* 🔔 Floating Toast Notification Banner */}
       {toastMessage && (
         <div style={{
-          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed', bottom: 'calc(74px + env(safe-area-inset-bottom, 0px))', left: '50%', transform: 'translateX(-50%)',
           zIndex: 12000, background: '#0A2315', color: '#DFBA67', border: '2px solid #DFBA67',
-          padding: '12px 24px', borderRadius: '9999px', fontWeight: 900, fontSize: '0.88rem',
+          padding: '10px 18px', borderRadius: '9999px', fontWeight: 900, fontSize: '0.84rem',
+          maxWidth: 'calc(100vw - 24px)', boxSizing: 'border-box', textAlign: 'center',
           boxShadow: '0 10px 30px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', gap: '8px'
         }}>
           {toastMessage}

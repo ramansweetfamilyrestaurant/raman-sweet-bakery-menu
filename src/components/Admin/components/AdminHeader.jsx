@@ -54,7 +54,7 @@ export default function AdminHeader({
       height: '68px',
       background: '#FFFFFF',
       borderBottom: '1px solid #E2E8F0',
-      padding: '0 20px',
+      padding: '0 clamp(10px, 3vw, 20px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -77,6 +77,7 @@ export default function AdminHeader({
           .header-biz-text { display: none !important; }
           .header-biz-chevron { display: none !important; }
           .header-desktop-subtitle { display: none !important; }
+          .hide-on-mobile { display: none !important; }
         }
       `}</style>
 
