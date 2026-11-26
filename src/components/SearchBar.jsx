@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
+import { triggerHaptic } from '../utils/haptics';
 
 export default function SearchBar({
   value = '',
@@ -9,6 +10,7 @@ export default function SearchBar({
   onQuickFilter,
   totalResultsCount,
   filtersVisibility,
+  businessType,
   restoType,
   foodType,
   isPureVeg: isPureVegProp,
@@ -17,6 +19,7 @@ export default function SearchBar({
 }) {
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
 
   const cleanFood = String(foodType || '').trim().toLowerCase();
   const cleanResto = String(restoType || '').trim().toLowerCase();
@@ -73,6 +76,7 @@ export default function SearchBar({
 
   const handleFilterClick = (filterId) => {
     if (!onQuickFilter) return;
+    triggerHaptic('light');
     if (filterId === '') {
       onQuickFilter('');
     } else {
@@ -82,10 +86,32 @@ export default function SearchBar({
   };
 
   const handleClearAll = () => {
+    triggerHaptic('light');
     if (onClear) onClear();
     if (onQuickFilter) onQuickFilter('');
     setIsFocused(false);
   };
+
+  const getSearchPlaceholder = () => {
+    const biz = String(businessType || cleanResto || '').trim().toLowerCase();
+    const byType = {
+      cafe: lang === 'hi' ? 'कॉफी, स्नैक्स, ड्रिंक्स खोजें...' : 'Search coffee, snacks, drinks...',
+      bakery_confectionery: lang === 'hi' ? 'केक, पेस्ट्री, बेकरी आइटम खोजें...' : 'Search cakes, pastries, breads...',
+      sweet_shop: lang === 'hi' ? 'मिठाई, नमकीन, गिफ्ट पैक खोजें...' : 'Search sweets, mithai, namkeen...',
+      juice_beverage: lang === 'hi' ? 'जूस, शेक, स्मूदी खोजें...' : 'Search juices, shakes, coolers...',
+      ice_cream_dessert: lang === 'hi' ? 'आइसक्रीम, डेज़र्ट, शेक खोजें...' : 'Search ice cream, desserts, sundaes...',
+      cinema_theatre: lang === 'hi' ? 'पॉपकॉर्न, कॉम्बो, ड्रिंक्स खोजें...' : 'Search popcorn, combos, drinks...',
+      lounge: lang === 'hi' ? 'ड्रिंक्स, स्टार्टर्स, मॉकटेल खोजें...' : 'Search drinks, starters, mocktails...',
+      pub_bar: lang === 'hi' ? 'ड्रिंक्स, स्टार्टर्स, प्लैटर खोजें...' : 'Search drinks, starters, platters...',
+      club: lang === 'hi' ? 'ड्रिंक्स, स्टार्टर्स, बॉटल सर्विस खोजें...' : 'Search drinks, starters, mixes...',
+      fast_food_qsr: lang === 'hi' ? 'बर्गर, रोल्स, कॉम्बो खोजें...' : 'Search snacks, combos, drinks...',
+      food_truck: lang === 'hi' ? 'स्नैक्स, रोल्स, ड्रिंक्स खोजें...' : 'Search snacks, combos, drinks...'
+    };
+    if (byType[biz]) return byType[biz];
+    return lang === 'hi' ? 'मेनू में आइटम खोजें...' : 'Search menu items...';
+  };
+
+  const placeholderText = getSearchPlaceholder();
 
   return (
     <div 
@@ -94,7 +120,7 @@ export default function SearchBar({
         maxWidth: '800px',
         margin: '0 auto',
         width: '100%',
-        padding: '10px 12px 4px',
+        padding: '8px 12px 4px',
         transition: 'all 0.2s ease-in-out'
       }}
     >
@@ -104,11 +130,11 @@ export default function SearchBar({
         display: 'flex',
         alignItems: 'center',
         width: '100%',
-        marginBottom: showFilters ? '8px' : '4px',
+        marginBottom: showFilters ? '7px' : '2px',
         transition: 'margin-bottom 0.2s ease'
       }}>
         <Search 
-          size={16} 
+          size={15} 
           color={isFocused ? 'var(--primary-emerald)' : 'var(--text-muted)'} 
           style={{
             position: 'absolute',
@@ -119,50 +145,65 @@ export default function SearchBar({
         />
 
         <input
+          ref={inputRef}
           type="text"
+          inputMode="search"
+          enterKeyHint="search"
           value={value}
           onFocus={() => setIsFocused(true)}
           onClick={() => setIsFocused(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.currentTarget.blur();
+            } else if (e.key === 'Escape') {
+              handleClearAll();
+              e.currentTarget.blur();
+            }
+          }}
           onChange={(e) => {
             setIsFocused(true);
             if (onChange) onChange(e.target.value);
           }}
-          placeholder={lang === 'hi' ? 'मिठाई, थाली, डोसा, पिज़्ज़ा, चाय खोजें...' : 'Search sweets, thali, dosa, cakes, chai...'}
+          placeholder={placeholderText}
           style={{
             width: '100%',
-            padding: '10px 44px 10px 36px',
-            fontSize: '1rem',
+            height: '38px',
+            padding: '0 38px 0 36px',
+            fontSize: '0.84rem',
             boxSizing: 'border-box',
             fontWeight: 500,
             background: 'var(--theme-input-bg, var(--bg-card, #FFFFFF))',
             color: 'var(--text-dark)',
             border: isFocused 
-              ? '1.5px solid var(--primary-emerald, #059669)' 
-              : '1.5px solid var(--theme-card-border, var(--border-light))',
+              ? '1px solid var(--theme-primary, var(--primary-emerald))' 
+              : '1px solid var(--theme-card-border, rgba(148, 163, 184, 0.3))',
             borderRadius: 'var(--radius-pill)',
             boxShadow: isFocused 
-              ? '0 0 0 3px rgba(16, 185, 129, 0.15)' 
-              : 'var(--theme-shadow, var(--shadow-sm))',
+              ? '0 2px 10px rgba(10, 35, 21, 0.08)' 
+              : '0 1px 4px rgba(10, 35, 21, 0.04)',
             outline: 'none',
-            transition: 'all 0.2s ease'
+            transition: 'border-color 0.18s ease, box-shadow 0.18s ease'
           }}
         />
 
         {value && (
           <button
+            type="button"
             onClick={() => {
+              triggerHaptic('light');
               if (onClear) onClear();
+              if (inputRef.current) inputRef.current.focus();
             }}
             aria-label="Clear search text"
             style={{
               position: 'absolute',
-              right: '4px',
-              width: '36px',
-              height: '36px',
+              right: '7px',
+              width: '24px',
+              height: '24px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '4px',
+              padding: 0,
               borderRadius: '50%',
               background: 'var(--bg-secondary)',
               color: 'var(--text-muted)',
@@ -170,45 +211,57 @@ export default function SearchBar({
               cursor: 'pointer'
             }}
           >
-            <X size={14} />
+            <X size={13} />
           </button>
         )}
       </div>
 
-      {/* Quick Micro-Filter Pills: Only rendered when user taps on search or when search/filter is active */}
+      {/* Quick Micro-Filter Pills: Unified with CategoryJumpRail aesthetic */}
       {showFilters && filters.length > 1 && (
-        <div style={{
-          display: 'flex',
-          gap: '6px',
-          overflowX: 'auto',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          paddingBottom: '2px',
-          animation: 'fadeIn 0.2s ease-in-out'
-        }}>
+        <div
+          className="no-scrollbar"
+          style={{
+            display: 'flex',
+            gap: '6px',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: '2px',
+            paddingRight: '14px',
+            maskImage: 'linear-gradient(to right, #000 0%, #000 94%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, #000 0%, #000 94%, transparent 100%)',
+            animation: 'fadeIn 0.18s ease-in-out'
+          }}
+        >
           {filters.map((f, i) => {
             const isSelected = activeQuickFilter === f.id || (f.id === '' && !activeQuickFilter);
             return (
               <button
                 key={f.id || i}
+                type="button"
+                className="tq-pill-smooth"
                 onMouseDown={(e) => {
                   // Prevent input blur so filters stay open smoothly
                   e.preventDefault();
                 }}
                 onClick={() => handleFilterClick(f.id)}
                 style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: '30px',
+                  padding: '0 11px',
+                  fontSize: '0.73rem',
+                  fontWeight: isSelected ? 800 : 700,
                   flexShrink: 0,
-                  minHeight: '38px',
-                  padding: '6px 12px',
                   borderRadius: 'var(--radius-pill)',
                   background: isSelected ? 'var(--theme-nav-active, var(--primary-emerald))' : 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
                   color: isSelected ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
-                  border: isSelected ? '1.5px solid var(--gold-bright)' : '1px solid var(--theme-card-border, var(--border-light))',
+                  border: isSelected
+                    ? '1px solid var(--theme-primary, var(--primary-emerald))'
+                    : '1px solid var(--theme-card-border, rgba(148, 163, 184, 0.28))',
                   whiteSpace: 'nowrap',
-                  transition: 'var(--transition-fast)',
-                  boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
+                  boxShadow: isSelected ? '0 2px 6px rgba(10, 35, 21, 0.14)' : 'none',
+                  animation: 'tqCardIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both',
+                  animationDelay: `${Math.min(i * 25, 150)}ms`,
                   cursor: 'pointer'
                 }}
               >
@@ -219,36 +272,33 @@ export default function SearchBar({
         </div>
       )}
 
-      {/* Active Filter & Match Counter Feedback Pill Bar */}
+      {/* Slim Single-Line Active Search/Filter Summary without bulky border box */}
       {showFilters && hasActiveSearchOrFilter && (
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '8px',
-          marginTop: '6px',
-          padding: '4px 10px',
-          fontSize: '0.74rem',
+          marginTop: '4px',
+          padding: '2px 4px 0',
+          fontSize: '0.72rem',
           fontWeight: 600,
           color: 'var(--text-muted)',
-          background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
-          border: '1px solid var(--theme-card-border, var(--border-light))',
-          borderRadius: '8px',
-          boxShadow: 'var(--shadow-sm)',
-          animation: 'fadeIn 0.2s ease-in-out'
+          animation: 'fadeIn 0.18s ease-in-out'
         }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0, flex: 1 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', minWidth: 0, flex: 1 }}>
             <span>
               {lang === 'hi' 
-                ? `${totalResultsCount !== undefined ? totalResultsCount : ''} व्यंजन उपलब्ध` 
-                : `${totalResultsCount !== undefined ? totalResultsCount : ''} dishes found`}
+                ? `${totalResultsCount !== undefined ? totalResultsCount : ''} परिणाम` 
+                : `${totalResultsCount !== undefined ? totalResultsCount : ''} matches`}
             </span>
             {activeFilterLabel && (
               <span style={{
-                background: 'var(--theme-nav-active, var(--primary-emerald))',
-                color: 'var(--theme-nav-active-text, #FFFFFF)',
-                padding: '1px 8px',
-                borderRadius: '10px',
+                background: 'var(--theme-badge-bg, var(--bg-secondary))',
+                color: 'var(--text-dark)',
+                border: '1px solid var(--theme-card-border, rgba(148, 163, 184, 0.3))',
+                padding: '0 7px',
+                borderRadius: '9999px',
                 fontSize: '0.68rem',
                 fontWeight: 700
               }}>
@@ -262,22 +312,21 @@ export default function SearchBar({
             )}
           </span>
           <button
+            type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleClearAll}
             style={{
               background: 'transparent',
               border: 'none',
-              color: 'var(--theme-price-color, var(--primary-emerald))',
+              color: '#DC2626',
               fontWeight: 800,
-              fontSize: '0.74rem',
+              fontSize: '0.71rem',
               cursor: 'pointer',
-              padding: '4px 8px',
-              minHeight: '36px',
-              display: 'inline-flex',
-              alignItems: 'center'
+              padding: '2px 4px',
+              whiteSpace: 'nowrap'
             }}
           >
-            {lang === 'hi' ? 'हटाएं ✕' : 'Clear all ✕'}
+            {lang === 'hi' ? 'हटाएं ✕' : 'Clear ✕'}
           </button>
         </div>
       )}

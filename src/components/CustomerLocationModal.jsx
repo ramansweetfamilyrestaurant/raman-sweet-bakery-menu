@@ -439,8 +439,7 @@ export default function CustomerLocationModal({
                   fontSize: '0.80rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  padding: '8px 12px',
-                  minHeight: '36px'
+                  padding: '6px'
                 }}
               >
                 Browse Menu First

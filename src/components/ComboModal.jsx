@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Plus, Minus, Sparkles, CheckCircle2, Utensils, Tag, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { getComboImageUrl, getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
@@ -19,6 +19,20 @@ export default function ComboModal({
   foodType,
   isPureVeg: isPureVegProp
 }) {
+  useEffect(() => {
+    if (!combo) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && onClose) onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [combo, onClose]);
+
   if (!combo) return null;
 
   const symbol = getCurrencySymbol(currencySymbol);
@@ -31,10 +45,10 @@ export default function ComboModal({
   }
 
   // Calculate prices and offers
-  const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null)
+  const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null && combo.regular_price !== '')
     ? Number(combo.regular_price)
     : Number(combo.price || 0);
-  const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null)
+  const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) < regularPrice)
     ? Number(combo.offer_price)
     : regularPrice;
   const originalTotal = comboItems.reduce((s, i) => s + ((Number(i.original_price) || 0) * (i.qty || 1)), 0);
@@ -59,7 +73,7 @@ export default function ComboModal({
     <div style={{
       position: 'fixed',
       inset: 0,
-      zIndex: 3500,
+      zIndex: 10020,
       background: 'rgba(10, 25, 16, 0.75)',
       backdropFilter: 'blur(6px)',
       WebkitBackdropFilter: 'blur(6px)',
@@ -259,20 +273,16 @@ export default function ComboModal({
 
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{
-                fontSize: '1.05rem',
+                fontSize: '1.14rem',
                 fontWeight: 900,
-                padding: '3px 10px',
-                borderRadius: '8px',
-                background: 'var(--theme-badge-bg, #F0FDF4)',
-                color: 'var(--theme-price-color, #16A34A)',
-                border: '1px solid var(--theme-card-border, #BBF7D0)',
+                color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
                 whiteSpace: 'nowrap',
-                lineHeight: 1.2
+                lineHeight: 1.15
               }}>
                 {symbol}{formatPriceNumber(effectivePrice)}
               </div>
               {(originalTotal > effectivePrice || regularPrice > effectivePrice) && (
-                <div style={{ fontSize: '0.74rem', color: '#94A3B8', textDecoration: 'line-through', marginTop: '2px', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.74rem', color: '#94A3B8', textDecoration: 'line-through', marginTop: '2px', textAlign: 'right' }}>
                   {symbol}{formatPriceNumber(originalTotal > effectivePrice ? originalTotal : regularPrice)}
                 </div>
               )}
@@ -486,8 +496,8 @@ export default function ComboModal({
                         background: 'var(--bg-secondary, #F1F5F9)',
                         color: 'var(--text-dark, #0F172A)',
                         border: 'none',
-                        width: '36px',
-                        height: '36px',
+                        width: '28px',
+                        height: '28px',
                         padding: 0,
                         borderRadius: '50%',
                         fontWeight: 900,
@@ -513,8 +523,8 @@ export default function ComboModal({
                         background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                         color: 'var(--theme-btn-text, #FFFFFF)',
                         border: 'none',
-                        width: '36px',
-                        height: '36px',
+                        width: '28px',
+                        height: '28px',
                         padding: 0,
                         borderRadius: '50%',
                         fontWeight: 900,
@@ -560,8 +570,9 @@ export default function ComboModal({
             ) : (
               <button
                 type="button"
-                onClick={() => {
-                  onAddToCart(combo);
+                className="tq-tap"
+                onClick={(e) => {
+                  onAddToCart(combo, e.currentTarget);
                 }}
                 style={{
                   width: '100%',

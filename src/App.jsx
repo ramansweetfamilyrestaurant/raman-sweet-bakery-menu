@@ -15,6 +15,7 @@ import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailabili
 import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle, MessageSquare, XCircle } from 'lucide-react';
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
+import BillCompletedModal from './components/BillCompletedModal';
 import PresenceVerificationModal from './components/PresenceVerificationModal';
 import CategoryImage from './components/CategoryImage';
 import { resolveImageUrl, getDishImageUrl, getComboImageUrl } from './utils/imageHelper';
@@ -24,6 +25,7 @@ import { getCurrencySymbol, formatPriceNumber, formatPrice } from './utils/curre
 import { getValidDishModifiers } from './utils/billingHelper';
 import { roundOfferCurrency } from './utils/offerPricing';
 import { triggerHaptic } from './utils/haptics';
+import { triggerFlyToCart } from './utils/flyToCart';
 import {
   isFlagEnabled,
   isCustomDomainHost,
@@ -164,13 +166,20 @@ export default function App() {
   const [currentTableToken, setCurrentTableToken] = useState(initialSpaceInfo.token);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
+  const [billCompletedModal, setBillCompletedModal] = useState(null);
+  const [lastCompletedBill, setLastCompletedBill] = useState(null);
+  const [completedSpaceSnapshot, setCompletedSpaceSnapshot] = useState(null);
+  const handledSettledOrderIdsRef = useRef(new Set());
 
   // Validate if the table/space number exists within the restaurant's configured capacity & has valid token shape
   const isSpaceNumberValid = () => {
+    const tokenShapeOk = currentTableToken
+      ? isValidQrTokenFormat(currentTableToken)
+      : initialSpaceInfo.isValidTokenShape;
     return isCustomerSpaceValid({
       currentTableNum,
       currentSpaceType: currentSpaceType || initialSpaceInfo.type,
-      hasValidTokenShape: initialSpaceInfo.isValidTokenShape,
+      hasValidTokenShape: tokenShapeOk,
       info
     });
   };
@@ -218,7 +227,7 @@ export default function App() {
   const hasScannedSpace = Boolean(
     currentTableNum &&
     String(currentTableNum).trim() !== '' &&
-    initialSpaceInfo.isValidTokenShape &&
+    (currentTableToken ? isValidQrTokenFormat(currentTableToken) : initialSpaceInfo.isValidTokenShape) &&
     isTableValid &&
     effectiveTableNum
   );
@@ -545,9 +554,12 @@ export default function App() {
   const [combos, setCombos] = useState([]);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
 
-  const handleAddToCart = (dish, portionType = 'full', selectedModifiers = [], quantity = 1) => {
+  const handleAddToCart = (dish, portionType = 'full', selectedModifiers = [], quantity = 1, sourceEl = null) => {
     if (!dish || !isFlagEnabled(dish.available, true)) return;
     triggerHaptic('success');
+    if (sourceEl) {
+      triggerFlyToCart({ sourceEl, imageSrc: getDishImageUrl(dish.image) });
+    }
     const addQty = Math.min(99, Math.max(1, parseInt(quantity, 10) || 1));
     const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
     const isHalf = portionType === 'half' && hasHalfPrice;
@@ -562,7 +574,7 @@ export default function App() {
 
     const regularBasePrice = roundOfferCurrency(isHalf ? (Number(dish.price_half) || 0) : (Number(dish.price) || 0));
     let effectiveBasePrice = regularBasePrice;
-    if ((dish.offer_price !== undefined && dish.offer_price !== null) && Number(dish.offer_price) < Number(dish.price) && !isHalf) {
+    if ((dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '') && Number(dish.offer_price) < Number(dish.price) && !isHalf) {
       effectiveBasePrice = roundOfferCurrency(Number(dish.offer_price) || 0);
     }
 
@@ -600,14 +612,17 @@ export default function App() {
     });
   };
 
-  const handleAddComboToCart = (combo) => {
+  const handleAddComboToCart = (combo, sourceEl = null) => {
     triggerHaptic('success');
+    if (sourceEl) {
+      triggerFlyToCart({ sourceEl, imageSrc: getComboImageUrl(combo.image), fallbackSrc: '/images/default-combo.webp?v=3' });
+    }
     let comboItems = [];
     try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
     const includesText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}${i.portion === 'half' ? ' (H)' : ''}`).join(' + ');
     const cartKey = `combo_${combo.id}`;
     const regularPrice = roundOfferCurrency(Number(combo.price) || 0);
-    const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null && Number(combo.offer_price) < Number(combo.price))
+    const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) < Number(combo.price))
       ? roundOfferCurrency(Number(combo.offer_price) || 0)
       : regularPrice;
     const discountAmount = Math.max(0, roundOfferCurrency(regularPrice - effectivePrice));
@@ -676,6 +691,25 @@ export default function App() {
   const [orderSuccessModal, setOrderSuccessModal] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
   const isPlacingOrderRef = useRef(false);
+
+  // Lock background scroll & close bottom drawers / confirmation modal on Escape
+  useEffect(() => {
+    if (!showCategoryDrawer && !showCartDrawer && !orderSuccessModal) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        setShowCategoryDrawer(false);
+        setShowCartDrawer(false);
+        setOrderSuccessModal(null);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [showCategoryDrawer, showCartDrawer, orderSuccessModal]);
 
   const handleSendWhatsAppOrder = () => {
     if (!info || cartItems.length === 0) return;
@@ -810,9 +844,93 @@ export default function App() {
     trackingExpiredRef.current = false;
   }, [activeOrderId]);
 
-  // 5-Second Persistent Auto-Kill Session Protection after order completion, cancellation, or rejection
+  // Post-Bill Receipt Trigger (completed/settled) vs 5-Second Auto-Kill (cancelled/rejected)
   useEffect(() => {
-    if (!activeOrderTrack || !['completed', 'cancelled', 'rejected'].includes(activeOrderTrack.status)) {
+    if (!activeOrderTrack) {
+      setAutoKillSeconds(null);
+      return;
+    }
+
+    const trackStatus = String(activeOrderTrack.status || '').toLowerCase();
+    const isCancelledOrRejected = trackStatus === 'cancelled' || trackStatus === 'rejected';
+    const isBillSettled = !isCancelledOrRejected && Boolean(
+      trackStatus === 'completed' ||
+      activeOrderTrack.is_settled === 1 ||
+      activeOrderTrack.is_settled === '1' ||
+      activeOrderTrack.is_settled === true
+    );
+
+    if (isBillSettled) {
+      const orderIdKey = String(activeOrderTrack.id || '');
+      if (orderIdKey && handledSettledOrderIdsRef.current.has(orderIdKey)) {
+        return;
+      }
+      if (orderIdKey) {
+        handledSettledOrderIdsRef.current.add(orderIdKey);
+        localStorage.removeItem(`touchqr_order_completed_time_${orderIdKey}`);
+        try {
+          sessionStorage.removeItem(`tq_track_${orderIdKey}`);
+          sessionStorage.removeItem('tq_active_tracking_token');
+        } catch (e) {}
+      }
+
+      const resolvedType = activeOrderTrack.space_type || currentSpaceType || initialSpaceInfo.type || 'table';
+      const canReuseForOrderAgain = Boolean(
+        resolvedType === 'counter' ||
+        resolvedType === 'room' ||
+        resolvedType === 'cinema_seat' ||
+        resolvedType === 'cinema' ||
+        isCounterSpace ||
+        isHotelVenue ||
+        isCinemaVenue
+      );
+      const tokenForReuse = currentTableToken || initialSpaceInfo.token || '';
+      const numForReuse = currentTableNum || activeOrderTrack.table_number || '';
+      if (canReuseForOrderAgain && numForReuse && tokenForReuse) {
+        setCompletedSpaceSnapshot({
+          num: numForReuse,
+          type: resolvedType,
+          token: tokenForReuse
+        });
+      } else {
+        setCompletedSpaceSnapshot(null);
+      }
+
+      const billPayload = {
+        ...activeOrderTrack,
+        spaceLabelSnapshot: getDynamicSpaceLabel(activeOrderTrack.table_number, resolvedType) || getDynamicSpaceLabel()
+      };
+      setLastCompletedBill(billPayload);
+      setBillCompletedModal(billPayload);
+      setOrderSuccessModal(null);
+
+      // Silently clean active table lock & cart so next guest stays isolated, without triggering Session Expired error
+      const key = getOrderStorageKey(activeOrderTrack.table_number, resolvedType);
+      if (key) localStorage.removeItem(key);
+      const tenantSlug = getActiveStorageTenantSlug();
+      if (tenantSlug && numForReuse) {
+        const scanKey = buildScopedStorageKey('touchqr_table_scan_time', {
+          slug: tenantSlug,
+          spaceType: resolvedType,
+          tableNumber: numForReuse
+        });
+        if (scanKey) localStorage.removeItem(scanKey);
+      }
+      setActiveOrderId(null);
+      setActiveOrderTrack(null);
+      setCurrentTableNum('');
+      setCurrentTableToken('');
+      setSessionExpired(false);
+      setAutoKillSeconds(null);
+      setCartItems([]);
+      setShowCartDrawer(false);
+      const pathSlug = getSlugFromUrl();
+      const cleanPath = pathSlug ? `/${pathSlug}` : (window.location.pathname || '/');
+      window.history.replaceState({}, '', cleanPath);
+      return;
+    }
+
+    if (!isCancelledOrRejected) {
       setAutoKillSeconds(null);
       return;
     }
@@ -830,7 +948,7 @@ export default function App() {
       const remainingSec = Math.max(0, 5 - elapsedSec);
 
       if (remainingSec <= 0) {
-        // Auto-kill session cleanly after 5 seconds
+        // Auto-kill session cleanly after 5 seconds for cancelled/rejected orders
         const key = getOrderStorageKey(activeOrderTrack.table_number, activeOrderTrack.space_type || currentSpaceType);
         if (key) localStorage.removeItem(key);
         localStorage.removeItem(timeKey);
@@ -852,7 +970,7 @@ export default function App() {
     updateCountdown();
     const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
-  }, [activeOrderTrack?.status, activeOrderTrack?.id]);
+  }, [activeOrderTrack?.status, activeOrderTrack?.is_settled, activeOrderTrack?.id]);
 
   // 3-Minute Inactivity Auto-Kill for Table QR Scanned Customers who haven't placed an order
   useEffect(() => {
@@ -1074,6 +1192,9 @@ export default function App() {
         setActiveOrderId(String(res.order_id));
       }
 
+      setLastCompletedBill(null);
+      setBillCompletedModal(null);
+      setCompletedSpaceSnapshot(null);
       setOrderSuccessModal(res);
       setCartItems([]);
       setShowCartDrawer(false);
@@ -1181,6 +1302,9 @@ export default function App() {
         setActiveOrderId(String(res.order_id));
       }
 
+      setLastCompletedBill(null);
+      setBillCompletedModal(null);
+      setCompletedSpaceSnapshot(null);
       setOrderSuccessModal(res);
       setCartItems([]);
       setShowCartDrawer(false);
@@ -1926,8 +2050,6 @@ export default function App() {
       });
     }
 
-    const totalMatchingCount = list.length + ((q || activeQuickFilter) ? filteredCombos.length : 0);
-
     // 3. Group by category
     const map = {};
     (categories || []).forEach(c => {
@@ -1958,7 +2080,10 @@ export default function App() {
       }
     }
 
-    return { groupedDishes: results, totalMatchingDishesCount: totalMatchingCount };
+    const visibleDishesCount = results.reduce((sum, g) => sum + g.items.length, 0)
+      + ((q || activeQuickFilter || selectedCategory === 'combos-section') ? filteredCombos.length : 0);
+
+    return { groupedDishes: results, totalMatchingDishesCount: visibleDishesCount };
   }, [dishes, categories, searchQuery, activeQuickFilter, selectedCategory, filteredCombos, isPureVegResto]);
 
   // Categories that contain at least one dish (auto-hides blank categories for customers)
@@ -1993,19 +2118,12 @@ export default function App() {
   };
 
   const scrollToCategory = (catId) => {
+    triggerHaptic('light');
+    if (searchQuery) setSearchQuery('');
+    if (activeQuickFilter) setActiveQuickFilter('');
     setSelectedCategory(catId);
     setShowCategoryDrawer(false);
-    
-    if (catId === 'all') {
-      window.scrollTo({ top: 120, behavior: 'smooth' });
-    } else {
-      const element = document.getElementById(`cat-sec-${catId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        window.scrollTo({ top: 180, behavior: 'smooth' });
-      }
-    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleRateUsClick = () => {
@@ -2293,29 +2411,130 @@ export default function App() {
     );
   }
 
-  // Global Initial Loading Screen Guard (Prevents ANY layout/header flashing on customer menu refresh)
-  if (loading && view === 'menu') {
+  const renderMenuSkeletonCards = (neutral = false) => (
+    <div aria-label="Loading Digital Menu" style={{ padding: '4px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', padding: '0 2px' }}>
+        <div className="tq-skeleton" style={{ height: '16px', width: '132px', borderRadius: '6px' }} />
+        <div className="tq-skeleton" style={{ height: '14px', width: '48px', borderRadius: '9999px' }} />
+      </div>
+      <div className="dish-list-grid">
+        {[0, 1, 2, 3, 4].map((idx) => (
+          <div
+            key={idx}
+            style={{
+              background: neutral ? '#FFFFFF' : 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
+              borderRadius: 'var(--radius-md, 14px)',
+              border: '1px solid rgba(148, 163, 184, 0.24)',
+              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+              padding: '10px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px'
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="tq-skeleton" style={{ width: '12px', height: '12px', borderRadius: '2px', flexShrink: 0 }} />
+                <div className="tq-skeleton" style={{ height: '14px', width: idx % 2 === 0 ? '64%' : '54%' }} />
+              </div>
+              <div className="tq-skeleton" style={{ height: '10px', width: '88%' }} />
+              <div className="tq-skeleton" style={{ height: '10px', width: '62%' }} />
+              {idx % 2 === 0 && (
+                <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+                  <div className="tq-skeleton" style={{ width: '42px', height: '18px', borderRadius: '9999px' }} />
+                  <div className="tq-skeleton" style={{ width: '42px', height: '18px', borderRadius: '9999px' }} />
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+              <div className="tq-skeleton" style={{ height: '16px', width: '36px' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <div className="tq-skeleton" style={{ width: '62px', height: '62px', borderRadius: '10px' }} />
+                <div className="tq-skeleton" style={{ width: '52px', height: '22px', borderRadius: '9999px' }} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Global Initial Loading Skeleton Guard (Pure neutral skeleton to avoid theme/color flashing before business theme loads)
+  if (loading && view === 'menu' && !info) {
     return (
-      <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-        color: '#DFBA67', textAlign: 'center', padding: '20px'
-      }}>
-        <div style={{
-          width: '48px', height: '48px',
-          border: '4px solid rgba(223,186,103,0.25)',
-          borderTopColor: '#FFD700',
-          borderRadius: '50%',
-          marginBottom: '20px',
-          animation: 'spin 0.8s linear infinite'
-        }} />
-        <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFD700', letterSpacing: '0.5px' }}>
-          TouchQR Digital Menu
+      <div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        {/* Neutral Header Skeleton matching CustomerHeader.jsx proportions */}
+        <header style={{
+          background: '#FFFFFF',
+          padding: 'max(9px, env(safe-area-inset-top, 0px)) 14px 10px',
+          borderBottom: '1px solid #E2E8F0',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>
+            <div className="tq-skeleton" style={{ width: '74px', height: '22px', borderRadius: '9999px' }} />
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <div className="tq-skeleton" style={{ width: '68px', height: '22px', borderRadius: '9999px' }} />
+              <div className="tq-skeleton" style={{ width: '64px', height: '22px', borderRadius: '9999px' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="tq-skeleton" style={{ width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0 }} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div className="tq-skeleton" style={{ width: '52%', height: '16px' }} />
+              <div className="tq-skeleton" style={{ width: '38%', height: '10px' }} />
+            </div>
+          </div>
+        </header>
+
+        {/* Search Bar Skeleton */}
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0 auto', padding: '10px 12px 4px' }}>
+          <div className="tq-skeleton" style={{ height: '40px', width: '100%', borderRadius: '9999px' }} />
         </div>
-        <p style={{ fontSize: '0.84rem', color: '#E2E8F0', marginTop: '6px', fontWeight: 600 }}>
-          Verifying business details & loading menu...
-        </p>
+
+        {/* Category Jump Rail Skeleton */}
+        <div style={{
+          background: '#FFFFFF',
+          borderBottom: '1px solid #E2E8F0',
+          padding: '6px 0'
+        }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%', padding: '0 12px', display: 'flex', gap: '7px', overflow: 'hidden' }}>
+            {[64, 88, 78, 92, 72].map((w, i) => (
+              <div key={i} className="tq-skeleton" style={{ height: '28px', width: `${w}px`, borderRadius: '9999px', flexShrink: 0 }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Toolbar + Main Dish Card Skeletons */}
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0 auto', padding: '6px 12px 96px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '2px' }}>
+            <div className="tq-skeleton" style={{ width: '64px', height: '16px' }} />
+            <div className="tq-skeleton" style={{ width: '108px', height: '26px', borderRadius: '9999px' }} />
+          </div>
+          {renderMenuSkeletonCards(true)}
+        </div>
+
+        {/* Neutral Slim Bottom Dock Placeholder */}
+        <div style={{
+          position: 'fixed',
+          bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 'calc(100% - 28px)',
+          maxWidth: '440px',
+          background: '#FFFFFF',
+          borderRadius: '9999px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
+          padding: '7px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div className="tq-skeleton" style={{ width: '58px', height: '24px', borderRadius: '9999px' }} />
+          <div className="tq-skeleton" style={{ width: '88px', height: '30px', borderRadius: '9999px' }} />
+          <div className="tq-skeleton" style={{ width: '58px', height: '24px', borderRadius: '9999px' }} />
+        </div>
       </div>
     );
   }
@@ -2666,217 +2885,403 @@ export default function App() {
         }}
       />
 
-      {/* ⏸️ Inactive / Paused Space Customer Banner */}
+      {/* Inactive / Paused Space Customer Banner */}
       {isCurrentSpacePaused && (
         <div style={{
           background: '#FFFBEB',
-          border: '1.5px solid #FCD34D',
-          borderRadius: '12px',
-          padding: '12px 16px',
-          margin: '12px 16px',
+          border: '1px solid #FCD34D',
+          borderRadius: '14px',
+          padding: '10px 14px',
+          maxWidth: '776px',
+          width: 'calc(100% - 24px)',
+          margin: '10px auto 2px',
+          boxSizing: 'border-box',
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
+          gap: '10px',
           color: '#92400E',
-          boxShadow: '0 2px 8px rgba(245, 158, 11, 0.15)'
+          boxShadow: '0 2px 8px rgba(245, 158, 11, 0.14)',
+          animation: 'tqCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
         }}>
-          <span style={{ fontSize: '1.4rem' }}>⏸️</span>
-          <div>
-            <strong style={{ display: 'block', fontSize: '0.88rem', color: '#92400E' }}>
-              {getDynamicSpaceLabel() || 'This space'} is temporarily paused
+          <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>⏸️</span>
+          <div style={{ minWidth: 0 }}>
+            <strong style={{ display: 'block', fontSize: '0.86rem', color: '#92400E', overflowWrap: 'break-word' }}>
+              {lang === 'hi'
+                ? `${getDynamicSpaceLabel() || 'यह स्थान'} अस्थायी रूप से रोका गया है`
+                : `${getDynamicSpaceLabel() || 'This space'} is temporarily paused`}
             </strong>
-            <span style={{ fontSize: '0.76rem', color: '#B45309', display: 'block', marginTop: '2px' }}>
-              Digital ordering is offline for this space. Please contact staff or visit another table.
+            <span style={{ fontSize: '0.75rem', color: '#B45309', display: 'block', marginTop: '2px', lineHeight: 1.35 }}>
+              {lang === 'hi'
+                ? 'इस स्थान के लिए डिजिटल ऑर्डरिंग अभी बंद है। कृपया स्टाफ से संपर्क करें।'
+                : 'Digital ordering is offline for this space. Please contact staff for assistance.'}
             </span>
           </div>
         </div>
       )}
 
-      {/* 🛎️ Live Dine-In Customer Order Tracker Banner */}
-      {activeOrderTrack && (info?.direct_ordering_enabled !== false && info?.direct_ordering_enabled !== 0) && (
-        <div style={{
-          background: 'var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
-          color: '#FFFFFF',
-          padding: '10px 16px',
-          borderBottom: '2px solid var(--gold-bright)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '10px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: '1 1 200px' }}>
-            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>🛎️</span>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <strong style={{ fontSize: '0.86rem', color: 'var(--gold-bright)', display: 'block', overflowWrap: 'break-word' }}>
-                {(activeOrderTrack.token_display || activeOrderTrack.token_number) ? (
-                  <>Token {activeOrderTrack.token_display || `TK-${String(activeOrderTrack.token_number).padStart(2, '0')}`}</>
-                ) : (
-                  <>{formatCustomerLocation(activeOrderTrack.table_number)}</>
+      {/* Live Customer Order Tracker Banner */}
+      {activeOrderTrack && (info?.direct_ordering_enabled !== false && info?.direct_ordering_enabled !== 0) && (() => {
+        const statusRaw = String(activeOrderTrack.status || '').toLowerCase();
+        const isCompleted = statusRaw === 'completed';
+        const isCancelled = statusRaw === 'cancelled' || statusRaw === 'rejected';
+        const isServed = statusRaw === 'served';
+        const isPrepared = activeOrderTrack.kitchen_prepared === 1 || activeOrderTrack.kitchen_prepared === '1' || activeOrderTrack.kitchen_prepared === true;
+        const isPreparing = statusRaw === 'accepted' || statusRaw === 'kitchen' || statusRaw === 'preparing';
+        const isActiveCooking = !isCompleted && !isCancelled && !isServed;
+
+        const bizType = String(info?.business_type || '').toLowerCase();
+        const spaceStr = String(activeOrderTrack.table_number || '').toLowerCase();
+        const isCinema = bizType === 'cinema_theatre' || spaceStr.includes('screen') || spaceStr.includes('seat');
+        const isRoom = bizType === 'hotel_resort' || spaceStr.includes('room');
+        const isCounter = spaceStr.includes('counter') || ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(bizType);
+
+        const stepIdx = isCancelled ? -1 : (isCompleted || isServed) ? 3 : isPrepared ? 2 : isPreparing ? 1 : 0;
+        const dotColor = isCancelled ? '#F87171' : (isCompleted || isServed || isPrepared) ? '#4ADE80' : isPreparing ? '#38BDF8' : '#FBBF24';
+        const timerText = autoKillSeconds
+          ? ` (${lang === 'hi' ? 'बंद होगा' : 'Closes in'} ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})`
+          : '';
+
+        const statusLabel = isCompleted
+          ? (lang === 'hi' ? `ऑर्डर पूर्ण और भुगतान सफल 🏁${timerText}` : `Order Completed & Paid 🏁${timerText}`)
+          : isCancelled
+            ? (lang === 'hi' ? `ऑर्डर रद्द किया गया 🔴${timerText}` : `Order Cancelled 🔴${timerText}`)
+            : isServed
+              ? (isCinema ? (lang === 'hi' ? 'सीट पर ऑर्डर सर्व किया गया 🎬' : 'Delivered to Seat 🎬 Enjoy!')
+                : isRoom ? (lang === 'hi' ? 'रूम में ऑर्डर डिलीवर हो गया 🏨' : 'Delivered to Room 🏨 Enjoy!')
+                : isCounter ? (lang === 'hi' ? 'काउंटर पर ऑर्डर दिया गया 🧾' : 'Handed Over at Counter 🧾')
+                : (lang === 'hi' ? 'टेबल पर ऑर्डर सर्व हो गया 🍽️' : 'Served to Table 🍽️ Enjoy!'))
+              : isPrepared
+                ? (isCinema ? (lang === 'hi' ? 'ऑर्डर तैयार है! सीट पर आ रहा है 🎬' : 'Order Ready! Staff bringing to seat 🎬')
+                  : isRoom ? (lang === 'hi' ? 'ऑर्डर तैयार है! रूम में आ रहा है 🏨' : 'Order Ready! Delivering to room 🏨')
+                  : isCounter ? (lang === 'hi' ? 'ऑर्डर तैयार है! काउंटर से लें ⚡' : 'Order Ready! Pickup at counter ⚡')
+                  : (lang === 'hi' ? 'ऑर्डर तैयार है! टेबल पर आ रहा है 🛎️' : 'Order Ready! Staff bringing to table 🛎️'))
+                : isPreparing
+                  ? (lang === 'hi' ? 'ऑर्डर स्वीकार — तैयार हो रहा है 👨‍🍳' : 'Accepted — Preparing Now 👨‍🍳')
+                  : statusRaw === 'pending'
+                    ? (lang === 'hi' ? 'स्वीकृति की प्रतीक्षा में 🟡' : 'Pending Acceptance 🟡')
+                    : (lang === 'hi' ? 'ऑर्डर प्राप्त हुआ 🟢' : 'Order Received 🟢');
+
+        const handleEndTrackingSession = () => {
+          if (isActiveCooking) {
+            const msg = lang === 'hi'
+              ? 'आपका ऑर्डर अभी चल रहा है। क्या आप वाकई लाइव ट्रैकिंग बंद करना चाहते हैं?'
+              : 'Your order is still active. Are you sure you want to end live tracking?';
+            if (!window.confirm(msg)) return;
+          }
+          triggerHaptic('light');
+          if (activeOrderTrack?.id) {
+            localStorage.removeItem(`touchqr_order_completed_time_${activeOrderTrack.id}`);
+          }
+          const scopedKey = getOrderStorageKey(activeOrderTrack?.table_number, activeOrderTrack?.space_type || currentSpaceType);
+          if (scopedKey) localStorage.removeItem(scopedKey);
+          setActiveOrderId(null);
+          setActiveOrderTrack(null);
+          setCurrentTableNum('');
+          setSessionExpired(true);
+          setAutoKillSeconds(null);
+          setCartItems([]);
+          setShowCartDrawer(false);
+          const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
+          const cleanPath = currentSlug ? `/${currentSlug}` : '/';
+          window.history.replaceState({}, '', cleanPath);
+        };
+
+        return (
+          <div style={{
+            background: 'var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
+            color: '#FFFFFF',
+            padding: '9px 14px 10px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.16)',
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.18)',
+            animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <div style={{
+              maxWidth: '800px',
+              margin: '0 auto',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0, flex: '1 1 200px' }}>
+                <span style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  background: dotColor,
+                  boxShadow: `0 0 0 3px rgba(255,255,255,0.14)`,
+                  flexShrink: 0
+                }} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <strong style={{ fontSize: '0.84rem', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <span>
+                      {(activeOrderTrack.token_display || activeOrderTrack.token_number)
+                        ? `${lang === 'hi' ? 'टोकन' : 'Token'} ${activeOrderTrack.token_display || `TK-${String(activeOrderTrack.token_number).padStart(2, '0')}`}`
+                        : formatCustomerLocation(activeOrderTrack.table_number)}
+                    </span>
+                    {activeOrderTrack.round_number && Number(activeOrderTrack.round_number) > 1 && (
+                      <span style={{ fontSize: '0.68rem', background: 'rgba(255,255,255,0.16)', padding: '1px 7px', borderRadius: '9999px', fontWeight: 800 }}>
+                        {lang === 'hi' ? `राउंड ${activeOrderTrack.round_number}` : `Round ${activeOrderTrack.round_number}`}
+                      </span>
+                    )}
+                  </strong>
+                  <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.88)', fontWeight: 700, display: 'block', overflowWrap: 'break-word', marginTop: '1px' }}>
+                    {statusLabel}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="tq-tap"
+                onClick={handleEndTrackingSession}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.14)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(255, 255, 255, 0.28)',
+                  padding: '5px 11px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {isActiveCooking
+                  ? (lang === 'hi' ? 'सेशन बंद करें' : 'End Session')
+                  : (lang === 'hi' ? 'हटाएं' : 'Dismiss')}
+              </button>
+            </div>
+
+            {stepIdx >= 0 && (
+              <div style={{ maxWidth: '800px', margin: '8px auto 0', display: 'flex', gap: '5px' }} aria-label="Order progress">
+                {[0, 1, 2, 3].map((step) => (
+                  <div
+                    key={step}
+                    style={{
+                      flex: 1,
+                      height: '4px',
+                      borderRadius: '9999px',
+                      background: step <= stepIdx ? dotColor : 'rgba(255, 255, 255, 0.2)',
+                      transition: 'background 0.25s ease'
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Polite Post-Bill Completed Banner */}
+      {!activeOrderTrack && !sessionExpired && lastCompletedBill && (() => {
+        const summary = lastCompletedBill.bill_summary || lastCompletedBill;
+        const sym = getCurrencySymbol(summary.currency_symbol || info?.currency_symbol);
+        const totalPaid = Number(summary.grand_total_amount) > 0
+          ? Number(summary.grand_total_amount)
+          : (Number(lastCompletedBill.total_amount) || 0);
+        const spaceTxt = lastCompletedBill.spaceLabelSnapshot || getDynamicSpaceLabel(lastCompletedBill.table_number) || '';
+
+        return (
+          <div style={{
+            background: 'linear-gradient(135deg, #064E3B 0%, #047857 100%)',
+            color: '#FFFFFF',
+            padding: '10px 14px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.16)',
+            animation: 'tqCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <div style={{
+              maxWidth: '800px',
+              margin: '0 auto',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '8px'
+            }}>
+              <div style={{ minWidth: 0, flex: '1 1 200px' }}>
+                <strong style={{ fontSize: '0.84rem', display: 'block', lineHeight: 1.3 }}>
+                  🙏 {lang === 'hi' ? 'बिल भुगतान पूर्ण — पधारने के लिए धन्यवाद!' : 'Visit Completed — Thanks for dining with us!'}
+                </strong>
+                <span style={{ fontSize: '0.73rem', color: '#D1FAE5', fontWeight: 700, display: 'block', marginTop: '1px' }}>
+                  {spaceTxt ? `${spaceTxt} • ` : ''}{lang === 'hi' ? 'भुगतान:' : 'Paid'} {sym}{formatPriceNumber(totalPaid)}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="tq-tap"
+                  onClick={() => { triggerHaptic('light'); setBillCompletedModal(lastCompletedBill); }}
+                  style={{
+                    background: '#FFFFFF',
+                    color: '#064E3B',
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '5px 11px',
+                    fontSize: '0.73rem',
+                    fontWeight: 900,
+                    cursor: 'pointer'
+                  }}
+                >
+                  🧾 {lang === 'hi' ? 'बिल देखें' : 'View Receipt'}
+                </button>
+                {Boolean(info?.google_reviews_enabled) && (
+                  <button
+                    type="button"
+                    className="tq-tap"
+                    onClick={() => { triggerHaptic('light'); handleRateUsClick(); }}
+                    style={{
+                      background: 'linear-gradient(135deg, #FDE047 0%, #F59E0B 100%)',
+                      color: '#0F172A',
+                      border: 'none',
+                      borderRadius: '9999px',
+                      padding: '5px 11px',
+                      fontSize: '0.73rem',
+                      fontWeight: 900,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ⭐ {lang === 'hi' ? 'रेट करें' : 'Rate Us'}
+                  </button>
                 )}
-                {activeOrderTrack.round_number && Number(activeOrderTrack.round_number) > 1 && (
-                  <span style={{ fontSize: '0.74rem', opacity: 0.85, marginLeft: '6px' }}>(Round {activeOrderTrack.round_number})</span>
-                )}
-              </strong>
-              <span style={{ fontSize: '0.76rem', color: '#E5E7EB', fontWeight: 700, display: 'block', overflowWrap: 'break-word' }}>
-                Status: {
-                  activeOrderTrack.status === 'completed' ? `Order Completed & Paid 🏁${autoKillSeconds ? ` (Session closes in ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})` : ''}` :
-                  activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected' ? `Order Cancelled 🔴${autoKillSeconds ? ` (Session closes in ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})` : ''}` :
-                  activeOrderTrack.status === 'served' ? (
-                    (info?.business_type === 'cinema_theatre' || String(activeOrderTrack.table_number).toLowerCase().includes('screen') || String(activeOrderTrack.table_number).toLowerCase().includes('seat'))
-                      ? 'Food Served to Seat 🎬 Enjoy your movie!'
-                      : (info?.business_type === 'hotel_resort' || String(activeOrderTrack.table_number).toLowerCase().includes('room'))
-                        ? 'Food Delivered to Room 🏨 Enjoy your meal!'
-                        : (String(activeOrderTrack.table_number).toLowerCase().includes('counter') || ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(String(info?.business_type || '').toLowerCase()))
-                          ? 'Order Handed Over at Counter 🧾 Thank you!'
-                          : 'Food Served to Table 🍽️ Enjoy your meal!'
-                  ) :
-                  (activeOrderTrack.kitchen_prepared === 1 || activeOrderTrack.kitchen_prepared === '1' || activeOrderTrack.kitchen_prepared === true) ? (
-                    (info?.business_type === 'cinema_theatre' || String(activeOrderTrack.table_number).toLowerCase().includes('screen') || String(activeOrderTrack.table_number).toLowerCase().includes('seat'))
-                      ? '🎉 Food Prepared! Staff bringing to seat 🎬'
-                      : (info?.business_type === 'hotel_resort' || String(activeOrderTrack.table_number).toLowerCase().includes('room'))
-                        ? '🎉 Food Prepared! Staff delivering to room 🏨'
-                        : (String(activeOrderTrack.table_number).toLowerCase().includes('counter') || ['bakery_confectionery', 'sweet_shop', 'fast_food_qsr', 'cloud_kitchen', 'food_truck'].includes(String(info?.business_type || '').toLowerCase()))
-                          ? '🎉 Order Prepared! Ready for pickup at counter ⚡'
-                          : '🎉 Food Prepared! Staff bringing to table 🛎️'
-                  ) :
-                  (activeOrderTrack.status === 'accepted' || activeOrderTrack.status === 'kitchen' || activeOrderTrack.status === 'preparing') ? 'Order Accepted - Chef Preparing 👨‍🍳' :
-                  activeOrderTrack.status === 'pending' ? 'Pending Kitchen Acceptance 🟡' :
-                  'Order Received 🟢'
-                }
-              </span>
+                <button
+                  type="button"
+                  className="tq-tap"
+                  aria-label="Dismiss completed banner"
+                  onClick={() => { triggerHaptic('light'); setLastCompletedBill(null); setCompletedSpaceSnapshot(null); }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.16)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255, 255, 255, 0.28)',
+                    borderRadius: '50%',
+                    width: '26px',
+                    height: '26px',
+                    padding: 0,
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           </div>
+        );
+      })()}
 
-          <button
-            onClick={() => {
-              if (activeOrderTrack?.id) {
-                localStorage.removeItem(`touchqr_order_completed_time_${activeOrderTrack.id}`);
-              }
-              const scopedKey = getOrderStorageKey(activeOrderTrack?.table_number, activeOrderTrack?.space_type || currentSpaceType);
-              if (scopedKey) localStorage.removeItem(scopedKey);
-              setActiveOrderId(null);
-              setActiveOrderTrack(null);
-              setCurrentTableNum('');
-              setSessionExpired(true);
-              setAutoKillSeconds(null);
-              setCartItems([]);
-              setShowCartDrawer(false);
-              const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
-              const cleanPath = currentSlug ? `/${currentSlug}` : '/';
-              window.history.replaceState({}, '', cleanPath);
-            }}
+      {/* Session Expired & Invalid Space Warning Banners */}
+      {(() => {
+        const isInvalidSpace = Boolean(currentTableNum && info && !isTableValid);
+        if (!sessionExpired && !isInvalidSpace) return null;
+
+        const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+        const isCin = isCinemaVenue || activeType === 'cinema_seat' || activeType === 'cinema' || String(currentTableNum || '').toLowerCase().includes('screen') || String(currentTableNum || '').toLowerCase().includes('seat');
+        const isRoom = isHotelVenue || activeType === 'room' || String(currentTableNum || '').toLowerCase().includes('room');
+        const isCounter = isCounterSpace || activeType === 'counter' || String(currentTableNum || '').toLowerCase().includes('counter');
+
+        const alerts = [];
+        if (sessionExpired) {
+          alerts.push({
+            key: 'session-expired',
+            icon: '📱',
+            title: lang === 'hi' ? 'सेशन समाप्त (केवल देखने के लिए मेनू):' : 'Session Expired (Read-Only Menu):',
+            body: isCin
+              ? (lang === 'hi' ? 'सीट सेशन समाप्त हो गया है। नया ऑर्डर करने के लिए सीट QR कोड दोबारा स्कैन करें।' : 'Seat session ended. Please scan the seat QR code again to place a new order.')
+              : isRoom
+                ? (lang === 'hi' ? 'रूम सेशन समाप्त हो गया है। नया ऑर्डर करने के लिए रूम QR कोड दोबारा स्कैन करें।' : 'Room session ended. Please scan the room QR code again to place a new order.')
+                : isCounter
+                  ? (lang === 'hi' ? 'काउंटर सेशन समाप्त हो गया है। नया ऑर्डर करने के लिए काउंटर QR कोड दोबारा स्कैन करें।' : 'Counter session ended. Please scan the counter QR code again to place a new order.')
+                  : (lang === 'hi' ? 'टेबल सेशन समाप्त हो गया है। नया ऑर्डर करने के लिए टेबल QR कोड दोबारा स्कैन करें।' : 'Table session ended. Please scan the table QR code again to place a new order.'),
+            onDismiss: () => setSessionExpired(false)
+          });
+        }
+        if (isInvalidSpace) {
+          const scanPrompt = isCin
+            ? (lang === 'hi' ? 'ऑर्डर करने के लिए अपनी सिनेमा सीट पर लगा आधिकारिक QR कोड स्कैन करें।' : 'Please scan the official QR code at your cinema seat to order.')
+            : isRoom
+              ? (lang === 'hi' ? 'ऑर्डर करने के लिए अपने रूम का आधिकारिक QR कोड स्कैन करें।' : 'Please scan the official QR code in your room to order.')
+              : isCounter
+                ? (lang === 'hi' ? 'ऑर्डर करने के लिए काउंटर का आधिकारिक QR कोड स्कैन करें।' : 'Please scan the official QR code at the counter to order.')
+                : (lang === 'hi' ? 'ऑर्डर करने के लिए अपनी टेबल का आधिकारिक QR कोड स्कैन करें।' : 'Please scan the official QR code at your dining table to order.');
+          const locationDisplay = formatCustomerLocation(currentTableNum);
+
+          alerts.push({
+            key: 'invalid-space',
+            icon: '⚠️',
+            title: isCin
+              ? (lang === 'hi' ? 'अमान्य सीट QR:' : 'Invalid Seat QR:')
+              : isRoom
+                ? (lang === 'hi' ? 'अमान्य रूम QR:' : 'Invalid Room QR:')
+                : isCounter
+                  ? (lang === 'hi' ? 'अमान्य काउंटर QR:' : 'Invalid Counter QR:')
+                  : (lang === 'hi' ? 'अमान्य टेबल QR:' : 'Invalid Table QR:'),
+            body: !initialSpaceInfo.isValidTokenShape
+              ? (lang === 'hi' ? `यह QR कोड अधूरा या बदला हुआ है। ${scanPrompt} (मेनू केवल देखने के लिए है)।` : `This QR code is incomplete or modified. ${scanPrompt} (Menu in View-Only mode).`)
+              : (lang === 'hi' ? `${locationDisplay} पंजीकृत नहीं है। ${scanPrompt} (मेनू केवल देखने के लिए है)।` : `${locationDisplay} is not registered. ${scanPrompt} (Menu in View-Only mode).`),
+            onDismiss: () => setCurrentTableNum('')
+          });
+        }
+
+        return alerts.map((al) => (
+          <div
+            key={al.key}
             style={{
-              background: 'rgba(255,255,255,0.15)',
+              background: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)',
               color: '#FFFFFF',
-              border: '1px solid rgba(255,255,255,0.3)',
-              padding: '6px 12px',
-              minHeight: '36px',
-              borderRadius: 'var(--radius-pill)',
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              flexShrink: 0,
-              whiteSpace: 'nowrap'
+              padding: '10px 14px',
+              borderBottom: '1.5px solid #F87171',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.24)',
+              animation: 'tqCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
-            End Session
-          </button>
-        </div>
-      )}
-
-      {/* ⌛ Session Expired Toast / Warning Banner */}
-      {sessionExpired && (
-        <div style={{
-          background: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)',
-          color: '#FFFFFF',
-          padding: '12px 16px',
-          borderBottom: '2px solid #F87171',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '10px',
-          fontSize: '0.84rem',
-          fontWeight: 700,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 200px' }}>
-            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>📱</span>
-            <span style={{ minWidth: 0, overflowWrap: 'break-word' }}>
-              <strong>Session Expired (Read-Only Menu):</strong>{' '}
-              {(() => {
-                const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
-                const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(currentTableNum || '').toLowerCase().includes('screen') || String(currentTableNum || '').toLowerCase().includes('seat');
-                const isRoom = activeType === 'room' || String(currentTableNum || '').toLowerCase().includes('room');
-                const isCounter = activeType === 'counter' || String(currentTableNum || '').toLowerCase().includes('counter');
-                if (isCin) return 'Seat session ended. Naya order place karne ke liye seat QR code dubara scan karein!';
-                if (isRoom) return 'Room session ended. Naya order place karne ke liye room QR code dubara scan karein!';
-                if (isCounter) return 'Counter session ended. Naya order place karne ke liye counter QR code dubara scan karein!';
-                return 'Table session ended. Naya order place karne ke liye table QR code dubara scan karein!';
-              })()}
-            </span>
+            <div style={{
+              maxWidth: '800px',
+              margin: '0 auto',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '10px',
+              fontSize: '0.82rem',
+              fontWeight: 700
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 200px' }}>
+                <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{al.icon}</span>
+                <span style={{ minWidth: 0, overflowWrap: 'break-word', lineHeight: 1.4 }}>
+                  <strong>{al.title}</strong> {al.body}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="tq-tap"
+                onClick={() => { triggerHaptic('light'); al.onDismiss(); }}
+                style={{
+                  background: '#FFFFFF',
+                  color: '#991B1B',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '4px 11px',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  fontSize: '0.74rem',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {lang === 'hi' ? 'ठीक है ✕' : 'Got it ✕'}
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setSessionExpired(false)}
-            style={{ background: '#FFFFFF', color: '#991B1B', border: 'none', borderRadius: '9999px', padding: '6px 12px', minHeight: '36px', fontWeight: 900, cursor: 'pointer', fontSize: '0.76rem', flexShrink: 0, whiteSpace: 'nowrap' }}
-          >
-            Got it ✖
-          </button>
-        </div>
-      )}
-
-      {/* ⚠️ Invalid Table / Space Warning Banner (When URL has a missing token, fake/unconfigured table number) */}
-      {currentTableNum && info && !isTableValid && (
-        <div style={{
-          background: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)',
-          color: '#FFFFFF',
-          padding: '12px 16px',
-          borderBottom: '2px solid #F87171',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '10px',
-          fontSize: '0.84rem',
-          fontWeight: 700,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 200px' }}>
-            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>⚠️</span>
-            <span style={{ minWidth: 0, overflowWrap: 'break-word' }}>
-              {(() => {
-                const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
-                const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(currentTableNum || '').toLowerCase().includes('screen') || String(currentTableNum || '').toLowerCase().includes('seat');
-                const isRoom = activeType === 'room' || String(currentTableNum || '').toLowerCase().includes('room');
-                const isCounter = activeType === 'counter' || String(currentTableNum || '').toLowerCase().includes('counter');
-                const spaceTitle = isCin ? 'Invalid Seat QR:' : isRoom ? 'Invalid Room QR:' : isCounter ? 'Invalid Counter QR:' : 'Invalid Table QR:';
-                const scanPrompt = isCin
-                  ? 'Please scan the official QR code at your cinema seat to order.'
-                  : isRoom
-                    ? 'Please scan the official QR code in your room to order.'
-                    : isCounter
-                      ? 'Please scan the official QR code at the counter to order.'
-                      : 'Please scan the official QR code at your dining table to order.';
-                const locationDisplay = formatCustomerLocation(currentTableNum);
-
-                return (
-                  <>
-                    <strong>{spaceTitle}</strong> {!initialSpaceInfo.isValidTokenShape ? `This QR code is incomplete or modified. ${scanPrompt}` : `${locationDisplay} is not registered. ${scanPrompt}`} (Menu in View-Only mode).
-                  </>
-                );
-              })()}
-            </span>
-          </div>
-          <button
-            onClick={() => setCurrentTableNum('')}
-            style={{ background: '#FFFFFF', color: '#991B1B', border: 'none', borderRadius: '9999px', padding: '6px 12px', minHeight: '36px', fontWeight: 900, cursor: 'pointer', fontSize: '0.76rem', flexShrink: 0, whiteSpace: 'nowrap' }}
-          >
-            Got it ✖
-          </button>
-        </div>
-      )}
+        ));
+      })()}
 
       {/* Live Search Bar & Quick Micro-Filter Pills */}
       <SearchBar
@@ -2887,6 +3292,7 @@ export default function App() {
         onQuickFilter={handleQuickFilterChange}
         totalResultsCount={totalMatchingDishesCount}
         filtersVisibility={info?.filters_visibility}
+        businessType={info?.business_type}
         restoType={info?.resto_type}
         foodType={info?.food_type}
         isPureVeg={isPureVegResto}
@@ -2912,7 +3318,7 @@ export default function App() {
         maxWidth: '800px',
         margin: '0 auto',
         width: '100%',
-        padding: '10px 12px 0',
+        padding: '6px 12px 0',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -2921,23 +3327,49 @@ export default function App() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
           <h2 style={{
-            fontSize: '1rem',
+            fontSize: '0.96rem',
             fontWeight: 800,
-            color: 'var(--primary-emerald)'
+            color: 'var(--text-dark, var(--primary-emerald))',
+            margin: 0
           }}>
-            {lang === 'hi' ? 'डिजिटल मेन्यू' : 'Digital Menu'}
+            {lang === 'hi' ? 'मेनू' : 'Menu'}
           </h2>
-          <span style={{
-            fontSize: '0.75rem',
-            background: 'var(--veg-green-bg)',
-            color: 'var(--veg-green)',
-            padding: '2px 8px',
-            borderRadius: 'var(--radius-pill)',
-            fontWeight: 700,
-            whiteSpace: 'nowrap'
-          }}>
-            {dishes.length} {lang === 'hi' ? 'व्यंजन' : 'Dishes'}
-          </span>
+          {(searchQuery || activeQuickFilter || selectedCategory !== 'all') && (
+            <>
+              <span style={{
+                fontSize: '0.72rem',
+                background: 'var(--bg-secondary, #F1F5F9)',
+                color: 'var(--text-muted, #475569)',
+                border: '1px solid var(--theme-card-border, rgba(148, 163, 184, 0.28))',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-pill)',
+                fontWeight: 700,
+                whiteSpace: 'nowrap'
+              }}>
+                {totalMatchingDishesCount} {lang === 'hi' ? 'आइटम्स' : (totalMatchingDishesCount === 1 ? 'item' : 'items')}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  handleClearAllSearchAndFilters();
+                }}
+                style={{
+                  fontSize: '0.70rem',
+                  fontWeight: 800,
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-pill)',
+                  background: 'var(--bg-secondary, #F1F5F9)',
+                  color: '#DC2626',
+                  border: '1px solid rgba(220, 38, 38, 0.25)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                ✕ {lang === 'hi' ? 'रीसेट' : 'Reset'}
+              </button>
+            </>
+          )}
         </div>
 
         {/* List vs Grid Layout Switcher */}
@@ -2955,8 +3387,7 @@ export default function App() {
               setLayoutMode('list');
             }}
             style={{
-              padding: '6px 10px',
-              minHeight: '36px',
+              padding: '4px 10px',
               borderRadius: 'var(--radius-pill)',
               background: layoutMode === 'list' ? 'var(--primary-emerald)' : 'transparent',
               color: layoutMode === 'list' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
@@ -2980,8 +3411,7 @@ export default function App() {
               setLayoutMode('grid');
             }}
             style={{
-              padding: '6px 10px',
-              minHeight: '36px',
+              padding: '4px 10px',
               borderRadius: 'var(--radius-pill)',
               background: layoutMode === 'grid' ? 'var(--primary-emerald)' : 'transparent',
               color: layoutMode === 'grid' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
@@ -3007,28 +3437,9 @@ export default function App() {
         maxWidth: '800px',
         margin: '0 auto',
         width: '100%',
-        padding: '12px 12px 105px'
+        padding: (cartItems.length > 0 && isDirectOrderingActive) ? '8px 12px 124px' : '8px 12px 88px'
       }}>
-        {loading ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            color: 'var(--text-muted)'
-          }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              border: '3px solid var(--border-light)',
-              borderTopColor: 'var(--gold-primary)',
-              borderRadius: '50%',
-              margin: '0 auto 12px',
-              animation: 'spin 0.8s linear infinite'
-            }} />
-            <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-              {lang === 'hi' ? 'डिजिटल मेन्यू लोड हो रहा है...' : 'Loading Digital Menu...'}
-            </p>
-          </div>
-        ) : restaurantStatus === 'not_found' ? (
+        {loading ? renderMenuSkeletonCards() : restaurantStatus === 'not_found' ? (
           <div style={{
             textAlign: 'center',
             padding: '60px 20px',
@@ -3183,7 +3594,7 @@ export default function App() {
                           }
                         }}
                         style={{
-                          minWidth: '158px', maxWidth: '185px', flex: '0 0 auto', overflow: 'hidden',
+                          minWidth: '148px', maxWidth: '170px', flex: '0 0 auto', overflow: 'hidden',
                           background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', borderRadius: '12px',
                           border: '1.5px solid var(--theme-card-border, var(--border-light))', padding: '10px',
                           cursor: 'pointer', position: 'relative',
@@ -3235,17 +3646,11 @@ export default function App() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginTop: '6px', gap: '6px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
                             <span style={{
-                              fontSize: '0.86rem',
+                              fontSize: '0.92rem',
                               fontWeight: 900,
-                              color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
-                              background: 'var(--theme-badge-bg, var(--bg-card-soft, #ECFDF5))',
-                              border: '1.5px solid var(--theme-card-border, #A7F3D0)',
-                              padding: '2px 8px',
-                              borderRadius: 'var(--radius-pill)',
+                              color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
                               whiteSpace: 'nowrap',
-                              boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0, 0, 0, 0.08))',
-                              display: 'inline-flex',
-                              alignItems: 'center'
+                              lineHeight: 1.15
                             }}>
                               {sym}{formatPriceNumber(offerPrice)}
                             </span>
@@ -3289,8 +3694,8 @@ export default function App() {
                                           background: 'var(--bg-secondary, #F1F5F9)',
                                           color: 'var(--text-dark, #0F172A)',
                                           border: 'none',
-                                          width: '36px',
-                                          height: '36px',
+                                          width: '24px',
+                                          height: '24px',
                                           padding: 0,
                                           flexShrink: 0,
                                           borderRadius: '50%',
@@ -3322,8 +3727,8 @@ export default function App() {
                                           background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                           color: 'var(--theme-btn-text, #FFFFFF)',
                                           border: 'none',
-                                          width: '36px',
-                                          height: '36px',
+                                          width: '24px',
+                                          height: '24px',
                                           padding: 0,
                                           flexShrink: 0,
                                           borderRadius: '50%',
@@ -3370,8 +3775,8 @@ export default function App() {
                                           background: 'var(--bg-secondary, #F1F5F9)',
                                           color: 'var(--text-dark, #0F172A)',
                                           border: 'none',
-                                          width: '36px',
-                                          height: '36px',
+                                          width: '24px',
+                                          height: '24px',
                                           padding: 0,
                                           flexShrink: 0,
                                           borderRadius: '50%',
@@ -3403,8 +3808,8 @@ export default function App() {
                                           background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                           color: 'var(--theme-btn-text, #FFFFFF)',
                                           border: 'none',
-                                          width: '36px',
-                                          height: '36px',
+                                          width: '24px',
+                                          height: '24px',
                                           padding: 0,
                                           flexShrink: 0,
                                           borderRadius: '50%',
@@ -3428,17 +3833,18 @@ export default function App() {
                             return (
                               <button
                                 type="button"
+                                className="tq-tap"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (item._type === 'combo') {
-                                    handleAddComboToCart(item);
+                                    handleAddComboToCart(item, e.currentTarget);
                                   } else {
                                     const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
                                     const hasModifiers = isFlagEnabled(info?.modifiers_enabled, true) && getValidDishModifiers(item.modifiers).length > 0;
                                     if (hasHalf || hasModifiers) {
                                       openDishCustomizationModal(item, null, 'addon');
                                     } else {
-                                      handleAddToCart(item, 'full');
+                                      handleAddToCart(item, 'full', [], 1, e.currentTarget);
                                     }
                                   }
                                 }}
@@ -3446,8 +3852,7 @@ export default function App() {
                                   background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                   color: 'var(--theme-btn-text, #FFFFFF)',
                                   border: 'none',
-                                  padding: '6px 10px',
-                                  minHeight: '36px',
+                                  padding: '4px 9px',
                                   borderRadius: 'var(--radius-pill)',
                                   fontSize: '0.70rem',
                                   fontWeight: 900,
@@ -3531,8 +3936,8 @@ export default function App() {
                       key={combo.id}
                       onClick={() => setSelectedComboModal(combo)}
                       style={{
-                        minWidth: selectedCategory === 'combos-section' ? 'min(280px, 100%)' : 'min(256px, 82vw)',
-                        maxWidth: selectedCategory === 'combos-section' ? '100%' : '280px',
+                        minWidth: selectedCategory === 'combos-section' ? 'min(280px, 100%)' : 'min(230px, 76vw)',
+                        maxWidth: selectedCategory === 'combos-section' ? '100%' : '250px',
                         flex: selectedCategory === 'combos-section' ? '1 1 260px' : '0 0 auto',
                         scrollSnapAlign: 'start',
                         background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
@@ -3604,17 +4009,11 @@ export default function App() {
                           </p>
                           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginTop: '3px' }}>
                             <span style={{
-                              fontSize: '0.86rem',
+                              fontSize: '0.92rem',
                               fontWeight: 900,
-                              color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
-                              background: hasDiscount ? 'var(--theme-badge-bg, var(--bg-card-soft, #ECFDF5))' : 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
-                              border: hasDiscount ? '1.5px solid var(--theme-card-border, #A7F3D0)' : '1.5px solid var(--theme-card-border, var(--border-light))',
-                              padding: '2px 8px',
-                              borderRadius: 'var(--radius-pill)',
+                              color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
                               whiteSpace: 'nowrap',
-                              boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0, 0, 0, 0.08))',
-                              display: 'inline-flex',
-                              alignItems: 'center'
+                              lineHeight: 1.15
                             }}>
                               {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(effectivePrice)}
                             </span>
@@ -3677,8 +4076,8 @@ export default function App() {
                                   background: 'var(--bg-secondary, #F1F5F9)',
                                   color: 'var(--text-dark, #0F172A)',
                                   border: 'none',
-                                  width: '36px',
-                                  height: '36px',
+                                  width: '24px',
+                                  height: '24px',
                                   padding: 0,
                                   flexShrink: 0,
                                   borderRadius: '50%',
@@ -3710,8 +4109,8 @@ export default function App() {
                                   background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                   color: 'var(--theme-btn-text, #FFFFFF)',
                                   border: 'none',
-                                  width: '36px',
-                                  height: '36px',
+                                  width: '24px',
+                                  height: '24px',
                                   padding: 0,
                                   flexShrink: 0,
                                   borderRadius: '50%',
@@ -3733,16 +4132,16 @@ export default function App() {
                         return (
                           <button
                             type="button"
+                            className="tq-tap"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleAddComboToCart(combo);
+                              handleAddComboToCart(combo, e.currentTarget);
                             }}
                             style={{
                               background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                               color: 'var(--theme-btn-text, #FFFFFF)',
                               border: 'none',
-                              padding: '6px 10px',
-                              minHeight: '36px',
+                              padding: '5px 9px',
                               borderRadius: 'var(--radius-pill)',
                               fontSize: '0.68rem',
                               fontWeight: 900,
@@ -3819,6 +4218,8 @@ export default function App() {
                       modifiersEnabled={isFlagEnabled(info?.modifiers_enabled, true)}
                       onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
+                      onUpdateCartQuantity={isDirectOrderingActive ? handleUpdateCartQuantity : undefined}
+                      cartItems={cartItems}
                     />
                   ))}
                 </div>
@@ -3838,6 +4239,8 @@ export default function App() {
                       modifiersEnabled={isFlagEnabled(info?.modifiers_enabled, true)}
                       onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
                       onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
+                      onUpdateCartQuantity={isDirectOrderingActive ? handleUpdateCartQuantity : undefined}
+                      cartItems={cartItems}
                     />
                   ))}
                 </div>
@@ -3852,11 +4255,11 @@ export default function App() {
       {cartItems.length > 0 && isDirectOrderingActive && !showCategoryDrawer && !selectedComboModal && !showInfoModal && (
         <div style={{
           position: 'fixed',
-          bottom: 'calc(78px + env(safe-area-inset-bottom, 0px))',
+          bottom: 'calc(66px + env(safe-area-inset-bottom, 0px))',
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 2100,
-          width: 'calc(100% - 24px)',
+          width: 'calc(100% - 28px)',
           maxWidth: '440px'
         }}>
           {(() => {
@@ -3864,43 +4267,64 @@ export default function App() {
             const nextRound = (Number(activeOrderTrack?.current_round) || Number(activeOrderTrack?.round_number) || 1) + 1;
             return (
               <button
-                onClick={() => setShowCartDrawer(true)}
+                className="tq-tap"
+                onClick={() => { triggerHaptic('light'); setShowCartDrawer(true); }}
                 style={{
                   width: '100%',
                   background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                   color: 'var(--theme-btn-text, #FFFFFF)',
-                  padding: '12px 20px',
-                  borderRadius: 'var(--radius-pill)',
+                  padding: '10px 16px',
+                  borderRadius: '14px',
                   fontWeight: 900,
-                  fontSize: '0.9rem',
-                  border: '2px solid rgba(255, 255, 255, 0.8)',
+                  fontSize: '0.88rem',
+                  border: '1.5px solid rgba(255, 255, 255, 0.75)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   boxShadow: 'var(--theme-shadow, 0 10px 30px rgba(0, 0, 0, 0.35))',
-                  animation: 'fadeIn 0.25s ease-out'
+                  animation: 'tqSlideUpFade 0.28s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-                  <span style={{ background: '#FFFFFF', color: 'var(--theme-price-color, var(--primary-emerald, #059669))', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900, flexShrink: 0 }}>
+                  <span
+                    id="tq-floating-cart-badge"
+                    key={cartItems.reduce((acc, i) => acc + i.quantity, 0)}
+                    className="tq-qty-pop"
+                    style={{ background: '#FFFFFF', color: '#0F172A', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900, flexShrink: 0 }}
+                  >
                     {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
                   </span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>{isAddon ? `+ Add to ${getDynamicSpaceLabel() || 'Order'} (Round ${nextRound})` : (lang === 'hi' ? 'कार्ट देखें' : 'View Cart')}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, textAlign: 'left', lineHeight: 1.15 }}>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: 'var(--theme-btn-text, #FFFFFF)', whiteSpace: 'nowrap' }}>
+                      {(() => {
+                        const sym = getCurrencySymbol(info?.currency_symbol);
+                        const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                        const isGst = isFlagEnabled(info?.gst_enabled, false);
+                        const cgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
+                        const sgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
+                        const grandTotal = isGst ? Math.round((subtotal + cgst + sgst) * 100) / 100 : subtotal;
+                        return `${sym}${formatPriceNumber(grandTotal)}`;
+                      })()}
+                    </span>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.9, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {isAddon ? `Add-on (${getDynamicSpaceLabel() || 'Order'} R${nextRound})` : (lang === 'hi' ? 'कुल अनुमानित राशि' : 'Estimated total')}
+                    </span>
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                  <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--theme-btn-text, #FFFFFF)' }}>
-                    {(() => {
-                      const sym = getCurrencySymbol(info?.currency_symbol);
-                      const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                      const isGst = isFlagEnabled(info?.gst_enabled, false);
-                      const cgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
-                      const sgst = isGst ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
-                      const grandTotal = isGst ? Math.round((subtotal + cgst + sgst) * 100) / 100 : subtotal;
-                      return `${sym}${formatPriceNumber(grandTotal)}`;
-                    })()}
-                  </span>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  flexShrink: 0,
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  padding: '5px 11px',
+                  borderRadius: '9999px',
+                  fontSize: '0.78rem',
+                  fontWeight: 900
+                }}>
+                  <span>{lang === 'hi' ? 'कार्ट देखें' : 'View Cart'}</span>
                   <span>→</span>
                 </div>
               </button>
@@ -3921,6 +4345,47 @@ export default function App() {
             setServiceToastMsg(msg);
             setTimeout(() => setServiceToastMsg(''), 6000);
           }}
+        />
+      )}
+
+      {/* 🧾 Post-Bill Settled Receipt & Review Sheet */}
+      {billCompletedModal && (
+        <BillCompletedModal
+          bill={billCompletedModal}
+          info={info}
+          lang={lang}
+          spaceLabel={billCompletedModal.spaceLabelSnapshot || getDynamicSpaceLabel(billCompletedModal.table_number)}
+          canOrderAgain={Boolean(completedSpaceSnapshot)}
+          orderAgainLabel={(() => {
+            if (!completedSpaceSnapshot) return '';
+            if (completedSpaceSnapshot.type === 'room' || isHotelVenue) {
+              return lang === 'hi' ? 'रूम मेनू पर जाएं 🏨' : 'Back to Room Menu';
+            }
+            if (completedSpaceSnapshot.type === 'cinema_seat' || completedSpaceSnapshot.type === 'cinema' || isCinemaVenue) {
+              return lang === 'hi' ? 'और आइटम ऑर्डर करें 🍿' : 'Order More 🍿';
+            }
+            return lang === 'hi' ? 'नया ऑर्डर करें ⚡' : 'Order Again ⚡';
+          })()}
+          onOrderAgain={() => {
+            if (!completedSpaceSnapshot) return;
+            const { num, type, token } = completedSpaceSnapshot;
+            setCurrentTableNum(num);
+            setCurrentSpaceType(type);
+            setCurrentTableToken(token);
+            setSessionExpired(false);
+            setBillCompletedModal(null);
+            setLastCompletedBill(null);
+            setCompletedSpaceSnapshot(null);
+            const params = new URLSearchParams();
+            params.set('space_type', type);
+            params.set('table_num', num);
+            params.set('tkn', token);
+            const pathSlug = getSlugFromUrl();
+            const basePath = pathSlug ? `/${pathSlug}` : (window.location.pathname || '/');
+            window.history.replaceState({}, '', `${basePath}?${params.toString()}`);
+          }}
+          onOpenReview={Boolean(info?.google_reviews_enabled) ? handleRateUsClick : undefined}
+          onClose={() => setBillCompletedModal(null)}
         />
       )}
 
@@ -3957,22 +4422,26 @@ export default function App() {
           top: '80px',
           left: '50%',
           transform: 'translateX(-50%)',
-          background: 'var(--dock-gradient, var(--header-gradient))',
-          color: 'var(--gold-bright, #4ADE80)',
           width: 'max-content',
           maxWidth: 'calc(100vw - 32px)',
-          boxSizing: 'border-box',
-          padding: '12px 18px',
-          borderRadius: '18px',
-          border: '1.5px solid var(--gold-bright, #4ADE80)',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
           zIndex: 10010,
-          fontWeight: 800,
-          fontSize: '0.86rem',
-          textAlign: 'center',
-          animation: 'fadeIn 0.3s ease-out'
+          pointerEvents: 'none'
         }}>
-          {serviceToastMsg}
+          <div style={{
+            background: 'var(--dock-gradient, var(--header-gradient))',
+            color: '#FFFFFF',
+            boxSizing: 'border-box',
+            padding: '10px 16px',
+            borderRadius: '14px',
+            border: '1px solid rgba(255, 255, 255, 0.25)',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.35)',
+            fontWeight: 800,
+            fontSize: '0.84rem',
+            textAlign: 'center',
+            animation: 'tqSlideUpFade 0.26s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            {serviceToastMsg}
+          </div>
         </div>
       )}
 
@@ -4060,8 +4529,7 @@ export default function App() {
                             color: '#DC2626',
                             border: '1px solid var(--border-light, #E2E8F0)',
                             borderRadius: '9999px',
-                            padding: '6px 12px',
-                            minHeight: '36px',
+                            padding: '5px 10px',
                             fontSize: '0.72rem',
                             fontWeight: 800,
                             cursor: 'pointer',
@@ -4083,8 +4551,8 @@ export default function App() {
                           background: 'var(--bg-secondary, #F3F4F6)',
                           color: 'var(--text-dark, #374151)',
                           border: 'none',
-                          width: '36px',
-                          height: '36px',
+                          width: '32px',
+                          height: '32px',
                           padding: 0,
                           borderRadius: '50%',
                           cursor: 'pointer',
@@ -4134,7 +4602,7 @@ export default function App() {
                           const itemKey = item.key || item.dish.id;
                           const itemDisplayName = (lang === 'hi' && item.dish?.name_hi) ? item.dish.name_hi : item.dish?.name;
                           return (
-                            <div key={itemKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexShrink: 0, background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', padding: '12px', borderRadius: '14px', border: '1.5px solid var(--theme-card-border, var(--border-light))' }}>
+                            <div key={itemKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexShrink: 0, background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--theme-card-border, var(--border-light))' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <strong style={{ fontSize: '0.9rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', lineHeight: 1.3 }}>
                                   <span>{itemDisplayName}</span>
@@ -4180,7 +4648,7 @@ export default function App() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '2px',
-                                  minHeight: '40px',
+                                  height: '32px',
                                   padding: '2px',
                                   borderRadius: '9999px',
                                   background: 'var(--bg-secondary, #F8FAFC)',
@@ -4195,8 +4663,8 @@ export default function App() {
                                       background: 'var(--theme-card-bg, #FFFFFF)',
                                       color: 'var(--text-dark, #0F172A)',
                                       border: '1px solid var(--border-light, #CBD5E1)',
-                                      width: '36px',
-                                      height: '36px',
+                                      width: '26px',
+                                      height: '26px',
                                       padding: 0,
                                       borderRadius: '50%',
                                       fontWeight: 900,
@@ -4222,8 +4690,8 @@ export default function App() {
                                       background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                       color: 'var(--theme-btn-text, #FFFFFF)',
                                       border: 'none',
-                                      width: '36px',
-                                      height: '36px',
+                                      width: '26px',
+                                      height: '26px',
                                       padding: 0,
                                       borderRadius: '50%',
                                       fontWeight: 900,
@@ -4249,8 +4717,8 @@ export default function App() {
                                     background: '#FEE2E2',
                                     color: '#DC2626',
                                     border: '1px solid #FECACA',
-                                    width: '36px',
-                                    height: '36px',
+                                    width: '28px',
+                                    height: '28px',
                                     padding: 0,
                                     borderRadius: '50%',
                                     cursor: 'pointer',
@@ -4447,7 +4915,7 @@ export default function App() {
                                     padding: '8px 12px',
                                     borderRadius: '10px',
                                     border: '1.5px solid var(--border-light, #CBD5E1)',
-                                    fontSize: '1rem',
+                                    fontSize: '0.82rem',
                                     boxSizing: 'border-box',
                                     fontWeight: 800,
                                     background: effectiveTableNum ? 'var(--bg-secondary, #F1F5F9)' : 'var(--theme-input-bg, #FFFFFF)',
@@ -4463,7 +4931,7 @@ export default function App() {
                                   value={customerNameInput}
                                   onChange={(e) => setCustomerNameInput(e.target.value)}
                                   placeholder="e.g. Rahul"
-                                  style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '1rem', boxSizing: 'border-box', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
+                                  style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '0.86rem', boxSizing: 'border-box', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
                                 />
                               </div>
                             </div>
@@ -4479,7 +4947,7 @@ export default function App() {
                                 value={customerPhoneInput}
                                 onChange={(e) => setCustomerPhoneInput(e.target.value.replace(/\D/g, ''))}
                                 placeholder="e.g. 9876543210"
-                                style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '1rem', boxSizing: 'border-box', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
+                                style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '0.86rem', boxSizing: 'border-box', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
                               />
                             </div>
                           </div>
@@ -4647,155 +5115,206 @@ export default function App() {
         </div>
       )}
 
-      {/* 🎉 Direct Kitchen Order Success Confirmation Modal */}
-      {orderSuccessModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.85)',
-          backdropFilter: 'blur(10px)',
-          zIndex: 20000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            background: 'var(--dock-gradient, var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%)))',
-            border: '2px solid var(--gold-bright)',
-            borderRadius: '24px',
-            maxWidth: '420px',
-            width: '100%',
-            maxHeight: '90dvh',
-            overflowY: 'auto',
-            boxSizing: 'border-box',
-            padding: '24px 18px',
-            textAlign: 'center',
-            boxShadow: 'var(--shadow-gold)',
-            color: '#FFFFFF'
-          }}>
-            <div style={{
-              width: '64px', height: '64px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #25D366 0%, #10B981 100%)',
-              color: '#FFFFFF',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 16px',
-              fontSize: '2rem',
-              boxShadow: '0 8px 24px rgba(37, 211, 102, 0.5)'
-            }}>
-              ✓
-            </div>
+      {/* Direct Kitchen Order Success Confirmation Modal */}
+      {orderSuccessModal && (() => {
+        const hasToken = Boolean(orderSuccessModal.token_display || orderSuccessModal.token_number);
+        const tokenCode = orderSuccessModal.token_display || `TK-${String(orderSuccessModal.token_number).padStart(2, '0')}`;
+        const roundNum = Number(orderSuccessModal.round_number) || 1;
+        const isAddonRound = roundNum > 1;
+        const activeSpace = (orderSuccessModal?.space_type || currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+        const isCounter = activeSpace === 'counter' || String(orderSuccessModal.table_number).toLowerCase().includes('counter');
+        const isTakeaway = orderSuccessModal?.order_type === 'takeaway' || isCounter || hasToken;
+        const isCin = activeSpace === 'cinema_seat' || activeSpace === 'cinema' || String(orderSuccessModal.table_number).toLowerCase().includes('screen') || String(orderSuccessModal.table_number).toLowerCase().includes('seat');
+        const isRoom = activeSpace === 'room' || String(orderSuccessModal.table_number).toLowerCase().includes('room');
+        const isCabin = activeSpace === 'cabin' || String(orderSuccessModal.table_number).toLowerCase().includes('cabin');
 
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--gold-bright)', marginBottom: '8px' }}>
-              Order Placed Successfully!
-            </h2>
+        const destinationMsg = isTakeaway
+          ? (lang === 'hi'
+              ? 'आपका टेकअवे ऑर्डर किचन में भेज दिया गया है! पैक होते ही स्टाफ आपका टोकन नंबर पुकारेगा।'
+              : 'Your takeaway order has been sent to the kitchen! Staff will call your token when ready for counter pickup.')
+          : isCin
+            ? (lang === 'hi'
+                ? 'आपका ऑर्डर भेज दिया गया है! तैयार होते ही स्टाफ आपकी सीट तक लाएगा।'
+                : 'Your order has been sent! Our staff will prepare and bring it to your seat shortly.')
+            : isRoom
+              ? (lang === 'hi'
+                  ? 'आपका ऑर्डर भेज दिया गया है! तैयार होते ही सीधे आपके रूम में डिलीवर किया जाएगा।'
+                  : 'Your order has been sent! It will be prepared fresh and delivered to your room shortly.')
+              : isCabin
+                ? (lang === 'hi'
+                    ? 'आपका ऑर्डर भेज दिया गया है! तैयार होते ही आपके केबिन तक सर्व किया जाएगा।'
+                    : 'Your order has been sent! It will be prepared and delivered to your cabin shortly.')
+                : (lang === 'hi'
+                    ? 'आपका ऑर्डर किचन में भेज दिया गया है! तैयार होते ही आपकी टेबल पर सर्व किया जाएगा।'
+                    : 'Your order has been sent directly to the kitchen! It will be prepared and served to your table shortly.');
 
-            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px', margin: '16px 0', border: '1px solid rgba(255,255,255,0.15)' }}>
-              {(orderSuccessModal.token_display || orderSuccessModal.token_number) && (
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.35) 100%)',
-                  border: '2px dashed #F59E0B',
-                  borderRadius: '14px',
-                  padding: '12px 10px',
-                  marginBottom: '12px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#FCD34D', fontWeight: 800 }}>
-                    ⚡ Takeaway Pickup Token
-                  </div>
-                  <div style={{ fontSize: '2.4rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '2px', lineHeight: 1.1, margin: '4px 0' }}>
-                    {orderSuccessModal.token_display || `TK-${String(orderSuccessModal.token_number).padStart(2, '0')}`}
-                  </div>
-                  <div style={{ fontSize: '0.74rem', color: '#E5E7EB' }}>
-                    Please show this token at the counter to collect your parcel
-                  </div>
-                </div>
-              )}
-              <p style={{ fontSize: '1.2rem', fontWeight: 900, color: '#34D399', margin: '0 0 6px 0' }}>
-                {(orderSuccessModal.token_display || orderSuccessModal.token_number) ? (
-                  <>Token {orderSuccessModal.token_display || `TK-${String(orderSuccessModal.token_number).padStart(2, '0')}`}</>
-                ) : (
-                  <>{formatCustomerLocation(orderSuccessModal.table_number)}</>
-                )}
-                {orderSuccessModal.round_number && Number(orderSuccessModal.round_number) > 1 && (
-                  <span style={{ fontSize: '0.78rem', marginLeft: '6px', padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.15)', color: '#FCD34D' }}>
-                    Round {orderSuccessModal.round_number}
-                  </span>
-                )}
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                <p style={{ fontSize: '0.82rem', color: '#D1D5DB', margin: 0 }}>
-                  Status: <strong style={{ color: '#FBBF24' }}>Pending Kitchen Acceptance 🟡</strong>
-                </p>
-              </div>
-            </div>
-
-            <p style={{ fontSize: '0.86rem', color: '#E5E7EB', lineHeight: 1.5, marginBottom: '20px' }}>
-              {(() => {
-                const activeSpace = (orderSuccessModal?.space_type || currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
-                const isCounter = activeSpace === 'counter' || String(orderSuccessModal.table_number).toLowerCase().includes('counter');
-                const isTakeaway = orderSuccessModal?.order_type === 'takeaway' || isCounter || Boolean(orderSuccessModal.token_display || orderSuccessModal.token_number);
-                const isCin = activeSpace === 'cinema_seat' || activeSpace === 'cinema' || String(orderSuccessModal.table_number).toLowerCase().includes('screen') || String(orderSuccessModal.table_number).toLowerCase().includes('seat');
-                const isRoom = activeSpace === 'room' || String(orderSuccessModal.table_number).toLowerCase().includes('room');
-                const isCabin = activeSpace === 'cabin' || String(orderSuccessModal.table_number).toLowerCase().includes('cabin');
-                if (isTakeaway) return 'Your takeaway order has been sent to the kitchen! When your order is packed, staff will call your token number for pickup at the counter.';
-                if (isCin) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and bring it to your seat shortly.';
-                if (isRoom) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and deliver it to your room shortly.';
-                if (isCabin) return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and deliver it to your cabin shortly.';
-                return 'Your order has been sent directly to the kitchen terminal! Our staff will prepare and serve it to your table shortly.';
-              })()}
-            </p>
-
-            {Boolean(info?.google_reviews_enabled) && (
-              <button
-                onClick={() => {
-                  setOrderSuccessModal(null);
-                  handleRateUsClick();
-                }}
-                style={{
-                  width: '100%',
-                  marginBottom: '10px',
-                  background: 'var(--gold-gradient, linear-gradient(135deg, #FFD700 0%, #DFBA67 100%))',
-                  color: 'var(--dock-btn-text, #0A2315)',
-                  padding: '11px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontWeight: 800,
-                  fontSize: '0.86rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  boxShadow: 'var(--theme-shadow, 0 4px 12px rgba(0, 0, 0, 0.2))'
-                }}
-              >
-                <span>⭐</span>
-                <span>{lang === 'hi' ? 'हमें गूगल पर रेट करें' : 'Rate & Review Us on Google'}</span>
-              </button>
-            )}
-
-            <button
-              onClick={() => setOrderSuccessModal(null)}
+        return (
+          <div
+            onClick={() => setOrderSuccessModal(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.78)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              zIndex: 20000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              animation: 'sheetBackdropFade 0.2s ease-out'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
               style={{
+                background: 'var(--dock-gradient, var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%)))',
+                border: '1.5px solid rgba(255, 255, 255, 0.22)',
+                borderRadius: '22px',
+                maxWidth: '410px',
                 width: '100%',
-                background: 'var(--theme-btn-gradient, linear-gradient(135deg, #EAB308 0%, #CA8A04 100%))',
-                color: 'var(--theme-btn-text, #FFFFFF)',
-                padding: '13px',
-                borderRadius: 'var(--radius-pill)',
-                fontWeight: 900,
-                fontSize: '0.96rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: 'var(--theme-shadow, var(--shadow-gold))'
+                maxHeight: '90dvh',
+                overflowY: 'auto',
+                boxSizing: 'border-box',
+                padding: '22px 18px',
+                textAlign: 'center',
+                boxShadow: '0 24px 48px rgba(0, 0, 0, 0.45)',
+                color: '#FFFFFF',
+                animation: 'tqPopIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)'
               }}
             >
-              {lang === 'hi' ? 'ठीक है, धन्यवाद!' : 'Great, Thanks!'}
-            </button>
+              <div style={{
+                width: '58px',
+                height: '58px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #25D366 0%, #10B981 100%)',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 14px',
+                fontSize: '1.85rem',
+                fontWeight: 900,
+                boxShadow: '0 8px 22px rgba(16, 185, 129, 0.45)',
+                animation: 'tqPopIn 0.34s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              }}>
+                ✓
+              </div>
+
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 6px 0', lineHeight: 1.25 }}>
+                {isAddonRound
+                  ? (lang === 'hi' ? `राउंड ${roundNum} आइटम जुड़ गए!` : `Round ${roundNum} Items Sent!`)
+                  : (lang === 'hi' ? 'ऑर्डर सफलतापूर्वक दर्ज हो गया!' : 'Order Placed Successfully!')}
+              </h2>
+
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                borderRadius: '16px',
+                padding: '14px',
+                margin: '14px 0',
+                border: '1px solid rgba(255, 255, 255, 0.14)'
+              }}>
+                {hasToken ? (
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.32) 100%)',
+                    border: '1.5px dashed #FBBF24',
+                    borderRadius: '12px',
+                    padding: '10px',
+                    marginBottom: '10px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '0.70rem', textTransform: 'uppercase', letterSpacing: '1.4px', color: '#FDE68A', fontWeight: 800 }}>
+                      ⚡ {lang === 'hi' ? 'टेकअवे पिकअप टोकन' : 'Takeaway Pickup Token'}
+                    </div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '2px', lineHeight: 1.12, margin: '4px 0' }}>
+                      {tokenCode}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.86)' }}>
+                      {lang === 'hi' ? 'पार्सल लेने के लिए यह टोकन काउंटर पर दिखाएं' : 'Show this token at the counter to collect your order'}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '1.12rem', fontWeight: 900, color: '#4ADE80', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <span>{formatCustomerLocation(orderSuccessModal.table_number)}</span>
+                    {isAddonRound && (
+                      <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.16)', color: '#FDE68A' }}>
+                        {lang === 'hi' ? `राउंड ${roundNum}` : `Round ${roundNum}`}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.8)' }}>
+                    {lang === 'hi' ? 'स्थिति:' : 'Status:'}
+                  </span>
+                  <strong style={{ fontSize: '0.80rem', color: '#FCD34D' }}>
+                    {isAddonRound
+                      ? (lang === 'hi' ? 'रनिंग बिल में जुड़ा 🟢' : 'Added to Active Order 🟢')
+                      : (lang === 'hi' ? 'स्वीकृति की प्रतीक्षा में 🟡' : 'Pending Acceptance 🟡')}
+                  </strong>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '0.84rem', color: 'rgba(255, 255, 255, 0.86)', lineHeight: 1.5, margin: '0 0 18px 0' }}>
+                {destinationMsg}
+              </p>
+
+              {Boolean(info?.google_reviews_enabled) && (
+                <button
+                  type="button"
+                  className="tq-tap"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setOrderSuccessModal(null);
+                    handleRateUsClick();
+                  }}
+                  style={{
+                    width: '100%',
+                    marginBottom: '10px',
+                    background: 'var(--gold-gradient, linear-gradient(135deg, #FFD700 0%, #DFBA67 100%))',
+                    color: 'var(--dock-btn-text, #0A2315)',
+                    padding: '10px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontWeight: 800,
+                    fontSize: '0.84rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.22)'
+                  }}
+                >
+                  <span>⭐</span>
+                  <span>{lang === 'hi' ? 'हमें गूगल पर रेट करें' : 'Rate & Review Us on Google'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="tq-tap"
+                onClick={() => { triggerHaptic('light'); setOrderSuccessModal(null); }}
+                style={{
+                  width: '100%',
+                  background: '#FFFFFF',
+                  color: '#0F172A',
+                  padding: '12px',
+                  borderRadius: 'var(--radius-pill)',
+                  fontWeight: 900,
+                  fontSize: '0.94rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 18px rgba(0, 0, 0, 0.25)'
+                }}
+              >
+                {lang === 'hi' ? 'ठीक है, लाइव स्टेटस देखें' : 'Track Live Order →'}
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Floating Bottom Navigation Dock */}
       <BottomDock
@@ -4826,7 +5345,7 @@ export default function App() {
           bottom: 0,
           background: 'rgba(0, 0, 0, 0.6)',
           backdropFilter: 'blur(4px)',
-          zIndex: 3000,
+          zIndex: 10015,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-end'
@@ -4837,98 +5356,178 @@ export default function App() {
           />
 
           <div
+            onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'var(--bg-app)',
-              borderTopLeftRadius: 'var(--radius-lg)',
-              borderTopRightRadius: 'var(--radius-lg)',
-              padding: '20px 16px calc(28px + env(safe-area-inset-bottom, 0px))',
-              maxWidth: '800px',
+              background: 'var(--theme-modal-bg, var(--bg-app, #FFFFFF))',
+              borderTopLeftRadius: '22px',
+              borderTopRightRadius: '22px',
+              padding: '10px 16px calc(20px + env(safe-area-inset-bottom, 0px))',
+              maxWidth: '520px',
               width: '100%',
               boxSizing: 'border-box',
               margin: '0 auto',
-              boxShadow: 'var(--shadow-lg)',
-              maxHeight: '85dvh',
+              boxShadow: '0 -12px 36px rgba(0, 0, 0, 0.28)',
+              maxHeight: '82dvh',
               overflowY: 'auto',
-              borderTop: '3px solid #D4AF37',
-              animation: 'fadeIn 0.25s ease-out'
+              borderTop: '1px solid var(--theme-modal-border, rgba(226, 232, 240, 0.9))',
+              animation: 'sheetSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
+            <div style={{
+              width: '38px',
+              height: '4px',
+              borderRadius: '9999px',
+              background: '#CBD5E1',
+              margin: '0 auto 10px'
+            }} />
+
             {/* Drawer Header */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '16px',
-              paddingBottom: '12px',
-              borderBottom: '1px solid var(--border-light)'
+              marginBottom: '12px',
+              paddingBottom: '10px',
+              borderBottom: '1px solid var(--border-light, #E2E8F0)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <BookOpen size={20} color="var(--primary-emerald)" />
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary-emerald)' }}>
-                  {lang === 'hi' ? 'मेन्यू श्रेणी (Menu Categories)' : 'Menu Categories'}
+                <BookOpen size={18} color="var(--primary-emerald)" />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark, var(--primary-emerald))', margin: 0 }}>
+                  {lang === 'hi' ? 'मेनू श्रेणियां' : 'Menu Categories'}
                 </h3>
               </div>
-              <button onClick={() => setShowCategoryDrawer(false)} aria-label="Close categories" style={{ color: 'var(--text-dark)', border: 'none', background: 'none', cursor: 'pointer', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <X size={20} />
+              <button
+                type="button"
+                onClick={() => setShowCategoryDrawer(false)}
+                aria-label="Close categories"
+                style={{
+                  color: 'var(--text-dark, #334155)',
+                  border: 'none',
+                  background: 'var(--bg-secondary, #F1F5F9)',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+              >
+                <X size={16} />
               </button>
             </div>
 
             {/* Category List Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
               <button
+                type="button"
                 onClick={() => scrollToCategory('all')}
                 style={{
-                  padding: '14px 16px',
-                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 13px',
+                  borderRadius: '12px',
                   textAlign: 'left',
-                  fontSize: '0.94rem',
+                  fontSize: '0.88rem',
                   fontWeight: 700,
-                  background: selectedCategory === 'all' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
-                  color: selectedCategory === 'all' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--primary-emerald)',
+                  background: selectedCategory === 'all' ? 'var(--theme-nav-active, var(--primary-emerald))' : 'var(--bg-secondary, #F8FAFC)',
+                  color: selectedCategory === 'all' ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
+                  border: selectedCategory === 'all' ? '1px solid var(--theme-primary, var(--primary-emerald))' : '1px solid var(--border-light, #E2E8F0)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  border: 'none',
                   cursor: 'pointer'
                 }}
               >
-                <span>❖ {lang === 'hi' ? 'सभी श्रेणियां (All Items)' : 'All Categories'}</span>
-                <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>({dishes.length})</span>
+                <span>❖ {lang === 'hi' ? 'सभी श्रेणियां' : 'All Categories'}</span>
+                <span style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  background: selectedCategory === 'all' ? 'rgba(255,255,255,0.2)' : 'var(--theme-card-bg, #FFFFFF)',
+                  padding: '2px 8px',
+                  borderRadius: '9999px'
+                }}>
+                  {dishes.length}
+                </span>
               </button>
 
-              {populatedCategories.map((cat) => {
+              {combos.length > 0 && info?.filters_visibility?.combo !== false && (
+                <button
+                  type="button"
+                  onClick={() => scrollToCategory('combos-section')}
+                  style={{
+                    padding: '10px 13px',
+                    borderRadius: '12px',
+                    textAlign: 'left',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    background: selectedCategory === 'combos-section' ? 'var(--theme-nav-active, var(--primary-emerald))' : 'var(--bg-secondary, #F8FAFC)',
+                    color: selectedCategory === 'combos-section' ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
+                    border: selectedCategory === 'combos-section' ? '1px solid var(--theme-primary, var(--primary-emerald))' : '1px solid var(--border-light, #E2E8F0)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span>🍱 {lang === 'hi' ? 'कॉम्बो एवं थाली' : 'Combos & Thalis'}</span>
+                  <span style={{
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    background: selectedCategory === 'combos-section' ? 'rgba(255,255,255,0.2)' : 'var(--theme-card-bg, #FFFFFF)',
+                    padding: '2px 8px',
+                    borderRadius: '9999px'
+                  }}>
+                    {combos.length}
+                  </span>
+                </button>
+              )}
+
+              {populatedCategories.map((cat, catIdx) => {
+                const isSelected = String(selectedCategory) === String(cat.id);
                 const catDisplayName = (lang === 'hi' && cat.name_hi) ? cat.name_hi : cat.name;
                 const itemCount = dishes.filter(d => String(d.category_id) === String(cat.id)).length;
 
                 return (
                   <button
                     key={cat.id}
+                    type="button"
+                    className="tq-pill-smooth"
                     onClick={() => scrollToCategory(cat.id)}
                     style={{
-                      padding: '14px 16px',
-                      borderRadius: 'var(--radius-md)',
+                      padding: '10px 13px',
+                      borderRadius: '12px',
                       textAlign: 'left',
-                      fontSize: '0.94rem',
+                      fontSize: '0.88rem',
                       fontWeight: 700,
-                      background: String(selectedCategory) === String(cat.id) ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
-                      color: String(selectedCategory) === String(cat.id) ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-dark)',
+                      background: isSelected ? 'var(--theme-nav-active, var(--primary-emerald))' : 'var(--bg-secondary, #F8FAFC)',
+                      color: isSelected ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
+                      border: isSelected ? '1px solid var(--theme-primary, var(--primary-emerald))' : '1px solid var(--border-light, #E2E8F0)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      border: 'none',
+                      animation: 'tqCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both',
+                      animationDelay: `${Math.min(catIdx * 24, 160)}ms`,
                       cursor: 'pointer'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                       <CategoryImage
                         image={cat.image}
                         name={cat.name}
-                        size={28}
+                        size={26}
+                        isSelected={isSelected}
                       />
-                      <span>{catDisplayName}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{catDisplayName}</span>
                     </div>
 
-                    <span style={{ fontSize: '0.8rem', opacity: 0.8, background: 'rgba(0,0,0,0.06)', padding: '2px 8px', borderRadius: 'var(--radius-pill)' }}>
+                    <span style={{
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--theme-card-bg, #FFFFFF)',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      flexShrink: 0
+                    }}>
                       {itemCount}
                     </span>
                   </button>

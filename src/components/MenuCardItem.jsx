@@ -5,7 +5,7 @@ import { getValidDishModifiers } from '../utils/billingHelper';
 import { triggerHaptic } from '../utils/haptics';
 import { isFlagEnabled } from '../utils/customerHelpers';
 
-export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currencySymbol, filtersVisibility, modifiersEnabled = true }) {
+export default function MenuCardItem({ dish, lang, onClick, onAddToCart, onUpdateCartQuantity, cartItems = [], currencySymbol, filtersVisibility, modifiersEnabled = true }) {
   const symbol = getCurrencySymbol(currencySymbol);
   const isAvailable = isFlagEnabled(dish.available, true);
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
@@ -32,6 +32,11 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
 
   const fullPriceNum = Math.round(Number(dish.price));
   const halfPriceNum = hasHalfPrice ? Math.round(Number(dish.price_half)) : null;
+  const activePortion = hasHalfPrice ? portionMode : 'full';
+  const matchedCartItem = (!hasModifiers && Array.isArray(cartItems))
+    ? cartItems.find(i => !i.isCombo && String(i.dish?.id) === String(dish.id) && (!i.modifiers || i.modifiers.length === 0) && String(i.portion_type || 'full') === activePortion)
+    : null;
+  const inCartQty = matchedCartItem ? matchedCartItem.quantity : 0;
 
   return (
     <div 
@@ -49,6 +54,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
         opacity: isAvailable ? 1 : 0.65,
         position: 'relative',
         transition: 'var(--transition-smooth)',
+        animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1)',
         overflow: 'hidden'
       }}
       onMouseOver={(e) => {
@@ -165,27 +171,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               </span>
             )}
 
-            {/* Customizable / Add-ons Badge */}
-            {(hasModifiers || hasHalfPrice) && !(dish.offer_badge || dish.offer?.offer_badge) && filtersVisibility?.customizable !== false && (
-              <span style={{
-                background: 'var(--theme-badge-bg, rgba(255, 255, 255, 0.95))',
-                color: 'var(--theme-badge-text, var(--primary-emerald, #0A2315))',
-                border: '1px solid var(--theme-card-border, var(--border-light, rgba(0, 0, 0, 0.15)))',
-                borderRadius: 'var(--radius-pill)',
-                padding: '2px 7px',
-                fontSize: '0.62rem',
-                fontWeight: 800,
-                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '2px',
-                whiteSpace: 'nowrap'
-              }}>
-                ✨ {lang === 'hi' ? 'कस्टमाइज़ेबल' : 'Customizable'}
-              </span>
-            )}
-
-            {dish.badge && (() => {
+            {dish.badge && !(dish.offer_badge || dish.offer?.offer_badge) && (() => {
               const lower = dish.badge.toLowerCase();
               let bg = 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)';
               let color = '#92400E';
@@ -246,6 +232,18 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 </span>
               );
             })()}
+
+            {/* Subtle text cue for Customizable instead of heavy bordered pill */}
+            {(hasModifiers || hasHalfPrice) && filtersVisibility?.customizable !== false && (
+              <span style={{
+                fontSize: '0.63rem',
+                fontWeight: 700,
+                color: 'var(--text-muted, #64748B)',
+                whiteSpace: 'nowrap'
+              }}>
+                • {lang === 'hi' ? 'कस्टमाइज़ेबल' : 'Customizable'}
+              </span>
+            )}
           </div>
         )}
 
@@ -276,10 +274,9 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 setPortionMode('half');
               }}
               style={{
-                fontSize: '0.68rem',
+                fontSize: '0.66rem',
                 fontWeight: 800,
-                minHeight: '36px',
-                padding: '4px 10px',
+                padding: '2px 8px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'half' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
                 color: portionMode === 'half' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
@@ -297,10 +294,9 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 setPortionMode('full');
               }}
               style={{
-                fontSize: '0.68rem',
+                fontSize: '0.66rem',
                 fontWeight: 800,
-                minHeight: '36px',
-                padding: '4px 10px',
+                padding: '2px 8px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'full' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
                 color: portionMode === 'full' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
@@ -314,23 +310,19 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
         )}
       </div>
 
-      {/* Right Pricing & Thumbnail (Compact vertical stack on narrow phones) */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px', flexShrink: 0, maxWidth: '108px' }}>
-        {/* Pricing Pill */}
+      {/* Right Pricing & Thumbnail (Price Pill LEFT of Thumbnail, Thumbnail + Add stacked RIGHT) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        {/* Clean Bold Price Left of Image */}
         {hasHalfPrice ? (
           <div 
             style={{
-              fontSize: '0.86rem',
+              fontSize: '0.94rem',
               fontWeight: 900,
-              padding: '3px 10px',
-              borderRadius: 'var(--radius-pill)',
-              background: 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
               color: 'var(--theme-price-color, var(--text-dark))',
-              border: '1.5px solid var(--theme-card-border, var(--border-light))',
               whiteSpace: 'nowrap',
               lineHeight: 1.2,
-              boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              paddingRight: '2px'
             }}
             onClick={() => {
               triggerHaptic('light');
@@ -340,13 +332,14 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
             {symbol}{formatPriceNumber(portionMode === 'half' ? halfPriceNum : fullPriceNum)}
           </div>
         ) : (
-          dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? (
+          dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) < Number(dish.price) ? (
             <div 
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'flex-end',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                paddingRight: '2px'
               }}
               onClick={() => {
                 triggerHaptic('light');
@@ -354,10 +347,11 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
               }}
             >
               <div style={{
-                fontSize: '0.88rem',
+                fontSize: '0.94rem',
                 fontWeight: 900,
                 color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
-                lineHeight: 1.1
+                lineHeight: 1.15,
+                whiteSpace: 'nowrap'
               }}>
                 {symbol}{formatPriceNumber(dish.offer_price)}
               </div>
@@ -366,7 +360,7 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 color: '#94A3B8',
                 textDecoration: 'line-through',
                 fontWeight: 600,
-                marginRight: '2px'
+                lineHeight: 1.1
               }}>
                 {symbol}{formatPriceNumber(fullPriceNum)}
               </span>
@@ -374,17 +368,13 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
           ) : (
             <div 
               style={{
-                fontSize: '0.86rem',
+                fontSize: '0.94rem',
                 fontWeight: 900,
-                padding: '3px 12px',
-                borderRadius: 'var(--radius-pill)',
-                background: 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
                 color: 'var(--theme-price-color, var(--text-dark))',
-                border: '1.5px solid var(--theme-card-border, var(--border-light))',
                 whiteSpace: 'nowrap',
                 lineHeight: 1.2,
-                boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                paddingRight: '2px'
               }}
               onClick={() => {
                 triggerHaptic('light');
@@ -397,20 +387,20 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
         )}
 
         {/* Dish Thumbnail & + Add Button */}
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
           <div 
             onClick={() => {
               triggerHaptic('light');
               onClick(dish);
             }}
             style={{
-              width: '46px',
-              height: '46px',
-              minWidth: '46px',
+              width: '62px',
+              height: '62px',
+              minWidth: '62px',
               flexShrink: 0,
-              borderRadius: 'var(--radius-sm)',
+              borderRadius: '10px',
               overflow: 'hidden',
-              border: '1.5px solid var(--theme-card-border, var(--gold-border))',
+              border: '1px solid var(--theme-card-border, var(--gold-border))',
               position: 'relative',
               background: 'var(--bg-secondary)',
               cursor: 'pointer',
@@ -428,37 +418,121 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
           </div>
 
           {onAddToCart && isAvailable && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                triggerHaptic('medium');
-                const chosenPortion = hasHalfPrice ? portionMode : 'full';
-                if (hasModifiers && onClick) {
-                  onClick(dish, chosenPortion, 'addon');
-                } else {
-                  onAddToCart(dish, chosenPortion);
-                }
-              }}
-              style={{
-                background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
-                color: 'var(--theme-btn-text, #FFFFFF)',
-                border: 'none',
-                padding: '5px 12px',
-                minHeight: '36px',
-                whiteSpace: 'nowrap',
-                borderRadius: 'var(--radius-pill)',
-                fontSize: '0.72rem',
-                fontWeight: 900,
-                cursor: 'pointer',
-                boxShadow: 'var(--theme-shadow, 0 3px 10px rgba(0, 0, 0, 0.25))',
-                transition: 'transform 0.15s ease'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              title="Add to Order Cart"
-            >
-              + Add
-            </button>
+            inCartQty > 0 && onUpdateCartQuantity ? (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  background: 'var(--theme-card-bg, #FFFFFF)',
+                  border: '1.5px solid var(--primary-emerald, #10B981)',
+                  borderRadius: 'var(--radius-pill)',
+                  padding: '2px 3px',
+                  boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.12))',
+                  animation: 'tqPopIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                }}
+              >
+                <button
+                  type="button"
+                  className="tq-tap"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    onUpdateCartQuantity(matchedCartItem.key || matchedCartItem.dish?.id, -1);
+                  }}
+                  aria-label="Decrease quantity"
+                  style={{
+                    background: 'var(--bg-secondary, #F1F5F9)',
+                    color: 'var(--text-dark, #0F172A)',
+                    border: 'none',
+                    width: '20px',
+                    height: '20px',
+                    padding: 0,
+                    borderRadius: '50%',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    fontSize: '0.78rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1
+                  }}
+                >
+                  −
+                </button>
+                <span
+                  key={inCartQty}
+                  className="tq-qty-pop"
+                  style={{
+                    minWidth: '14px',
+                    textAlign: 'center',
+                    fontSize: '0.72rem',
+                    fontWeight: 900,
+                    color: 'var(--theme-price-color, var(--primary-emerald, #10B981))'
+                  }}
+                >
+                  {inCartQty}
+                </span>
+                <button
+                  type="button"
+                  className="tq-tap"
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    onUpdateCartQuantity(matchedCartItem.key || matchedCartItem.dish?.id, 1);
+                  }}
+                  aria-label="Increase quantity"
+                  style={{
+                    background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                    color: 'var(--theme-btn-text, #FFFFFF)',
+                    border: 'none',
+                    width: '20px',
+                    height: '20px',
+                    padding: 0,
+                    borderRadius: '50%',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    fontSize: '0.78rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1
+                  }}
+                >
+                  +
+                </button>
+              </div>
+            ) : (
+              <button
+                className="tq-tap"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerHaptic('medium');
+                  if (hasModifiers && onClick) {
+                    onClick(dish, activePortion, 'addon');
+                  } else {
+                    onAddToCart(dish, activePortion, [], 1, e.currentTarget);
+                  }
+                }}
+                style={{
+                  background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
+                  color: 'var(--theme-btn-text, #FFFFFF)',
+                  border: 'none',
+                  padding: '4px 12px',
+                  whiteSpace: 'nowrap',
+                  borderRadius: 'var(--radius-pill)',
+                  fontSize: '0.72rem',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  boxShadow: 'var(--theme-shadow, 0 3px 10px rgba(0, 0, 0, 0.25))',
+                  transition: 'transform 0.15s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                title="Add to Order Cart"
+              >
+                + Add
+              </button>
+            )
           )}
 
           {!isAvailable && (

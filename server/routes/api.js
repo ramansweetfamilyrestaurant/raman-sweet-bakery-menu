@@ -2936,7 +2936,7 @@ router.get('/orders/track/:id', async (req, res) => {
     const targetId = resto.id;
 
     const orders = await query(
-      'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display FROM orders WHERE id = $1 AND restaurant_id = $2',
+      'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display, is_settled, payment_method FROM orders WHERE id = $1 AND restaurant_id = $2',
       [orderId, targetId]
     );
 
@@ -2992,7 +2992,9 @@ router.get('/orders/track/:id', async (req, res) => {
 
     // 🛡️ Step 3: Server-Side Expiration Check
     const nowMs = Date.now();
-    const isTerminal = ['completed', 'cancelled', 'rejected'].includes(order.status);
+    const isSettled = Boolean(order.is_settled === 1 || order.is_settled === '1' || order.is_settled === true);
+    const isCancelledOrRejected = ['cancelled', 'rejected'].includes(order.status);
+    const isTerminal = ['completed', 'cancelled', 'rejected'].includes(order.status) || isSettled;
     if (isTerminal) {
       const terminalTime = order.terminal_at ? new Date(order.terminal_at).getTime() : new Date(order.created_at).getTime();
       const TERMINAL_EXPIRY_MS = 2 * 60 * 60 * 1000; // 2 hours
@@ -3013,18 +3015,121 @@ router.get('/orders/track/:id', async (req, res) => {
       }
     }
 
-    // 🛡️ Step 4: Parse items & strictly scrub tracking_token_hash from response
-    let parsedItems = [];
-    if (typeof order.items === 'string') {
-      try { parsedItems = JSON.parse(order.items); } catch (e) { parsedItems = []; }
-    } else if (Array.isArray(order.items)) {
-      parsedItems = order.items;
+    // 🛡️ Step 4: Parse items & build consolidated bill summary when settled/completed
+    const parseOrderItems = (rawItems) => {
+      if (typeof rawItems === 'string') {
+        try { return JSON.parse(rawItems); } catch (e) { return []; }
+      }
+      return Array.isArray(rawItems) ? rawItems : [];
+    };
+
+    const parsedItems = parseOrderItems(order.items);
+    let billSummary = null;
+
+    if (!isCancelledOrRejected && (isSettled || order.status === 'completed')) {
+      const isCounterOrder =
+        String(order.order_type || '').toLowerCase() === 'takeaway' ||
+        String(order.table_number || '').trim().toLowerCase() === 'counter';
+
+      let billRows = [order];
+      if (!isCounterOrder && order.session_id) {
+        try {
+          const siblingRows = await query(
+            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+             FROM orders
+             WHERE restaurant_id = $1 AND session_id = $2 AND status NOT IN ('rejected', 'cancelled')
+             ORDER BY id ASC`,
+            [targetId, order.session_id]
+          );
+          if (Array.isArray(siblingRows) && siblingRows.length > 0) {
+            billRows = siblingRows;
+          }
+        } catch (e) {}
+      } else if (!isCounterOrder) {
+        const rootId = order.parent_order_id || order.id;
+        try {
+          const siblingRows = await query(
+            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+             FROM orders
+             WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) AND status NOT IN ('rejected', 'cancelled')
+             ORDER BY id ASC`,
+            [targetId, rootId]
+          );
+          if (Array.isArray(siblingRows) && siblingRows.length > 0) {
+            billRows = siblingRows;
+          }
+        } catch (e) {}
+      }
+
+      const allItems = [];
+      let runningSubtotal = 0;
+      let runningCgst = 0;
+      let runningSgst = 0;
+      let runningTax = 0;
+      let runningGrandTotal = 0;
+      let resolvedPaymentMethod = order.payment_method || null;
+      let resolvedSettledAt = order.terminal_at || order.created_at || null;
+
+      const rounds = billRows.map((row, idx) => {
+        const rowItems = parseOrderItems(row.items);
+        const rSub = Number(row.subtotal_amount) > 0 ? Number(row.subtotal_amount) : (Number(row.total_amount) || 0);
+        const rCgst = Number(row.cgst_amount) || 0;
+        const rSgst = Number(row.sgst_amount) || 0;
+        const rTax = Number(row.tax_amount) || (rCgst + rSgst);
+        const rGrand = Number(row.grand_total_amount) > 0 ? Number(row.grand_total_amount) : (Number(row.total_amount) || 0);
+
+        runningSubtotal += rSub;
+        runningCgst += rCgst;
+        runningSgst += rSgst;
+        runningTax += rTax;
+        runningGrandTotal += rGrand;
+
+        if (!resolvedPaymentMethod && row.payment_method) {
+          resolvedPaymentMethod = row.payment_method;
+        }
+        if (row.terminal_at) {
+          resolvedSettledAt = row.terminal_at;
+        }
+        allItems.push(...rowItems);
+
+        return {
+          id: row.id,
+          round_number: Number(row.round_number) || (idx + 1),
+          items: rowItems,
+          subtotal_amount: Math.round(rSub * 100) / 100,
+          tax_amount: Math.round(rTax * 100) / 100,
+          grand_total_amount: Math.round(rGrand * 100) / 100,
+          created_at: row.created_at
+        };
+      });
+
+      billSummary = {
+        order_id: order.id,
+        session_id: order.session_id || null,
+        round_count: rounds.length,
+        rounds,
+        items: allItems,
+        subtotal_amount: Math.round(runningSubtotal * 100) / 100,
+        cgst_amount: Math.round(runningCgst * 100) / 100,
+        sgst_amount: Math.round(runningSgst * 100) / 100,
+        tax_amount: Math.round(runningTax * 100) / 100,
+        grand_total_amount: Math.round(runningGrandTotal * 100) / 100,
+        gst_enabled: Boolean(resto.gst_enabled === true || resto.gst_enabled === 1 || resto.gst_enabled === '1'),
+        gstin_number: resto.gstin_number || '',
+        currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
+        payment_method: String(resolvedPaymentMethod || 'cash').toLowerCase(),
+        settled_at: resolvedSettledAt
+      };
     }
 
+    // 🛡️ Step 5: Strictly scrub tracking_token_hash from response
     const { tracking_token_hash, ...safeOrder } = order;
     res.json({
       ...safeOrder,
-      items: parsedItems
+      is_settled: isSettled ? 1 : 0,
+      payment_method: order.payment_method || billSummary?.payment_method || null,
+      items: parsedItems,
+      ...(billSummary ? { bill_summary: billSummary } : {})
     });
   } catch (err) {
     console.error('Track order error:', err);

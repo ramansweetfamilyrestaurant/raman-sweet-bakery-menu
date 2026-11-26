@@ -6,7 +6,7 @@ import { getValidDishModifiers } from '../utils/billingHelper';
 import { triggerHaptic } from '../utils/haptics';
 import { isFlagEnabled } from '../utils/customerHelpers';
 
-export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = '₹', lang = 'en', filtersVisibility, modifiersEnabled = true }) {
+export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuantity, cartItems = [], currencySymbol = '₹', lang = 'en', filtersVisibility, modifiersEnabled = true }) {
   const symbol = getCurrencySymbol(currencySymbol);
   const isAvailable = isFlagEnabled(dish.available, true);
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
@@ -21,8 +21,132 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
     if (hasModifiers && onClick) {
       onClick(dish, portion, 'addon');
     } else {
-      onAddToCart(dish, portion);
+      onAddToCart(dish, portion, [], 1, e.currentTarget);
     }
+  };
+
+  const renderCartAction = (portion, label, isSecondary = false) => {
+    const matchedItem = (!hasModifiers && Array.isArray(cartItems))
+      ? cartItems.find(i => !i.isCombo && String(i.dish?.id) === String(dish.id) && (!i.modifiers || i.modifiers.length === 0) && String(i.portion_type || 'full') === portion)
+      : null;
+    const qty = matchedItem ? matchedItem.quantity : 0;
+
+    if (qty > 0 && onUpdateCartQuantity) {
+      return (
+        <div
+          key={`stepper-${portion}`}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px',
+            background: 'var(--theme-card-bg, #FFFFFF)',
+            border: isSecondary ? '1.5px solid #F59E0B' : '1.5px solid var(--primary-emerald, #10B981)',
+            borderRadius: 'var(--radius-pill)',
+            padding: '2px 3px',
+            boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.12))',
+            animation: 'tqPopIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}
+        >
+          <button
+            type="button"
+            className="tq-tap"
+            onClick={() => {
+              triggerHaptic('light');
+              onUpdateCartQuantity(matchedItem.key || matchedItem.dish?.id, -1);
+            }}
+            aria-label="Decrease quantity"
+            style={{
+              background: 'var(--bg-secondary, #F1F5F9)',
+              color: 'var(--text-dark, #0F172A)',
+              border: 'none',
+              width: '20px',
+              height: '20px',
+              padding: 0,
+              borderRadius: '50%',
+              fontWeight: 900,
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1
+            }}
+          >
+            −
+          </button>
+          <span
+            key={qty}
+            className="tq-qty-pop"
+            style={{
+              minWidth: '14px',
+              textAlign: 'center',
+              fontSize: '0.72rem',
+              fontWeight: 900,
+              color: isSecondary ? '#B45309' : 'var(--theme-price-color, var(--primary-emerald, #10B981))'
+            }}
+          >
+            {qty}
+          </span>
+          <button
+            type="button"
+            className="tq-tap"
+            onClick={() => {
+              triggerHaptic('medium');
+              onUpdateCartQuantity(matchedItem.key || matchedItem.dish?.id, 1);
+            }}
+            aria-label="Increase quantity"
+            style={{
+              background: isSecondary
+                ? 'var(--theme-btn-secondary-bg, linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%))'
+                : 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+              color: isSecondary ? '#92400E' : 'var(--theme-btn-text, #FFFFFF)',
+              border: 'none',
+              width: '20px',
+              height: '20px',
+              padding: 0,
+              borderRadius: '50%',
+              fontWeight: 900,
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1
+            }}
+          >
+            +
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        key={`add-${portion}`}
+        className="tq-tap"
+        onClick={(e) => handleAddAction(e, portion)}
+        style={{
+          background: isSecondary
+            ? 'var(--theme-btn-secondary-bg, linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%))'
+            : 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
+          color: isSecondary ? 'var(--theme-text-primary, #92400E)' : 'var(--theme-btn-text, #FFFFFF)',
+          border: isSecondary ? '1px solid var(--theme-card-border, #F59E0B)' : 'none',
+          padding: hasHalfPrice ? '4px 11px' : '4px 14px',
+          whiteSpace: 'nowrap',
+          borderRadius: 'var(--radius-pill)',
+          fontSize: hasHalfPrice ? '0.7rem' : '0.74rem',
+          fontWeight: 900,
+          cursor: 'pointer',
+          boxShadow: isSecondary ? 'var(--theme-shadow, 0 2px 8px rgba(0, 0, 0, 0.15))' : 'var(--theme-shadow, 0 3px 10px rgba(0, 0, 0, 0.25))',
+          transition: 'transform 0.15s ease'
+        }}
+        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+      >
+        {label}
+      </button>
+    );
   };
 
   return (
@@ -303,18 +427,14 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               {displayName}
             </h3>
 
-            {dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
+            {dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) < Number(dish.price) ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', flexShrink: 0 }}>
                 <span style={{
-                  fontSize: '0.88rem',
+                  fontSize: '0.96rem',
                   fontWeight: 900,
-                  color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
-                  background: 'var(--theme-badge-bg, var(--bg-card-soft, #ECFDF5))',
-                  border: '1.5px solid var(--theme-card-border, #A7F3D0)',
-                  padding: '2px 8px',
-                  borderRadius: 'var(--radius-pill)',
+                  color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
                   whiteSpace: 'nowrap',
-                  boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0, 0, 0, 0.08))'
+                  lineHeight: 1.15
                 }}>
                   {symbol}{formatPriceNumber(dish.offer_price)}
                 </span>
@@ -323,22 +443,19 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                   color: '#94A3B8',
                   textDecoration: 'line-through',
                   fontWeight: 600,
-                  marginRight: '4px'
+                  lineHeight: 1.1
                 }}>
                   {symbol}{formatPriceNumber(dish.price)}
                 </span>
               </div>
             ) : (
               <span style={{
-                fontSize: '0.86rem',
+                fontSize: '0.96rem',
                 fontWeight: 900,
                 color: 'var(--theme-price-color, var(--text-dark))',
-                background: 'var(--theme-badge-bg, var(--bg-card-soft, #FFFFFF))',
-                border: '1.5px solid var(--theme-card-border, var(--border-light))',
-                padding: '3px 10px',
-                borderRadius: 'var(--radius-pill)',
                 whiteSpace: 'nowrap',
-                boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))'
+                lineHeight: 1.2,
+                flexShrink: 0
               }}>
                 {symbol}{formatPriceNumber(dish.price)}
               </span>
@@ -375,7 +492,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             fontWeight: 700,
             color: 'var(--primary-emerald)'
           }}>
-            {hasHalfPrice ? `${lang === 'hi' ? 'हाफ' : 'Half'} ${symbol}${formatPriceNumber(dish.price_half)} | ${lang === 'hi' ? 'फुल' : 'Full'} ${symbol}${formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}` : (dish.portion && !dish.portion.toLowerCase().includes('portion') ? dish.portion : '')}
+            {hasHalfPrice ? `${lang === 'hi' ? 'हाफ' : 'Half'} ${symbol}${formatPriceNumber(dish.price_half)} | ${lang === 'hi' ? 'फुल' : 'Full'} ${symbol}${formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}` : (dish.portion && !dish.portion.toLowerCase().includes('portion') ? dish.portion : '')}
           </span>
 
           <span style={{
@@ -387,71 +504,11 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
             {onAddToCart && isAvailable && (
               hasHalfPrice ? (
                 <>
-                  <button
-                    onClick={(e) => handleAddAction(e, 'half')}
-                    style={{
-                      background: 'var(--theme-btn-secondary-bg, linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%))',
-                      color: 'var(--theme-text-primary, #92400E)',
-                      border: '1px solid var(--theme-card-border, #F59E0B)',
-                      padding: '6px 12px',
-                      minHeight: '36px',
-                      whiteSpace: 'nowrap',
-                      borderRadius: 'var(--radius-pill)',
-                      fontSize: '0.7rem',
-                      fontWeight: 900,
-                      cursor: 'pointer',
-                      boxShadow: 'var(--theme-shadow, 0 2px 8px rgba(0, 0, 0, 0.15))',
-                      transition: 'transform 0.15s ease'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                  >
-                    + Half
-                  </button>
-                  <button
-                    onClick={(e) => handleAddAction(e, 'full')}
-                    style={{
-                      background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
-                      color: 'var(--theme-btn-text, #FFFFFF)',
-                      border: 'none',
-                      padding: '6px 12px',
-                      minHeight: '36px',
-                      whiteSpace: 'nowrap',
-                      borderRadius: 'var(--radius-pill)',
-                      fontSize: '0.7rem',
-                      fontWeight: 900,
-                      cursor: 'pointer',
-                      boxShadow: 'var(--theme-shadow, 0 3px 10px rgba(0, 0, 0, 0.25))',
-                      transition: 'transform 0.15s ease'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                  >
-                    + Full
-                  </button>
+                  {renderCartAction('half', '+ Half', true)}
+                  {renderCartAction('full', '+ Full', false)}
                 </>
               ) : (
-                <button
-                  onClick={(e) => handleAddAction(e, 'full')}
-                  style={{
-                    background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
-                    color: 'var(--theme-btn-text, #FFFFFF)',
-                    border: 'none',
-                    padding: '6px 14px',
-                    minHeight: '36px',
-                    whiteSpace: 'nowrap',
-                    borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.74rem',
-                    fontWeight: 900,
-                    cursor: 'pointer',
-                    boxShadow: 'var(--theme-shadow, 0 3px 10px rgba(0, 0, 0, 0.25))',
-                    transition: 'transform 0.15s ease'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  + Add
-                </button>
+                renderCartAction('full', '+ Add', false)
               )
             )}
 

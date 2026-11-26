@@ -889,8 +889,7 @@ export default function PresenceVerificationModal({
                 onClick={handleCancelAndClose}
                 style={{
                   width: '100%',
-                  padding: '10px',
-                  minHeight: '38px',
+                  padding: '9px',
                   background: 'transparent',
                   color: '#94A3B8',
                   border: 'none',

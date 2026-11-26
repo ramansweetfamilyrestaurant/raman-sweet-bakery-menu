@@ -3,6 +3,29 @@ import { Sparkles } from 'lucide-react';
 import CategoryImage from './CategoryImage';
 
 export default function CategoryNav({ categories, selectedCategory, onSelectCategory, lang }) {
+  const getPillStyle = (isSelected) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    height: '32px',
+    padding: '0 12px',
+    flexShrink: 0,
+    borderRadius: 'var(--radius-pill)',
+    fontSize: '0.78rem',
+    fontWeight: isSelected ? 800 : 700,
+    whiteSpace: 'nowrap',
+    transition: 'var(--transition-fast)',
+    cursor: 'pointer',
+    background: isSelected
+      ? 'var(--theme-nav-active, var(--primary-emerald))'
+      : 'var(--theme-nav-bg, var(--bg-card, #FFFFFF))',
+    color: isSelected ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
+    border: isSelected
+      ? '1px solid var(--theme-primary, var(--primary-emerald))'
+      : '1px solid var(--theme-card-border, rgba(148, 163, 184, 0.28))',
+    boxShadow: isSelected ? '0 2px 8px rgba(10, 35, 21, 0.14)' : 'none'
+  });
+
   return (
     <div style={{
       maxWidth: '800px',
@@ -10,41 +33,24 @@ export default function CategoryNav({ categories, selectedCategory, onSelectCate
       width: '100%',
       padding: '4px 12px 8px',
     }}>
-      <div style={{
-        display: 'flex',
-        gap: '6px',
-        overflowX: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none',
-        paddingBottom: '4px'
-      }}>
+      <div
+        className="no-scrollbar"
+        style={{
+          display: 'flex',
+          gap: '7px',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: '4px'
+        }}
+      >
         {/* All Categories Pill */}
         <button
+          type="button"
+          className="tq-pill-smooth"
           onClick={() => onSelectCategory('all')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-            padding: '7px 14px',
-            minHeight: '40px',
-            flexShrink: 0,
-            borderRadius: 'var(--radius-pill)',
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            whiteSpace: 'nowrap',
-            transition: 'var(--transition-fast)',
-            background: selectedCategory === 'all' 
-              ? 'var(--theme-nav-active, var(--primary-emerald))' 
-              : 'var(--theme-nav-bg, var(--bg-card, #FFFFFF))',
-            color: selectedCategory === 'all' ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
-            border: selectedCategory === 'all' 
-              ? '1.5px solid var(--gold-bright)' 
-              : '1px solid var(--theme-card-border, var(--border-light))',
-            boxShadow: 'var(--theme-shadow, var(--shadow-sm))'
-          }}
+          style={getPillStyle(selectedCategory === 'all')}
         >
-          <Sparkles size={13} color={selectedCategory === 'all' ? 'var(--gold-bright, #D4AF37)' : 'var(--primary-emerald)'} />
+          <Sparkles size={13} color={selectedCategory === 'all' ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--primary-emerald)'} />
           {lang === 'hi' ? 'सभी श्रेणियां' : 'All Categories'}
         </button>
 
@@ -56,28 +62,10 @@ export default function CategoryNav({ categories, selectedCategory, onSelectCate
           return (
             <button
               key={cat.id}
+              type="button"
+              className="tq-pill-smooth"
               onClick={() => onSelectCategory(cat.id)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 14px',
-                minHeight: '40px',
-                flexShrink: 0,
-                borderRadius: 'var(--radius-pill)',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                whiteSpace: 'nowrap',
-                transition: 'var(--transition-fast)',
-                background: isSelected 
-                  ? 'var(--theme-nav-active, var(--primary-emerald))' 
-                  : 'var(--theme-nav-bg, var(--bg-card, #FFFFFF))',
-                color: isSelected ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
-                border: isSelected 
-                  ? '1.5px solid var(--gold-bright)' 
-                  : '1px solid var(--theme-card-border, var(--border-light))',
-                boxShadow: 'var(--theme-shadow, var(--shadow-sm))'
-              }}
+              style={getPillStyle(isSelected)}
             >
               <CategoryImage
                 image={cat.image}

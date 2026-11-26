@@ -289,6 +289,21 @@ function runTests() {
     assert.ok(addSlice.includes('isFlagEnabled(dish.available, true)'), 'handleAddToCart must guard unavailable dishes');
   });
 
+  test('App.jsx and BillCompletedModal handle settled bills without Session Expired shock', () => {
+    const appSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/App.jsx'), 'utf8');
+    assert.ok(appSrc.includes("import BillCompletedModal from './components/BillCompletedModal';"), 'App.jsx must import BillCompletedModal');
+    const billIdx = appSrc.indexOf('if (isBillSettled) {');
+    assert.notEqual(billIdx, -1, 'App.jsx must handle isBillSettled branch separately from cancelled/rejected');
+    const billSlice = appSrc.slice(billIdx, billIdx + 3200);
+    assert.ok(billSlice.includes('setBillCompletedModal(billPayload)'), 'Settled bill must open BillCompletedModal');
+    assert.ok(billSlice.includes('setSessionExpired(false)'), 'Settled bill must clear session without triggering Session Expired banner');
+    assert.ok(appSrc.includes('bill_summary'), 'api/frontend post-bill integration checks bill_summary');
+
+    const modalSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/components/BillCompletedModal.jsx'), 'utf8');
+    assert.ok(modalSrc.includes('bill.bill_summary || bill'), 'BillCompletedModal must support consolidated bill_summary');
+    assert.ok(modalSrc.includes('escapeHtml'), 'BillCompletedModal printable HTML receipt must escape dynamic strings');
+  });
+
   console.log(`\nAll ${passed} Customer Page helper/regression tests passed.`);
 }
 

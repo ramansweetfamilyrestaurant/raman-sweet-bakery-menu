@@ -1,28 +1,44 @@
-import React, { useState } from 'react';
-import { X, ShieldCheck, Sparkles, Clock, Utensils, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 import { getValidDishModifiers } from '../utils/billingHelper';
 import { isFlagEnabled } from '../utils/customerHelpers';
+import { triggerHaptic } from '../utils/haptics';
 
 export default function DishModal({ dish, onClose, onAddToCart, currencySymbol = '₹', lang = 'en', initialPortion = null, modifiersEnabled = true, addonOnly = false }) {
+  const hasHalfPrice = dish?.price_half !== null && dish?.price_half !== undefined && dish?.price_half !== '' && Number(dish.price_half) > 0;
+  const resolvedInitialPortion = (hasHalfPrice && (initialPortion === 'half' || initialPortion === 'full'))
+    ? initialPortion
+    : (hasHalfPrice ? 'half' : 'full');
+  const [selectedPortion, setSelectedPortion] = useState(resolvedInitialPortion);
+  const [selectedModifiers, setSelectedModifiers] = useState([]);
+  const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    if (!dish) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && onClose) onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [dish, onClose]);
+
   if (!dish) return null;
 
   const symbol = getCurrencySymbol(currencySymbol);
   const isAvailable = isFlagEnabled(dish?.available, true);
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
   const displayDesc = (lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description;
-  const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
-  const resolvedInitialPortion = (hasHalfPrice && (initialPortion === 'half' || initialPortion === 'full'))
-    ? initialPortion
-    : (hasHalfPrice ? 'half' : 'full');
-  const [selectedPortion, setSelectedPortion] = useState(resolvedInitialPortion);
-
   const availableModifiers = modifiersEnabled === false ? [] : getValidDishModifiers(dish?.modifiers);
-  const [selectedModifiers, setSelectedModifiers] = useState([]);
-  const [quantity, setQuantity] = useState(1);
 
   const toggleModifier = (mod) => {
+    triggerHaptic('light');
     if (selectedModifiers.some(m => m.name === mod.name)) {
       setSelectedModifiers(selectedModifiers.filter(m => m.name !== mod.name));
     } else {
@@ -31,8 +47,9 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
   };
 
   const regularBasePrice = (selectedPortion === 'half' && hasHalfPrice) ? Number(dish.price_half) : Number(dish.price);
+  const hasValidFullOffer = dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) < Number(dish.price);
   let basePrice = regularBasePrice;
-  if ((dish.offer_price !== undefined && dish.offer_price !== null) && Number(dish.offer_price) < Number(dish.price) && selectedPortion !== 'half') {
+  if (hasValidFullOffer && selectedPortion !== 'half') {
     basePrice = Number(dish.offer_price);
   }
   const extraModifiersPrice = selectedModifiers.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
@@ -78,19 +95,19 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
         onClick={(e) => e.stopPropagation()}
         style={{
           background: 'var(--theme-modal-bg, #FFFFFF)',
-          borderRadius: addonOnly ? '22px 22px 0 0' : 'var(--radius-lg)',
+          borderRadius: addonOnly ? '22px 22px 0 0' : '20px',
           overflow: 'hidden',
           width: '100%',
           maxWidth: '520px',
           maxHeight: addonOnly ? '82dvh' : '88dvh',
           boxSizing: 'border-box',
-          boxShadow: addonOnly ? '0 -12px 36px rgba(0, 0, 0, 0.28)' : 'var(--shadow-lg)',
-          border: addonOnly ? '1.5px solid var(--theme-modal-border, var(--gold-border))' : '2px solid var(--theme-modal-border, var(--gold-bright))',
+          boxShadow: addonOnly ? '0 -12px 36px rgba(0, 0, 0, 0.28)' : '0 20px 44px rgba(0, 0, 0, 0.3)',
+          border: '1px solid var(--theme-modal-border, var(--border-light, rgba(226, 232, 240, 0.9)))',
           borderBottom: addonOnly ? 'none' : undefined,
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          animation: addonOnly ? 'sheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1)' : 'fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          animation: addonOnly ? 'sheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1)' : 'fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
           color: 'var(--text-dark)'
         }}
       >
@@ -170,8 +187,8 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   color: 'var(--text-dark, #334155)',
                   border: 'none',
                   borderRadius: '50%',
-                  width: '36px',
-                  height: '36px',
+                  width: '32px',
+                  height: '32px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -198,9 +215,9 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 color: '#FFFFFF',
                 border: '1px solid rgba(255,255,255,0.4)',
                 borderRadius: '50%',
-                width: '36px',
-                height: '36px',
-                minHeight: '36px',
+                width: '34px',
+                height: '34px',
+                minHeight: 'unset',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -215,13 +232,13 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             <div style={{
               width: '100%',
               height: 'min(210px, 30vh)',
-              background: 'var(--gold-soft)',
+              background: 'var(--bg-secondary, #F1F5F9)',
               position: 'relative',
               flexShrink: 0
             }}>
               <img
                 src={imageSrc}
-                alt={dish.name}
+                alt={displayName}
                 onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
                 style={{
                   width: '100%',
@@ -229,21 +246,27 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   objectFit: 'cover'
                 }}
               />
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(to top, rgba(0, 0, 0, 0.48) 0%, transparent 55%)',
+                pointerEvents: 'none'
+              }} />
 
-              {/* FSSAI 100% Pure Veg Badge Overlay */}
+              {/* FSSAI Dietary Badge Overlay */}
               <div style={{
                 position: 'absolute',
                 bottom: '10px',
-                left: '10px',
-                background: 'var(--theme-modal-bg, rgba(255, 255, 255, 0.95))',
+                left: '12px',
+                background: 'var(--theme-modal-bg, rgba(255, 255, 255, 0.96))',
                 backdropFilter: 'blur(6px)',
-                border: '1.5px solid var(--veg-green-border)',
+                border: '1px solid var(--border-light, rgba(226, 232, 240, 0.9))',
                 borderRadius: 'var(--radius-pill)',
-                padding: '4px 10px',
+                padding: '3px 10px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.18)'
+                boxShadow: '0 2px 10px rgba(0,0,0,0.18)'
               }}>
                 <span style={{
                   width: '10px',
@@ -261,8 +284,12 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                     backgroundColor: dish.type === 'nonveg' ? '#DC2626' : dish.type === 'egg' ? '#D97706' : 'var(--veg-green)'
                   }} />
                 </span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-                  {dish.type === 'nonveg' ? 'Non-Veg' : dish.type === 'egg' ? 'Contains Egg' : '100% Pure Veg'}
+                <span style={{ fontSize: '0.70rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                  {dish.type === 'nonveg'
+                    ? (lang === 'hi' ? 'नॉन-वेज' : 'Non-Veg')
+                    : dish.type === 'egg'
+                      ? (lang === 'hi' ? 'अंडा' : 'Contains Egg')
+                      : (lang === 'hi' ? 'शुद्ध शाकाहारी' : 'Pure Veg')}
                 </span>
               </div>
             </div>
@@ -334,45 +361,35 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 )}
               </div>
 
-              {/* Dynamic Active Price Tag Pill matching Chaat section */}
+              {/* Clean Bold Price Typography */}
               {activePrice < regularActivePrice ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', flexShrink: 0 }}>
                   <div style={{
-                    fontSize: '1.02rem',
+                    fontSize: '1.18rem',
                     fontWeight: 900,
-                    padding: '2px 10px',
-                    borderRadius: 'var(--radius-pill)',
-                    background: 'var(--theme-badge-bg, var(--bg-card-soft, #ECFDF5))',
-                    color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
-                    border: '1.5px solid var(--theme-card-border, #A7F3D0)',
-                    boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0, 0, 0, 0.08))',
+                    color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
                     whiteSpace: 'nowrap',
-                    lineHeight: 1.2
+                    lineHeight: 1.15
                   }}>
                     {symbol}{formatPriceNumber(activePrice)}
                   </div>
                   <div style={{
-                    fontSize: '0.72rem',
+                    fontSize: '0.74rem',
                     color: '#94A3B8',
                     textDecoration: 'line-through',
                     fontWeight: 600,
-                    marginRight: '4px'
+                    lineHeight: 1.1
                   }}>
                     {symbol}{formatPriceNumber(regularActivePrice)}
                   </div>
                 </div>
               ) : (
                 <div style={{
-                  fontSize: '1rem',
+                  fontSize: '1.18rem',
                   fontWeight: 900,
-                  padding: '3px 12px',
-                  borderRadius: 'var(--radius-pill)',
-                  background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
-                  color: 'var(--text-dark)',
-                  border: '1.5px solid var(--theme-card-border, var(--border-light))',
-                  boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
+                  color: 'var(--theme-price-color, var(--text-dark))',
                   whiteSpace: 'nowrap',
-                  lineHeight: 1.2,
+                  lineHeight: 1.15,
                   flexShrink: 0
                 }}>
                   {symbol}{formatPriceNumber(activePrice)}
@@ -384,27 +401,28 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
           {/* Interactive Half / Full Portion Selector */}
           {hasHalfPrice ? (
             <div style={{
-              background: 'var(--bg-champagne, var(--bg-card-soft))',
-              border: '1.5px solid var(--gold-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '8px 12px',
-              marginBottom: '14px'
+              background: 'var(--bg-secondary, #F8FAFC)',
+              border: '1px solid var(--border-light, #E2E8F0)',
+              borderRadius: '14px',
+              padding: '10px 12px',
+              marginBottom: '12px'
             }}>
-              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--primary-emerald)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                {lang === 'hi' ? 'पोर्शन साइज चुनें:' : 'Select Portion Size:'}
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted, #64748B)', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: '7px' }}>
+                {lang === 'hi' ? 'पोर्शन साइज चुनें:' : 'Select Portion Size'}
               </span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
+                  type="button"
                   className="price-pill-btn"
-                  onClick={() => setSelectedPortion('half')}
+                  onClick={() => { triggerHaptic('light'); setSelectedPortion('half'); }}
                   style={{
                     flex: 1,
-                    padding: '6px 10px',
-                    minHeight: '38px',
+                    padding: '7px 10px',
+                    minHeight: 'unset',
                     borderRadius: 'var(--radius-pill)',
                     fontSize: '0.8rem',
                     fontWeight: 800,
-                    border: selectedPortion === 'half' ? '1.5px solid var(--gold-bright)' : '1px solid var(--border-light, var(--gold-border))',
+                    border: selectedPortion === 'half' ? '1.5px solid var(--primary-emerald)' : '1px solid var(--border-light, #CBD5E1)',
                     background: selectedPortion === 'half' ? 'var(--primary-emerald)' : 'var(--theme-card-bg, #FFFFFF)',
                     color: selectedPortion === 'half' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-dark)',
                     transition: 'var(--transition-fast)'
@@ -414,22 +432,23 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 </button>
 
                 <button
+                  type="button"
                   className="price-pill-btn"
-                  onClick={() => setSelectedPortion('full')}
+                  onClick={() => { triggerHaptic('light'); setSelectedPortion('full'); }}
                   style={{
                     flex: 1,
-                    padding: '6px 10px',
-                    minHeight: '38px',
+                    padding: '7px 10px',
+                    minHeight: 'unset',
                     borderRadius: 'var(--radius-pill)',
                     fontSize: '0.8rem',
                     fontWeight: 800,
-                    border: selectedPortion === 'full' ? '1.5px solid var(--gold-bright)' : '1px solid var(--border-light, var(--gold-border))',
+                    border: selectedPortion === 'full' ? '1.5px solid var(--primary-emerald)' : '1px solid var(--border-light, #CBD5E1)',
                     background: selectedPortion === 'full' ? 'var(--primary-emerald)' : 'var(--theme-card-bg, #FFFFFF)',
                     color: selectedPortion === 'full' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-dark)',
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  {formatFullLabel(dish.portion_full_label)} • {symbol}{formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}
+                  {formatFullLabel(dish.portion_full_label)} • {symbol}{formatPriceNumber(hasValidFullOffer ? dish.offer_price : dish.price)}
                 </button>
               </div>
             </div>
@@ -469,30 +488,31 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
           {/* Interactive Custom Add-on Modifiers & Toppings */}
           {availableModifiers.length > 0 && (
             <div style={{
-              background: addonOnly ? 'var(--bg-secondary, #F8FAFC)' : 'var(--bg-champagne)',
-              border: addonOnly ? '1.5px solid var(--border-light, #E2E8F0)' : '1.5px solid var(--gold-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: addonOnly ? '12px' : '10px 14px',
+              background: 'var(--bg-secondary, #F8FAFC)',
+              border: '1px solid var(--border-light, #E2E8F0)',
+              borderRadius: '14px',
+              padding: addonOnly ? '11px' : '10px 12px',
               marginBottom: addonOnly ? '4px' : '14px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', gap: '8px' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--primary-emerald)', textTransform: 'uppercase' }}>
-                  {lang === 'hi' ? '➕ अतिरिक्त टॉपिंग्स / ऐड-ऑन्स चुनें:' : '➕ Choose Add-ons & Extra Toppings'}
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted, #64748B)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  {lang === 'hi' ? '➕ अतिरिक्त टॉपिंग्स / ऐड-ऑन्स चुनें' : '➕ Add-ons & Extra Toppings'}
                 </span>
                 <span style={{
                   fontSize: '0.66rem',
-                  fontWeight: 750,
+                  fontWeight: 800,
                   padding: '2px 8px',
                   borderRadius: '9999px',
-                  background: selectedModifiers.length > 0 ? '#DCFCE7' : 'var(--theme-badge-bg, #E2E8F0)',
-                  color: selectedModifiers.length > 0 ? '#15803D' : 'var(--theme-badge-text, #475569)'
+                  background: selectedModifiers.length > 0 ? '#DCFCE7' : 'var(--theme-card-bg, #FFFFFF)',
+                  color: selectedModifiers.length > 0 ? '#15803D' : 'var(--text-muted, #64748B)',
+                  border: selectedModifiers.length > 0 ? '1px solid #BBF7D0' : '1px solid var(--border-light, #E2E8F0)'
                 }}>
                   {selectedModifiers.length > 0
                     ? `${selectedModifiers.length} ${lang === 'hi' ? 'चुना' : 'selected'}`
                     : (lang === 'hi' ? 'वैकल्पिक' : 'Optional')}
                 </span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                 {availableModifiers.map((mod, idx) => {
                   const isSelected = selectedModifiers.some(m => m.name === mod.name);
                   return (
@@ -503,10 +523,10 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '9px 12px',
+                        padding: '8px 11px',
                         borderRadius: '10px',
-                        background: isSelected ? 'var(--theme-card-bg, #FFFFFF)' : 'var(--bg-secondary, #F8FAFC)',
-                        border: isSelected ? '1.5px solid var(--primary-emerald, #059669)' : (addonOnly ? '1px solid var(--border-light, #CBD5E1)' : '1px solid var(--gold-border)'),
+                        background: 'var(--theme-card-bg, #FFFFFF)',
+                        border: isSelected ? '1.5px solid var(--primary-emerald, #059669)' : '1px solid var(--border-light, #E2E8F0)',
                         cursor: 'pointer',
                         transition: 'var(--transition-fast)'
                       }}
@@ -536,10 +556,10 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             <>
               {/* Description */}
               <p style={{
-                fontSize: '0.92rem',
-                color: 'var(--text-dark)',
-                lineHeight: 1.6,
-                marginBottom: '20px'
+                fontSize: '0.88rem',
+                color: 'var(--text-muted, #475569)',
+                lineHeight: 1.55,
+                marginBottom: '16px'
               }}>
                 {displayDesc || (lang === 'hi' ? 'ताजा और शुद्ध सामग्री से निर्मित प्रामाणिक व्यंजन।' : 'Prepared fresh using fine quality ingredients & authentic traditional recipes.')}
               </p>
@@ -547,31 +567,31 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
               {/* Ingredients List */}
               {ingredientsList.length > 0 && (
                 <div style={{
-                  background: 'var(--bg-champagne, var(--bg-card-soft))',
-                  border: '1px solid var(--gold-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '14px 16px',
-                  marginBottom: '20px'
+                  background: 'var(--bg-secondary, #F8FAFC)',
+                  border: '1px solid var(--border-light, #E2E8F0)',
+                  borderRadius: '14px',
+                  padding: '12px 14px',
+                  marginBottom: !isAvailable ? '14px' : '4px'
                 }}>
                   <h4 style={{
-                    fontSize: '0.8rem',
+                    fontSize: '0.72rem',
                     fontWeight: 800,
-                    color: 'var(--primary-emerald)',
+                    color: 'var(--text-muted, #64748B)',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.8px',
-                    marginBottom: '8px'
+                    letterSpacing: '0.6px',
+                    margin: '0 0 8px 0'
                   }}>
-                    Key Ingredients & Preparation
+                    {lang === 'hi' ? 'मुख्य सामग्री' : 'Key Ingredients'}
                   </h4>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     {ingredientsList.map((ing, i) => (
                       <span key={i} style={{
-                        fontSize: '0.78rem',
+                        fontSize: '0.76rem',
                         fontWeight: 600,
                         color: 'var(--text-dark)',
                         background: 'var(--theme-card-bg, #FFFFFF)',
-                        border: '1px solid var(--gold-border)',
-                        padding: '4px 10px',
+                        border: '1px solid var(--border-light, #E2E8F0)',
+                        padding: '3px 10px',
                         borderRadius: 'var(--radius-pill)'
                       }}>
                         ✓ {ing}
@@ -581,47 +601,44 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 </div>
               )}
 
-              {/* Availability Footer */}
-              <div style={{
-                background: 'var(--gold-soft)',
-                borderRadius: 'var(--radius-md)',
-                padding: '10px 14px',
-                border: '1px solid var(--gold-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '14px'
-              }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--primary-emerald)', fontWeight: 600 }}>
-                  Availability Status
-                </span>
-                <span style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 800,
-                  color: isAvailable ? 'var(--veg-green)' : '#EF4444'
+              {/* Show subtle unavailable notice only when out of stock */}
+              {!isAvailable && (
+                <div style={{
+                  background: '#FEF2F2',
+                  borderRadius: '12px',
+                  padding: '9px 12px',
+                  border: '1px solid #FECACA',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px'
                 }}>
-                  {isAvailable ? '● Available Fresh Now' : '● Currently Out of Stock'}
-                </span>
-              </div>
+                  <span style={{ fontSize: '0.78rem', color: '#991B1B', fontWeight: 700 }}>
+                    {lang === 'hi' ? 'उपलब्धता' : 'Availability Status'}
+                  </span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 900, color: '#DC2626' }}>
+                    ● {lang === 'hi' ? 'आज अनुपलब्ध' : 'Currently Out of Stock'}
+                  </span>
+                </div>
+              )}
             </>
           )}
 
           {/* Close Scrollable Content Body */}
         </div>
 
-        {/* Sticky Bottom Action Bar (Stepper in Add-on Sheet OR Detail Total + Add Button) */}
+        {/* Sticky Bottom Action Bar (Unified Stepper + Dynamic Add CTA in both Detail & Add-on modes) */}
         <div style={{
-          padding: addonOnly ? '12px 16px calc(14px + env(safe-area-inset-bottom, 0px))' : '12px 16px calc(16px + env(safe-area-inset-bottom, 0px))',
-          borderTop: addonOnly ? '1px solid var(--border-light, #E2E8F0)' : '1.5px solid var(--gold-border)',
+          padding: addonOnly ? '11px 16px calc(13px + env(safe-area-inset-bottom, 0px))' : '11px 16px calc(15px + env(safe-area-inset-bottom, 0px))',
+          borderTop: '1px solid var(--border-light, #E2E8F0)',
           background: 'var(--theme-modal-bg, #FFFFFF)',
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          flexWrap: 'wrap',
           gap: '10px'
         }}>
-          {addonOnly && isAvailable && onAddToCart ? (
+          {isAvailable && onAddToCart && (
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -636,10 +653,10 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 type="button"
                 aria-label="Decrease quantity"
                 disabled={quantity <= 1}
-                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                onClick={() => { triggerHaptic('light'); setQuantity(q => Math.max(1, q - 1)); }}
                 style={{
-                  width: '36px',
-                    height: '36px',
+                  width: '30px',
+                  height: '32px',
                   border: 'none',
                   background: 'transparent',
                   color: quantity <= 1 ? '#94A3B8' : 'var(--text-dark)',
@@ -656,10 +673,10 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
               <button
                 type="button"
                 aria-label="Increase quantity"
-                onClick={() => setQuantity(q => Math.min(20, q + 1))}
+                onClick={() => { triggerHaptic('light'); setQuantity(q => Math.min(20, q + 1)); }}
                 style={{
-                  width: '36px',
-                    height: '36px',
+                  width: '30px',
+                  height: '32px',
                   border: 'none',
                   background: 'transparent',
                   color: 'var(--primary-emerald)',
@@ -671,27 +688,19 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 +
               </button>
             </div>
-          ) : !addonOnly && (
-            <div>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #6B7280)', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>
-                Total (incl. add-ons)
-              </span>
-              <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)' }}>
-                {symbol}{formatPriceNumber(activePrice)}
-              </span>
-            </div>
           )}
 
           {isAvailable && onAddToCart ? (
             <button
               type="button"
-              onClick={() => {
-                onAddToCart(dish, selectedPortion, selectedModifiers, quantity);
+              className="tq-tap"
+              onClick={(e) => {
+                onAddToCart(dish, selectedPortion, selectedModifiers, quantity, e.currentTarget);
                 if (onClose) onClose();
               }}
               style={{
                 flex: 1,
-                padding: '12px 18px',
+                padding: '11px 18px',
                 borderRadius: 'var(--radius-pill)',
                 background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
                 color: 'var(--theme-btn-text, #FFFFFF)',
@@ -699,7 +708,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 fontSize: '0.92rem',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: 'var(--theme-shadow, 0 4px 14px rgba(0, 0, 0, 0.25))',
+                boxShadow: 'var(--theme-shadow, 0 4px 14px rgba(0, 0, 0, 0.22))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -709,9 +718,9 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             >
               <span>➕</span>
               <span>
-                {addonOnly
-                  ? `${lang === 'hi' ? 'कार्ट में जोड़ें' : 'Add Item'} • ${symbol}${formatPriceNumber(totalPrice)}`
-                  : `${lang === 'hi' ? 'ऑर्डर में जोड़ें' : 'Add to Order'} • ${symbol}${formatPriceNumber(activePrice)}`}
+                {lang === 'hi'
+                  ? `कार्ट में जोड़ें • ${symbol}${formatPriceNumber(totalPrice)}`
+                  : `Add Item • ${symbol}${formatPriceNumber(totalPrice)}`}
               </span>
             </button>
           ) : (

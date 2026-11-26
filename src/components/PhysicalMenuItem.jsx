@@ -104,8 +104,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
               style={{
                 fontSize: '0.74rem',
                 fontWeight: 700,
-                padding: '5px 10px',
-                minHeight: '36px',
+                padding: '3px 9px',
                 borderRadius: 'var(--radius-pill)',
                 background: selectedPortion === 'half' ? 'var(--primary-emerald)' : 'transparent',
                 color: selectedPortion === 'half' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--primary-emerald)'
@@ -122,8 +121,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
               style={{
                 fontSize: '0.74rem',
                 fontWeight: 700,
-                padding: '5px 10px',
-                minHeight: '36px',
+                padding: '3px 9px',
                 borderRadius: 'var(--radius-pill)',
                 background: selectedPortion === 'full' ? 'var(--primary-emerald)' : 'transparent',
                 color: selectedPortion === 'full' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--primary-emerald)'

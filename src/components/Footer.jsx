@@ -7,7 +7,7 @@ export default function Footer({ info, onOpenAdmin, onOpenReviewModal }) {
       background: 'var(--footer-gradient, linear-gradient(180deg, #05140B 0%, #0A2315 100%))',
       color: '#FFFFFF',
       marginTop: '40px',
-      padding: '40px 20px calc(136px + env(safe-area-inset-bottom, 0px))',
+      padding: '40px 20px calc(105px + env(safe-area-inset-bottom, 0px))',
       borderTop: '3px solid var(--gold-bright)'
     }}>
       <div style={{
@@ -82,8 +82,7 @@ export default function Footer({ info, onOpenAdmin, onOpenReviewModal }) {
               background: 'var(--gold-gradient, linear-gradient(135deg, #FFD700 0%, #FFA500 100%))',
               color: 'var(--dock-btn-text, #0A2315)',
               border: 'none',
-              padding: '9px 18px',
-              minHeight: '38px',
+              padding: '8px 18px',
               borderRadius: 'var(--radius-pill)',
               fontSize: '0.82rem',
               fontWeight: 800,

@@ -1,15 +1,31 @@
 import React from 'react';
 import { BookOpen, Info, Lock } from 'lucide-react';
+import { triggerHaptic } from '../utils/haptics';
 
 export default function BottomDock({ categoriesCount, lang, onOpenCategories, onOpenInfo, onOpenAdmin }) {
+  const sideBtnStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '2px',
+    background: 'transparent',
+    border: 'none',
+    padding: '4px 6px',
+    cursor: 'pointer',
+    fontSize: '0.70rem',
+    flex: 1,
+    minWidth: 0
+  };
+
   return (
     <div style={{
       position: 'fixed',
-      bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
+      bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 2000,
-      width: 'calc(100% - 32px)',
+      width: 'calc(100% - 28px)',
       maxWidth: '440px'
     }}>
       <div style={{
@@ -17,79 +33,79 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         borderRadius: 'var(--radius-pill)',
-        border: '1.5px solid var(--border-light, rgba(212, 175, 55, 0.5))',
-        boxShadow: 'var(--theme-shadow, 0 12px 36px rgba(10, 35, 21, 0.45))',
-        padding: '6px 12px',
+        border: '1px solid var(--border-light, rgba(212, 175, 55, 0.45))',
+        boxShadow: 'var(--theme-shadow, 0 10px 28px rgba(10, 35, 21, 0.36))',
+        padding: '5px 12px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
-        gap: '6px'
+        gap: '6px',
+        animation: 'tqSlideUpFade 0.34s cubic-bezier(0.16, 1, 0.3, 1)'
       }}>
         {/* Restaurant Info */}
         <button
-          onClick={onOpenInfo}
+          type="button"
+          className="tq-tap"
+          onClick={() => {
+            triggerHaptic('light');
+            if (onOpenInfo) onOpenInfo();
+          }}
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '2px',
+            ...sideBtnStyle,
             color: '#FFFFFF',
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            flex: 1,
-            minHeight: '42px',
-            minWidth: 0
+            fontWeight: 700
           }}
         >
-          <Info size={18} color="var(--gold-bright, #D4AF37)" />
-          Info
+          <Info size={17} color="var(--gold-bright, #D4AF37)" />
+          <span>{lang === 'hi' ? 'जानकारी' : 'Info'}</span>
         </button>
 
-        {/* Zomato-Style Floating Menu Pill Button (Center Highlight) */}
+        {/* Floating Menu Pill Button (Center Highlight — Glossy Sheen + Tap Spring) */}
         <button
-          onClick={onOpenCategories}
-          className="btn-pulse"
+          type="button"
+          className="tq-tap tq-menu-pill"
+          onClick={() => {
+            triggerHaptic('medium');
+            if (onOpenCategories) onOpenCategories();
+          }}
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
             background: 'var(--gold-gradient, linear-gradient(135deg, #DFBA67 0%, #C5A059 50%, #9B7733 100%))',
             color: 'var(--dock-btn-text, var(--primary-emerald, #0A2315))',
-            fontSize: '0.82rem',
+            fontSize: '0.80rem',
             fontWeight: 900,
-            padding: '9px 18px',
-            minHeight: '42px',
+            padding: '7px 18px',
+            border: 'none',
             borderRadius: 'var(--radius-pill)',
-            boxShadow: '0 4px 20px rgba(0,0,0, 0.3)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.28)',
             letterSpacing: '0.5px',
+            cursor: 'pointer',
             flexShrink: 0,
             whiteSpace: 'nowrap'
           }}
         >
-          <BookOpen size={17} color="currentColor" />
-          {lang === 'hi' ? '📖 मेनु' : '📖 MENU'}
+          <BookOpen size={15} color="currentColor" />
+          <span>{lang === 'hi' ? 'मेनू' : 'MENU'}</span>
         </button>
 
         {/* Admin Portal */}
         <button
-          onClick={onOpenAdmin}
+          type="button"
+          className="tq-tap"
+          onClick={() => {
+            triggerHaptic('light');
+            if (onOpenAdmin) onOpenAdmin();
+          }}
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '2px',
-            color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: '0.72rem',
-            fontWeight: 600,
-            flex: 1,
-            minHeight: '42px',
-            minWidth: 0
+            ...sideBtnStyle,
+            color: 'rgba(255, 255, 255, 0.72)',
+            fontWeight: 600
           }}
         >
-          <Lock size={18} color="rgba(255, 255, 255, 0.7)" />
-          Admin
+          <Lock size={16} color="rgba(255, 255, 255, 0.72)" />
+          <span>{lang === 'hi' ? 'एडमिन' : 'Admin'}</span>
         </button>
       </div>
     </div>

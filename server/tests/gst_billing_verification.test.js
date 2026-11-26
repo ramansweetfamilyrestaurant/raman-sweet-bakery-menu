@@ -16,10 +16,11 @@ import test from 'node:test';
 import assert from 'node:assert';
 import jwt from 'jsonwebtoken';
 import http from 'http';
+import crypto from 'crypto';
 import express from 'express';
 import { JWT_SECRET } from '../config/jwt.js';
 import { query, initDb } from '../db.js';
-import { calculateOrderTax } from '../routes/api.js';
+import apiRouter, { calculateOrderTax } from '../routes/api.js';
 import { calculateBillDetails } from '../../src/utils/billingHelper.js';
 import adminRouter from '../routes/admin.js';
 
@@ -76,6 +77,7 @@ test('🛡️ TouchQR GST Billing & Invoicing Verification Suite', async (t) => 
     const app = express();
     app.use(express.json());
     app.use('/api/admin', adminRouter);
+    app.use('/api', apiRouter);
 
     const server = http.createServer(app);
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -140,6 +142,56 @@ test('🛡️ TouchQR GST Billing & Invoicing Verification Suite', async (t) => 
       assert.strictEqual(Number(posBody.order.sgst_amount), 2.5);
       assert.strictEqual(Number(posBody.order.tax_amount), 5.0);
       assert.strictEqual(Number(posBody.order.total_amount), 105);
+
+      // Step C: Verify /api/orders/track/:id returns consolidated multi-round bill_summary when settled
+      const rawTrackingToken = 'track-secret-post-bill-test';
+      const trackingHash = crypto.createHash('sha256').update(rawTrackingToken).digest('hex');
+      const sessId = `sess_${restoId}_T4_test`;
+      const nowIso = new Date().toISOString();
+
+      const r1Insert = await query(`
+        INSERT INTO orders (
+          restaurant_id, table_number, customer_name, items, total_amount, subtotal_amount,
+          cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, status,
+          session_id, round_number, is_settled, payment_method, tracking_token_hash, created_at, terminal_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        RETURNING id
+      `, [
+        restoId, '4', 'Rahul',
+        JSON.stringify([{ name: 'Paneer Tikka', price: 200, quantity: 1 }]),
+        210, 200, 5, 5, 10, 210, 5, 'served',
+        sessId, 1, 1, 'upi', trackingHash, nowIso, nowIso
+      ]);
+      const r1Id = (r1Insert.rows || r1Insert)[0].id;
+
+      await query(`
+        INSERT INTO orders (
+          restaurant_id, table_number, customer_name, items, total_amount, subtotal_amount,
+          cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, status,
+          session_id, round_number, parent_order_id, is_settled, payment_method, created_at, terminal_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+      `, [
+        restoId, '4', 'Rahul',
+        JSON.stringify([{ name: 'Butter Naan', price: 100, quantity: 2 }]),
+        210, 200, 5, 5, 10, 210, 5, 'completed',
+        sessId, 2, r1Id, 1, 'upi', nowIso, nowIso
+      ]);
+
+      const trackRes = await fetch(`${baseUrl}/api/orders/track/${r1Id}?slug=gst-test-resto`, {
+        headers: { 'X-Order-Tracking-Token': rawTrackingToken }
+      });
+      assert.strictEqual(trackRes.status, 200, 'Customer tracking endpoint must return 200 for settled bill');
+      const trackBody = await trackRes.json();
+      assert.strictEqual(trackBody.tracking_token_hash, undefined, 'tracking_token_hash must be scrubbed');
+      assert.strictEqual(trackBody.is_settled, 1, 'is_settled must be returned as 1');
+      assert.strictEqual(trackBody.payment_method, 'upi', 'payment_method must be returned');
+      assert.ok(trackBody.bill_summary, 'bill_summary must be included for settled bill');
+      assert.strictEqual(trackBody.bill_summary.round_count, 2, 'bill_summary must merge both rounds');
+      assert.strictEqual(trackBody.bill_summary.subtotal_amount, 400, 'consolidated subtotal must be 400');
+      assert.strictEqual(trackBody.bill_summary.cgst_amount, 10, 'consolidated cgst must be 10');
+      assert.strictEqual(trackBody.bill_summary.sgst_amount, 10, 'consolidated sgst must be 10');
+      assert.strictEqual(trackBody.bill_summary.grand_total_amount, 420, 'consolidated grand total must be 420');
+      assert.strictEqual(trackBody.bill_summary.gstin_number, '10ABCDE1234F1Z5', 'gstin_number must propagate');
 
     } finally {
       server.close();

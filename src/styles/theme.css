@@ -513,8 +513,8 @@ button {
   touch-action: manipulation;
 }
 
-/* Prevent iOS/iPadOS Safari unwanted auto-zoom on inputs while keeping text legible */
-@media (max-width: 1024px) {
+/* Prevent iOS Safari unwanted auto-zoom on inputs while keeping text legible */
+@media (max-width: 768px) {
 
   input,
   select,
@@ -713,7 +713,7 @@ img {
   select,
   textarea,
   .btn-form-submit {
-    min-height: 44px;
+    min-height: 40px;
     touch-action: manipulation;
   }
 
@@ -830,3 +830,165 @@ img {
     gap: 16px !important;
   }
 }
+
+/* Smooth GPU-accelerated Shimmer Skeleton Loader */
+@keyframes tqSkeletonSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.tq-skeleton,
+.tq-skeleton-dark {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.tq-skeleton {
+  background-color: rgba(148, 163, 184, 0.22);
+}
+
+.tq-skeleton-dark {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.tq-skeleton::after,
+.tq-skeleton-dark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  animation: tqSkeletonSweep 1.35s ease-in-out infinite;
+}
+
+.tq-skeleton::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+}
+
+.tq-skeleton-dark::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.22) 50%, transparent 100%);
+}
+
+/* Hide horizontal scrollbars cleanly across Safari/Chrome/Android WebView */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Customer UI Micro-Animations (GPU-accelerated, zero layout-shift) */
+@keyframes tqPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes tqCardIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tqSlideUpFade {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tq-tap {
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.14s ease !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tq-tap:active {
+  transform: scale(0.94) !important;
+}
+
+.tq-qty-pop {
+  display: inline-block;
+  animation: tqPopIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Floating MENU Pill Sheen + Category/Filter Pill Micro-Animation */
+@keyframes tqPillSheen {
+  0%, 62% {
+    transform: translateX(-140%) skewX(-18deg);
+  }
+
+  100% {
+    transform: translateX(240%) skewX(-18deg);
+  }
+}
+
+.tq-menu-pill {
+  position: relative;
+  overflow: hidden;
+}
+
+.tq-menu-pill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.36) 50%, transparent 100%);
+  transform: translateX(-140%) skewX(-18deg);
+  animation: tqPillSheen 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+.tq-pill-smooth {
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tq-pill-smooth:active {
+  transform: scale(0.94) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tq-skeleton::after,
+  .tq-skeleton-dark::after,
+  .tq-menu-pill::after,
+  .tq-qty-pop,
+  .tq-tap,
+  .tq-pill-smooth {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+

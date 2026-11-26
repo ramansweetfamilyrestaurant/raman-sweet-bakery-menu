@@ -46,20 +46,20 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
       color: '#FFFFFF',
-      padding: 'max(12px, env(safe-area-inset-top, 0px)) 14px 14px',
-      borderBottom: '1.5px solid var(--border-light, rgba(212, 175, 55, 0.4))',
+      padding: 'max(9px, env(safe-area-inset-top, 0px)) 14px 10px',
+      borderBottom: '1px solid var(--border-light, rgba(212, 175, 55, 0.35))',
       position: 'relative',
       zIndex: 100,
-      boxShadow: '0 8px 24px rgba(0,0,0,0.18)'
+      boxShadow: '0 4px 16px rgba(0,0,0,0.14)'
     }}>
       {/* Top Mobile Bar: Language Pill + Table Indicator + Call Staff + Google Review Button */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '10px',
+        marginBottom: '7px',
         flexWrap: 'wrap',
-        gap: '6px'
+        gap: '5px'
       }}>
         {/* Language Switcher (Gated by Plan matrix: multi_language_enabled) */}
         {(info?.multi_language_enabled !== false && info?.multi_language_enabled !== 0) ? (
@@ -71,8 +71,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
               color: '#FFFFFF',
               background: 'rgba(255, 255, 255, 0.14)',
               border: '1px solid var(--border-light, rgba(212, 175, 55, 0.5))',
-              padding: '5px 10px',
-              minHeight: '36px',
+              padding: '3px 9px',
               borderRadius: 'var(--radius-pill)',
               display: 'inline-flex',
               alignItems: 'center',
@@ -96,8 +95,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                 color: 'var(--dock-btn-text, #0A2315)',
                 background: 'var(--gold-gradient, linear-gradient(135deg, var(--gold-bright, #FFD700) 0%, var(--gold-primary, #DFBA67) 100%))',
                 border: '1px solid var(--border-light, rgba(255, 255, 255, 0.5))',
-                padding: '5px 10px',
-                minHeight: '36px',
+                padding: '3px 9px',
                 borderRadius: 'var(--radius-pill)',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -122,8 +120,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                   color: '#4ADE80',
                   background: 'rgba(34, 197, 94, 0.18)',
                   border: '1px solid rgba(34, 197, 94, 0.4)',
-                  padding: '5px 10px',
-                  minHeight: '36px',
+                  padding: '3px 9px',
                   borderRadius: 'var(--radius-pill)',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -148,8 +145,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                     color: '#FFFFFF',
                     background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
                     border: '1px solid #C4B5FD',
-                    padding: '5px 10px',
-                    minHeight: '36px',
+                    padding: '3px 9px',
                     borderRadius: 'var(--radius-pill)',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -169,8 +165,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
               color: '#E2E8F0',
               background: 'rgba(255, 255, 255, 0.12)',
               border: '1px solid rgba(255, 255, 255, 0.25)',
-              padding: '5px 10px',
-              minHeight: '36px',
+              padding: '3px 9px',
               borderRadius: 'var(--radius-pill)',
               display: 'inline-flex',
               alignItems: 'center',
@@ -192,8 +187,8 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
       }}>
         {/* Logo Avatar */}
         <div style={{
-          width: '44px',
-          height: '44px',
+          width: '40px',
+          height: '40px',
           borderRadius: '50%',
           border: '2px solid var(--gold-bright, #D4AF37)',
           padding: '1px',
@@ -246,8 +241,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                 fontWeight: 600,
                 color: '#FEFCE8',
                 textDecoration: 'underline',
-                padding: '6px 4px',
-                minHeight: '36px',
+                padding: '2px 0',
                 flexShrink: 0
               }}
             >

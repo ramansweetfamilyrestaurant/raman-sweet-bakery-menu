@@ -148,7 +148,7 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
               border: '1.5px solid var(--theme-card-border, #CBD5E1)',
               background: 'var(--theme-card-bg, #FFFFFF)',
               color: 'var(--text-dark, #0F172A)',
-              fontSize: '1rem',
+              fontSize: '0.85rem',
               outline: 'none'
             }}
           />
@@ -160,7 +160,6 @@ export default function ServiceRequestModal({ tableNum, slug, onClose, onSuccess
           disabled={submitting}
           style={{
             width: '100%',
-            minHeight: '46px',
             background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
             color: 'var(--theme-btn-text, #FFFFFF)',
             padding: '13px',

@@ -430,9 +430,8 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                     style={{
                       background: 'none',
                       border: 'none',
-                      padding: '6px 4px',
-                      minHeight: '36px',
-                      fontSize: '0.72rem',
+                      padding: 0,
+                      fontSize: '0.70rem',
                       fontWeight: 700,
                       color: '#2563EB',
                       cursor: 'pointer',
@@ -460,10 +459,9 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                         background: isSelected ? '#0F172A' : '#F8FAFC',
                         color: isSelected ? '#FFFFFF' : '#334155',
                         border: isSelected ? '1px solid #0F172A' : '1px solid #E2E8F0',
-                        padding: '6px 11px',
-                        minHeight: '36px',
+                        padding: '4px 9px',
                         borderRadius: '20px',
-                        fontSize: '0.72rem',
+                        fontSize: '0.70rem',
                         fontWeight: 700,
                         cursor: 'pointer',
                         display: 'inline-flex',
@@ -497,7 +495,7 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                   border: '1px solid #CBD5E1',
                   background: '#FFFFFF',
                   color: '#0F172A',
-                  fontSize: '1rem',
+                  fontSize: '0.76rem',
                   outline: 'none',
                   boxSizing: 'border-box'
                 }}
@@ -562,7 +560,7 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                 border: 'none',
                 background: 'transparent',
                 resize: 'none',
-                fontSize: '1rem',
+                fontSize: '0.80rem',
                 lineHeight: 1.45,
                 color: '#1E293B',
                 fontWeight: 500,
@@ -610,8 +608,7 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                   fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  padding: '8px 4px',
-                  minHeight: '36px',
+                  padding: '4px 0',
                   textDecoration: 'underline'
                 }}
               >

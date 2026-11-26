@@ -2,8 +2,11 @@ import React from 'react';
 import { Flame } from 'lucide-react';
 import { getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
+import { getValidDishModifiers } from '../utils/billingHelper';
+import { isFlagEnabled } from '../utils/customerHelpers';
+import { triggerHaptic } from '../utils/haptics';
 
-export default function BestsellersCarousel({ dishes = [], onSelectDish, currencySymbol = '₹', lang = 'en' }) {
+export default function BestsellersCarousel({ dishes = [], onSelectDish, onAddToCart, onUpdateCartQuantity, cartItems = [], modifiersEnabled = true, currencySymbol = '₹', lang = 'en' }) {
   const symbol = getCurrencySymbol(currencySymbol);
   const bestsellers = dishes.filter(d => d.must_try || d.bestseller || d.is_must_try || d.is_bestseller).slice(0, 10);
 
@@ -134,18 +137,18 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                   gap: '6px',
                   marginTop: '8px'
                 }}>
-                  {dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? (
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                  {dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) < Number(dish.price) ? (
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
                       <span style={{
                         fontFamily: 'var(--font-heading)',
-                        fontSize: '1.1rem',
-                        fontWeight: 800,
-                        color: 'var(--primary-emerald)'
+                        fontSize: '0.96rem',
+                        fontWeight: 900,
+                        color: 'var(--theme-price-color, var(--primary-emerald, #059669))'
                       }}>
                         {symbol}{formatPriceNumber(dish.offer_price)}
                       </span>
                       <span style={{
-                        fontSize: '0.74rem',
+                        fontSize: '0.72rem',
                         color: '#94A3B8',
                         textDecoration: 'line-through',
                         fontWeight: 600
@@ -156,14 +159,81 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                   ) : (
                     <span style={{
                       fontFamily: 'var(--font-heading)',
-                      fontSize: '1.1rem',
-                      fontWeight: 800,
-                      color: 'var(--primary-emerald)'
+                      fontSize: '0.96rem',
+                      fontWeight: 900,
+                      color: 'var(--theme-price-color, var(--text-dark, var(--primary-emerald)))'
                     }}>
                       {symbol}{formatPriceNumber(dish.price)}
                     </span>
                   )}
-                  {(dish.offer_badge || dish.offer?.offer_badge) && (
+                  {onAddToCart && isFlagEnabled(dish.available, true) ? (() => {
+                    const hasHalf = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
+                    const hasMods = modifiersEnabled !== false && getValidDishModifiers(dish?.modifiers).length > 0;
+                    const simpleMatch = (!hasHalf && !hasMods && Array.isArray(cartItems))
+                      ? cartItems.find(i => !i.isCombo && String(i.dish?.id) === String(dish.id) && (!i.modifiers || i.modifiers.length === 0) && String(i.portion_type || 'full') === 'full')
+                      : null;
+                    const qty = simpleMatch ? simpleMatch.quantity : 0;
+
+                    if (qty > 0 && onUpdateCartQuantity) {
+                      return (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            background: 'var(--theme-card-bg, #FFFFFF)',
+                            border: '1.5px solid var(--primary-emerald, #10B981)',
+                            borderRadius: 'var(--radius-pill)',
+                            padding: '2px 3px'
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => { triggerHaptic('light'); onUpdateCartQuantity(simpleMatch.key || simpleMatch.dish?.id, -1); }}
+                            aria-label="Decrease quantity"
+                            style={{ background: 'var(--bg-secondary, #F1F5F9)', color: 'var(--text-dark, #0F172A)', border: 'none', width: '20px', height: '20px', padding: 0, borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                          >−</button>
+                          <span style={{ minWidth: '14px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 900, color: 'var(--theme-price-color, var(--primary-emerald, #10B981))' }}>{qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => { triggerHaptic('medium'); onUpdateCartQuantity(simpleMatch.key || simpleMatch.dish?.id, 1); }}
+                            aria-label="Increase quantity"
+                            style={{ background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))', color: 'var(--theme-btn-text, #FFFFFF)', border: 'none', width: '20px', height: '20px', padding: 0, borderRadius: '50%', fontWeight: 900, cursor: 'pointer', fontSize: '0.78rem', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                          >+</button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        type="button"
+                        className="tq-tap"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          triggerHaptic('medium');
+                          if ((hasHalf || hasMods) && onSelectDish) {
+                            onSelectDish(dish, null, 'addon');
+                          } else {
+                            onAddToCart(dish, 'full', [], 1, e.currentTarget);
+                          }
+                        }}
+                        style={{
+                          background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
+                          color: 'var(--theme-btn-text, #FFFFFF)',
+                          border: 'none',
+                          padding: '4px 10px',
+                          whiteSpace: 'nowrap',
+                          borderRadius: 'var(--radius-pill)',
+                          fontSize: '0.7rem',
+                          fontWeight: 900,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        + Add
+                      </button>
+                    );
+                  })() : (dish.offer_badge || dish.offer?.offer_badge) && (
                     <span style={{
                       fontSize: '0.60rem',
                       fontWeight: 800,
