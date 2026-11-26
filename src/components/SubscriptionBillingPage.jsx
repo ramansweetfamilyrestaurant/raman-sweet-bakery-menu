@@ -382,14 +382,16 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
+      boxSizing: 'border-box',
+      overflowX: 'hidden',
       background: 'radial-gradient(circle at top right, #0A2315 0%, #05140B 60%, #020904 100%)',
       color: '#FFFFFF',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px 16px',
+      padding: '20px 14px calc(28px + env(safe-area-inset-bottom, 0px))',
       fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif"
     }}>
       {/* Top Header Bar */}
@@ -399,8 +401,11 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '8px',
         marginBottom: '16px',
-        padding: '0 4px'
+        padding: '0 4px',
+        boxSizing: 'border-box'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {(logoUrl || activeResto?.logo) && !logoErr ? (
@@ -425,6 +430,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             border: '1px solid rgba(255,255,255,0.15)',
             color: '#94A3B8',
             padding: '6px 12px',
+            minHeight: '36px',
             borderRadius: '20px',
             fontSize: '0.78rem',
             fontWeight: 700,
@@ -442,6 +448,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
       <div style={{
         maxWidth: '520px',
         width: '100%',
+        boxSizing: 'border-box',
         background: 'rgba(13, 31, 21, 0.92)',
         backdropFilter: 'blur(24px)',
         borderRadius: '24px',
@@ -525,7 +532,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           </label>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(95px, 100%), 1fr))',
             gap: '8px',
             background: 'rgba(0,0,0,0.4)',
             padding: '4px',
@@ -579,7 +586,7 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
           textAlign: 'left',
           boxShadow: '0 8px 20px rgba(0,0,0,0.4)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
             <div>
               <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#86EFAC', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 SELECTED PLAN
@@ -636,22 +643,22 @@ export default function SubscriptionBillingPage({ restoInfo, token, onProceedToD
             gap: '8px',
             fontSize: '0.82rem'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', color: '#94A3B8' }}>
               <span>Monthly Subscription Rate:</span>
               <span style={{ color: '#E2E8F0', fontWeight: 700 }}>₹{monthlyPrice}/month</span>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#86EFAC', fontWeight: 800 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', color: '#86EFAC', fontWeight: 800 }}>
               <span>Charge Today:</span>
               <span>₹0 (FREE TODAY)</span>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94A3B8' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', color: '#94A3B8' }}>
               <span>Free Trial Period:</span>
               <span style={{ color: '#86EFAC', fontWeight: 800 }}>{calcDays} Days (Until {formatDate(trialEnd)})</span>
             </div>
 
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', alignItems: 'center' }}>
               <span style={{ color: '#F1F5F9', fontWeight: 800 }}>Monthly Charge After Trial:</span>
               <span style={{ fontSize: '1.12rem', fontWeight: 900, color: '#FFD700' }}>
                 ₹{monthlyPrice}/month

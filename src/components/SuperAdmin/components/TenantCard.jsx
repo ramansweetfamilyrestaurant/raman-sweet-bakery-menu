@@ -10,13 +10,15 @@ export default function TenantCard({ resto, onOpen360, onEdit, onDelete, onImper
   const planInfo = formatTenantPlanDisplay(resto);
 
   return (
-    <div className="sa-stat-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>{resto.name}</h3>
-          <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)' }}>/{resto.slug || resto.subdomain}</span>
+    <div className="sa-stat-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0, flex: '1 1 160px' }}>
+          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{resto.name}</h3>
+          <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', overflowWrap: 'anywhere' }}>/{resto.slug || resto.subdomain}</span>
         </div>
-        <StatusBadge status={resto.subscription_status} type={resto.subscription_type} active={resto.active} />
+        <div style={{ flexShrink: 0 }}>
+          <StatusBadge status={resto.subscription_status} type={resto.subscription_type} active={resto.active} />
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -45,10 +47,10 @@ export default function TenantCard({ resto, onOpen360, onEdit, onDelete, onImper
             ({planInfo.secondaryLabel.replace(' (', ' • ').replace(')', '')})
           </span>
         </div>
-        <div><strong>Owner:</strong> {resto.owner_email || resto.email || resto.phone || 'N/A'}</div>
+        <div style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}><strong>Owner:</strong> {resto.owner_email || resto.email || resto.phone || 'N/A'}</div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--sa-border)', paddingTop: '12px', marginTop: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderTop: '1px solid var(--sa-border)', paddingTop: '12px', marginTop: 'auto' }}>
         <button
           type="button"
           onClick={() => onOpen360(resto)}

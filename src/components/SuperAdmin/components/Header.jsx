@@ -137,8 +137,8 @@ export default function Header({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '36px',
-              height: '36px',
+              width: '40px',
+              height: '40px',
               borderRadius: '50%',
               border: isNotifOpen ? '1.5px solid #D4AF37' : '1px solid var(--sa-border, #E2E8F0)',
               background: isNotifOpen ? 'rgba(212, 175, 55, 0.14)' : 'var(--sa-surface-subtle, #F8FAFC)',
@@ -231,12 +231,13 @@ export default function Header({
                   <button
                     type="button"
                     onClick={() => setIsNotifOpen(false)}
+                    aria-label="Close alerts"
                     style={{
                       background: 'rgba(255,255,255,0.18)',
                       border: 'none',
                       borderRadius: '50%',
-                      width: '30px',
-                      height: '30px',
+                      width: '36px',
+                      height: '36px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -246,7 +247,7 @@ export default function Header({
                     }}
                     title="Close alerts"
                   >
-                    <X size={15} />
+                    <X size={16} />
                   </button>
                 </div>
 
@@ -315,7 +316,7 @@ export default function Header({
                               <MessageSquare size={17} />
                             </div>
                             <div style={{ minWidth: 0 }}>
-                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#991B1B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#991B1B', overflowWrap: 'break-word' }}>
                                 {alerts.tickets} Support {alerts.tickets === 1 ? 'Ticket' : 'Tickets'}
                               </div>
                               <div style={{ fontSize: '0.70rem', color: '#B91C1C' }}>
@@ -362,7 +363,7 @@ export default function Header({
                               <CreditCard size={17} />
                             </div>
                             <div style={{ minWidth: 0 }}>
-                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#92400E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#92400E', overflowWrap: 'break-word' }}>
                                 {alerts.failed} Payment {alerts.failed === 1 ? 'Failure' : 'Failures'}
                               </div>
                               <div style={{ fontSize: '0.70rem', color: '#B45309' }}>
@@ -409,7 +410,7 @@ export default function Header({
                               <Calendar size={17} />
                             </div>
                             <div style={{ minWidth: 0 }}>
-                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1E40AF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1E40AF', overflowWrap: 'break-word' }}>
                                 {alerts.expiring} Expiring in 7 Days
                               </div>
                               <div style={{ fontSize: '0.70rem', color: '#3B82F6' }}>
@@ -456,7 +457,7 @@ export default function Header({
                               <UserCheck size={17} />
                             </div>
                             <div style={{ minWidth: 0 }}>
-                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#166534', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#166534', overflowWrap: 'break-word' }}>
                                 {alerts.pending} Pending / Suspended
                               </div>
                               <div style={{ fontSize: '0.70rem', color: '#15803D' }}>

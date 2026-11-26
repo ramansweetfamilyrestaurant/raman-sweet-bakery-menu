@@ -19,12 +19,13 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title, messag
       <div className="sa-modal" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onClose}
-          style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)' }}
+          aria-label="Close modal"
+          style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', minWidth: '38px', minHeight: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <X size={18} />
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px', paddingRight: '36px' }}>
           <div style={{
             width: '40px', height: '40px', borderRadius: '12px',
             background: danger ? 'var(--sa-danger-bg)' : 'var(--sa-warning-bg)',
@@ -33,18 +34,18 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title, messag
           }}>
             <AlertTriangle size={22} />
           </div>
-          <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>
+          <div style={{ minWidth: 0 }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0, overflowWrap: 'break-word' }}>
               {title}
             </h3>
           </div>
         </div>
 
-        <p style={{ fontSize: '0.85rem', color: 'var(--sa-text-muted)', margin: '0 0 20px 0', lineHeight: 1.4 }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--sa-text-muted)', margin: '0 0 20px 0', lineHeight: 1.4, overflowWrap: 'break-word' }}>
           {message}
         </p>
 
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button onClick={onClose} className="sa-btn sa-btn-secondary" disabled={loading}>
             Cancel
           </button>

@@ -14,7 +14,7 @@ export default function SearchBar({
   ariaLabel = 'Search'
 }) {
   return (
-    <div style={{ position: 'relative', width, ...style }} className={className}>
+    <div style={{ position: 'relative', width, maxWidth: '100%', minWidth: 0, ...style }} className={className}>
       <Search
         size={15}
         style={{
@@ -59,16 +59,16 @@ export default function SearchBar({
           aria-label="Clear search"
           style={{
             position: 'absolute',
-            right: '11px',
+            width: '36px',
+            height: '36px',
+            right: '4px',
             top: '50%',
             transform: 'translateY(-50%)',
             background: 'rgba(0,0,0,0.06)',
             border: 'none',
-            cursor: 'pointer',
-            color: 'var(--sa-text-muted, #64748B)',
             borderRadius: '50%',
-            width: '22px',
-            height: '22px',
+            color: 'var(--sa-text-muted, #64748B)',
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

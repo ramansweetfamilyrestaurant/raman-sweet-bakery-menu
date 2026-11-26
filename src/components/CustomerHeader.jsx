@@ -46,11 +46,10 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
       color: '#FFFFFF',
-      padding: '12px 14px 14px',
+      padding: 'max(12px, env(safe-area-inset-top, 0px)) 14px 14px',
       borderBottom: '1.5px solid var(--border-light, rgba(212, 175, 55, 0.4))',
-      position: 'sticky',
-      top: 0,
-      zIndex: 1000,
+      position: 'relative',
+      zIndex: 100,
       boxShadow: '0 8px 24px rgba(0,0,0,0.18)'
     }}>
       {/* Top Mobile Bar: Language Pill + Table Indicator + Call Staff + Google Review Button */}
@@ -72,11 +71,13 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
               color: '#FFFFFF',
               background: 'rgba(255, 255, 255, 0.14)',
               border: '1px solid var(--border-light, rgba(212, 175, 55, 0.5))',
-              padding: '3px 8px',
+              padding: '5px 10px',
+              minHeight: '36px',
               borderRadius: 'var(--radius-pill)',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '4px',
+              flexShrink: 0
             }}
           >
             <Globe size={12} color="var(--gold-bright, #D4AF37)" />
@@ -85,7 +86,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
         ) : <div />}
 
         {/* Right Action Group: Rate Us + Table Indicator + Call Staff */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '6px', maxWidth: '100%', minWidth: 0 }}>
           {onOpenReviewModal && Boolean(info?.google_reviews_enabled) && (
             <button
               onClick={onOpenReviewModal}
@@ -95,13 +96,15 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                 color: 'var(--dock-btn-text, #0A2315)',
                 background: 'var(--gold-gradient, linear-gradient(135deg, var(--gold-bright, #FFD700) 0%, var(--gold-primary, #DFBA67) 100%))',
                 border: '1px solid var(--border-light, rgba(255, 255, 255, 0.5))',
-                padding: '3px 8px',
+                padding: '5px 10px',
+                minHeight: '36px',
                 borderRadius: 'var(--radius-pill)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '3px',
                 boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                flexShrink: 0
               }}
               title="Rate & Review on Google"
             >
@@ -119,15 +122,21 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                   color: '#4ADE80',
                   background: 'rgba(34, 197, 94, 0.18)',
                   border: '1px solid rgba(34, 197, 94, 0.4)',
-                  padding: '3px 8px',
+                  padding: '5px 10px',
+                  minHeight: '36px',
                   borderRadius: 'var(--radius-pill)',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '4px',
+                  maxWidth: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  boxSizing: 'border-box'
                 }}
               >
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4ADE80' }} />
-                {getDisplayBadge()}
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4ADE80', flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{getDisplayBadge()}</span>
               </span>
 
               {onCallStaff && !(info?.business_type === 'cinema_theatre' || info?.service_model === 'cinema' || info?.service_model === 'seat_service' || String(info?.table_prefix || '').toLowerCase() === 'cinema_seat' || String(tableNum || '').toLowerCase().includes('screen') || String(tableNum || '').toLowerCase().includes('seat')) && (
@@ -139,12 +148,14 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                     color: '#FFFFFF',
                     background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
                     border: '1px solid #C4B5FD',
-                    padding: '3px 9px',
+                    padding: '5px 10px',
+                    minHeight: '36px',
                     borderRadius: 'var(--radius-pill)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '3px',
-                    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)'
+                    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)',
+                    flexShrink: 0
                   }}
                 >
                   <span style={{ fontSize: '0.74rem' }}>🛎️</span> {terminology.callStaffLabel || 'Call Staff'}
@@ -158,11 +169,13 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
               color: '#E2E8F0',
               background: 'rgba(255, 255, 255, 0.12)',
               border: '1px solid rgba(255, 255, 255, 0.25)',
-              padding: '3px 8px',
+              padding: '5px 10px',
+              minHeight: '36px',
               borderRadius: 'var(--radius-pill)',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '4px',
+              boxSizing: 'border-box'
             }}>
               📖 View Only Menu
             </span>
@@ -211,7 +224,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
             {info?.name || 'Digital Menu'}
           </h1>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 6px', marginTop: '3px' }}>
             <span style={{
               fontSize: '0.72rem',
               fontWeight: 700,
@@ -220,7 +233,7 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
               alignItems: 'center',
               gap: '4px'
             }}>
-              <ShieldCheck size={13} color="#4ADE80" />
+              <ShieldCheck size={13} color="#4ADE80" style={{ flexShrink: 0 }} />
               {info?.badge || (lang === 'hi' ? 'डिजिटल मेन्यू' : 'Digital Menu')}
             </span>
 
@@ -232,7 +245,10 @@ export default function CustomerHeader({ info, lang, tableNum, spaceLabel, onTog
                 fontSize: '0.72rem',
                 fontWeight: 600,
                 color: '#FEFCE8',
-                textDecoration: 'underline'
+                textDecoration: 'underline',
+                padding: '6px 4px',
+                minHeight: '36px',
+                flexShrink: 0
               }}
             >
               {lang === 'hi' ? 'जानकारी' : 'Info & Timings'}

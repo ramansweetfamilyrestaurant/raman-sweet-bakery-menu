@@ -69,6 +69,9 @@ export default function AdminHeader({
         .adm-header-mobile-toggle { display: none !important; }
         .header-biz-text { display: inline !important; }
         .header-global-search { display: flex !important; }
+        @media (min-width: 901px) and (max-width: 1120px) {
+          .header-global-search { width: 160px !important; }
+        }
         @media (max-width: 900px) {
           .adm-header-mobile-toggle { display: flex !important; }
           .header-global-search { display: none !important; }
@@ -79,10 +82,13 @@ export default function AdminHeader({
           .header-desktop-subtitle { display: none !important; }
           .hide-on-mobile { display: none !important; }
         }
+        @media (max-width: 360px) {
+          .adm-header-right { gap: 4px !important; }
+        }
       `}</style>
 
       {/* LEFT: Menu Toggle + Dynamic Greeting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
         <button
           onClick={() => setShowMobileDrawer(true)}
           className="adm-header-mobile-toggle"
@@ -92,6 +98,9 @@ export default function AdminHeader({
             color: '#0F172A',
             cursor: 'pointer',
             padding: '4px',
+            minWidth: '36px',
+            minHeight: '36px',
+            flexShrink: 0,
             alignItems: 'center',
             justifyContent: 'center'
           }}
@@ -100,8 +109,8 @@ export default function AdminHeader({
           <Menu size={22} />
         </button>
 
-        <div>
-          <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, lineHeight: 1.1 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {greeting},
           </div>
           <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '3px' }}>
@@ -112,7 +121,7 @@ export default function AdminHeader({
       </div>
 
       {/* RIGHT: Global Search + Storefront + Bell + User Avatar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+      <div className="adm-header-right" style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', flexShrink: 0 }}>
         {/* Global Search Bar (Desktop) */}
         <div className="header-global-search" style={{
           position: 'relative',
@@ -158,6 +167,7 @@ export default function AdminHeader({
           }}
           style={{
             height: '36px',
+            minWidth: '36px',
             padding: '0 10px',
             borderRadius: '10px',
             border: '1px solid #E2E8F0',
@@ -170,6 +180,7 @@ export default function AdminHeader({
             alignItems: 'center',
             justifyContent: 'center',
             gap: '6px',
+            flexShrink: 0,
             boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
           }}
           title="Open Public Menu & Storefront"
@@ -184,6 +195,7 @@ export default function AdminHeader({
             onClick={onOpenDayClosing}
             style={{
               height: '36px',
+              minWidth: '36px',
               padding: '0 12px',
               borderRadius: '10px',
               border: '1.5px solid #064E3B',
@@ -191,7 +203,9 @@ export default function AdminHeader({
               color: '#064E3B',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '6px',
+              flexShrink: 0,
               cursor: 'pointer',
               fontSize: '0.78rem',
               fontWeight: 800,
@@ -219,6 +233,7 @@ export default function AdminHeader({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexShrink: 0,
             cursor: 'pointer',
             position: 'relative'
           }}
@@ -262,6 +277,7 @@ export default function AdminHeader({
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
+            flexShrink: 0,
             userSelect: 'none'
           }}
           title={`Admin User: ${username}`}
@@ -378,6 +394,9 @@ export default function AdminHeader({
               padding: '24px',
               maxWidth: '360px',
               width: '100%',
+              maxHeight: '90dvh',
+              overflowY: 'auto',
+              boxSizing: 'border-box',
               textAlign: 'center',
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
             }}>
@@ -387,11 +406,12 @@ export default function AdminHeader({
               <p style={{ fontSize: '0.84rem', color: '#64748B', margin: '0 0 20px 0' }}>
                 Are you sure you want to log out of the admin panel?
               </p>
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
                   style={{
-                    padding: '9px 18px',
+                    padding: '10px 18px',
+                    minHeight: '42px',
                     borderRadius: '10px',
                     border: '1px solid #CBD5E1',
                     background: '#F8FAFC',
@@ -406,7 +426,8 @@ export default function AdminHeader({
                 <button
                   onClick={onLogout}
                   style={{
-                    padding: '9px 18px',
+                    padding: '10px 18px',
+                    minHeight: '42px',
                     borderRadius: '10px',
                     border: 'none',
                     background: '#DC2626',
@@ -446,13 +467,14 @@ export default function AdminHeader({
               position: 'relative',
               width: '82%',
               maxWidth: '310px',
-              height: '100%',
+              height: '100dvh',
               background: '#0B0F19',
               color: '#F8FAFC',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
-              padding: '20px 16px',
+              padding: '20px 16px calc(24px + env(safe-area-inset-bottom, 0px))',
+              boxSizing: 'border-box',
               boxShadow: '4px 0 25px rgba(0,0,0,0.5)',
               zIndex: 10001,
               overflowY: 'auto'
@@ -523,8 +545,8 @@ export default function AdminHeader({
                       background: '#1E293B',
                       border: '1px solid #334155',
                       color: '#94A3B8',
-                      width: '32px',
-                      height: '32px',
+                      width: '36px',
+                      height: '36px',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       display: 'flex',

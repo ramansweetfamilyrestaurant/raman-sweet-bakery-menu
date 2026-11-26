@@ -5,7 +5,7 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
   return (
     <div style={{
       position: 'fixed',
-      bottom: '16px',
+      bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 2000,
@@ -19,10 +19,11 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
         borderRadius: 'var(--radius-pill)',
         border: '1.5px solid var(--border-light, rgba(212, 175, 55, 0.5))',
         boxShadow: 'var(--theme-shadow, 0 12px 36px rgba(10, 35, 21, 0.45))',
-        padding: '7px 14px',
+        padding: '6px 12px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-around'
+        justifyContent: 'space-around',
+        gap: '6px'
       }}>
         {/* Restaurant Info */}
         <button
@@ -31,11 +32,14 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '2px',
             color: '#FFFFFF',
             fontSize: '0.72rem',
             fontWeight: 700,
-            flex: 1
+            flex: 1,
+            minHeight: '42px',
+            minWidth: 0
           }}
         >
           <Info size={18} color="var(--gold-bright, #D4AF37)" />
@@ -54,10 +58,13 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
             color: 'var(--dock-btn-text, var(--primary-emerald, #0A2315))',
             fontSize: '0.82rem',
             fontWeight: 900,
-            padding: '9px 22px',
+            padding: '9px 18px',
+            minHeight: '42px',
             borderRadius: 'var(--radius-pill)',
             boxShadow: '0 4px 20px rgba(0,0,0, 0.3)',
-            letterSpacing: '0.5px'
+            letterSpacing: '0.5px',
+            flexShrink: 0,
+            whiteSpace: 'nowrap'
           }}
         >
           <BookOpen size={17} color="currentColor" />
@@ -71,11 +78,14 @@ export default function BottomDock({ categoriesCount, lang, onOpenCategories, on
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '2px',
             color: 'rgba(255, 255, 255, 0.7)',
             fontSize: '0.72rem',
             fontWeight: 600,
-            flex: 1
+            flex: 1,
+            minHeight: '42px',
+            minWidth: 0
           }}
         >
           <Lock size={18} color="rgba(255, 255, 255, 0.7)" />

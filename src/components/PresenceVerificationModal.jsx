@@ -486,56 +486,62 @@ export default function PresenceVerificationModal({
         borderRadius: '26px',
         maxWidth: '430px',
         width: '100%',
-        padding: '24px',
+        maxHeight: '90dvh',
+        overflowY: 'auto',
+        boxSizing: 'border-box',
+        padding: '22px 20px',
         boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
         border: '1.5px solid var(--theme-modal-border, rgba(0,0,0,0.1))',
         color: 'var(--text-dark, #0F172A)',
         animation: 'fadeIn 0.22s ease-out',
-        position: 'relative',
-        overflow: 'hidden'
+        position: 'relative'
       }}>
         {/* Header Ribbon */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: '10px',
           marginBottom: '18px',
           borderBottom: '1.5px solid var(--theme-divider, #F1F5F9)',
           paddingBottom: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
             <div style={{
               background: '#ECFDF5',
               color: '#059669',
               padding: '8px',
               borderRadius: '12px',
-              display: 'flex'
+              display: 'flex',
+              flexShrink: 0
             }}>
               <ShieldCheck size={22} />
             </div>
-            <div>
-              <strong style={{ fontSize: '1.02rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>
+            <div style={{ minWidth: 0 }}>
+              <strong style={{ fontSize: '1.02rem', color: 'var(--text-dark, #0F172A)', display: 'block', overflowWrap: 'break-word' }}>
                 {modalTitle}
               </strong>
-              <span style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 800 }}>
+              <span style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 800, overflowWrap: 'break-word' }}>
                 {currentLabel} • {restaurantInfo?.name || 'TouchQR Store'}
               </span>
             </div>
           </div>
           <button
             onClick={handleCancelAndClose}
+            aria-label="Close"
             style={{
               background: 'var(--bg-secondary, #F1F5F9)',
               border: 'none',
-              width: '32px',
-              height: '32px',
+              width: '38px',
+              height: '38px',
               borderRadius: '50%',
               cursor: 'pointer',
               fontWeight: 900,
               color: 'var(--text-muted, #64748B)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              flexShrink: 0
             }}
           >
             ✕
@@ -883,7 +889,8 @@ export default function PresenceVerificationModal({
                 onClick={handleCancelAndClose}
                 style={{
                   width: '100%',
-                  padding: '9px',
+                  padding: '10px',
+                  minHeight: '38px',
                   background: 'transparent',
                   color: '#94A3B8',
                   border: 'none',

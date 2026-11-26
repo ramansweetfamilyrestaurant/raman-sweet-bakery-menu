@@ -507,7 +507,8 @@ Need assistance? Reply directly to this message.`;
           border-color: #1E40AF;
         }
         @media (max-width: 767px) {
-          .add-biz-grid-2 {
+          .add-biz-grid-2,
+          .add-biz-grid-3 {
             grid-template-columns: 1fr !important;
             gap: 12px !important;
           }
@@ -543,19 +544,20 @@ Need assistance? Reply directly to this message.`;
       `}</style>
 
       <div 
-        className="sa-modal-box"
+        className="add-biz-modal-box"
         onClick={e => e.stopPropagation()}
         style={{
           background: '#FFFFFF',
           borderRadius: '20px',
           maxWidth: '700px',
           width: 'calc(100vw - 24px)',
-          maxHeight: 'calc(100vh - 24px)',
+          maxHeight: 'calc(100dvh - 24px)',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 25px 60px -10px rgba(0, 0, 0, 0.45)',
           border: '1.5px solid #D4AF37',
           position: 'relative',
+          boxSizing: 'border-box',
           overflow: 'hidden'
         }}
       >
@@ -567,8 +569,8 @@ Need assistance? Reply directly to this message.`;
           borderBottom: '1.5px solid #D4AF37',
           flexShrink: 0
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
               <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(212, 175, 55, 0.2)', border: '1px solid #D4AF37', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Store size={20} color="#DFBA67" />
               </div>
@@ -585,9 +587,9 @@ Need assistance? Reply directly to this message.`;
               type="button"
               onClick={handleModalClose}
               aria-label="Close modal"
-              style={{ background: 'rgba(255,255,255,0.12)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', color: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              style={{ background: 'rgba(255,255,255,0.12)', border: 'none', width: '38px', height: '38px', borderRadius: '50%', color: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             >
-              <X size={16} />
+              <X size={17} />
             </button>
           </div>
 
@@ -659,7 +661,7 @@ Need assistance? Reply directly to this message.`;
         </div>
 
         {/* Scrollable Form Body */}
-        <div className="add-biz-body-pad" style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, WebkitOverflowScrolling: 'touch' }}>
+        <div className="add-biz-body-pad" style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, minHeight: 0, WebkitOverflowScrolling: 'touch' }}>
           {error && (
             <div style={{
               background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#DC2626',
@@ -714,8 +716,8 @@ Need assistance? Reply directly to this message.`;
                     {copiedField === 'url' ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy Link</>}
                   </button>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '10px 14px' }}>
-                  <span style={{ fontSize: '0.90rem', fontWeight: 800, color: '#0F172A', wordBreak: 'break-all' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '10px 14px' }}>
+                  <span style={{ fontSize: '0.90rem', fontWeight: 800, color: '#0F172A', wordBreak: 'break-all', minWidth: 0, flex: '1 1 160px' }}>
                     /r/{createdSuccessData.slug}
                   </span>
                   <a
@@ -723,7 +725,7 @@ Need assistance? Reply directly to this message.`;
                     target="_blank"
                     rel="noopener noreferrer"
                     className="sa-btn sa-btn-accent"
-                    style={{ minHeight: '34px', padding: '6px 14px', fontSize: '0.76rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', flexShrink: 0, marginLeft: '8px' }}
+                    style={{ minHeight: '38px', padding: '6px 14px', fontSize: '0.76rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', flexShrink: 0 }}
                   >
                     <span>Open Menu</span> <ExternalLink size={13} />
                   </a>
@@ -732,7 +734,7 @@ Need assistance? Reply directly to this message.`;
 
               {/* Admin Portal Credentials Card */}
               <div style={{ background: '#FEFCE8', border: '1.5px solid #FEF08A', borderRadius: '14px', padding: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
                   <span style={{ fontSize: '0.74rem', fontWeight: 900, color: '#854D0E', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <KeyRound size={15} color="#B45309" /> ADMIN PORTAL CREDENTIALS
                   </span>
@@ -740,21 +742,21 @@ Need assistance? Reply directly to this message.`;
                     href={`/admin/login?slug=${createdSuccessData.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ fontSize: '0.74rem', fontWeight: 800, color: '#B45309', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ fontSize: '0.74rem', fontWeight: 800, color: '#B45309', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
                   >
                     <span>Open Admin Login</span> <ExternalLink size={13} />
                   </a>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div style={{ background: '#FFFFFF', border: '1px solid #FDE047', borderRadius: '10px', padding: '10px 12px' }}>
+                <div className="add-biz-grid-2" style={{ gap: '10px' }}>
+                  <div style={{ background: '#FFFFFF', border: '1px solid #FDE047', borderRadius: '10px', padding: '10px 12px', minWidth: 0 }}>
                     <div style={{ fontSize: '0.68rem', color: '#713F12', fontWeight: 700, marginBottom: '2px' }}>ADMIN USERNAME</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <strong style={{ fontSize: '0.88rem', color: '#0F172A' }}>{createdSuccessData.owner_username}</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <strong style={{ fontSize: '0.88rem', color: '#0F172A', overflowWrap: 'anywhere' }}>{createdSuccessData.owner_username}</strong>
                       <button
                         type="button"
                         onClick={() => handleCopyText(createdSuccessData.owner_username, 'username')}
-                        style={{ background: 'none', border: 'none', color: copiedField === 'username' ? '#10B981' : '#64748B', cursor: 'pointer', padding: '2px' }}
+                        style={{ background: 'none', border: 'none', color: copiedField === 'username' ? '#10B981' : '#64748B', cursor: 'pointer', padding: '4px', minWidth: '36px', minHeight: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                         title="Copy Username"
                       >
                         {copiedField === 'username' ? <Check size={14} color="#10B981" /> : <Copy size={14} />}
@@ -762,24 +764,24 @@ Need assistance? Reply directly to this message.`;
                     </div>
                   </div>
 
-                  <div style={{ background: '#FFFFFF', border: '1px solid #FDE047', borderRadius: '10px', padding: '10px 12px' }}>
+                  <div style={{ background: '#FFFFFF', border: '1px solid #FDE047', borderRadius: '10px', padding: '10px 12px', minWidth: 0 }}>
                     <div style={{ fontSize: '0.68rem', color: '#713F12', fontWeight: 700, marginBottom: '2px' }}>INITIAL PASSWORD</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <strong style={{ fontSize: '0.88rem', color: '#0F172A', fontFamily: showPassword ? 'inherit' : 'monospace' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <strong style={{ fontSize: '0.88rem', color: '#0F172A', overflowWrap: 'anywhere', fontFamily: showPassword ? 'inherit' : 'monospace' }}>
                         {showPassword ? createdSuccessData.owner_password : '••••••••'}
                       </strong>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '2px' }}
+                          style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '4px', minWidth: '36px', minHeight: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                           {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                         <button
                           type="button"
                           onClick={() => handleCopyText(createdSuccessData.owner_password, 'password')}
-                          style={{ background: 'none', border: 'none', color: copiedField === 'password' ? '#10B981' : '#64748B', cursor: 'pointer', padding: '2px' }}
+                          style={{ background: 'none', border: 'none', color: copiedField === 'password' ? '#10B981' : '#64748B', cursor: 'pointer', padding: '4px', minWidth: '36px', minHeight: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                           title="Copy Password"
                         >
                           {copiedField === 'password' ? <Check size={14} color="#10B981" /> : <Copy size={14} />}
@@ -846,7 +848,7 @@ Need assistance? Reply directly to this message.`;
               </div>
 
               {/* Success Modal Footer Actions */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '14px', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderTop: '1px solid #E2E8F0', paddingTop: '14px', marginTop: '4px' }}>
                 <button
                   type="button"
                   onClick={handleResetForm}
@@ -1114,7 +1116,7 @@ Need assistance? Reply directly to this message.`;
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+              <div className="add-biz-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>CITY</label>
                   <input
@@ -1390,7 +1392,7 @@ Need assistance? Reply directly to this message.`;
                         onChange={(e) => setFormData({ ...formData, trial_days: e.target.value })}
                         style={{ width: '80px', padding: '6px 10px', borderRadius: '8px', border: '1.5px solid #93C5FD', fontWeight: 900, fontSize: '0.9rem', color: '#1E3A8A' }}
                       />
-                      <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {[7, 14, 16, 30].map(d => (
                           <button
                             key={d}
@@ -1500,7 +1502,7 @@ Need assistance? Reply directly to this message.`;
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', padding: '4px' }}
+                    style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', padding: '4px', minWidth: '36px', minHeight: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>

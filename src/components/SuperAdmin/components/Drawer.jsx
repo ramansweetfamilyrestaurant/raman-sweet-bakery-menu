@@ -25,20 +25,21 @@ export default function Drawer({ isOpen, onClose, title, subtitle, children, foo
         onClick={(e) => e.stopPropagation()}
         style={width ? { maxWidth: width } : {}}
       >
-        <div className="sa-drawer-header">
-          <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>
+        <div className="sa-drawer-header" style={{ gap: '12px' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
               {title}
             </h3>
             {subtitle && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 600, display: 'block', overflowWrap: 'anywhere' }}>
                 {subtitle}
               </span>
             )}
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', padding: '4px' }}
+            aria-label="Close drawer"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', padding: '8px', minWidth: '40px', minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
           >
             <X size={20} />
           </button>

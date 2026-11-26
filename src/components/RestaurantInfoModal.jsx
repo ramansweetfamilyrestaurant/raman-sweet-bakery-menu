@@ -13,9 +13,9 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px'
+      padding: '16px'
     }} onClick={onClose}>
-      <div 
+      <div
         onClick={(e) => e.stopPropagation()}
         style={{
           background: 'var(--theme-modal-bg, #FFFFFF)',
@@ -23,7 +23,8 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
           borderRadius: 'var(--radius-lg)',
           width: '100%',
           maxWidth: '460px',
-          maxHeight: '90vh',
+          maxHeight: '90dvh',
+          boxSizing: 'border-box',
           boxShadow: 'var(--shadow-lg)',
           border: '1.5px solid var(--theme-modal-border, var(--border-light))',
           overflow: 'hidden',
@@ -38,19 +39,21 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
           background: 'var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #123722 100%))',
           color: '#FFFFFF',
           padding: '20px',
+          flexShrink: 0,
           position: 'relative'
         }}>
           <button
             onClick={onClose}
+            aria-label="Close modal"
             style={{
               position: 'absolute',
-              top: '16px',
-              right: '16px',
+              top: '14px',
+              right: '14px',
               background: 'rgba(255, 255, 255, 0.15)',
               color: '#FFFFFF',
               borderRadius: '50%',
-              width: '32px',
-              height: '32px',
+              width: '38px',
+              height: '38px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -61,18 +64,18 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
             <X size={18} />
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingRight: '42px', minWidth: 0 }}>
             <img
               src={getRestaurantLogoUrl(info?.logo)}
               alt="Logo"
               onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
-              style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid #D4AF37', objectFit: 'cover' }}
+              style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid #D4AF37', objectFit: 'cover', flexShrink: 0 }}
             />
-            <div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2, overflowWrap: 'break-word' }}>
                 {info?.name || 'Digital Menu'}
               </h3>
-              <span style={{ fontSize: '0.74rem', color: '#4ADE80', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.74rem', color: '#4ADE80', fontWeight: 700, overflowWrap: 'break-word' }}>
                 {info?.badge || info?.tagline || 'Digital Menu & Ordering'}
               </span>
             </div>
@@ -80,7 +83,7 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
         </div>
 
         {/* Content Body */}
-        <div style={{ padding: '20px', overflowY: 'auto' }}>
+        <div style={{ padding: '20px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {/* FSSAI & Quality Seals - ONLY rendered when FSSAI license number is configured */}
           {Boolean(info?.fssai_lic_no && String(info.fssai_lic_no).trim()) && (
             <div style={{
@@ -175,7 +178,9 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
                       background: 'var(--bg-secondary)',
                       color: 'var(--primary-emerald)',
                       border: '1px solid var(--border-light)',
-                      padding: '6px 14px',
+                      padding: '8px 14px',
+                      minHeight: '36px',
+                      boxSizing: 'border-box',
                       borderRadius: 'var(--radius-pill)',
                       fontSize: '0.78rem',
                       fontWeight: 700,
@@ -201,7 +206,9 @@ export default function RestaurantInfoModal({ info, onClose, onOpenReviewModal }
                       background: 'var(--gold-gradient, linear-gradient(135deg, #FFD700 0%, #FFA500 100%))',
                       color: 'var(--dock-btn-text, #0A2315)',
                       border: '1px solid var(--border-light, rgba(255, 255, 255, 0.4))',
-                      padding: '6px 14px',
+                      padding: '8px 14px',
+                      minHeight: '36px',
+                      boxSizing: 'border-box',
                       borderRadius: 'var(--radius-pill)',
                       fontSize: '0.78rem',
                       fontWeight: 800,

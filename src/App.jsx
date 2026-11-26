@@ -2403,7 +2403,7 @@ export default function App() {
   // Dedicated Kitchen Display System (KDS) View Render
   if (view === 'kitchen-kds') {
     return (
-      <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', background: '#090D16', color: '#F8FAFC', minHeight: '100vh', fontWeight: 800 }}>🍳 Loading Kitchen Display System...</div>}>
+      <Suspense fallback={<div style={{ padding: '60px 20px', textAlign: 'center', background: '#090D16', color: '#F8FAFC', minHeight: '100dvh', boxSizing: 'border-box', fontWeight: 800 }}>🍳 Loading Kitchen Display System...</div>}>
         <StandaloneKdsPage slug={getSlugFromUrl() || new URLSearchParams(window.location.search).get('slug') || ''} />
       </Suspense>
     );
@@ -2702,12 +2702,14 @@ export default function App() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '10px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '1.2rem' }}>🛎️</span>
-            <div>
-              <strong style={{ fontSize: '0.86rem', color: 'var(--gold-bright)', display: 'block' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: '1 1 200px' }}>
+            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>🛎️</span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <strong style={{ fontSize: '0.86rem', color: 'var(--gold-bright)', display: 'block', overflowWrap: 'break-word' }}>
                 {(activeOrderTrack.token_display || activeOrderTrack.token_number) ? (
                   <>Token {activeOrderTrack.token_display || `TK-${String(activeOrderTrack.token_number).padStart(2, '0')}`}</>
                 ) : (
@@ -2717,7 +2719,7 @@ export default function App() {
                   <span style={{ fontSize: '0.74rem', opacity: 0.85, marginLeft: '6px' }}>(Round {activeOrderTrack.round_number})</span>
                 )}
               </strong>
-              <span style={{ fontSize: '0.76rem', color: '#E5E7EB', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.76rem', color: '#E5E7EB', fontWeight: 700, display: 'block', overflowWrap: 'break-word' }}>
                 Status: {
                   activeOrderTrack.status === 'completed' ? `Order Completed & Paid 🏁${autoKillSeconds ? ` (Session closes in ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})` : ''}` :
                   activeOrderTrack.status === 'cancelled' || activeOrderTrack.status === 'rejected' ? `Order Cancelled 🔴${autoKillSeconds ? ` (Session closes in ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})` : ''}` :
@@ -2769,11 +2771,14 @@ export default function App() {
               background: 'rgba(255,255,255,0.15)',
               color: '#FFFFFF',
               border: '1px solid rgba(255,255,255,0.3)',
-              padding: '4px 10px',
+              padding: '6px 12px',
+              minHeight: '36px',
               borderRadius: 'var(--radius-pill)',
               fontSize: '0.72rem',
               fontWeight: 800,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap'
             }}
           >
             End Session
@@ -2786,18 +2791,20 @@ export default function App() {
         <div style={{
           background: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)',
           color: '#FFFFFF',
-          padding: '12px 18px',
+          padding: '12px 16px',
           borderBottom: '2px solid #F87171',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '10px',
           fontSize: '0.84rem',
           fontWeight: 700,
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.2rem' }}>📱</span>
-            <span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 200px' }}>
+            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>📱</span>
+            <span style={{ minWidth: 0, overflowWrap: 'break-word' }}>
               <strong>Session Expired (Read-Only Menu):</strong>{' '}
               {(() => {
                 const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
@@ -2813,7 +2820,7 @@ export default function App() {
           </div>
           <button
             onClick={() => setSessionExpired(false)}
-            style={{ background: '#FFFFFF', color: '#991B1B', border: 'none', borderRadius: '9999px', padding: '4px 10px', fontWeight: 900, cursor: 'pointer', fontSize: '0.76rem' }}
+            style={{ background: '#FFFFFF', color: '#991B1B', border: 'none', borderRadius: '9999px', padding: '6px 12px', minHeight: '36px', fontWeight: 900, cursor: 'pointer', fontSize: '0.76rem', flexShrink: 0, whiteSpace: 'nowrap' }}
           >
             Got it ✖
           </button>
@@ -2825,18 +2832,20 @@ export default function App() {
         <div style={{
           background: 'linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%)',
           color: '#FFFFFF',
-          padding: '12px 18px',
+          padding: '12px 16px',
           borderBottom: '2px solid #F87171',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '10px',
           fontSize: '0.84rem',
           fontWeight: 700,
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.2rem' }}>⚠️</span>
-            <span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 200px' }}>
+            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>⚠️</span>
+            <span style={{ minWidth: 0, overflowWrap: 'break-word' }}>
               {(() => {
                 const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
                 const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(currentTableNum || '').toLowerCase().includes('screen') || String(currentTableNum || '').toLowerCase().includes('seat');
@@ -2862,7 +2871,7 @@ export default function App() {
           </div>
           <button
             onClick={() => setCurrentTableNum('')}
-            style={{ background: '#FFFFFF', color: '#991B1B', border: 'none', borderRadius: '9999px', padding: '4px 10px', fontWeight: 900, cursor: 'pointer', fontSize: '0.76rem' }}
+            style={{ background: '#FFFFFF', color: '#991B1B', border: 'none', borderRadius: '9999px', padding: '6px 12px', minHeight: '36px', fontWeight: 900, cursor: 'pointer', fontSize: '0.76rem', flexShrink: 0, whiteSpace: 'nowrap' }}
           >
             Got it ✖
           </button>
@@ -2906,9 +2915,11 @@ export default function App() {
         padding: '10px 12px 0',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '8px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
           <h2 style={{
             fontSize: '1rem',
             fontWeight: 800,
@@ -2922,7 +2933,8 @@ export default function App() {
             color: 'var(--veg-green)',
             padding: '2px 8px',
             borderRadius: 'var(--radius-pill)',
-            fontWeight: 700
+            fontWeight: 700,
+            whiteSpace: 'nowrap'
           }}>
             {dishes.length} {lang === 'hi' ? 'व्यंजन' : 'Dishes'}
           </span>
@@ -2934,7 +2946,8 @@ export default function App() {
           background: 'var(--bg-secondary)',
           padding: '3px',
           borderRadius: 'var(--radius-pill)',
-          border: '1px solid var(--border-light)'
+          border: '1px solid var(--border-light)',
+          flexShrink: 0
         }}>
           <button
             onClick={() => {
@@ -2942,7 +2955,8 @@ export default function App() {
               setLayoutMode('list');
             }}
             style={{
-              padding: '4px 10px',
+              padding: '6px 10px',
+              minHeight: '36px',
               borderRadius: 'var(--radius-pill)',
               background: layoutMode === 'list' ? 'var(--primary-emerald)' : 'transparent',
               color: layoutMode === 'list' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
@@ -2966,7 +2980,8 @@ export default function App() {
               setLayoutMode('grid');
             }}
             style={{
-              padding: '4px 10px',
+              padding: '6px 10px',
+              minHeight: '36px',
               borderRadius: 'var(--radius-pill)',
               background: layoutMode === 'grid' ? 'var(--primary-emerald)' : 'transparent',
               color: layoutMode === 'grid' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
@@ -3168,7 +3183,7 @@ export default function App() {
                           }
                         }}
                         style={{
-                          minWidth: '145px', maxWidth: '165px', flex: '0 0 auto',
+                          minWidth: '158px', maxWidth: '185px', flex: '0 0 auto', overflow: 'hidden',
                           background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', borderRadius: '12px',
                           border: '1.5px solid var(--theme-card-border, var(--border-light))', padding: '10px',
                           cursor: 'pointer', position: 'relative',
@@ -3183,6 +3198,7 @@ export default function App() {
                               background: 'linear-gradient(135deg, #EF4444, #DC2626)',
                               color: '#FFFFFF', fontSize: '0.58rem', fontWeight: 800,
                               padding: '2px 6px', borderRadius: '6px', letterSpacing: '0.02em',
+                              maxWidth: 'calc(100% - 12px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                               zIndex: 2
                             }}>
                               {item.offer_badge}
@@ -3216,8 +3232,8 @@ export default function App() {
                           </p>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', gap: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginTop: '6px', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
                             <span style={{
                               fontSize: '0.86rem',
                               fontWeight: 900,
@@ -3273,8 +3289,8 @@ export default function App() {
                                           background: 'var(--bg-secondary, #F1F5F9)',
                                           color: 'var(--text-dark, #0F172A)',
                                           border: 'none',
-                                          width: '22px',
-                                          height: '22px',
+                                          width: '36px',
+                                          height: '36px',
                                           padding: 0,
                                           flexShrink: 0,
                                           borderRadius: '50%',
@@ -3306,8 +3322,8 @@ export default function App() {
                                           background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                           color: 'var(--theme-btn-text, #FFFFFF)',
                                           border: 'none',
-                                          width: '22px',
-                                          height: '22px',
+                                          width: '36px',
+                                          height: '36px',
                                           padding: 0,
                                           flexShrink: 0,
                                           borderRadius: '50%',
@@ -3354,8 +3370,8 @@ export default function App() {
                                           background: 'var(--bg-secondary, #F1F5F9)',
                                           color: 'var(--text-dark, #0F172A)',
                                           border: 'none',
-                                          width: '22px',
-                                          height: '22px',
+                                          width: '36px',
+                                          height: '36px',
                                           padding: 0,
                                           flexShrink: 0,
                                           borderRadius: '50%',
@@ -3387,8 +3403,8 @@ export default function App() {
                                           background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                           color: 'var(--theme-btn-text, #FFFFFF)',
                                           border: 'none',
-                                          width: '22px',
-                                          height: '22px',
+                                          width: '36px',
+                                          height: '36px',
                                           padding: 0,
                                           flexShrink: 0,
                                           borderRadius: '50%',
@@ -3430,7 +3446,8 @@ export default function App() {
                                   background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                   color: 'var(--theme-btn-text, #FFFFFF)',
                                   border: 'none',
-                                  padding: '4px 9px',
+                                  padding: '6px 10px',
+                                  minHeight: '36px',
                                   borderRadius: 'var(--radius-pill)',
                                   fontSize: '0.70rem',
                                   fontWeight: 900,
@@ -3514,9 +3531,9 @@ export default function App() {
                       key={combo.id}
                       onClick={() => setSelectedComboModal(combo)}
                       style={{
-                        minWidth: selectedCategory === 'combos-section' ? '280px' : '220px',
-                        maxWidth: selectedCategory === 'combos-section' ? '100%' : '240px',
-                        flex: selectedCategory === 'combos-section' ? '1 1 280px' : '0 0 auto',
+                        minWidth: selectedCategory === 'combos-section' ? 'min(280px, 100%)' : 'min(256px, 82vw)',
+                        maxWidth: selectedCategory === 'combos-section' ? '100%' : '280px',
+                        flex: selectedCategory === 'combos-section' ? '1 1 260px' : '0 0 auto',
                         scrollSnapAlign: 'start',
                         background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
                         borderRadius: '12px',
@@ -3585,7 +3602,7 @@ export default function App() {
                           }}>
                             {itemsSummaryText || combo.description || (lang === 'hi' ? 'विशेष कॉम्बो थाली' : 'Special combo deal')}
                           </p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginTop: '3px' }}>
                             <span style={{
                               fontSize: '0.86rem',
                               fontWeight: 900,
@@ -3660,8 +3677,8 @@ export default function App() {
                                   background: 'var(--bg-secondary, #F1F5F9)',
                                   color: 'var(--text-dark, #0F172A)',
                                   border: 'none',
-                                  width: '22px',
-                                  height: '22px',
+                                  width: '36px',
+                                  height: '36px',
                                   padding: 0,
                                   flexShrink: 0,
                                   borderRadius: '50%',
@@ -3693,8 +3710,8 @@ export default function App() {
                                   background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                   color: 'var(--theme-btn-text, #FFFFFF)',
                                   border: 'none',
-                                  width: '22px',
-                                  height: '22px',
+                                  width: '36px',
+                                  height: '36px',
                                   padding: 0,
                                   flexShrink: 0,
                                   borderRadius: '50%',
@@ -3724,7 +3741,8 @@ export default function App() {
                               background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                               color: 'var(--theme-btn-text, #FFFFFF)',
                               border: 'none',
-                              padding: '5px 8px',
+                              padding: '6px 10px',
+                              minHeight: '36px',
                               borderRadius: 'var(--radius-pill)',
                               fontSize: '0.68rem',
                               fontWeight: 900,
@@ -3807,7 +3825,7 @@ export default function App() {
               ) : (
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px, 100%), 1fr))',
                   gap: '12px'
                 }}>
                   {group.items.map((dish) => (
@@ -3831,14 +3849,14 @@ export default function App() {
       </main>
 
       {/* 🛒 Zomato-Style Floating Cart Bar (Appears ONLY when cart has items AND direct ordering is active) */}
-      {cartItems.length > 0 && isDirectOrderingActive && (
+      {cartItems.length > 0 && isDirectOrderingActive && !showCategoryDrawer && !selectedComboModal && !showInfoModal && (
         <div style={{
           position: 'fixed',
-          bottom: '78px',
+          bottom: 'calc(78px + env(safe-area-inset-bottom, 0px))',
           left: '50%',
           transform: 'translateX(-50%)',
-          zIndex: 9999,
-          width: 'calc(100% - 32px)',
+          zIndex: 2100,
+          width: 'calc(100% - 24px)',
           maxWidth: '440px'
         }}>
           {(() => {
@@ -3864,14 +3882,14 @@ export default function App() {
                   animation: 'fadeIn 0.25s ease-out'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ background: '#FFFFFF', color: 'var(--theme-price-color, var(--primary-emerald, #059669))', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                  <span style={{ background: '#FFFFFF', color: 'var(--theme-price-color, var(--primary-emerald, #059669))', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900, flexShrink: 0 }}>
                     {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
                   </span>
-                  <span>{isAddon ? `+ Add to ${getDynamicSpaceLabel() || 'Order'} (Round ${nextRound})` : (lang === 'hi' ? 'कार्ट देखें' : 'View Cart')}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>{isAddon ? `+ Add to ${getDynamicSpaceLabel() || 'Order'} (Round ${nextRound})` : (lang === 'hi' ? 'कार्ट देखें' : 'View Cart')}</span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                   <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--theme-btn-text, #FFFFFF)' }}>
                     {(() => {
                       const sym = getCurrencySymbol(info?.currency_symbol);
@@ -3941,8 +3959,11 @@ export default function App() {
           transform: 'translateX(-50%)',
           background: 'var(--dock-gradient, var(--header-gradient))',
           color: 'var(--gold-bright, #4ADE80)',
-          padding: '12px 20px',
-          borderRadius: 'var(--radius-pill)',
+          width: 'max-content',
+          maxWidth: 'calc(100vw - 32px)',
+          boxSizing: 'border-box',
+          padding: '12px 18px',
+          borderRadius: '18px',
           border: '1.5px solid var(--gold-bright, #4ADE80)',
           boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
           zIndex: 10010,
@@ -3994,7 +4015,8 @@ export default function App() {
                   boxShadow: '0 -12px 40px rgba(0,0,0,0.45)',
                   border: '1.5px solid var(--theme-modal-border, var(--border-light, transparent))',
                   borderBottom: 'none',
-                  maxHeight: '88vh',
+                  maxHeight: '90dvh',
+                  boxSizing: 'border-box',
                   display: 'flex',
                   flexDirection: 'column',
                   overflow: 'hidden',
@@ -4038,7 +4060,8 @@ export default function App() {
                             color: '#DC2626',
                             border: '1px solid var(--border-light, #E2E8F0)',
                             borderRadius: '9999px',
-                            padding: '5px 10px',
+                            padding: '6px 12px',
+                            minHeight: '36px',
                             fontSize: '0.72rem',
                             fontWeight: 800,
                             cursor: 'pointer',
@@ -4060,8 +4083,8 @@ export default function App() {
                           background: 'var(--bg-secondary, #F3F4F6)',
                           color: 'var(--text-dark, #374151)',
                           border: 'none',
-                          width: '32px',
-                          height: '32px',
+                          width: '36px',
+                          height: '36px',
                           padding: 0,
                           borderRadius: '50%',
                           cursor: 'pointer',
@@ -4157,7 +4180,7 @@ export default function App() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '2px',
-                                  height: '32px',
+                                  minHeight: '40px',
                                   padding: '2px',
                                   borderRadius: '9999px',
                                   background: 'var(--bg-secondary, #F8FAFC)',
@@ -4172,8 +4195,8 @@ export default function App() {
                                       background: 'var(--theme-card-bg, #FFFFFF)',
                                       color: 'var(--text-dark, #0F172A)',
                                       border: '1px solid var(--border-light, #CBD5E1)',
-                                      width: '26px',
-                                      height: '26px',
+                                      width: '36px',
+                                      height: '36px',
                                       padding: 0,
                                       borderRadius: '50%',
                                       fontWeight: 900,
@@ -4199,8 +4222,8 @@ export default function App() {
                                       background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                                       color: 'var(--theme-btn-text, #FFFFFF)',
                                       border: 'none',
-                                      width: '26px',
-                                      height: '26px',
+                                      width: '36px',
+                                      height: '36px',
                                       padding: 0,
                                       borderRadius: '50%',
                                       fontWeight: 900,
@@ -4226,8 +4249,8 @@ export default function App() {
                                     background: '#FEE2E2',
                                     color: '#DC2626',
                                     border: '1px solid #FECACA',
-                                    width: '28px',
-                                    height: '28px',
+                                    width: '36px',
+                                    height: '36px',
                                     padding: 0,
                                     borderRadius: '50%',
                                     cursor: 'pointer',
@@ -4381,8 +4404,8 @@ export default function App() {
                         {/* Customer Information (Table, Name, Mobile) - Locked for Add-on Rounds */}
                         {!isAddon && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              <div style={{ flex: '1 1 130px', minWidth: 0 }}>
                                 <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
                                   {(() => {
                                     const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
@@ -4424,7 +4447,8 @@ export default function App() {
                                     padding: '8px 12px',
                                     borderRadius: '10px',
                                     border: '1.5px solid var(--border-light, #CBD5E1)',
-                                    fontSize: '0.82rem',
+                                    fontSize: '1rem',
+                                    boxSizing: 'border-box',
                                     fontWeight: 800,
                                     background: effectiveTableNum ? 'var(--bg-secondary, #F1F5F9)' : 'var(--theme-input-bg, #FFFFFF)',
                                     color: 'var(--text-dark, #0F172A)',
@@ -4432,14 +4456,14 @@ export default function App() {
                                   }}
                                 />
                               </div>
-                              <div style={{ flex: 1.2 }}>
+                              <div style={{ flex: '1.2 1 150px', minWidth: 0 }}>
                                 <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>YOUR NAME (OPTIONAL)</label>
                                 <input
                                   type="text"
                                   value={customerNameInput}
                                   onChange={(e) => setCustomerNameInput(e.target.value)}
                                   placeholder="e.g. Rahul"
-                                  style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '0.86rem', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
+                                  style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '1rem', boxSizing: 'border-box', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
                                 />
                               </div>
                             </div>
@@ -4455,7 +4479,7 @@ export default function App() {
                                 value={customerPhoneInput}
                                 onChange={(e) => setCustomerPhoneInput(e.target.value.replace(/\D/g, ''))}
                                 placeholder="e.g. 9876543210"
-                                style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '0.86rem', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
+                                style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid var(--border-light, #CBD5E1)', fontSize: '1rem', boxSizing: 'border-box', background: 'var(--theme-input-bg, #FFFFFF)', color: 'var(--text-dark, #0F172A)' }}
                               />
                             </div>
                           </div>
@@ -4642,7 +4666,10 @@ export default function App() {
             borderRadius: '24px',
             maxWidth: '420px',
             width: '100%',
-            padding: '30px 24px',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
+            boxSizing: 'border-box',
+            padding: '24px 18px',
             textAlign: 'center',
             boxShadow: 'var(--shadow-gold)',
             color: '#FFFFFF'
@@ -4814,12 +4841,13 @@ export default function App() {
               background: 'var(--bg-app)',
               borderTopLeftRadius: 'var(--radius-lg)',
               borderTopRightRadius: 'var(--radius-lg)',
-              padding: '20px 16px 30px',
+              padding: '20px 16px calc(28px + env(safe-area-inset-bottom, 0px))',
               maxWidth: '800px',
               width: '100%',
+              boxSizing: 'border-box',
               margin: '0 auto',
               boxShadow: 'var(--shadow-lg)',
-              maxHeight: '80vh',
+              maxHeight: '85dvh',
               overflowY: 'auto',
               borderTop: '3px solid #D4AF37',
               animation: 'fadeIn 0.25s ease-out'
@@ -4840,7 +4868,7 @@ export default function App() {
                   {lang === 'hi' ? 'मेन्यू श्रेणी (Menu Categories)' : 'Menu Categories'}
                 </h3>
               </div>
-              <button onClick={() => setShowCategoryDrawer(false)} style={{ color: 'var(--text-dark)', border: 'none', background: 'none', cursor: 'pointer' }}>
+              <button onClick={() => setShowCategoryDrawer(false)} aria-label="Close categories" style={{ color: 'var(--text-dark)', border: 'none', background: 'none', cursor: 'pointer', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <X size={20} />
               </button>
             </div>

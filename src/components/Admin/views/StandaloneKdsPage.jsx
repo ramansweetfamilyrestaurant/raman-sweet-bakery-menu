@@ -1334,7 +1334,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
   if (loading) {
     return (
       <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        minHeight: '100dvh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
         background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
         color: '#FFFFFF', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
@@ -1363,15 +1363,15 @@ export default function StandaloneKdsPage({ slug = '' }) {
       <div
         id="kds-tenant-prompt-screen"
         style={{
-          minHeight: '100vh', display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
+          minHeight: '100dvh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', padding: '32px 20px', overflowY: 'auto',
           background: 'linear-gradient(135deg, #090D16 0%, #0F172A 100%)',
           color: '#FFFFFF', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
         }}
       >
         <div style={{
           background: '#0F172A', border: '1px solid #1E293B', borderRadius: '24px',
-          padding: '36px 28px', maxWidth: '460px', width: '100%',
+          padding: '28px 20px', maxWidth: '460px', width: '100%',
           boxShadow: '0 20px 40px rgba(0,0,0,0.6)', boxSizing: 'border-box'
         }}>
           <div style={{
@@ -1400,7 +1400,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
               style={{
                 width: '100%', padding: '14px 16px', borderRadius: '12px',
                 border: '1px solid #334155', background: '#1E293B',
-                color: '#F8FAFC', fontSize: '0.95rem', fontWeight: 700,
+                color: '#F8FAFC', fontSize: '1rem', fontWeight: 700,
                 outline: 'none', boxSizing: 'border-box'
               }}
             />
@@ -1424,7 +1424,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
           <div style={{
             background: '#131D31', border: '1px solid #1E293B', borderRadius: '12px',
-            padding: '12px 14px', textAlign: 'left', fontSize: '0.76rem', color: '#64748B', lineHeight: 1.5
+            padding: '12px 14px', textAlign: 'left', fontSize: '0.76rem', color: '#64748B', lineHeight: 1.5, wordBreak: 'break-all', overflowWrap: 'anywhere'
           }}>
             <strong style={{ color: '#94A3B8', display: 'block', marginBottom: '4px' }}>Supported Kitchen URL Formats:</strong>
             <div>• <code style={{ color: '#38BDF8' }}>touchqr.in/:restaurant-slug/kitchen</code></div>
@@ -1450,7 +1450,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
   if (notFound) {
     return (
       <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        minHeight: '100dvh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
         background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
         color: '#FFFFFF', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
@@ -1483,7 +1483,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
   if (kdsDisabled) {
     return (
       <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        minHeight: '100dvh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
         background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
         color: '#FFFFFF', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
@@ -1519,7 +1519,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
   if (pinUnconfigured) {
     return (
       <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        minHeight: '100dvh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: '32px 20px',
         background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
         color: '#FFFFFF', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
@@ -1555,26 +1555,27 @@ export default function StandaloneKdsPage({ slug = '' }) {
   if (needsPinUnlock) {
     return (
       <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', padding: '24px 16px',
+        minHeight: '100dvh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', padding: '24px 16px', overflowY: 'auto',
         background: 'linear-gradient(135deg, #090D16 0%, #111827 100%)',
         color: '#FFFFFF', fontFamily: 'system-ui, sans-serif'
       }}>
         <div style={{
+          margin: 'auto',
           background: '#0F172A', border: '1px solid #1E293B', borderRadius: '24px',
-          padding: '32px 24px', maxWidth: '380px', width: '100%',
+          padding: '26px 20px', maxWidth: '380px', width: '100%',
           boxShadow: '0 20px 40px rgba(0,0,0,0.6)', textAlign: 'center', boxSizing: 'border-box'
         }}>
           <div style={{
-            width: '60px', height: '60px', borderRadius: '18px',
+            width: '56px', height: '56px', borderRadius: '16px',
             background: 'linear-gradient(135deg, #38BDF8 0%, #2563EB 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px auto', boxShadow: '0 8px 24px rgba(56,189,248,0.3)'
+            margin: '0 auto 14px auto', boxShadow: '0 8px 24px rgba(56,189,248,0.3)'
           }}>
-            <Lock size={28} color="#FFFFFF" />
+            <Lock size={26} color="#FFFFFF" />
           </div>
 
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#F8FAFC', margin: '0 0 4px 0' }}>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#F8FAFC', margin: '0 0 4px 0', overflowWrap: 'anywhere' }}>
             {restaurantName}
           </h2>
           <span style={{ fontSize: '0.82rem', color: '#94A3B8', fontWeight: 700, display: 'block', marginBottom: '20px' }}>
@@ -1662,10 +1663,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
     <div
       className="touchqr-kds-root"
       style={{
-        minHeight: '100vh',
+        minHeight: '100dvh',
         background: 'radial-gradient(circle at 50% 0%, #162444 0%, #0F172A 40%, #080D1A 100%)',
         color: '#F8FAFC',
-        padding: 'clamp(10px, 2vw, 18px)',
+        padding: 'clamp(10px, 2vw, 18px) clamp(10px, 2vw, 18px) calc(24px + env(safe-area-inset-bottom, 0px))',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif',
         boxSizing: 'border-box',
         overflowX: 'hidden',
@@ -1681,9 +1682,22 @@ export default function StandaloneKdsPage({ slug = '' }) {
           width: 100%;
           box-sizing: border-box;
         }
+        @media (max-width: 640px) {
+          .kds-controls-strip {
+            width: 100%;
+            flex-wrap: nowrap !important;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 2px;
+          }
+          .kds-controls-strip::-webkit-scrollbar {
+            display: none;
+          }
+        }
         @media (max-width: 480px) {
           .touchqr-kds-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr);
             gap: 10px;
           }
           .kds-header-bar {
@@ -1691,7 +1705,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
             gap: 8px !important;
           }
           .kds-header-title {
-            font-size: 1.05rem !important;
+            font-size: 1.02rem !important;
           }
         }
         @media (max-width: 330px) {
@@ -1740,16 +1754,18 @@ export default function StandaloneKdsPage({ slug = '' }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: '8px',
+            flexWrap: 'wrap',
             fontSize: '0.8125rem',
             fontWeight: 500,
             cursor: 'pointer'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Volume2 size={16} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+            <Volume2 size={16} style={{ flexShrink: 0 }} />
             <span>Click to enable kitchen order sound alerts.</span>
           </div>
-          <span style={{ textDecoration: 'underline', fontSize: '0.75rem', fontWeight: 600 }}>Enable</span>
+          <span style={{ textDecoration: 'underline', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0 }}>Enable</span>
         </div>
       )}
 
@@ -1766,16 +1782,19 @@ export default function StandaloneKdsPage({ slug = '' }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: '8px',
             fontSize: '0.8125rem',
             fontWeight: 500
           }}
         >
-          <span>{recallNotice.message}</span>
+          <span style={{ minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>{recallNotice.message}</span>
           <button
             onClick={() => setRecallNotice(null)}
+            aria-label="Dismiss alert"
             style={{
               background: 'none', border: 'none', color: '#94A3B8',
-              fontSize: '1rem', cursor: 'pointer', padding: 0
+              fontSize: '1rem', cursor: 'pointer', width: '36px', height: '36px',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
             }}
           >
             ✕
@@ -1801,7 +1820,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
         }}
       >
         {/* Left: Store Name & Section */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: '1 1 180px' }}>
           <div style={{ minWidth: 0 }}>
             <h1
               className="kds-header-title"
@@ -1828,7 +1847,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
         </div>
 
         {/* Right Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="kds-controls-strip" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Connection indicator */}
           <div
             id="kds-connection-indicator"
@@ -1837,7 +1856,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
               alignItems: 'center',
               gap: '6px',
               padding: '0 8px',
-              height: '32px',
+              height: '38px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               fontSize: '0.75rem',
               fontWeight: 500,
               color: connectionStatus === 'online' ? '#94A3B8' : '#FCA5A5'
@@ -1860,8 +1881,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
             type="button"
             onClick={handleToggleSound}
             style={{
-              height: '32px',
-              padding: '0 10px',
+              height: '38px',
+              padding: '0 12px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               borderRadius: '8px',
               border: '1px solid #334155',
               background: '#1E293B',
@@ -1884,8 +1907,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
               type="button"
               onClick={() => setShowPrepSummary(!showPrepSummary)}
               style={{
-                height: '32px',
-                padding: '0 10px',
+                height: '38px',
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 borderRadius: '8px',
                 border: '1px solid #334155',
                 background: showPrepSummary ? 'rgba(56, 189, 248, 0.1)' : '#1E293B',
@@ -1909,8 +1934,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
               type="button"
               onClick={() => setShowCompletedDrawer(!showCompletedDrawer)}
               style={{
-                height: '32px',
-                padding: '0 10px',
+                height: '38px',
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 borderRadius: '8px',
                 border: '1px solid #334155',
                 background: '#1E293B',
@@ -1930,7 +1957,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
           {/* Clock */}
           <div style={{
-            height: '32px',
+            height: '38px',
             background: '#1E293B',
             color: '#94A3B8',
             padding: '0 10px',
@@ -1940,7 +1967,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
             alignItems: 'center',
             fontSize: '0.75rem',
             fontWeight: 500,
-            fontVariantNumeric: 'tabular-nums'
+            fontVariantNumeric: 'tabular-nums',
+            whiteSpace: 'nowrap',
+            flexShrink: 0
           }}>
             {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
           </div>
@@ -1950,8 +1979,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
             onClick={toggleFullscreen}
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             style={{
-              height: '32px',
-              width: '32px',
+              height: '38px',
+              width: '38px',
+              flexShrink: 0,
               background: '#1E293B',
               border: '1px solid #334155',
               color: '#94A3B8',
@@ -1970,8 +2000,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
             onClick={handleLockScreen}
             title="Lock Display"
             style={{
-              height: '32px',
-              width: '32px',
+              height: '38px',
+              width: '38px',
+              flexShrink: 0,
               background: '#1E293B',
               border: '1px solid #334155',
               color: '#94A3B8',
@@ -1998,13 +2029,14 @@ export default function StandaloneKdsPage({ slug = '' }) {
           alignItems: 'center',
           gap: '8px',
           overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',
           marginBottom: '12px'
         }}>
-          <span style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>
             Summary:
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap', flexShrink: 0 }}>
             {aggregatedPrepItems.map(item => (
               <div
                 key={item.name}
@@ -2017,6 +2049,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   alignItems: 'center',
                   gap: '6px',
                   whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   fontSize: '0.75rem'
                 }}
               >
@@ -2041,13 +2074,13 @@ export default function StandaloneKdsPage({ slug = '' }) {
             <button
               type="button"
               onClick={() => setShowCompletedDrawer(false)}
-              style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.75rem', cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.75rem', cursor: 'pointer', minHeight: '36px', padding: '6px 10px', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
             >
               Close
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '2px' }}>
             {recentlyCompleted.map(ord => {
               const isRecallingThis = recallingOrderIds.includes(ord.id);
               return (
@@ -2055,7 +2088,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   key={ord.id}
                   style={{
                     background: '#1E293B', border: '1px solid #334155', borderRadius: '8px',
-                    padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
+                    padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0
                   }}
                 >
                   <span style={{ fontSize: '0.75rem', color: '#F8FAFC', fontWeight: 500 }}>
@@ -2066,10 +2099,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
                     disabled={isRecallingThis}
                     onClick={() => handleRecallOrder(ord)}
                     style={{
-                      padding: '3px 8px', borderRadius: '5px', border: '1px solid #334155',
-                      background: 'transparent',
-                      color: '#FCD34D', fontSize: '0.70rem',
-                      fontWeight: 500, cursor: isRecallingThis ? 'not-allowed' : 'pointer'
+                      padding: '6px 12px', minHeight: '36px', borderRadius: '6px', border: '1px solid #334155',
+                      background: 'transparent', display: 'inline-flex', alignItems: 'center',
+                      color: '#FCD34D', fontSize: '0.72rem',
+                      fontWeight: 600, cursor: isRecallingThis ? 'not-allowed' : 'pointer'
                     }}
                   >
                     {isRecallingThis ? 'Restoring...' : 'Undo'}
@@ -2169,9 +2202,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
                   gap: '8px',
                   flexWrap: 'wrap'
                 }}>
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ minWidth: 0, flex: '1 1 150px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <div style={{ fontSize: '1rem', fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em', lineHeight: 1.2, overflowWrap: 'anywhere' }}>
                         {formatKdsLocation(order.table_number, order.space_type, restaurantMeta?.business_type === 'hotel_resort' ? 'room' : restaurantMeta?.table_prefix)}
                       </div>
                       {(order.token_display || order.token_number) && (
@@ -2183,7 +2216,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
                           borderRadius: '6px',
                           fontSize: '0.82rem',
                           fontWeight: 800,
-                          letterSpacing: '0.5px'
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
                         }}>
                           TOKEN {order.token_display || order.token_number}
                         </span>
@@ -2202,7 +2236,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 400 }}>
+                    <span style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 400, display: 'block', overflowWrap: 'anywhere' }}>
                       {order.customer_name || 'Dine-in'}
                     </span>
                   </div>
@@ -2216,6 +2250,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                       borderRadius: '6px',
                       fontSize: '0.75rem',
                       fontWeight: 500,
+                      whiteSpace: 'nowrap',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px'
@@ -2238,13 +2273,14 @@ export default function StandaloneKdsPage({ slug = '' }) {
                       fontSize: '0.75rem',
                       fontWeight: 400,
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
+                      flexWrap: 'wrap',
                       gap: '6px',
                       minWidth: 0,
                       boxSizing: 'border-box'
                     }}>
-                      <span style={{ color: '#F59E0B', fontWeight: 600 }}>Note:</span>
-                      <span style={{ color: '#F1F5F9' }}>"{notesText}"</span>
+                      <span style={{ color: '#F59E0B', fontWeight: 600, flexShrink: 0 }}>Note:</span>
+                      <span style={{ color: '#F1F5F9', minWidth: 0, flex: 1, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>"{notesText}"</span>
                     </div>
                   )}
 
@@ -2267,7 +2303,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
                             background: isChecked ? 'rgba(30, 41, 59, 0.4)' : '#1E293B',
                             border: '1px solid rgba(255, 255, 255, 0.04)',
                             borderRadius: '8px',
-                            padding: '6px 10px',
+                            padding: '8px 10px',
+                            minHeight: '42px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
@@ -2317,7 +2354,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
                                   fontSize: '0.6875rem',
                                   color: '#34D399',
                                   marginTop: '2px',
-                                  lineHeight: 1.2
+                                  lineHeight: 1.2,
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'anywhere'
                                 }}>
                                   Includes: {item.includes || item.comboIncludes}
                                 </div>
@@ -2325,7 +2364,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
                                 {item.portion && (
-                                  <span style={{ fontSize: '0.6875rem', color: '#94A3B8', background: 'rgba(255, 255, 255, 0.05)', padding: '1px 5px', borderRadius: '4px' }}>
+                                  <span style={{ fontSize: '0.6875rem', color: '#94A3B8', background: 'rgba(255, 255, 255, 0.05)', padding: '1px 5px', borderRadius: '4px', maxWidth: '100%', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                     {item.portion}
                                   </span>
                                 )}
@@ -2338,7 +2377,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
                                       color: '#FCD34D',
                                       background: 'rgba(245, 158, 11, 0.1)',
                                       padding: '1px 5px',
-                                      borderRadius: '4px'
+                                      borderRadius: '4px',
+                                      maxWidth: '100%',
+                                      wordBreak: 'break-word',
+                                      overflowWrap: 'anywhere'
                                     }}
                                   >
                                     + {m.name}
@@ -2361,13 +2403,14 @@ export default function StandaloneKdsPage({ slug = '' }) {
                     className="kds-action-btn"
                     style={{
                       width: '100%',
-                      height: '38px',
-                      borderRadius: '8px',
+                      height: '44px',
+                      minHeight: '44px',
+                      borderRadius: '10px',
                       border: 'none',
                       background: '#10B981',
                       color: '#FFFFFF',
-                      fontSize: '0.8125rem',
-                      fontWeight: 500,
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
                       cursor: completingOrderIds.includes(order.id) ? 'not-allowed' : 'pointer',
                       opacity: completingOrderIds.includes(order.id) ? 0.7 : 1,
                       display: 'flex',

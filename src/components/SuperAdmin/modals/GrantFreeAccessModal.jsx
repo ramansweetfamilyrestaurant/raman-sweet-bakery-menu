@@ -91,21 +91,22 @@ export default function GrantFreeAccessModal({ resto, plansList, isOpen, onClose
     }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{
         background: '#FFFFFF', borderRadius: '24px', maxWidth: '540px', width: '100%',
-        padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #7C3AED', position: 'relative'
+        maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box',
+        padding: 'clamp(18px, 4vw, 28px) clamp(16px, 4vw, 24px)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #7C3AED', position: 'relative'
       }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: '18px', right: '18px', background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}>
-          <X size={20} />
+        <button onClick={onClose} aria-label="Close modal" style={{ position: 'absolute', top: '14px', right: '14px', background: '#F3F4F6', border: 'none', width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4B5563' }}>
+          <X size={18} />
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--sa-purple-bg)', color: 'var(--sa-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', paddingRight: '40px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--sa-purple-bg)', color: 'var(--sa-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Crown size={24} />
           </div>
-          <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0, overflowWrap: 'break-word' }}>
               {isAlreadyVip ? (step === 'confirm' ? 'Confirm VIP Extension' : step === 'success' ? 'VIP Updated!' : 'Extend / Update VIP Access') : (step === 'confirm' ? 'Confirm Free Access' : step === 'success' ? 'Access Activated!' : 'Grant VIP Complimentary Access')}
             </h3>
-            <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600, display: 'block', overflowWrap: 'anywhere' }}>
               Restaurant: <strong>{resto.name}</strong> (/{resto.slug})
             </span>
           </div>
@@ -122,9 +123,11 @@ export default function GrantFreeAccessModal({ resto, plansList, isOpen, onClose
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px',
             fontSize: '0.82rem'
           }}>
-            <div>
+            <div style={{ minWidth: 0, flex: '1 1 180px' }}>
               <div style={{ fontWeight: 800, color: '#6B21A8' }}>
                 👑 Currently Active VIP Tenant
               </div>
@@ -194,7 +197,7 @@ export default function GrantFreeAccessModal({ resto, plansList, isOpen, onClose
                   value={form.valid_until}
                   min={new Date().toISOString().split('T')[0]}
                   onChange={(e) => setForm({ ...form, valid_until: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)' }}
+                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', boxSizing: 'border-box' }}
                 />
               </div>
             )}
@@ -236,7 +239,7 @@ export default function GrantFreeAccessModal({ resto, plansList, isOpen, onClose
                 placeholder="e.g. Partner venue, Promotional sponsor, VIP extension..."
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)' }}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -244,7 +247,7 @@ export default function GrantFreeAccessModal({ resto, plansList, isOpen, onClose
               🛡️ Zero Charge Guarantee: Cashfree payment is NOT required. Recurring amount is ₹0 and auto-renew is disabled.
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: '8px' }}>
               <button onClick={onClose} className="sa-btn sa-btn-secondary">Cancel</button>
               <button onClick={() => setStep('confirm')} className="sa-btn sa-btn-primary">Next: Review Terms ➔</button>
             </div>
@@ -254,21 +257,21 @@ export default function GrantFreeAccessModal({ resto, plansList, isOpen, onClose
         {step === 'confirm' && (
           <div>
             <div style={{ background: 'var(--sa-surface-subtle)', border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-md)', padding: '14px', marginBottom: '16px', fontSize: '0.84rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--sa-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', padding: '4px 0', borderBottom: '1px solid var(--sa-border)' }}>
                 <span>Selected Plan:</span><strong style={{ color: 'var(--sa-primary)' }}>{form.plan_key.toUpperCase()}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--sa-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', padding: '4px 0', borderBottom: '1px solid var(--sa-border)' }}>
                 <span>Customer Charge:</span><strong style={{ color: 'var(--sa-success)' }}>₹0 / month (VIP Complimentary)</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--sa-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', padding: '4px 0', borderBottom: '1px solid var(--sa-border)' }}>
                 <span>Duration / Action:</span><strong>{form.duration_days === 'lifetime' ? '👑 Lifetime Access' : (form.duration_days === 'custom' ? `Until ${form.valid_until || 'Selected Date'}` : `+${form.duration_days} Days (${form.extend_mode === 'extend' ? 'Added to remaining' : 'From today'})`)}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', padding: '4px 0' }}>
                 <span>Cashfree Mandate:</span><strong>NOT REQUIRED</strong>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button onClick={() => setStep('form')} className="sa-btn sa-btn-secondary">⬅️ Back</button>
               <button onClick={handleConfirm} disabled={submitting} className="sa-btn sa-btn-primary">
                 {submitting ? 'Processing...' : (isAlreadyVip ? '👑 Update & Extend VIP Access' : '🎁 Confirm & Grant Access')}

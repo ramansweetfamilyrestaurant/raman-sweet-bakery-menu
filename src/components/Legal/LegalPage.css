@@ -13,12 +13,18 @@
 }
 
 .km-legal-wrapper {
-  min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--km-bg);
   color: var(--km-text);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+
+.km-legal-wrapper * {
+  box-sizing: border-box;
 }
 
 /* Header */
@@ -30,7 +36,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--km-border);
-  height: 60px;
+  min-height: 60px;
   display: flex;
   align-items: center;
 }
@@ -39,10 +45,12 @@
   max-width: 1000px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 8px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .km-legal-brand {
@@ -51,6 +59,7 @@
   gap: 8px;
   cursor: pointer;
   text-decoration: none;
+  min-width: 0;
 }
 
 .km-legal-logo-icon {
@@ -62,6 +71,7 @@
   font-weight: 900;
   color: var(--km-green);
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .km-legal-logo-badge {
@@ -72,6 +82,7 @@
   padding: 2px 6px;
   border-radius: 4px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .km-legal-nav-links {
@@ -104,6 +115,7 @@
   color: var(--km-green);
   border: 1px solid rgba(10, 35, 21, 0.12);
   padding: 6px 14px;
+  min-height: 36px;
   border-radius: 8px;
   font-size: 0.82rem;
   font-weight: 800;
@@ -340,7 +352,7 @@
 /* Mobile Media Queries (360px - 768px) */
 @media (max-width: 768px) {
   .km-legal-header-container {
-    padding: 0 14px;
+    padding: 8px 14px;
   }
 
   .km-legal-nav-links {

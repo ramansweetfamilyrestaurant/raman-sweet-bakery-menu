@@ -30,7 +30,7 @@ export default function OwnerLoginModal({
           setSupportPhone(data.support_whatsapp);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   if (!show) return null;
@@ -45,33 +45,33 @@ export default function OwnerLoginModal({
   };
 
   return (
-    <div 
+    <div
       style={{
         position: 'fixed', inset: 0, zIndex: 10050,
         background: 'rgba(5, 19, 10, 0.88)', backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-      }} 
+      }}
       onClick={onClose}
     >
-      <div 
-        onClick={e => e.stopPropagation()} 
+      <div
+        onClick={e => e.stopPropagation()}
         style={{
           background: 'linear-gradient(145deg, #0A2315 0%, #0F321E 100%)',
           border: '1.5px solid rgba(212, 175, 55, 0.5)',
           borderRadius: '24px',
-          padding: '32px 24px', maxWidth: '420px', width: '100%', maxHeight: '92vh', overflowY: 'auto',
+          padding: '28px 20px', maxWidth: '420px', width: '100%', maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box',
           color: '#FFFFFF', boxShadow: '0 25px 60px rgba(0,0,0,0.85), 0 0 30px rgba(212, 175, 55, 0.15)',
           position: 'relative'
         }}
       >
         {/* Close Button */}
-        <button 
-          onClick={onClose} 
+        <button
+          onClick={onClose}
           style={{
-            position: 'absolute', top: '16px', right: '16px',
+            position: 'absolute', top: '14px', right: '14px',
             background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
-            width: '34px', height: '34px', color: '#FFF', cursor: 'pointer',
+            width: '38px', height: '38px', color: '#FFF', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.2s ease'
           }}
@@ -169,7 +169,7 @@ export default function OwnerLoginModal({
               style={{
                 width: '100%', padding: '12px 14px', borderRadius: '10px',
                 border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(0,0,0,0.4)',
-                color: '#FFFFFF', fontSize: '0.92rem', outline: 'none', boxSizing: 'border-box'
+                color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
               }}
             />
           </div>
@@ -222,7 +222,7 @@ export default function OwnerLoginModal({
                 <button
                   type="button"
                   onClick={() => { setMode('forgot'); setErrMessage(''); setSuccessMessage(''); }}
-                  style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '0.74rem', cursor: 'pointer', textDecoration: 'underline' }}
+                  style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '0.74rem', cursor: 'pointer', textDecoration: 'underline', minHeight: '36px', padding: '6px 8px' }}
                 >
                   Forgot Password?
                 </button>
@@ -236,7 +236,7 @@ export default function OwnerLoginModal({
                 style={{
                   width: '100%', padding: '12px 14px', borderRadius: '10px',
                   border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(0,0,0,0.4)',
-                  color: '#FFFFFF', fontSize: '0.92rem', outline: 'none', boxSizing: 'border-box'
+                  color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                 }}
               />
             </div>

@@ -4269,7 +4269,7 @@ export default function AdminDashboard({
                   position: 'relative',
                   zIndex: 40
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: '1 1 200px' }}>
                     <div style={{
                       width: '42px',
                       height: '42px',
@@ -4283,8 +4283,8 @@ export default function AdminDashboard({
                     }}>
                       🛡️
                     </div>
-                    <div>
-                      <div style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '0.94rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '0.94rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                         <span>Customer Awaiting Table Presence Verification</span>
                         <span style={{ background: '#EF4444', color: '#FFFFFF', padding: '2px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 900 }}>ACTION NEEDED</span>
                       </div>
@@ -4301,7 +4301,7 @@ export default function AdminDashboard({
                       const raw = String(req.table_number || '1');
                       const tblLabel = raw.toLowerCase().includes('table') || raw.toLowerCase().includes('room') || raw.toLowerCase().includes('cabin') || raw.toLowerCase().includes('counter') ? raw : `Table ${raw}`;
                       return (
-                        <div key={req.id} style={{ display: 'flex', gap: '6px' }}>
+                        <div key={req.id} style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                           <button
                             type="button"
                             onClick={() => handleApprovePresenceRequest(req.id)}
@@ -4851,19 +4851,20 @@ export default function AdminDashboard({
             flexDirection: 'column',
             gap: '16px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong style={{ fontSize: '1.15rem', color: 'var(--adm-primary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: '1.1rem', color: 'var(--adm-primary)', minWidth: 0, flex: 1 }}>
                 🍳 Accept Order & KDS Routing
               </strong>
               <button
                 onClick={() => setAcceptRoutingModal(null)}
-                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--adm-muted)' }}
+                aria-label="Close modal"
+                style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--adm-muted)', flexShrink: 0 }}
               >
                 ✕
               </button>
             </div>
 
-            <div style={{ background: 'var(--adm-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--adm-border)' }}>
+            <div style={{ background: 'var(--adm-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--adm-border)', overflowWrap: 'anywhere' }}>
               <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--adm-primary)' }}>
                 {acceptRoutingModal.token_display
                   ? `⚡ Takeaway • Token ${acceptRoutingModal.token_display}`
@@ -4939,8 +4940,8 @@ export default function AdminDashboard({
                   gap: '10px'
                 }}
               >
-                <span style={{ fontSize: '1.4rem' }}>🍳</span>
-                <div>
+                <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>🍳</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <strong style={{ display: 'block', color: '#F8FAFC' }}>Send to Kitchen KDS Screen</strong>
                   <span style={{ fontSize: '0.74rem', color: '#94A3B8', fontWeight: 600 }}>Hot food, freshly cooked dishes for Chef Display</span>
                 </div>
@@ -4983,8 +4984,8 @@ export default function AdminDashboard({
                   gap: '10px'
                 }}
               >
-                <span style={{ fontSize: '1.4rem' }}>📦</span>
-                <div>
+                <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>📦</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <strong style={{ display: 'block' }}>Counter / Direct Fulfillment</strong>
                   <span style={{ fontSize: '0.74rem', color: 'var(--adm-muted)', fontWeight: 600 }}>Ready sweets, bakery, packaged items (Skips Kitchen KDS)</span>
                 </div>
@@ -5103,7 +5104,7 @@ export default function AdminDashboard({
                       <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0F172A' }}>
                         Pay Exact: {currency}{billData.grandTotal}
                       </div>
-                      <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '2px', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>
                         UPI ID: <strong>{upiId}</strong>
                       </div>
                     </div>
@@ -5153,6 +5154,8 @@ export default function AdminDashboard({
                   color: isSettlingOrder ? '#D1D5DB' : '#9CA3AF',
                   fontSize: '0.8rem',
                   cursor: isSettlingOrder ? 'not-allowed' : 'pointer',
+                  minHeight: '40px',
+                  padding: '8px 18px',
                   textDecoration: 'underline'
                 }}
               >
@@ -5172,16 +5175,18 @@ export default function AdminDashboard({
         }}>
           <div style={{
             background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
-            padding: '24px', maxWidth: '640px', width: '100%', maxHeight: '90vh',
+            padding: '24px', maxWidth: '640px', width: '100%', maxHeight: '90dvh',
+            boxSizing: 'border-box',
             overflowY: 'auto', color: '#FFFFFF', boxShadow: '0 25px 60px rgba(0,0,0,0.9)',
             position: 'relative'
           }}>
             <button
               onClick={() => setShowHelpModal(false)}
+              aria-label="Close help modal"
               style={{
-                position: 'absolute', top: '16px', right: '16px',
+                position: 'absolute', top: '14px', right: '14px',
                 background: 'rgba(255,255,255,0.12)', border: 'none',
-                color: '#FFFFFF', borderRadius: '50%', width: '32px', height: '32px',
+                color: '#FFFFFF', borderRadius: '50%', width: '38px', height: '38px',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}
             >

@@ -122,10 +122,10 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
 
       {/* Compact Operational Hub: Attention Required */}
       <div className="sa-table-container" style={{ padding: '18px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+          <div style={{ minWidth: 0 }}>
             <h3 className="sa-section-title" style={{ fontSize: '1.05rem' }}>
-              <AlertTriangle size={18} color="var(--sa-warning)" /> Attention Required
+              <AlertTriangle size={18} color="var(--sa-warning)" style={{ flexShrink: 0 }} /> Attention Required
             </h3>
             <span style={{ fontSize: '0.75rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
               Operational summary of pending registration approvals and subscription events.
@@ -136,24 +136,24 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
         {/* Compact Summary Box */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
           {/* Pending Registrations Summary Row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--sa-surface-subtle)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="sa-badge sa-badge-warning">MEDIUM</span>
-              <span style={{ fontSize: '0.84rem', fontWeight: 800 }}>Pending Registrations ({pendingRegistrations.length})</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', padding: '10px 14px', background: 'var(--sa-surface-subtle)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 180px' }}>
+              <span className="sa-badge sa-badge-warning" style={{ flexShrink: 0 }}>MEDIUM</span>
+              <span style={{ fontSize: '0.84rem', fontWeight: 800, overflowWrap: 'break-word' }}>Pending Registrations ({pendingRegistrations.length})</span>
             </div>
-            <button onClick={() => onNavigate('tenants')} className="sa-btn sa-btn-secondary sa-btn-sm">
+            <button onClick={() => onNavigate('tenants')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ flexShrink: 0 }}>
               View All ➔
             </button>
           </div>
 
           {/* Cancellations Summary Row */}
           {pendingCancellations.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--sa-warning-bg)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-warning-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="sa-badge sa-badge-warning">MEDIUM</span>
-                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#78350F' }}>Cancellations Requested ({pendingCancellations.length})</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', padding: '10px 14px', background: 'var(--sa-warning-bg)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-warning-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 180px' }}>
+                <span className="sa-badge sa-badge-warning" style={{ flexShrink: 0 }}>MEDIUM</span>
+                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#78350F', overflowWrap: 'break-word' }}>Cancellations Requested ({pendingCancellations.length})</span>
               </div>
-              <button onClick={() => onNavigate('subscriptions')} className="sa-btn sa-btn-secondary sa-btn-sm">
+              <button onClick={() => onNavigate('subscriptions')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ flexShrink: 0 }}>
                 View ➔
               </button>
             </div>
@@ -161,12 +161,12 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
 
           {/* Scheduled Changes Summary Row */}
           {scheduledChanges.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--sa-info-bg)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-info-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="sa-badge sa-badge-info">INFO</span>
-                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#1E40AF' }}>Scheduled Plan Changes ({scheduledChanges.length})</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', padding: '10px 14px', background: 'var(--sa-info-bg)', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-info-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 180px' }}>
+                <span className="sa-badge sa-badge-info" style={{ flexShrink: 0 }}>INFO</span>
+                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#1E40AF', overflowWrap: 'break-word' }}>Scheduled Plan Changes ({scheduledChanges.length})</span>
               </div>
-              <button onClick={() => onNavigate('subscriptions')} className="sa-btn sa-btn-secondary sa-btn-sm">
+              <button onClick={() => onNavigate('subscriptions')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ flexShrink: 0 }}>
                 View ➔
               </button>
             </div>
@@ -181,12 +181,12 @@ export default function OverviewView({ restaurants, pendingRegistrations = [], o
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {visibleRegistrations.map(reg => (
-                <div key={reg.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#FFFFFF', border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.82rem' }}>
-                  <div>
-                    <strong style={{ color: 'var(--sa-text-main)' }}>{reg.name}</strong>
+                <div key={reg.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', padding: '8px 12px', background: '#FFFFFF', border: '1px solid var(--sa-border)', borderRadius: 'var(--sa-radius-sm)', fontSize: '0.82rem' }}>
+                  <div style={{ minWidth: 0, flex: '1 1 160px' }}>
+                    <strong style={{ color: 'var(--sa-text-main)', wordBreak: 'break-word' }}>{reg.name}</strong>
                     <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', marginLeft: '8px' }}>Plan: {(reg.plan_key || 'pro').toUpperCase()}</span>
                   </div>
-                  <button onClick={() => onNavigate('tenants')} className="sa-btn sa-btn-secondary sa-btn-sm">
+                  <button onClick={() => onNavigate('tenants')} className="sa-btn sa-btn-secondary sa-btn-sm" style={{ flexShrink: 0 }}>
                     Review ➔
                   </button>
                 </div>

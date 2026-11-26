@@ -548,8 +548,8 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
         }}
       >
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-            <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+            <div style={{ minWidth: 0, flex: '1 1 160px' }}>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{
                   fontSize: '0.68rem',
@@ -595,7 +595,9 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '4px',
+              flexShrink: 0,
+              whiteSpace: 'nowrap'
             }}>
               <Users size={12} /> {subscriberCount} {subscriberCount === 1 ? 'Business' : 'Businesses'}
             </span>
@@ -988,10 +990,10 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
 
       {/* 📦 3. PLAN SUMMARY CARDS ROW */}
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Layers size={18} color="var(--sa-primary)" />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+          <div style={{ minWidth: 0, flex: '1 1 220px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <Layers size={18} color="var(--sa-primary)" style={{ flexShrink: 0 }} />
               {selectedIndustry === 'restaurant' && '🍽️ Restaurant / Cafe Vertical (₹499 Basic · ₹999 Pro · ₹1,999 Enterprise)'}
               {selectedIndustry === 'hotel' && '🏨 Hotel & Resort Vertical (₹999 Basic · ₹1,999 Pro · ₹3,499 Enterprise)'}
               {selectedIndustry === 'cinema' && '🎬 Cinema & Multiplex Vertical (₹1,499 Basic · ₹2,999 Pro · ₹4,999 Enterprise)'}
@@ -1004,7 +1006,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
               {selectedIndustry === 'all' && 'Master view across all three business verticals.'}
             </span>
           </div>
-          <span style={{ fontSize: '0.76rem', background: '#F1F5F9', padding: '4px 10px', borderRadius: '8px', fontWeight: 800, color: '#334155' }}>
+          <span style={{ fontSize: '0.76rem', background: '#F1F5F9', padding: '4px 10px', borderRadius: '8px', fontWeight: 800, color: '#334155', flexShrink: 0 }}>
             {displayedPlans.length} Active {displayedPlans.length === 1 ? 'Tier' : 'Tiers'}
           </span>
         </div>
@@ -1014,11 +1016,11 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
             {/* 🍽️ Restaurant Section */}
             <div style={{ background: '#FFFFFF', border: '1.5px solid #A7F3D0', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(4, 120, 87, 0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ECFDF5', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #A7F3D0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ECFDF5', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #A7F3D0', flexShrink: 0 }}>
                     <Utensils size={18} />
                   </div>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <h4 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 900, color: '#047857' }}>🍽️ Restaurant & Cafe Vertical Plans</h4>
                     <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Dine-In Tables Quotas, Kitchen KDS, Dual Printing & WhatsApp Ordering</span>
                   </div>
@@ -1032,7 +1034,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                   Configure Restaurant Matrix →
                 </button>
               </div>
-              <div className="sa-plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+              <div className="sa-plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '16px' }}>
                 {restaurantPlans.map(renderPlanCard)}
               </div>
             </div>
@@ -1040,11 +1042,11 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
             {/* 🏨 Hotel Section */}
             <div style={{ background: '#FFFFFF', border: '1.5px solid #BFDBFE', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(30, 64, 175, 0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EFF6FF', color: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #BFDBFE' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EFF6FF', color: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #BFDBFE', flexShrink: 0 }}>
                     <Building2 size={18} />
                   </div>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <h4 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 900, color: '#1E40AF' }}>🏨 Hotel & Resort In-Room Dining Plans</h4>
                     <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Guest Room QR Quotas, Amenities Requests & Room Service Pantry KDS</span>
                   </div>
@@ -1058,7 +1060,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                   Configure Hotel Matrix →
                 </button>
               </div>
-              <div className="sa-plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+              <div className="sa-plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '16px' }}>
                 {hotelPlans.map(renderPlanCard)}
               </div>
             </div>
@@ -1066,11 +1068,11 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
             {/* 🎬 Cinema Section */}
             <div style={{ background: '#FFFFFF', border: '1.5px solid #E9D5FF', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(126, 34, 206, 0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F5F3FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E9D5FF' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F5F3FF', color: '#7E22CE', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E9D5FF', flexShrink: 0 }}>
                     <Film size={18} />
                   </div>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <h4 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 900, color: '#7E22CE' }}>🎬 Cinema & Multiplex In-Seat Delivery Plans</h4>
                     <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Audi Screen & Seat Quotas, Interval Rush Mode & Concessions Runner Dispatch</span>
                   </div>
@@ -1084,13 +1086,13 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                   Configure Cinema Matrix →
                 </button>
               </div>
-              <div className="sa-plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+              <div className="sa-plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '16px' }}>
                 {cinemaPlans.map(renderPlanCard)}
               </div>
             </div>
           </div>
         ) : (
-          <div className="sa-plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
+          <div className="sa-plan-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '18px' }}>
             {displayedPlans.map(renderPlanCard)}
           </div>
         )}
@@ -1098,10 +1100,10 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
 
       {/* 📊 4. TABLE SECTION (EXECUTIVE CATALOG FOR ALL, DETAILED MATRIX FOR VERTICAL) */}
       {selectedIndustry === 'all' ? (
-        <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: 'var(--sa-radius-lg)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+        <div className="sa-table-container" style={{ background: '#FFFFFF', borderRadius: 'var(--sa-radius-lg)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
           <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--sa-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 900, color: 'var(--sa-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ minWidth: 0, flex: '1 1 220px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 900, color: 'var(--sa-text-main)', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <Layers size={18} color="var(--sa-primary)" />
                 🌐 Executive Master Plans Catalog ({plans.length} Tiers Across 3 Verticals)
               </h3>
@@ -1109,11 +1111,12 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                 High-level overview of pricing, quotas, capabilities, and active tenants. To configure granular feature checkboxes and limits, click any vertical tab above or the 'Configure Matrix' button.
               </span>
             </div>
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--sa-primary)', background: '#F1F5F9', padding: '5px 12px', borderRadius: '8px' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--sa-primary)', background: '#F1F5F9', padding: '5px 12px', borderRadius: '8px', flexShrink: 0 }}>
               Total Tiers: {plans.length}
             </span>
           </div>
 
+          <div className="sa-responsive-table">
           <table className="sa-table" style={{ minWidth: '980px' }}>
             <thead>
               <tr>
@@ -1285,11 +1288,12 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
               })}
             </tbody>
           </table>
+          </div>
         </div>
       ) : (
-        <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: 'var(--sa-radius-lg)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--sa-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
+        <div className="sa-table-container" style={{ background: '#FFFFFF', borderRadius: 'var(--sa-radius-lg)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--sa-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ minWidth: 0, flex: '1 1 220px' }}>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
                 ⚡ {selectedIndustry === 'restaurant' ? '🍽️ Restaurant & Cafe' : selectedIndustry === 'hotel' ? '🏨 Hotel & Resort' : '🎬 Cinema & Multiplex'} Feature & Permissions Matrix
               </h3>
@@ -1297,11 +1301,12 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                 Dedicated limits, quotas, and feature toggles for {displayedPlans.length} visible tiers
               </span>
             </div>
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--sa-primary)', background: '#F1F5F9', padding: '4px 10px', borderRadius: '6px' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--sa-primary)', background: '#F1F5F9', padding: '4px 10px', borderRadius: '6px', flexShrink: 0 }}>
               Tiers: {displayedPlans.length}
             </span>
           </div>
 
+          <div className="sa-responsive-table">
           <table className="sa-table" style={{ minWidth: '850px' }}>
             <thead>
               <tr>
@@ -1449,6 +1454,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -1462,22 +1468,22 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
           aria-modal="true"
           aria-labelledby="edit-plan-title"
         >
-          <div className="sa-modal-box" style={{ maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div className="sa-modal-box" style={{ maxWidth: '560px', maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box' }} onClick={(e) => e.stopPropagation()}>
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
               marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--sa-border)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Edit3 size={20} color="var(--sa-primary)" />
-                <h3 id="edit-plan-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>Edit Plan: {editingPlan.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                <Edit3 size={20} color="var(--sa-primary)" style={{ flexShrink: 0 }} />
+                <h3 id="edit-plan-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)', overflowWrap: 'break-word', minWidth: 0 }}>Edit Plan: {editingPlan.name}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingPlan(null)}
                 aria-label="Close Edit Plan Modal"
-                style={{ background: 'none', border: 'none', color: 'var(--sa-text-muted)', cursor: 'pointer', padding: '4px' }}
+                style={{ background: '#F3F4F6', border: 'none', width: '38px', height: '38px', borderRadius: '50%', color: 'var(--sa-text-muted)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
@@ -1507,7 +1513,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>MONTHLY PRICE (₹) *</label>
                   <input
@@ -1554,7 +1560,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                 </div>
               ) : (editingPlan.industry === 'cinema' || resolveIndustry(editingPlan) === 'cinema') ? (
                 <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--sa-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '12px' }}>
                     <div>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 800, marginBottom: '4px' }}>
                         <input
@@ -1771,7 +1777,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
                 <button
                   type="button"
                   onClick={() => setEditingPlan(null)}
@@ -1804,22 +1810,22 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
           aria-modal="true"
           aria-labelledby="create-plan-title"
         >
-          <div className="sa-modal-box" style={{ maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div className="sa-modal-box" style={{ maxWidth: '560px', maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box' }} onClick={(e) => e.stopPropagation()}>
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
               marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--sa-border)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={20} color="var(--sa-accent)" />
-                <h3 id="create-plan-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>Create Custom SaaS Plan Tier</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                <Sparkles size={20} color="var(--sa-accent)" style={{ flexShrink: 0 }} />
+                <h3 id="create-plan-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-text-main)', overflowWrap: 'break-word', minWidth: 0 }}>Create Custom SaaS Plan Tier</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
                 aria-label="Close Create Plan Modal"
-                style={{ background: 'none', border: 'none', color: 'var(--sa-text-muted)', cursor: 'pointer', padding: '4px' }}
+                style={{ background: '#F3F4F6', border: 'none', width: '38px', height: '38px', borderRadius: '50%', color: 'var(--sa-text-muted)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
@@ -1859,7 +1865,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '4px' }}>
                     PLAN KEY (UNIQUE) <span style={{ color: '#EF4444' }}>*</span>
@@ -1915,7 +1921,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                 </div>
               ) : createForm.industry === 'cinema' ? (
                 <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid var(--sa-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '12px' }}>
                     <div>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 800, marginBottom: '4px' }}>
                         <input
@@ -2136,7 +2142,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}

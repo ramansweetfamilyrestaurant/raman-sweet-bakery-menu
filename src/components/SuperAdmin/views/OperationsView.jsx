@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Database, Activity, RefreshCw, Server, HardDrive, Radio, Clock, 
-  Sparkles, CheckCircle, AlertTriangle, ShieldCheck, Settings, 
-  Layers, Utensils, CreditCard, Users, FileText, Zap, Cpu, Gauge, 
+import {
+  Database, Activity, RefreshCw, Server, HardDrive, Radio, Clock,
+  Sparkles, CheckCircle, AlertTriangle, ShieldCheck, Settings,
+  Layers, Utensils, CreditCard, Users, FileText, Zap, Cpu, Gauge,
   ChevronRight, ArrowRight, Sliders, Check, LifeBuoy, MessageSquare,
   QrCode, Search, Image, Copy, Terminal
 } from 'lucide-react';
 import '../styles/SuperAdmin.css';
 
-export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys = () => {} }) {
+export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys = () => { } }) {
   const [telemetry, setTelemetry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -21,11 +21,11 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
   const [copiedReport, setCopiedReport] = useState(false);
 
   const resolveToken = () => {
-    return token || 
-      localStorage.getItem('touchqr_superadmin_token') || 
-      localStorage.getItem('token') || 
-      localStorage.getItem('saas_super_token') || 
-      sessionStorage.getItem('touchqr_superadmin_token') || 
+    return token ||
+      localStorage.getItem('touchqr_superadmin_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('saas_super_token') ||
+      sessionStorage.getItem('touchqr_superadmin_token') ||
       sessionStorage.getItem('saas_super_token');
   };
 
@@ -96,9 +96,9 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
       };
       const res = await fetch('/api/superadmin/settings', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${authToken}` 
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify(payload)
       });
@@ -211,7 +211,7 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
     }
   };
 
-  const filteredTables = (db.tables || []).filter(t => 
+  const filteredTables = (db.tables || []).filter(t =>
     !tableSearch || t.table_name.toLowerCase().includes(tableSearch.toLowerCase())
   );
 
@@ -237,7 +237,7 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      
+
       {/* 🌟 1. LUXURY SIGNATURE DB OPERATIONS HERO BANNER */}
       <div style={{
         background: 'linear-gradient(135deg, #0A2315 0%, #153B25 100%)',
@@ -361,7 +361,7 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
             </div>
           </div>
 
-          <div 
+          <div
             style={{ background: 'rgba(255,255,255,0.07)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}
             title="Current Node.js worker/container uptime. Serverless instances may restart and reset this value."
           >
@@ -411,7 +411,7 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
       </div>
 
       {/* 🧭 2. OPERATIONS FILTER PILLS NAVIGATION */}
-      <div 
+      <div
         className="sa-filter-pills-strip"
         style={{
           display: 'flex', gap: '6px',
@@ -465,10 +465,10 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
       {/* ========================================================================= */}
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          
+
           {/* Subsystems Health Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
-            
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(210px, 100%), 1fr))', gap: '12px' }}>
+
             {/* 1. PostgreSQL */}
             <div className="sa-stat-card">
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -574,7 +574,7 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px', fontSize: '0.82rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '10px', fontSize: '0.82rem' }}>
               <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                 <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>DATABASE CONNECTION</span>
                 <strong style={{ color: '#15803D', marginTop: '2px', display: 'block' }}>✅ Connected ({db.provider})</strong>
@@ -614,9 +614,9 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
                   Live row counts ({totalRecordsSum.toLocaleString('en-IN')} total platform rows) and disk quotas across core tables.
                 </span>
               </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ position: 'relative' }}>
+
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ position: 'relative', flex: '1 1 150px', minWidth: 0 }}>
                   <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
                   <input
                     type="text"
@@ -625,7 +625,7 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
                     onChange={(e) => setTableSearch(e.target.value)}
                     style={{
                       padding: '6px 12px 6px 30px', borderRadius: '8px', border: '1px solid #CBD5E1',
-                      fontSize: '0.76rem', fontWeight: 700, width: '150px'
+                      fontSize: '0.84rem', fontWeight: 700, width: '100%', boxSizing: 'border-box'
                     }}
                   />
                 </div>
@@ -633,15 +633,15 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
                   type="button"
                   onClick={() => fetchTelemetry(true)}
                   className="sa-btn sa-btn-secondary sa-btn-sm"
-                  style={{ fontSize: '0.74rem', padding: '6px 12px', fontWeight: 800 }}
+                  style={{ fontSize: '0.74rem', padding: '6px 12px', fontWeight: 800, flexShrink: 0 }}
                 >
                   <RefreshCw size={13} className={refreshing ? 'spin' : ''} /> Refresh Counts
                 </button>
               </div>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', minWidth: '520px', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ background: '#F8FAFC', borderBottom: '1px solid var(--sa-border)' }}>
                     <th style={{ padding: '12px 18px', fontWeight: 800, color: 'var(--sa-text-muted)' }}>TABLE NAME</th>
@@ -695,8 +695,8 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
       {/* 3. TAB: VACUUM, REINDEX & ARCHIVAL                                        */}
       {/* ========================================================================= */}
       {activeTab === 'maintenance' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-          
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '16px' }}>
+
           {/* Database Optimization Card */}
           <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '16px', border: '1px solid var(--sa-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
             <div>
@@ -789,13 +789,13 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '14px' }}>
             {/* Free Trial Setting */}
-            <div style={{ background: '#FFFBEB', padding: '14px', borderRadius: '12px', border: '1px solid #FCD34D' }}>
+            <div style={{ background: '#FFFBEB', padding: '14px', borderRadius: '12px', border: '1px solid #FCD34D', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#B45309', marginBottom: '6px' }}>
                 🎁 DEFAULT SAAS FREE TRIAL DURATION:
               </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <input
                   type="number"
                   min="1"
@@ -819,7 +819,7 @@ export default function OperationsView({ token, paymentKeys = {}, setPaymentKeys
                 placeholder="919876543210"
                 value={paymentKeys?.support_whatsapp || ''}
                 onChange={(e) => setPaymentKeys({ ...paymentKeys, support_whatsapp: e.target.value })}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #A7F3D0', fontSize: '0.86rem', fontWeight: 800, color: '#065F46' }}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #A7F3D0', fontSize: '0.86rem', fontWeight: 800, color: '#065F46', boxSizing: 'border-box' }}
               />
             </div>
           </div>

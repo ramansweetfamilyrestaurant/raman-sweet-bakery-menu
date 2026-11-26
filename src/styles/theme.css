@@ -63,7 +63,9 @@
 /* ========== MULTI-TENANT BRAND THEME PRESETS ========== */
 
 /* Theme 1: Gold & Forest Green (Taj / Oberoi Luxury) */
-[data-theme="gold"], [data-theme="default"], :root:not([data-theme]) {
+[data-theme="gold"],
+[data-theme="default"],
+:root:not([data-theme]) {
   --bg-app: #F6F4EE;
   --theme-page-bg: #F6F4EE;
   --theme-page-gradient: linear-gradient(180deg, #F6F4EE 0%, #EFECE3 100%);
@@ -415,7 +417,8 @@
 }
 
 /* Theme 8: Obsidian Cyber & Neon Cyan (Sleek Dark Theme) */
-[data-theme="dark"], [data-theme="cyber"] {
+[data-theme="dark"],
+[data-theme="cyber"] {
   --bg-app: #0B0F19;
   --theme-page-bg: #0B0F19;
   --theme-page-gradient: linear-gradient(180deg, #0B0F19 0%, #020617 100%);
@@ -473,10 +476,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   position: relative;
 }
 
@@ -485,19 +489,19 @@ body {
   background-color: var(--bg-app);
   color: var(--text-dark);
   line-height: 1.4;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Full Width Seamless App Shell - ZERO BLACK SIDE BORDERS */
 #root {
   width: 100%;
   max-width: 100%;
-  min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-app);
   box-shadow: none;
   margin: 0;
   position: relative;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -509,9 +513,12 @@ button {
   touch-action: manipulation;
 }
 
-/* Prevent iOS Safari unwanted auto-zoom on inputs while keeping text legible */
-@media (max-width: 768px) {
-  input, select, textarea {
+/* Prevent iOS/iPadOS Safari unwanted auto-zoom on inputs while keeping text legible */
+@media (max-width: 1024px) {
+
+  input,
+  select,
+  textarea {
     font-size: 16px !important;
   }
 }
@@ -523,38 +530,79 @@ img {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes sheetSlideUp {
-  from { opacity: 0.5; transform: translateY(100%); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0.5;
+    transform: translateY(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes sheetBackdropFade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulseGlow {
-  0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
-  70% { box-shadow: 0 0 0 8px rgba(212, 175, 55, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(212, 175, 55, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes floatSoft {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
 /* Glassmorphism & Micro-Interactions Utility Classes */
@@ -584,6 +632,7 @@ img {
 .hover-lift {
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
+
 .hover-lift:hover {
   transform: translateY(-3px) !important;
   box-shadow: 0 12px 28px rgba(10, 35, 21, 0.12) !important;
@@ -609,13 +658,16 @@ img {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.03);
+  background: rgba(0, 0, 0, 0.03);
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(197, 160, 89, 0.3);
   border-radius: 99px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(197, 160, 89, 0.6);
 }
@@ -630,9 +682,11 @@ img {
 
 /* Phones & Small Screens (< 768px) */
 @media (max-width: 768px) {
-  html, body {
+
+  html,
+  body {
     font-size: 14px;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   /* Single column grids on mobile */
@@ -645,7 +699,8 @@ img {
   }
 
   /* Responsive Tables */
-  .table-responsive, table {
+  .table-responsive,
+  .table-responsive table {
     display: block !important;
     width: 100% !important;
     overflow-x: auto !important;
@@ -654,25 +709,13 @@ img {
   }
 
   /* Touch-friendly Form Controls on Mobile */
-  input:not([type="checkbox"]):not([type="radio"]), select, textarea, .btn-form-submit {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea,
+  .btn-form-submit {
     min-height: 44px;
     touch-action: manipulation;
   }
-
-  /* Header & Navigation Mobile Optimizations */
-  .customer-header {
-    padding: 10px 14px !important;
-  }
-
-  /* Safe Area Padding for iOS / Android bottom bar */
-  .bottom-dock {
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  /* Typography Adjustments for Customer Menu Views */
-  .customer-header h1 { font-size: 1.4rem !important; }
-  .customer-menu h2 { font-size: 1.25rem !important; }
-  .customer-menu h3 { font-size: 1.1rem !important; }
 
   /* Mobile Full Width Modals */
   .mobile-modal {
@@ -681,13 +724,15 @@ img {
     margin: 10px !important;
     padding: 16px !important;
     border-radius: 20px !important;
-    max-height: 90vh !important;
+    max-height: 90dvh !important;
+    box-sizing: border-box !important;
     overflow-y: auto !important;
   }
 }
 
 /* Tablets & Laptops (640px+) */
 @media (min-width: 640px) {
+
   .dish-list-grid,
   .admin-dish-grid {
     display: grid !important;
@@ -706,13 +751,31 @@ img {
 
 /* Modern Landing Page Keyframes & Utilities */
 @keyframes glowPulseAnim {
-  0%, 100% { transform: scale(1); opacity: 0.9; box-shadow: 0 0 15px rgba(223, 186, 103, 0.4); }
-  50% { transform: scale(1.03); opacity: 1; box-shadow: 0 0 25px rgba(223, 186, 103, 0.8); }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+    box-shadow: 0 0 15px rgba(223, 186, 103, 0.4);
+  }
+
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+    box-shadow: 0 0 25px rgba(223, 186, 103, 0.8);
+  }
 }
 
 @keyframes floatAnim {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 .glow-pulse {
@@ -736,12 +799,14 @@ img {
     line-height: 1.25 !important;
     margin-bottom: 14px !important;
   }
+
   .landing-cta-container {
     display: flex !important;
     flex-direction: column !important;
     gap: 10px !important;
     width: 100% !important;
   }
+
   .landing-cta-button {
     width: 100% !important;
     min-height: 48px !important;
@@ -754,14 +819,14 @@ img {
     justify-content: center !important;
     text-align: center !important;
   }
+
   .landing-feature-grid {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
+
   .landing-pricing-grid {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
   }
 }
-
-

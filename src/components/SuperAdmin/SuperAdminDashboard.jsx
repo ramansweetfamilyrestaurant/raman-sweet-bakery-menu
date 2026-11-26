@@ -1043,7 +1043,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         title="🏪 Shop Directory"
         subtitle={`Manage shops, subscriptions and access (${filteredAndSortedRestaurants.length} of ${restaurants.length} accounts)`}
         actions={
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => setShowAddModal(true)}
@@ -1087,8 +1087,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         gap: '12px'
       }}>
         {/* Search Bar with live counter and clear */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: '280px', maxWidth: '100%' }}>
-          <div style={{ position: 'relative', width: '320px', maxWidth: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0, maxWidth: '100%' }}>
+          <div style={{ position: 'relative', width: 'min(320px, 100%)', maxWidth: '100%', flex: '1 1 200px', minWidth: 0 }}>
             <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)' }} />
             <input
               type="text"
@@ -1112,7 +1112,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '36px', minHeight: '36px' }}
                 title="Clear search (Esc)"
               >
                 <X size={14} />
@@ -1468,7 +1468,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         /* 📱 CARD GRID VIEW (COMPACT & CLEAN) */
         <div className="sa-grid-container" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))',
           gap: '16px'
         }}>
           {filteredAndSortedRestaurants.map(r => {
@@ -1519,11 +1519,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                           flexShrink: 0
                         }}
                       />
-                      <div style={{ minWidth: 0 }}>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
                         <h3 style={{ fontSize: '0.96rem', fontWeight: 900, margin: 0, color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {r.name}
                         </h3>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 800 }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--sa-accent-hover, #B48F27)', fontWeight: 800, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           /{r.slug}
                         </span>
                       </div>
@@ -1588,10 +1588,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     gap: '4px',
                     border: '1px solid var(--sa-border)'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                       <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>👤 Owner:</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <strong style={{ fontFamily: 'monospace', color: 'var(--sa-text-main)' }}>{r.owner_username || 'admin'}</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                        <strong style={{ fontFamily: 'monospace', color: 'var(--sa-text-main)', overflowWrap: 'anywhere' }}>{r.owner_username || 'admin'}</strong>
                         <button
                           type="button"
                           onClick={() => {
@@ -1599,7 +1599,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                             setCopiedId(r.id + '-user');
                             setTimeout(() => setCopiedId(null), 2000);
                           }}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', minWidth: '36px', minHeight: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                           title="Copy Username"
                         >
                           {copiedId === r.id + '-user' ? <Check size={11} color="#166534" /> : <Copy size={11} color="#64748B" />}
@@ -1607,10 +1607,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                       <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>📞 Phone:</span>
                       {r.phone || r.whatsapp_number ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           <strong style={{ color: 'var(--sa-text-main)', fontWeight: 800 }}>{r.phone || r.whatsapp_number}</strong>
                           <a
                             href={`https://wa.me/${(r.phone || r.whatsapp_number || '').replace(/[^0-9]/g, '')}`}
@@ -1626,9 +1626,9 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                       <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>✉️ Email:</span>
-                      <span style={{ color: r.owner_email ? 'var(--sa-text-main)' : 'var(--sa-text-muted)', fontSize: '0.72rem', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: r.owner_email ? 'var(--sa-text-main)' : 'var(--sa-text-muted)', fontSize: '0.72rem', minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word', textAlign: 'right' }}>
                         {r.owner_email || 'Email not added'}
                       </span>
                     </div>
@@ -1636,7 +1636,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
 
                 {/* 4. Actions Footer: EXACTLY [ 🔍 360° Profile ] [ 👑 Manage Menu ] [ ••• More ] */}
-                <div style={{ display: 'flex', gap: '6px', borderTop: '1px solid var(--sa-border)', paddingTop: '10px', alignItems: 'center', position: 'relative' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', borderTop: '1px solid var(--sa-border)', paddingTop: '10px', alignItems: 'center', position: 'relative' }}>
                   <button
                     type="button"
                     onClick={() => setSelectedTenant360(r)}
@@ -1759,7 +1759,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     Platform health, revenue and tenant activity at a glance.
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     onClick={() => setShowAddModal(true)}
                     className="sa-btn sa-btn-accent sa-btn-sm"
@@ -2625,8 +2625,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               {/* 🛠️ 4. BILLING TOOLBAR (SEARCH + ACTIVE SUMMARY) */}
               <div className="sa-directory-controls">
                 {/* Search Bar */}
-                <div style={{ position: 'relative', width: '100%', maxWidth: '340px', height: '38px' }}>
-                  <Search size={14} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--sa-text-muted)', pointerEvents: 'none' }} />
+                <div style={{ position: 'relative', width: '100%', maxWidth: '340px', minHeight: '42px' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)', pointerEvents: 'none' }} />
                   <input
                     type="text"
                     placeholder="Search shop, owner, phone, email..."
@@ -2635,8 +2635,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     className="sa-input sa-search-input-field"
                     style={{
                       paddingLeft: '34px',
-                      paddingRight: searchQuery ? '32px' : '12px',
-                      height: '38px',
+                      paddingRight: searchQuery ? '42px' : '12px',
+                      minHeight: '42px',
                       fontSize: '0.80rem',
                       borderRadius: 'var(--sa-radius-full)',
                       background: 'var(--sa-surface-subtle)',
@@ -2648,7 +2648,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
-                      style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', padding: '2px' }}
+                      style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', padding: '2px', minWidth: '36px', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                       <X size={14} />
                     </button>
@@ -3376,7 +3376,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
                       <div className="sa-settings-field-group">
                         <label className="sa-settings-label">🎁 DEFAULT FREE TRIAL DURATION (DAYS)</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                           <input
                             type="number"
                             min="1"
@@ -3495,8 +3495,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '20px' }}>
           {/* Status Header Badge with Master Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, #0A2315 0%, #163E26 100%)', padding: '12px 14px', borderRadius: '14px', border: '1px solid rgba(212, 175, 55, 0.35)', boxShadow: '0 4px 12px rgba(10, 35, 21, 0.15)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', background: 'linear-gradient(135deg, #0A2315 0%, #163E26 100%)', padding: '12px 14px', borderRadius: '14px', border: '1px solid rgba(212, 175, 55, 0.35)', boxShadow: '0 4px 12px rgba(10, 35, 21, 0.15)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
               {paymentKeys.platform_logo_url && !logoErr ? (
                 <img
                   src={resolveImageUrl(paymentKeys.platform_logo_url || '/api/r2-proxy/superadmin/branding/logo.webp')}
@@ -3559,7 +3559,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0, flex: 1 }}>
                       <div style={{
                         width: '32px', height: '32px', borderRadius: '10px',
                         background: isActive ? 'rgba(212, 175, 55, 0.2)' : item.bg,
@@ -3568,7 +3568,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       }}>
                         <Icon size={16} />
                       </div>
-                      <div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
                         <strong style={{ display: 'block', fontSize: '0.84rem', color: isActive ? '#FFFFFF' : 'var(--sa-text-main)', lineHeight: 1.2 }}>
                           {item.label}
                         </strong>
@@ -3635,7 +3635,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0, flex: 1 }}>
                       <div style={{
                         width: '32px', height: '32px', borderRadius: '10px',
                         background: isActive ? 'rgba(212, 175, 55, 0.2)' : item.bg,
@@ -3644,7 +3644,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       }}>
                         <Icon size={16} />
                       </div>
-                      <div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
                         <strong style={{ display: 'block', fontSize: '0.84rem', color: isActive ? '#FFFFFF' : 'var(--sa-text-main)', lineHeight: 1.2 }}>
                           {item.label}
                         </strong>
@@ -3697,27 +3697,27 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   boxSizing: 'border-box'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0, flex: 1 }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <MessageSquare size={16} />
                   </div>
-                  <div style={{ textAlign: 'left' }}>
+                  <div style={{ textAlign: 'left', minWidth: 0, flex: 1 }}>
                     <strong style={{ display: 'block', fontSize: '0.84rem', color: '#15803D', lineHeight: 1.2 }}>WhatsApp Support Desk</strong>
                     <span style={{ fontSize: '0.70rem', color: '#166534', fontWeight: 600 }}>Direct hotline & client helpdesk</span>
                   </div>
                 </div>
-                <ChevronRight size={15} color="#15803D" />
+                <ChevronRight size={15} color="#15803D" style={{ flexShrink: 0 }} />
               </button>
             </div>
           </div>
 
           {/* Section 4: Master Account Profile & Logout Card */}
-          <div style={{ marginTop: '2px', background: '#FFFFFF', padding: '12px 14px', borderRadius: '16px', border: '1px solid var(--sa-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 4px rgba(0,0,0,0.03)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ marginTop: '2px', background: '#FFFFFF', padding: '12px 14px', borderRadius: '16px', border: '1px solid var(--sa-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', boxShadow: '0 1px 4px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0A2315 0%, #153B25 100%)', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.92rem', border: '1.5px solid rgba(212, 175, 55, 0.4)', flexShrink: 0 }}>
                 S
               </div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <strong style={{ display: 'block', fontSize: '0.84rem', color: 'var(--sa-text-main)', lineHeight: 1.2 }}>superadmin</strong>
                 <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>Master Administrator</span>
               </div>
@@ -3775,10 +3775,10 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               borderRadius: '24px 24px 0 0',
               width: '100%',
               maxWidth: '480px',
-              padding: '16px 20px 32px 20px',
+              padding: '16px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px',
               boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.25)',
               borderTop: '2px solid #D4AF37',
-              maxHeight: '85vh',
+              maxHeight: '85dvh',
               overflowY: 'auto',
               boxSizing: 'border-box'
             }}
@@ -3789,15 +3789,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             </div>
 
             {/* Restaurant Summary Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #F1F5F9' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #F1F5F9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                 <img
                   src={getRestaurantLogoUrl(selectedMoreResto.logo)}
                   alt={selectedMoreResto.name}
                   onError={(e) => { e.currentTarget.src = '/images/default-logo.webp'; }}
                   style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #D4AF37', flexShrink: 0 }}
                 />
-                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ minWidth: 0, overflow: 'hidden', flex: 1 }}>
                   <strong style={{ display: 'block', fontSize: '0.94rem', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {selectedMoreResto.name}
                   </strong>
@@ -3810,7 +3810,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <button
                 type="button"
                 onClick={() => setSelectedMoreResto(null)}
-                style={{ background: '#F1F5F9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontWeight: 900, flexShrink: 0 }}
+                aria-label="Close actions sheet"
+                style={{ background: '#F1F5F9', border: 'none', width: '38px', height: '38px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontWeight: 900, flexShrink: 0 }}
               >
                 ✕
               </button>
@@ -3829,8 +3830,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     }}
                     style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#F3E8FF', border: '1px solid #E9D5FF', color: '#6B21A8', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
                   >
-                    <Crown size={18} color="#7E22CE" />
-                    <div>
+                    <Crown size={18} color="#7E22CE" style={{ flexShrink: 0 }} />
+                    <div style={{ minWidth: 0, flex: 1 }}>
                       <strong style={{ display: 'block' }}>Extend / Update VIP Access</strong>
                       <span style={{ fontSize: '0.70rem', color: '#7E22CE', fontWeight: 600 }}>Extend duration, change plan tier, or grant lifetime</span>
                     </div>
@@ -3844,8 +3845,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     }}
                     style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
                   >
-                    <Shield size={18} color="#DC2626" />
-                    <div>
+                    <Shield size={18} color="#DC2626" style={{ flexShrink: 0 }} />
+                    <div style={{ minWidth: 0, flex: 1 }}>
                       <strong style={{ display: 'block' }}>Revoke VIP Access</strong>
                       <span style={{ fontSize: '0.70rem', color: '#B91C1C', fontWeight: 600 }}>Revert account back to normal billing</span>
                     </div>
@@ -3860,8 +3861,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   }}
                   style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#F3E8FF', border: '1px solid #E9D5FF', color: '#6B21A8', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
                 >
-                  <Crown size={18} color="#7E22CE" />
-                  <div>
+                  <Crown size={18} color="#7E22CE" style={{ flexShrink: 0 }} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <strong style={{ display: 'block' }}>Grant VIP Access</strong>
                     <span style={{ fontSize: '0.70rem', color: '#7E22CE', fontWeight: 600 }}>Give complimentary 100% free VIP access</span>
                   </div>
@@ -3877,8 +3878,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
               >
-                <Edit3 size={18} color="#475569" />
-                <div>
+                <Edit3 size={18} color="#475569" style={{ flexShrink: 0 }} />
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <strong style={{ display: 'block' }}>Edit Business Details</strong>
                   <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Update business name, contact, slug and owner info</span>
                 </div>
@@ -3892,8 +3893,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 onClick={() => setSelectedMoreResto(null)}
                 style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', fontWeight: 800, fontSize: '0.84rem', textDecoration: 'none', cursor: 'pointer' }}
               >
-                <ExternalLink size={18} color="#475569" />
-                <div>
+                <ExternalLink size={18} color="#475569" style={{ flexShrink: 0 }} />
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <strong style={{ display: 'block' }}>Open Live Customer Menu</strong>
                   <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Preview live digital menu seen by customers</span>
                 </div>
@@ -3911,8 +3912,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
               >
-                <Copy size={18} color="#475569" />
-                <div>
+                <Copy size={18} color="#475569" style={{ flexShrink: 0 }} />
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <strong style={{ display: 'block' }}>{copiedId === selectedMoreResto.id + '-menu' ? '✅ Copied to Clipboard!' : 'Copy Menu URL Link'}</strong>
                   <span style={{ fontSize: '0.70rem', color: '#64748B', fontWeight: 600 }}>Copy direct public menu URL link</span>
                 </div>
@@ -3927,8 +3928,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: selectedMoreResto.active === false ? '#F0FDF4' : '#FFFBEB', border: selectedMoreResto.active === false ? '1px solid #BBF7D0' : '1px solid #FDE68A', color: selectedMoreResto.active === false ? '#15803D' : '#D97706', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left' }}
               >
-                {selectedMoreResto.active === false ? <ShieldCheck size={18} color="#16A34A" /> : <Shield size={18} color="#D97706" />}
-                <div>
+                {selectedMoreResto.active === false ? <ShieldCheck size={18} color="#16A34A" style={{ flexShrink: 0 }} /> : <Shield size={18} color="#D97706" style={{ flexShrink: 0 }} />}
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <strong style={{ display: 'block' }}>{selectedMoreResto.active === false ? 'Reactivate Shop Access' : 'Suspend Shop Access'}</strong>
                   <span style={{ fontSize: '0.70rem', color: selectedMoreResto.active === false ? '#15803D' : '#B45309', fontWeight: 600 }}>{selectedMoreResto.active === false ? 'Unlock customer menu and ordering' : 'Temporarily disable customer menu access'}</span>
                 </div>
@@ -3943,8 +3944,8 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer', textAlign: 'left', marginTop: '4px' }}
               >
-                <Trash2 size={18} color="#DC2626" />
-                <div>
+                <Trash2 size={18} color="#DC2626" style={{ flexShrink: 0 }} />
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <strong style={{ display: 'block' }}>Delete Business Account</strong>
                   <span style={{ fontSize: '0.70rem', color: '#EF4444', fontWeight: 600 }}>Permanently remove business, menus and staff</span>
                 </div>
@@ -3974,14 +3975,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         }}>
           <div style={{
             background: '#FFFFFF', borderRadius: '24px', maxWidth: '480px', width: '100%',
-            padding: '28px 24px', boxShadow: '0 25px 60px rgba(0,0,0,0.45)', border: '2px solid #10B981',
+            maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box',
+            padding: 'clamp(20px, 4vw, 28px) clamp(16px, 4vw, 24px)', boxShadow: '0 25px 60px rgba(0,0,0,0.45)', border: '2px solid #10B981',
             textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px'
           }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#ECFDF5', border: '2px solid #10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#ECFDF5', border: '2px solid #10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <CheckCircle size={32} color="#059669" />
             </div>
 
-            <div>
+            <div style={{ minWidth: 0 }}>
               <h3 style={{ fontSize: '1.20rem', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>
                 Business Onboarding Verified
               </h3>
@@ -3990,30 +3992,30 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               </p>
             </div>
 
-            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '14px', width: '100%', textAlign: 'left', fontSize: '0.82rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '14px', width: '100%', boxSizing: 'border-box', textAlign: 'left', fontSize: '0.82rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                 <span style={{ color: '#64748B' }}>Business URL:</span>
-                <strong style={{ color: '#B45309' }}>/r/{onboardingSuccessData.slug}</strong>
+                <strong style={{ color: '#B45309', overflowWrap: 'anywhere' }}>/r/{onboardingSuccessData.slug}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                 <span style={{ color: '#64748B' }}>Billing Gateway:</span>
                 <span style={{ background: '#EFF6FF', color: '#1D4ED8', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, fontSize: '0.74rem' }}>
                   Cashfree Mandate Authorized
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                 <span style={{ color: '#64748B' }}>Status:</span>
                 <span style={{ color: '#059669', fontWeight: 800 }}>Awaiting First Recurring Payment</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '6px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', width: '100%', marginTop: '6px' }}>
               <a
                 href={`/r/${onboardingSuccessData.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="sa-btn sa-btn-accent"
-                style={{ flex: 1, minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 900, textDecoration: 'none' }}
+                style={{ flex: '1 1 160px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 900, textDecoration: 'none' }}
               >
                 <span>View Business Live</span> <ExternalLink size={16} />
               </a>
@@ -4021,7 +4023,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 type="button"
                 onClick={() => setOnboardingSuccessData(null)}
                 className="sa-btn sa-btn-secondary"
-                style={{ flex: 1, minHeight: '44px', fontWeight: 800 }}
+                style={{ flex: '1 1 140px', minHeight: '44px', fontWeight: 800 }}
               >
                 Shop Directory
               </button>
@@ -4039,17 +4041,17 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         }}>
           <div style={{
             background: '#FFFFFF', borderRadius: '24px', maxWidth: '540px', width: '100%',
-            padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #D4AF37',
-            maxHeight: '90vh', overflowY: 'auto'
+            padding: 'clamp(18px, 4vw, 28px) clamp(16px, 4vw, 24px)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #D4AF37',
+            maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Edit3 size={20} />
                 </div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0 }}>Edit Shop: {editModalData.name}</h3>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--primary-emerald)', margin: 0, overflowWrap: 'break-word', minWidth: 0 }}>Edit Shop: {editModalData.name}</h3>
               </div>
-              <button onClick={() => setEditModalData(null)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+              <button type="button" onClick={() => setEditModalData(null)} aria-label="Close modal" style={{ background: '#F3F4F6', border: 'none', width: '38px', height: '38px', borderRadius: '50%', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
             </div>
 
             <form onSubmit={handleUpdateRestaurant} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -4060,7 +4062,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   value={editModalData.name || ''}
                   onChange={(e) => setEditModalData({ ...editModalData, name: e.target.value })}
                   required
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '1rem', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -4073,7 +4075,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     const sModel = resolveServiceModelForBusinessType(bType);
                     setEditModalData({ ...editModalData, business_type: bType, service_model: sModel });
                   }}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', outline: 'none', background: '#FFFFFF', fontWeight: 700 }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '1rem', outline: 'none', background: '#FFFFFF', fontWeight: 700, boxSizing: 'border-box' }}
                 >
                   <option value="restaurant">🍽️ Dine-In (Restaurant, Cafe & Dining)</option>
                   <option value="hotel_resort">🏨 Hotel & Resort (In-Room Dining)</option>
@@ -4083,7 +4085,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
               {/* Dynamic Capacity Inputs for Hotels, Cinemas, Restaurants */}
               {(editModalData.service_model === 'cinema' || editModalData.business_type === 'cinema_theatre') ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>AUDITORIUM SCREENS</label>
                     <input
@@ -4092,7 +4094,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       max="100"
                       value={editModalData.total_screens !== undefined ? editModalData.total_screens : 3}
                       onChange={(e) => setEditModalData({ ...editModalData, total_screens: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                     />
                   </div>
                   <div>
@@ -4103,7 +4105,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                       max="10000"
                       value={editModalData.total_seats !== undefined ? editModalData.total_seats : 150}
                       onChange={(e) => setEditModalData({ ...editModalData, total_seats: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
@@ -4116,7 +4118,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     max="1000"
                     value={editModalData.total_rooms !== undefined ? editModalData.total_rooms : 20}
                     onChange={(e) => setEditModalData({ ...editModalData, total_rooms: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                   />
                 </div>
               ) : (
@@ -4128,12 +4130,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     max="500"
                     value={editModalData.total_tables !== undefined ? editModalData.total_tables : 20}
                     onChange={(e) => setEditModalData({ ...editModalData, total_tables: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                   />
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '10px' }}>
                 <div>
                   <label style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '4px', display: 'block' }}>PHONE / WHATSAPP</label>
                   <input
@@ -4141,7 +4143,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     placeholder="e.g. 9876543210"
                     value={editModalData.phone || editModalData.whatsapp_number || ''}
                     onChange={(e) => setEditModalData({ ...editModalData, phone: e.target.value, whatsapp_number: e.target.value })}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
@@ -4151,7 +4153,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     placeholder="City, locality, street"
                     value={editModalData.address || ''}
                     onChange={(e) => setEditModalData({ ...editModalData, address: e.target.value })}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -4163,7 +4165,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   placeholder="e.g. owner@example.com"
                   value={editModalData.owner_email || ''}
                   onChange={(e) => setEditModalData({ ...editModalData, owner_email: e.target.value })}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -4174,7 +4176,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   value={editModalData.owner_username || ''}
                   onChange={(e) => setEditModalData({ ...editModalData, owner_username: e.target.value })}
                   required
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -4185,15 +4187,15 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   placeholder="Enter new password to reset"
                   value={editModalData.owner_password || ''}
                   onChange={(e) => setEditModalData({ ...editModalData, owner_password: e.target.value })}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid var(--border-light)', fontSize: '0.9rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', marginTop: '4px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', margin: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '1rem' }}>⚡</span>
-                    <div>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', cursor: 'pointer', margin: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                    <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚡</span>
+                    <div style={{ minWidth: 0 }}>
                       <strong style={{ fontSize: '0.82rem', color: '#1E293B', display: 'block' }}>Counter Quick POS & Instant Token Billing</strong>
                       <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Enable or disable counter billing and takeaway tokens for this shop</span>
                     </div>
@@ -4202,14 +4204,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                     type="checkbox"
                     checked={editModalData.counter_ordering_enabled !== 0 && editModalData.counter_ordering_enabled !== false && editModalData.counter_ordering_enabled !== '0'}
                     onChange={(e) => setEditModalData({ ...editModalData, counter_ordering_enabled: e.target.checked ? 1 : 0 })}
-                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary-emerald)', cursor: 'pointer' }}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary-emerald)', cursor: 'pointer', flexShrink: 0 }}
                   />
                 </label>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '14px' }}>
-                <button type="button" onClick={() => setEditModalData(null)} className="sa-btn sa-btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" className="sa-btn sa-btn-accent" style={{ flex: 1 }}>💾 Save Changes</button>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '14px' }}>
+                <button type="button" onClick={() => setEditModalData(null)} className="sa-btn sa-btn-secondary" style={{ flex: '1 1 130px' }}>Cancel</button>
+                <button type="submit" className="sa-btn sa-btn-accent" style={{ flex: '1 1 150px' }}>💾 Save Changes</button>
               </div>
             </form>
           </div>
@@ -4225,14 +4227,16 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         }} onClick={() => setShowWhatsappModal(false)}>
           <div onClick={e => e.stopPropagation()} style={{
             background: '#FFFFFF', borderRadius: '24px', maxWidth: '480px', width: '100%',
-            padding: '28px 24px', boxShadow: '0 25px 60px rgba(0,0,0,0.45)', border: '2px solid #22C55E', position: 'relative'
+            maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box',
+            padding: 'clamp(18px, 4vw, 28px) clamp(16px, 4vw, 24px)', boxShadow: '0 25px 60px rgba(0,0,0,0.45)', border: '2px solid #22C55E', position: 'relative'
           }}>
             <button
               type="button"
               onClick={() => setShowWhatsappModal(false)}
+              aria-label="Close modal"
               style={{
-                position: 'absolute', top: '18px', right: '18px', background: '#F3F4F6',
-                border: 'none', width: '32px', height: '32px', borderRadius: '50%',
+                position: 'absolute', top: '14px', right: '14px', background: '#F3F4F6',
+                border: 'none', width: '38px', height: '38px', borderRadius: '50%',
                 cursor: 'pointer', fontWeight: 900, color: '#4B5563', display: 'flex',
                 alignItems: 'center', justifyContent: 'center'
               }}
@@ -4240,11 +4244,11 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               ✕
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', paddingRight: '40px' }}>
               <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #86EFAC', flexShrink: 0 }}>
                 <MessageSquare size={22} />
               </div>
-              <div>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#0F172A' }}>💬 WhatsApp Support Portal</h3>
                 <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
                   Manage the platform support contact shown to businesses.
@@ -4336,12 +4340,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                 <button
                   type="button"
                   onClick={() => setShowWhatsappModal(false)}
                   className="sa-btn sa-btn-secondary"
-                  style={{ flex: 1, minHeight: '44px', fontWeight: 800 }}
+                  style={{ flex: '1 1 120px', minHeight: '44px', fontWeight: 800 }}
                 >
                   Cancel
                 </button>
@@ -4350,7 +4354,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   disabled={whatsappSaving}
                   className="sa-btn sa-btn-primary"
                   style={{
-                    flex: 2, minHeight: '44px', fontWeight: 900,
+                    flex: '2 1 160px', minHeight: '44px', fontWeight: 900,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                     background: '#16A34A', borderColor: '#16A34A',
                     whiteSpace: 'nowrap'
@@ -4377,13 +4381,13 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
       {/* Global Toast Notification Popup */}
       {toastMessage && (
-        <div style={{
+        <div className="sa-toast-popup" style={{
           position: 'fixed', bottom: '24px', right: '24px', zIndex: 11000,
           background: '#0F172A', color: '#FFFFFF', padding: '12px 20px',
           borderRadius: '14px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
           border: '1.5px solid #22C55E', fontSize: '0.84rem', fontWeight: 800,
           display: 'flex', alignItems: 'center', gap: '8px',
-          animation: 'fadeInUp 0.25s ease'
+          animation: 'fadeInUp 0.25s ease', boxSizing: 'border-box'
         }}>
           <span>{toastMessage}</span>
         </div>
@@ -4437,16 +4441,17 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         }} onClick={() => setShowAnnounceModal(false)}>
           <div onClick={e => e.stopPropagation()} style={{
             background: '#FFFFFF', borderRadius: '20px', maxWidth: '620px', width: '100%',
-            padding: '24px 20px', boxShadow: '0 25px 60px -15px rgba(0,0,0,0.35)', border: '1.5px solid rgba(212, 175, 55, 0.4)',
-            maxHeight: '92vh', overflowY: 'auto', position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px'
+            padding: 'clamp(16px, 4vw, 24px) clamp(14px, 4vw, 20px)', boxShadow: '0 25px 60px -15px rgba(0,0,0,0.35)', border: '1.5px solid rgba(212, 175, 55, 0.4)',
+            maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box', position: 'relative', display: 'flex', flexDirection: 'column', gap: '16px'
           }}>
             {/* Close Button */}
             <button
               type="button"
               onClick={() => setShowAnnounceModal(false)}
+              aria-label="Close broadcast modal"
               style={{
-                position: 'absolute', top: '16px', right: '16px', background: '#F1F5F9',
-                border: 'none', width: '32px', height: '32px', borderRadius: '50%',
+                position: 'absolute', top: '14px', right: '14px', background: '#F1F5F9',
+                border: 'none', width: '38px', height: '38px', borderRadius: '50%',
                 cursor: 'pointer', fontWeight: 800, color: '#64748B', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', zIndex: 10, transition: 'all 0.15s ease'
               }}
@@ -4459,7 +4464,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
               <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #0A2315 0%, #153B25 100%)', color: '#DFBA67', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(212, 175, 55, 0.3)', flexShrink: 0 }}>
                 <Megaphone size={19} />
               </div>
-              <div style={{ paddingRight: '36px' }}>
+              <div style={{ paddingRight: '42px', minWidth: 0, flex: 1 }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--sa-primary)' }}>Global Broadcast Center</h3>
                 <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Send real-time platform notification banners directly to business admin dashboards</span>
               </div>
@@ -4469,7 +4474,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
             <form onSubmit={handleCreateAnnouncementSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* Quick Template Chips */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                   <label style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>
                     ANNOUNCEMENT MESSAGE *
                   </label>
@@ -4567,7 +4572,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                         <span style={{ fontSize: '0.64rem', fontWeight: 800, padding: '2px 7px', borderRadius: '9999px', background: pt.badgeBg, border: `1px solid ${pt.badgeBorder}`, color: pt.badgeText, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
                           {pt.badge}
                         </span>
-                        <span style={{ wordBreak: 'break-word', fontWeight: 600, flex: 1, minWidth: '160px' }}>
+                        <span style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', fontWeight: 600, flex: '1 1 160px', minWidth: 0 }}>
                           {announceMsg}
                         </span>
                       </div>
@@ -4593,12 +4598,12 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
 
             {/* Active Broadcasts History */}
             <div style={{ borderTop: '1px solid var(--sa-border)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
                   Active Broadcast Banners ({announcementsList.length})
                 </h4>
                 {announcementsList.length > 0 && (
-                  <button type="button" onClick={handleClearAllAnnouncements} className="sa-btn sa-btn-danger sa-btn-sm" style={{ fontSize: '0.70rem', padding: '4px 8px' }}>
+                  <button type="button" onClick={handleClearAllAnnouncements} className="sa-btn sa-btn-danger sa-btn-sm" style={{ fontSize: '0.70rem', padding: '6px 10px', flexShrink: 0 }}>
                     Clear All
                   </button>
                 )}
@@ -4674,13 +4679,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
         }}>
           <div style={{
             background: '#FFFFFF', borderRadius: '18px', maxWidth: '520px', width: '100%',
-            padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: '2px solid #F59E0B'
+            maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box',
+            padding: 'clamp(16px, 4vw, 24px)', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: '2px solid #F59E0B'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
                 ⚡
               </div>
-              <div>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#1E293B' }}>
                   Enable Cashfree Production Mode?
                 </h3>
@@ -4749,7 +4755,7 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   placeholder="Master Super Admin password"
                   value={prodPassword}
                   onChange={(e) => setProdPassword(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.88rem' }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -4759,14 +4765,14 @@ export default function SuperAdminDashboard({ token, username, onLogout, onRetur
                   id="prod_confirm_check"
                   checked={prodConfirmChecked}
                   onChange={(e) => setProdConfirmChecked(e.target.checked)}
-                  style={{ marginTop: '3px', width: '16px', height: '16px', cursor: 'pointer' }}
+                  style={{ marginTop: '3px', width: '16px', height: '16px', cursor: 'pointer', flexShrink: 0 }}
                 />
                 <label htmlFor="prod_confirm_check" style={{ fontSize: '0.78rem', color: '#334155', fontWeight: 700, cursor: 'pointer', lineHeight: '1.4' }}>
                   I understand this will enable Cashfree production payments and live customer transactions.
                 </label>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={() => {

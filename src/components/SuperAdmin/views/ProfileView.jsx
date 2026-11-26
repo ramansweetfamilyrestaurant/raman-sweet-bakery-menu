@@ -14,7 +14,7 @@ export default function ProfileView({ username, securityForm, setSecurityForm, o
     setLogoErr(false);
   }, [effectiveLogoUrl]);
 
-  const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.88rem', boxSizing: 'border-box' };
+  const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '1rem', boxSizing: 'border-box' };
   const labelStyle = { fontSize: '0.75rem', fontWeight: 800, color: 'var(--sa-text-muted)', display: 'block', marginBottom: '6px' };
 
   return (
@@ -52,7 +52,7 @@ export default function ProfileView({ username, securityForm, setSecurityForm, o
           </div>
         )}
         <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: '0 0 4px 0' }}>Super Admin</h2>
-        <p style={{ fontSize: '0.85rem', color: '#A7F3D0', margin: 0 }}>@{username}</p>
+        <p style={{ fontSize: '0.85rem', color: '#A7F3D0', margin: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>@{username}</p>
       </div>
 
       {/* Change Credentials */}

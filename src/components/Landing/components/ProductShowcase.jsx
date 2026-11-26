@@ -102,7 +102,7 @@ export default function ProductShowcase({ selectedIndustry = 'restaurant', onSel
             {/* Visual Box A */}
             <div className="km-showcase-box">
               <div style={{ background: '#0F172A', borderRadius: '16px', padding: '20px', color: '#FFF' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '16px' }}>
                   <div>
                     <div style={{ fontSize: '1rem', fontWeight: 900, color: '#D4AF37' }}>Table 7 • Dine-In</div>
                     <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Customer Order Cart</div>
@@ -123,7 +123,7 @@ export default function ProductShowcase({ selectedIndustry = 'restaurant', onSel
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                   <div>
                     <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Total Amount</span>
                     <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFF' }}>₹440</div>
@@ -184,12 +184,13 @@ export default function ProductShowcase({ selectedIndustry = 'restaurant', onSel
               <div style={{ background: '#0F172A', borderRadius: '16px', padding: '20px', color: '#FFF', border: '1px solid rgba(255,255,255,0.08)' }}>
                 
                 {/* Sub-toggle: Hotel vs Cinema */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: 'rgba(255,255,255,0.06)', padding: '4px', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', background: 'rgba(255,255,255,0.06)', padding: '4px', borderRadius: '8px' }}>
                   <button
                     type="button"
                     onClick={() => setServiceSubMode('hotel')}
                     style={{
-                      flex: 1,
+                      flex: '1 1 120px',
+                      minHeight: '36px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -213,7 +214,8 @@ export default function ProductShowcase({ selectedIndustry = 'restaurant', onSel
                     type="button"
                     onClick={() => setServiceSubMode('cinema')}
                     style={{
-                      flex: 1,
+                      flex: '1 1 120px',
+                      minHeight: '36px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -237,7 +239,7 @@ export default function ProductShowcase({ selectedIndustry = 'restaurant', onSel
                 {serviceSubMode === 'hotel' ? (
                   /* Hotel Room Service Mockup */
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '14px' }}>
                       <div>
                         <div style={{ fontSize: '1rem', fontWeight: 900, color: '#60A5FA' }}>Room 408 • Grand Luxury Suite</div>
                         <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>24x7 In-Room Dining & Butler Call</div>
@@ -266,7 +268,7 @@ export default function ProductShowcase({ selectedIndustry = 'restaurant', onSel
                 ) : (
                   /* Cinema Seat Concession Mockup */
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '14px' }}>
                       <div>
                         <div style={{ fontSize: '1rem', fontWeight: 900, color: '#F59E0B' }}>Audi 3 • Row D • Seat 12</div>
                         <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Concession Seat Delivery Express</div>
@@ -345,7 +347,7 @@ export default function ProductShowcase({ selectedIndustry = 'restaurant', onSel
             <div className="km-showcase-box">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ background: '#1E293B', padding: '14px', borderRadius: '12px', borderLeft: '4px solid #F59E0B', color: '#FFF' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', marginBottom: '6px' }}>
                     <strong style={{ fontSize: '0.9rem', color: '#F59E0B' }}>🛎️ NEW ORDER SIREN ringing...</strong>
                     <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Just now</span>
                   </div>
@@ -353,7 +355,7 @@ export default function ProductShowcase({ selectedIndustry = 'restaurant', onSel
                 </div>
 
                 <div style={{ background: '#1E293B', padding: '14px', borderRadius: '12px', borderLeft: '4px solid #3B82F6', color: '#FFF' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', marginBottom: '6px' }}>
                     <strong style={{ fontSize: '0.9rem', color: '#60A5FA' }}>🏨 Hotel Pantry Dispatch</strong>
                     <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>1 min ago</span>
                   </div>
@@ -361,7 +363,7 @@ export default function ProductShowcase({ selectedIndustry = 'restaurant', onSel
                 </div>
 
                 <div style={{ background: '#1E293B', padding: '14px', borderRadius: '12px', borderLeft: '4px solid #10B981', color: '#FFF' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', marginBottom: '6px' }}>
                     <strong style={{ fontSize: '0.9rem', color: '#34D399' }}>✓ KOT Printed & Cooking</strong>
                     <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>3 mins ago</span>
                   </div>

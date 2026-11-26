@@ -35,14 +35,14 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
       </div>
 
       {/* Tab Selector Bar */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--sa-border)', gap: '4px' }}>
+      <div className="sa-filter-pills-strip" style={{ display: 'flex', borderBottom: '1px solid var(--sa-border)', gap: '4px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
         <button
           onClick={() => setActiveTab('payments')}
           style={{
             padding: '10px 18px', fontWeight: 800, fontSize: '0.86rem', border: 'none', background: 'transparent',
             borderBottom: activeTab === 'payments' ? '2.5px solid var(--sa-primary)' : '2.5px solid transparent',
             color: activeTab === 'payments' ? 'var(--sa-primary)' : 'var(--sa-text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px'
+            display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, whiteSpace: 'nowrap', minHeight: '42px'
           }}
         >
           <CreditCard size={16} /> Payment Gateway
@@ -53,7 +53,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
             padding: '10px 18px', fontWeight: 800, fontSize: '0.86rem', border: 'none', background: 'transparent',
             borderBottom: activeTab === 'trial' ? '2.5px solid var(--sa-primary)' : '2.5px solid transparent',
             color: activeTab === 'trial' ? 'var(--sa-primary)' : 'var(--sa-text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px'
+            display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, whiteSpace: 'nowrap', minHeight: '42px'
           }}
         >
           <Clock size={16} /> Subscription & Trial Terms
@@ -64,7 +64,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
             padding: '10px 18px', fontWeight: 800, fontSize: '0.86rem', border: 'none', background: 'transparent',
             borderBottom: activeTab === 'support' ? '2.5px solid var(--sa-primary)' : '2.5px solid transparent',
             color: activeTab === 'support' ? 'var(--sa-primary)' : 'var(--sa-text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px'
+            display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, whiteSpace: 'nowrap', minHeight: '42px'
           }}
         >
           <Phone size={16} /> Support Channels
@@ -75,7 +75,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
             padding: '10px 18px', fontWeight: 800, fontSize: '0.86rem', border: 'none', background: 'transparent',
             borderBottom: activeTab === 'security' ? '2.5px solid var(--sa-primary)' : '2.5px solid transparent',
             color: activeTab === 'security' ? 'var(--sa-primary)' : 'var(--sa-text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px'
+            display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, whiteSpace: 'nowrap', minHeight: '42px'
           }}
         >
           <Lock size={16} /> Master Credentials
@@ -86,7 +86,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
             padding: '10px 18px', fontWeight: 800, fontSize: '0.86rem', border: 'none', background: 'transparent',
             borderBottom: activeTab === 'branding' ? '2.5px solid var(--sa-primary)' : '2.5px solid transparent',
             color: activeTab === 'branding' ? 'var(--sa-primary)' : 'var(--sa-text-muted)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px'
+            display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, whiteSpace: 'nowrap', minHeight: '42px'
           }}
         >
           🖼️ Branding & Logo
@@ -111,7 +111,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                 placeholder="e.g. 1047648f574d75432..."
                 value={keysForm.cashfree_app_id}
                 onChange={(e) => setKeysForm({ ...keysForm, cashfree_app_id: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -124,7 +124,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                 placeholder="••••••••••••••••••••••••"
                 value={keysForm.cashfree_secret_key || ''}
                 onChange={(e) => setKeysForm({ ...keysForm, cashfree_secret_key: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem', boxSizing: 'border-box' }}
               />
               <span style={{ fontSize: '0.72rem', color: 'var(--sa-success)', fontWeight: 800, marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                 <ShieldCheck size={13} /> Masked for security. Leave unchanged or blank to preserve existing key.
@@ -163,7 +163,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                 max="90"
                 value={keysForm.default_trial_days}
                 onChange={(e) => setKeysForm({ ...keysForm, default_trial_days: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.88rem', fontWeight: 800 }}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.88rem', fontWeight: 800, boxSizing: 'border-box' }}
               />
               <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', marginTop: '4px', display: 'block' }}>
                 * Database-driven. New restaurant registrations automatically receive this trial duration.
@@ -201,7 +201,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                 placeholder="e.g. 919876543210"
                 value={keysForm.support_whatsapp}
                 onChange={(e) => setKeysForm({ ...keysForm, support_whatsapp: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -211,7 +211,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                 href={`https://wa.me/${(keysForm.support_whatsapp || '').replace(/[^0-9]/g, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: 'var(--sa-success)', fontWeight: 800, textDecoration: 'none' }}
+                style={{ color: 'var(--sa-success)', fontWeight: 800, textDecoration: 'none', wordBreak: 'break-all', overflowWrap: 'anywhere' }}
               >
                 https://wa.me/{(keysForm.support_whatsapp || '').replace(/[^0-9]/g, '')}
               </a>
@@ -245,7 +245,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                 required
                 value={securityForm.newUsername}
                 onChange={(e) => setSecurityForm({ ...securityForm, newUsername: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -256,7 +256,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                 required
                 value={securityForm.currentPassword}
                 onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -266,7 +266,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                 type="password"
                 value={securityForm.newPassword}
                 onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -299,7 +299,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
           <form onSubmit={handleSaveKeysSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Logo Preview & File Select */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: '16px', padding: '16px',
+              display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '16px', padding: '16px',
               background: 'var(--sa-surface-subtle)', borderRadius: '12px', border: '1px solid var(--sa-border)'
             }}>
               {logoPreview || (keysForm.platform_logo_url && !logoErr) ? (
@@ -308,18 +308,18 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                   alt="Platform Logo"
                   referrerPolicy="no-referrer"
                   onError={() => setLogoErr(true)}
-                  style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'contain', background: '#FFF', padding: '4px' }}
+                  style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'contain', background: '#FFF', padding: '4px', flexShrink: 0 }}
                 />
               ) : (
                 <div style={{
                   width: '64px', height: '64px', borderRadius: '12px', background: 'linear-gradient(135deg, #D4AF37 0%, #B48F27 100%)',
-                  color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', fontWeight: 900
+                  color: '#0A2315', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', fontWeight: 900, flexShrink: 0
                 }}>
                   👑
                 </div>
               )}
 
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--sa-text-main)' }}>
                   UPLOAD NEW LOGO FILE:
                 </label>
@@ -345,7 +345,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                     }
                   }}
                   disabled={uploadingLogo}
-                  style={{ fontSize: '0.8rem' }}
+                  style={{ fontSize: '0.8rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                 />
                 {uploadingLogo && <span style={{ fontSize: '0.75rem', color: '#DFBA67', fontWeight: 700 }}>⏳ Uploading image to R2 storage & Database...</span>}
               </div>
@@ -363,7 +363,7 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
                   setKeysForm({ ...keysForm, platform_logo_url: e.target.value });
                   setLogoErr(false);
                 }}
-                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem' }}
+                style={{ width: '100%', padding: '10px', borderRadius: 'var(--sa-radius-md)', border: '1.5px solid var(--sa-border)', fontSize: '0.85rem', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -373,8 +373,8 @@ export default function SettingsView({ paymentKeys, onSavePaymentKeys, securityF
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="submit" className="sa-btn sa-btn-primary" disabled={savingKeys} style={{ flex: 1 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              <button type="submit" className="sa-btn sa-btn-primary" disabled={savingKeys} style={{ flex: '1 1 160px' }}>
                 {savingKeys ? 'Saving...' : 'Save Branding Settings'}
               </button>
 

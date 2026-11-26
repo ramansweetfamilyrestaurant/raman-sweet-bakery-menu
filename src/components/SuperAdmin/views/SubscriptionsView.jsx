@@ -103,8 +103,8 @@ export default function SubscriptionsView({ restaurants = [], onSelectTenant, on
 
       {/* Search & Filter Controls */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ position: 'relative', width: '100%', maxWidth: '320px', height: '38px' }}>
-          <Search size={14} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--sa-text-muted)', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', width: '100%', maxWidth: '320px', minWidth: 0 }}>
+          <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sa-text-muted)', pointerEvents: 'none' }} />
           <input
             type="text"
             placeholder="Search subscriptions by name, slug..."
@@ -112,10 +112,10 @@ export default function SubscriptionsView({ restaurants = [], onSelectTenant, on
             onChange={(e) => setSearchQuery(e.target.value)}
             className="sa-input sa-search-input-field"
             style={{
-              paddingLeft: '34px',
-              paddingRight: searchQuery ? '32px' : '12px',
-              height: '38px',
-              fontSize: '0.80rem',
+              paddingLeft: '36px',
+              paddingRight: searchQuery ? '36px' : '12px',
+              minHeight: '40px',
+              fontSize: '0.84rem',
               borderRadius: 'var(--sa-radius-full)',
               background: 'var(--sa-surface-subtle)',
               width: '100%',
@@ -126,7 +126,8 @@ export default function SubscriptionsView({ restaurants = [], onSelectTenant, on
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', padding: '2px' }}
+              aria-label="Clear search"
+              style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sa-text-muted)', padding: '6px', minWidth: '32px', minHeight: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <X size={14} />
             </button>
@@ -153,7 +154,7 @@ export default function SubscriptionsView({ restaurants = [], onSelectTenant, on
       </div>
 
       {/* Desktop Subscription Table */}
-      <div className="sa-table-container sa-responsive-table">
+      <div className="sa-table-container sa-responsive-table sa-desktop-table-only">
         <table className="sa-table">
           <thead>
             <tr>
@@ -286,9 +287,11 @@ export default function SubscriptionsView({ restaurants = [], onSelectTenant, on
 
           return (
             <div key={r.id} className="sa-mobile-card" onClick={() => onSelectTenant && onSelectTenant(r)} style={{ cursor: 'pointer', padding: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <strong style={{ fontSize: '0.95rem' }}>{r.name}</strong>
-                <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'suspended')} type={r.subscription_type} active={r.active} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
+                <strong style={{ fontSize: '0.95rem', minWidth: 0, flex: '1 1 160px', wordBreak: 'break-word' }}>{r.name}</strong>
+                <div style={{ flexShrink: 0 }}>
+                  <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'suspended')} type={r.subscription_type} active={r.active} />
+                </div>
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--sa-text-muted)', marginBottom: '8px' }}>
                 Plan: <strong style={{ color: isVipTenant(r) ? '#7E22CE' : 'var(--sa-text-main)' }}>
@@ -310,7 +313,7 @@ export default function SubscriptionsView({ restaurants = [], onSelectTenant, on
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', paddingTop: '8px', borderTop: '1px solid var(--sa-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', fontSize: '0.75rem', paddingTop: '8px', borderTop: '1px solid var(--sa-border)' }}>
                 <span>Auto-renew: <strong>{isVipTenant(r) ? (r.has_underlying_paid_subscription && r.underlying_subscription_status === 'active' ? `OFF (Paid: ${r.underlying_auto_renew ? 'ON' : 'OFF'})` : 'OFF (N/A)') : (r.auto_renew === 0 || r.auto_renew === false) ? 'OFF' : 'ON'}</strong></span>
                 <span>Until: <strong>{isLifetime ? '♾️ Lifetime' : (r.access_until && r.access_until !== 'Lifetime') ? new Date(r.access_until).toLocaleDateString('en-IN') : (r.plan_expires_at && String(r.plan_expires_at).toLowerCase() !== 'lifetime') ? new Date(r.plan_expires_at).toLocaleDateString('en-IN') : 'N/A'}</strong></span>
               </div>

@@ -699,11 +699,21 @@ export default function OrdersView({
           .orders-subnav-pills {
             width: 100%;
             gap: 6px !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 2px;
+          }
+          .orders-subnav-pills::-webkit-scrollbar {
+            display: none;
           }
           .orders-subnav-pills > button {
-            padding: 7px 10px !important;
-            font-size: 0.74rem !important;
+            padding: 8px 12px !important;
+            min-height: 40px !important;
+            font-size: 0.76rem !important;
             white-space: nowrap;
+            flex-shrink: 0;
           }
           .orders-day-closing-btn {
             margin-left: 0 !important;
@@ -727,7 +737,8 @@ export default function OrdersView({
           .orders-status-tabs > button {
             flex-shrink: 0;
             white-space: nowrap;
-            padding: 6px 10px !important;
+            padding: 8px 12px !important;
+            min-height: 38px !important;
             font-size: 0.74rem !important;
           }
           .orders-source-wrap {
@@ -737,17 +748,33 @@ export default function OrdersView({
           .orders-source-select {
             flex: 1;
             min-width: 0;
-            font-size: 0.82rem !important;
-            min-height: 36px !important;
-            height: 36px !important;
+            font-size: 1rem !important;
+            min-height: 44px !important;
+            height: 44px !important;
             padding: 6px 10px !important;
+          }
+        }
+        @media (max-width: 900px) {
+          .orders-view-root {
+            min-width: 0;
+            overflow-x: clip;
+          }
+          .orders-mobile-card {
+            min-width: 0;
+            overflow-wrap: anywhere;
+          }
+          .orders-card-actions > button {
+            min-height: 36px;
+          }
+          .orders-day-closing-btn {
+            margin-left: 0 !important;
           }
         }
         @media (max-width: 640px) {
           .orders-view-root {
             gap: 12px !important;
             min-width: 0;
-            overflow-x: hidden;
+            overflow-x: clip;
           }
           .orders-metric-grid {
             gap: 10px !important;
@@ -882,7 +909,7 @@ export default function OrdersView({
             grid-template-columns: minmax(0, 1fr) !important;
           }
         }
-        @media (max-width: 340px) {
+        @media (max-width: 400px) {
           .orders-space-grid {
             grid-template-columns: minmax(0, 1fr) !important;
           }
@@ -907,7 +934,7 @@ export default function OrdersView({
           boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <h2 className="orders-header-title" style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
               Live Orders Console
@@ -939,7 +966,7 @@ export default function OrdersView({
         </div>
 
         {/* Sub-Navigation Pills & Actions */}
-        <div className="orders-subnav-pills" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="orders-subnav-pills" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0, maxWidth: '100%' }}>
           {/* Live Orders Subtab */}
           <button
             onClick={() => setActiveSubTab && setActiveSubTab('orders')}
@@ -1389,7 +1416,8 @@ export default function OrdersView({
             background: '#FFFFFF',
             borderRadius: '18px',
             border: '1px solid #E2E8F0',
-            overflow: 'hidden',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
           }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
@@ -1878,7 +1906,7 @@ export default function OrdersView({
 
                   {/* Location & Source */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', minWidth: 0, fontSize: '0.78rem' }}>
-                    <div style={{ minWidth: 0, flex: '1 1 160px' }}>
+                    <div style={{ minWidth: 0, flex: '1 1 160px', overflowWrap: 'anywhere' }}>
                       <span style={{ fontWeight: 700, color: '#0F172A' }}>{cleanLoc}</span>
                       {isMultiRoundSession && (
                         <div style={{
@@ -1920,7 +1948,7 @@ export default function OrdersView({
                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <span>{it.quantity || 1}x {it.name}</span>
+                              <span style={{ overflowWrap: 'anywhere' }}>{it.quantity || 1}x {it.name}</span>
                               {it.portion && (
                                 <span style={{ fontSize: '0.66rem', color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
                                   {it.portion}
@@ -1928,7 +1956,7 @@ export default function OrdersView({
                               )}
                             </div>
                             {mods.length > 0 && (
-                              <div style={{ fontSize: '0.68rem', color: '#64748B', marginTop: '2px', lineHeight: 1.3 }}>
+                              <div style={{ fontSize: '0.68rem', color: '#64748B', marginTop: '2px', lineHeight: 1.3, overflowWrap: 'anywhere' }}>
                                 + {mods.map(m => `${m.name || m}${Number(m.price) > 0 ? ` (+${currencySymbol}${m.price})` : ''}`).join(', ')}
                               </div>
                             )}
@@ -2229,7 +2257,7 @@ export default function OrdersView({
           </div>
 
           {/* Category Filter Pills (Tables, Cabins, VIP, Rooms, Counter) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', paddingBottom: '2px' }}>
             {[
               { id: 'all', label: `All Spaces (${spaceGrid.length})` },
               { id: 'room', label: `🏨 Rooms (${spaceGrid.filter(s => s.category === 'room').length})` },
@@ -2247,6 +2275,8 @@ export default function OrdersView({
                   border: spaceCategoryFilter === tab.id ? '1px solid #261B14' : '1px solid #E2E8F0',
                   background: spaceCategoryFilter === tab.id ? '#261B14' : '#FFFFFF',
                   color: spaceCategoryFilter === tab.id ? '#FFFFFF' : '#475569',
+                  minHeight: '36px',
+                  flexShrink: 0,
                   fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -2309,7 +2339,7 @@ export default function OrdersView({
           ) : (
             <div className="orders-space-grid" style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))',
               gap: '14px'
             }}>
             {filteredSpaceGrid.map(space => {
@@ -2397,7 +2427,7 @@ export default function OrdersView({
                             {space.activeOrders.map((o, idx) => `Round ${o.round_number || (idx + 1)}`).join(' + ')}
                           </div>
                         )}
-                        <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                        <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginTop: '2px', overflowWrap: 'anywhere' }}>
                           ⏱️ {getTimeAgo(space.activeOrder.created_at)} • {space.activeOrder.customer_name || 'Guest'}
                         </span>
                       </div>
@@ -2406,11 +2436,11 @@ export default function OrdersView({
                     {/* Service Call Details */}
                     {isCall && space.serviceRequest && (
                       <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #FCD34D', marginTop: '6px' }}>
-                        <strong style={{ fontSize: '0.74rem', color: '#B45309', display: 'block' }}>
+                        <strong style={{ fontSize: '0.74rem', color: '#B45309', display: 'block', overflowWrap: 'anywhere' }}>
                           {space.serviceRequest.request_type || 'Service Call'}
                         </strong>
                         {space.serviceRequest.note && (
-                          <span style={{ fontSize: '0.66rem', color: '#64748B', fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
+                          <span style={{ fontSize: '0.66rem', color: '#64748B', fontStyle: 'italic', display: 'block', marginTop: '2px', overflowWrap: 'anywhere' }}>
                             "{space.serviceRequest.note}"
                           </span>
                         )}
@@ -2437,6 +2467,7 @@ export default function OrdersView({
                             background: '#FFFFFF',
                             border: '1px solid #E2E8F0',
                             color: '#0F172A',
+                            minHeight: '36px',
                             fontSize: '0.70rem',
                             fontWeight: 700,
                             cursor: 'pointer'
@@ -2449,6 +2480,7 @@ export default function OrdersView({
                             onClick={() => onPrintBill ? onPrintBill(space.activeOrder, 'CHECK_SLIP') : null}
                             style={{
                               padding: '6px 8px',
+                              minHeight: '36px',
                               borderRadius: '8px',
                               background: '#F5F3FF',
                               border: '1px solid #DDD6FE',
@@ -2482,6 +2514,7 @@ export default function OrdersView({
                             background: space.activeOrder?.is_settled ? '#0F766E' : (onOpenBillModal ? '#7E22CE' : '#9CA3AF'),
                             color: '#FFFFFF',
                             border: 'none',
+                            minHeight: '36px',
                             fontSize: '0.70rem',
                             fontWeight: 800,
                             cursor: 'pointer'
@@ -2494,7 +2527,7 @@ export default function OrdersView({
 
                     {isCall && space.serviceRequest && (
                       space.serviceRequest.request_type === 'presence_verification' ? (
-                        <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', width: '100%' }}>
                           <button
                             type="button"
                             onClick={() => handleApprove(space.serviceRequest)}
@@ -2502,6 +2535,7 @@ export default function OrdersView({
                             style={{
                               flex: 1,
                               padding: '7px 8px',
+                              minHeight: '36px',
                               borderRadius: '8px',
                               background: '#10B981',
                               color: '#FFFFFF',
@@ -2522,6 +2556,7 @@ export default function OrdersView({
                             onClick={() => handleOpenRejectModal(space.serviceRequest)}
                             style={{
                               padding: '7px 8px',
+                              minHeight: '36px',
                               borderRadius: '8px',
                               background: '#EF4444',
                               color: '#FFFFFF',
@@ -2540,6 +2575,7 @@ export default function OrdersView({
                           style={{
                             width: '100%',
                             padding: '7px 10px',
+                            minHeight: '36px',
                             borderRadius: '8px',
                             background: '#D97706',
                             color: '#FFFFFF',
@@ -2560,6 +2596,7 @@ export default function OrdersView({
                         style={{
                           width: '100%',
                           padding: '6px 10px',
+                          minHeight: '36px',
                           borderRadius: '8px',
                           background: '#F8FAFC',
                           border: '1px solid #E2E8F0',
@@ -2621,7 +2658,7 @@ export default function OrdersView({
               </p>
             </div>
           ) : (
-            <div className="orders-calls-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+            <div className="orders-calls-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))', gap: '14px' }}>
               {safeServiceRequests.map(req => {
                 const spaceInfo = parseServiceReqSpaceLocation(req);
                 const label = formatCleanTableLabel(req.table_number, spaceInfo.space_type);
@@ -2644,18 +2681,18 @@ export default function OrdersView({
                   >
                     <div style={{ minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>{label}</strong>
+                        <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900, overflowWrap: 'anywhere' }}>{label}</strong>
                         <span style={{ background: '#FEF3C7', color: '#B45309', padding: '2px 8px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
                           🛎️ Active Call
                         </span>
                       </div>
 
                       <div style={{ background: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #FDE68A' }}>
-                        <strong style={{ fontSize: '0.80rem', color: '#B45309', display: 'block' }}>
+                        <strong style={{ fontSize: '0.80rem', color: '#B45309', display: 'block', overflowWrap: 'anywhere' }}>
                           {req.request_type || 'Assistance Needed'}
                         </strong>
                         {req.note && (
-                          <span style={{ fontSize: '0.72rem', color: '#64748B', fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#64748B', fontStyle: 'italic', display: 'block', marginTop: '2px', overflowWrap: 'anywhere' }}>
                             "{req.note}"
                           </span>
                         )}
@@ -2716,7 +2753,8 @@ export default function OrdersView({
                           type="button"
                           onClick={() => onResolveServiceRequest && onResolveServiceRequest(req.id)}
                           style={{
-                            padding: '6px 10px',
+                            padding: '8px 10px',
+                            minHeight: '36px',
                             borderRadius: '8px',
                             background: '#F1F5F9',
                             color: '#64748B',
@@ -2812,9 +2850,9 @@ export default function OrdersView({
             }}
           >
             {/* Header */}
-            <div className="orders-drawer-header" style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+            <div className="orders-drawer-header" style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexShrink: 0 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: 0, overflowWrap: 'anywhere' }}>
                   {selectedOrder.token_display ? `Token ${selectedOrder.token_display}` : formatCleanTableLabel(selectedOrder.table_number, selectedOrder.space_type, selectedOrder.token_display, selectedOrder)}
                 </h3>
                 <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
@@ -2823,7 +2861,7 @@ export default function OrdersView({
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '4px' }}
+                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '4px', minWidth: '36px', minHeight: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               >
                 <X size={20} />
               </button>
@@ -2988,7 +3026,7 @@ export default function OrdersView({
                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                            <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>{itemQty}x {item.name}</strong>
+                            <strong style={{ fontSize: '0.82rem', color: '#0F172A', overflowWrap: 'anywhere' }}>{itemQty}x {item.name}</strong>
                             {item.portion && (
                               <span style={{ fontSize: '0.66rem', color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
                                 {item.portion}
@@ -3003,7 +3041,7 @@ export default function OrdersView({
                           {(() => {
                             const drawerMods = safeParseModifiers(item.modifiers);
                             return drawerMods.length > 0 ? (
-                              <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '2px' }}>
+                              <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '2px', overflowWrap: 'anywhere' }}>
                                 + {drawerMods.map(m => `${m.name || m}${Number(m.price) > 0 ? ` (+${currencySymbol}${m.price})` : ''}`).join(', ')}
                               </div>
                             ) : null;
@@ -3354,7 +3392,8 @@ export default function OrdersView({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 10050,
-          padding: '16px'
+          padding: '16px',
+          overflowY: 'auto'
         }}>
           <div
             className="orders-reject-modal"
@@ -3363,6 +3402,9 @@ export default function OrdersView({
               borderRadius: '20px',
               width: '100%',
               maxWidth: '420px',
+              maxHeight: '90dvh',
+              overflowY: 'auto',
+              margin: 'auto',
               padding: '24px',
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
               boxSizing: 'border-box'

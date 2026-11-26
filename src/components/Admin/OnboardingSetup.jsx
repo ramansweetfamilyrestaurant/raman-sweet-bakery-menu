@@ -373,7 +373,8 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
+      boxSizing: 'border-box',
       background: 'linear-gradient(135deg, #05140B 0%, #0A2315 50%, #164E2A 100%)',
       color: '#F8FAFC',
       display: 'flex',
@@ -501,7 +502,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   style={{
                     width: '100%', padding: '12px 16px', borderRadius: '12px',
                     background: '#071A0E', border: fieldErrors.name ? '1.5px solid #EF4444' : '1px solid rgba(223, 186, 103, 0.3)',
-                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+                    color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                   }}
                 />
                 {fieldErrors.name && <p style={{ color: '#FCA5A5', fontSize: '0.74rem', margin: '4px 0 0' }}>{fieldErrors.name}</p>}
@@ -520,7 +521,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   style={{
                     width: '100%', padding: '12px 16px', borderRadius: '12px',
                     background: '#071A0E', border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+                    color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -539,7 +540,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     style={{
                       width: '100%', padding: '12px 16px', borderRadius: '12px',
                       background: '#071A0E', border: fieldErrors.phone ? '1.5px solid #EF4444' : '1px solid rgba(223, 186, 103, 0.3)',
-                      color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+                      color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                     }}
                   />
                   {fieldErrors.phone && <p style={{ color: '#FCA5A5', fontSize: '0.74rem', margin: '4px 0 0' }}>{fieldErrors.phone}</p>}
@@ -558,7 +559,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     style={{
                       width: '100%', padding: '12px 16px', borderRadius: '12px',
                       background: '#071A0E', border: '1px solid rgba(255, 255, 255, 0.15)',
-                      color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box'
+                      color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                     }}
                   />
                 </div>
@@ -577,7 +578,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   style={{
                     width: '100%', padding: '12px 16px', borderRadius: '12px',
                     background: '#071A0E', border: fieldErrors.address ? '1.5px solid #EF4444' : '1px solid rgba(223, 186, 103, 0.3)',
-                    color: '#FFFFFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', resize: 'vertical'
+                    color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', resize: 'vertical'
                   }}
                 />
                 {fieldErrors.address && <p style={{ color: '#FCA5A5', fontSize: '0.74rem', margin: '4px 0 0' }}>{fieldErrors.address}</p>}
@@ -592,7 +593,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     value={formData.city}
                     onChange={handleChange}
                     placeholder="City"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
@@ -603,7 +604,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     value={formData.state}
                     onChange={handleChange}
                     placeholder="State"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
@@ -614,7 +615,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     value={formData.pincode}
                     onChange={handleChange}
                     placeholder="Pincode"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -810,7 +811,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     value={formData.latitude}
                     onChange={handleChange}
                     placeholder="e.g. 28.6139"
-                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
@@ -822,7 +823,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     value={formData.longitude}
                     onChange={handleChange}
                     placeholder="e.g. 77.2090"
-                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -906,11 +907,11 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#E2E8F0', marginBottom: '8px' }}>Brand / Outlet Logo</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   <div style={{
                     width: '74px', height: '74px', borderRadius: '16px', background: '#071A0E',
                     border: '1.5px solid rgba(223, 186, 103, 0.4)', overflow: 'hidden',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                   }}>
                     {formData.logo ? (
                       <img src={formData.logo} alt="Logo Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -939,13 +940,13 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   value={formData.openingHours}
                   onChange={handleChange}
                   placeholder="e.g. 8:00 AM - 10:30 PM"
-                  style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', background: '#071A0E', border: '1px solid rgba(255,255,255,0.15)', color: '#FFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
               {/* Authoritative Business Profile & Model (Locked to Registered Subscription) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: '#071A0E', padding: '16px', borderRadius: '16px', border: '1px solid rgba(223, 186, 103, 0.3)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                   <strong style={{ fontSize: '0.86rem', color: '#DFBA67', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     🏢 Business Profile & Model
                   </strong>
@@ -970,13 +971,15 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '8px',
                   padding: '12px 14px',
                   borderRadius: '12px',
                   background: modelInfo.bg,
                   border: `1px solid ${modelInfo.accent}40`,
                   boxSizing: 'border-box'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
                     <div style={{
                       width: '40px',
                       height: '40px',
@@ -990,8 +993,8 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                     }}>
                       {modelInfo.icon}
                     </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '0.90rem', fontWeight: 800, color: '#FFFFFF' }}>
                           {modelInfo.name}
                         </span>
@@ -1037,7 +1040,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                             resto_type: safeResto
                           }));
                         }}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
                       >
                         {DINE_IN_SUBTYPES.map(type => (
                           <option key={type} value={type}>
@@ -1065,7 +1068,7 @@ export default function OnboardingSetup({ token, restaurantInfo, setRestaurantIn
                           resto_type: safeResto
                         }));
                       }}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0A2315', border: '1px solid rgba(223, 186, 103, 0.4)', color: '#FFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
                     >
                       {FOOD_TYPES.map(type => (
                         <option key={type} value={type}>

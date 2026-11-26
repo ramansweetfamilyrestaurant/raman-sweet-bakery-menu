@@ -24,14 +24,15 @@ export default function ModalDialog({ isOpen, onClose, title, subtitle, children
         <button
           type="button"
           onClick={onClose}
+          aria-label="Close modal"
           style={{
             position: 'absolute',
-            top: '18px',
-            right: '18px',
+            top: '14px',
+            right: '14px',
             background: '#F3F4F6',
             border: 'none',
-            width: '32px',
-            height: '32px',
+            width: '38px',
+            height: '38px',
             borderRadius: '50%',
             cursor: 'pointer',
             fontWeight: 900,
@@ -42,12 +43,12 @@ export default function ModalDialog({ isOpen, onClose, title, subtitle, children
             zIndex: 10
           }}
         >
-          <X size={16} />
+          <X size={17} />
         </button>
 
         {title && (
-          <div style={{ marginBottom: '18px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-primary)' }}>{title}</h3>
+          <div style={{ marginBottom: '18px', paddingRight: '40px', minWidth: 0 }}>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-primary)', overflowWrap: 'break-word' }}>{title}</h3>
             {subtitle && <span style={{ fontSize: '0.74rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>{subtitle}</span>}
           </div>
         )}

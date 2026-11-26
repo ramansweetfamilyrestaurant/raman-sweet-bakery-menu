@@ -276,9 +276,10 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 setPortionMode('half');
               }}
               style={{
-                fontSize: '0.66rem',
+                fontSize: '0.68rem',
                 fontWeight: 800,
-                padding: '2px 8px',
+                minHeight: '36px',
+                padding: '4px 10px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'half' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
                 color: portionMode === 'half' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
@@ -296,9 +297,10 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 setPortionMode('full');
               }}
               style={{
-                fontSize: '0.66rem',
+                fontSize: '0.68rem',
                 fontWeight: 800,
-                padding: '2px 8px',
+                minHeight: '36px',
+                padding: '4px 10px',
                 borderRadius: 'var(--radius-pill)',
                 background: portionMode === 'full' ? 'var(--primary-emerald)' : 'var(--bg-secondary)',
                 color: portionMode === 'full' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted)',
@@ -312,8 +314,8 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
         )}
       </div>
 
-      {/* Right Pricing & Thumbnail */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+      {/* Right Pricing & Thumbnail (Compact vertical stack on narrow phones) */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px', flexShrink: 0, maxWidth: '108px' }}>
         {/* Pricing Pill */}
         {hasHalfPrice ? (
           <div 
@@ -394,8 +396,8 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
           )
         )}
 
-        {/* Dish Thumbnail & + Add WhatsApp Button */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+        {/* Dish Thumbnail & + Add Button */}
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '6px' }}>
           <div 
             onClick={() => {
               triggerHaptic('light');
@@ -441,7 +443,9 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, currenc
                 background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
                 color: 'var(--theme-btn-text, #FFFFFF)',
                 border: 'none',
-                padding: '4px 10px',
+                padding: '5px 12px',
+                minHeight: '36px',
+                whiteSpace: 'nowrap',
                 borderRadius: 'var(--radius-pill)',
                 fontSize: '0.72rem',
                 fontWeight: 900,

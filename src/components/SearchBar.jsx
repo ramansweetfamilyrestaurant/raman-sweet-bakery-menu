@@ -130,8 +130,9 @@ export default function SearchBar({
           placeholder={lang === 'hi' ? 'मिठाई, थाली, डोसा, पिज़्ज़ा, चाय खोजें...' : 'Search sweets, thali, dosa, cakes, chai...'}
           style={{
             width: '100%',
-            padding: '9px 36px 9px 36px',
-            fontSize: '0.84rem',
+            padding: '10px 44px 10px 36px',
+            fontSize: '1rem',
+            boxSizing: 'border-box',
             fontWeight: 500,
             background: 'var(--theme-input-bg, var(--bg-card, #FFFFFF))',
             color: 'var(--text-dark)',
@@ -155,7 +156,9 @@ export default function SearchBar({
             aria-label="Clear search text"
             style={{
               position: 'absolute',
-              right: '10px',
+              right: '4px',
+              width: '36px',
+              height: '36px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -196,7 +199,9 @@ export default function SearchBar({
                 style={{
                   fontSize: '0.72rem',
                   fontWeight: 700,
-                  padding: '5px 12px',
+                  flexShrink: 0,
+                  minHeight: '38px',
+                  padding: '6px 12px',
                   borderRadius: 'var(--radius-pill)',
                   background: isSelected ? 'var(--theme-nav-active, var(--primary-emerald))' : 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
                   color: isSelected ? 'var(--theme-nav-active-text, #FFFFFF)' : 'var(--text-dark)',
@@ -220,6 +225,7 @@ export default function SearchBar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: '8px',
           marginTop: '6px',
           padding: '4px 10px',
           fontSize: '0.74rem',
@@ -231,7 +237,7 @@ export default function SearchBar({
           boxShadow: 'var(--shadow-sm)',
           animation: 'fadeIn 0.2s ease-in-out'
         }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0, flex: 1 }}>
             <span>
               {lang === 'hi' 
                 ? `${totalResultsCount !== undefined ? totalResultsCount : ''} व्यंजन उपलब्ध` 
@@ -250,7 +256,7 @@ export default function SearchBar({
               </span>
             )}
             {value && (
-              <span style={{ fontStyle: 'italic', color: 'var(--text-dark)' }}>
+              <span style={{ fontStyle: 'italic', color: 'var(--text-dark)', overflowWrap: 'anywhere' }}>
                 "{value}"
               </span>
             )}
@@ -263,9 +269,12 @@ export default function SearchBar({
               border: 'none',
               color: 'var(--theme-price-color, var(--primary-emerald))',
               fontWeight: 800,
-              fontSize: '0.72rem',
+              fontSize: '0.74rem',
               cursor: 'pointer',
-              padding: '2px 4px'
+              padding: '4px 8px',
+              minHeight: '36px',
+              display: 'inline-flex',
+              alignItems: 'center'
             }}
           >
             {lang === 'hi' ? 'हटाएं ✕' : 'Clear all ✕'}

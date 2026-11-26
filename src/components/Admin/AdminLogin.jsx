@@ -52,7 +52,8 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
+      boxSizing: 'border-box',
       background: 'linear-gradient(135deg, #05140B 0%, #0A2315 50%, #164E2A 100%)',
       display: 'flex',
       alignItems: 'center',
@@ -63,7 +64,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
     }}>
       {/* Background Ambient Glow */}
       <div style={{
-        position: 'absolute', width: '380px', height: '380px',
+        position: 'absolute', width: 'min(380px, 90vw)', height: 'min(380px, 90vw)',
         borderRadius: '50%', background: 'radial-gradient(circle, rgba(212,175,55,0.15) 0%, rgba(0,0,0,0) 70%)',
         top: '10%', left: '20%', pointerEvents: 'none'
       }} />
@@ -199,7 +200,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                   paddingBottom: '10px',
                   paddingLeft: '44px',
                   paddingRight: '14px',
-                  fontSize: '0.90rem',
+                  fontSize: '1rem',
                   fontWeight: 600,
                   borderRadius: '12px',
                   border: '1.5px solid #CBD5E1',
@@ -274,7 +275,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                   onClick={() => { setMode('forgot'); setError(''); setSuccessMsg(''); }}
                   style={{
                     background: 'none', border: 'none', color: '#059669',
-                    fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', padding: 0
+                    fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', padding: '6px 4px', minHeight: '36px'
                   }}
                 >
                   Forgot Password?
@@ -297,7 +298,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                     paddingBottom: '10px',
                     paddingLeft: '44px',
                     paddingRight: '42px',
-                    fontSize: '0.90rem',
+                    fontSize: '1rem',
                     fontWeight: 600,
                     borderRadius: '12px',
                     border: '1.5px solid #CBD5E1',
@@ -320,7 +321,7 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   style={{
                     position: 'absolute',
-                    right: '12px',
+                    right: '6px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     background: 'none',
@@ -330,6 +331,8 @@ export default function AdminLogin({ onLoginSuccess, onCancel, restaurantName, t
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    minWidth: '36px',
+                    minHeight: '36px',
                     padding: '4px'
                   }}
                 >

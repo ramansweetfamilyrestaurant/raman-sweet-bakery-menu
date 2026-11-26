@@ -26,10 +26,10 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
             } else {
               localStorage.removeItem('touchqr_platform_logo_url');
             }
-          } catch {}
+          } catch { }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const handleSubmit = async (e) => {
@@ -49,12 +49,13 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
       background: 'linear-gradient(135deg, #05140B 0%, #0A2315 50%, #164E2A 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '24px 16px',
+      padding: '24px 16px calc(24px + env(safe-area-inset-bottom, 0px))',
+      boxSizing: 'border-box',
       position: 'relative',
       overflow: 'hidden'
     }}>
@@ -95,7 +96,8 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
             fontWeight: 800,
             background: '#F1F5F9',
             border: 'none',
-            padding: '6px 12px',
+            padding: '8px 12px',
+            minHeight: '36px',
             borderRadius: 'var(--radius-pill)',
             cursor: 'pointer'
           }}
@@ -194,7 +196,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ textAlign: 'left' }}>
-            <label 
+            <label
               htmlFor="superadmin-username"
               style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', marginBottom: '6px', display: 'block', letterSpacing: '0.03em' }}
             >
@@ -219,7 +221,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
                   paddingRight: '14px',
                   borderRadius: '12px',
                   border: '1.5px solid #CBD5E1',
-                  fontSize: '0.90rem',
+                  fontSize: '16px',
                   fontWeight: 600,
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -238,7 +240,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
           </div>
 
           <div style={{ textAlign: 'left' }}>
-            <label 
+            <label
               htmlFor="superadmin-password"
               style={{ fontSize: '0.76rem', fontWeight: 900, color: '#334155', marginBottom: '6px', display: 'block', letterSpacing: '0.03em' }}
             >
@@ -263,7 +265,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
                   paddingRight: '42px',
                   borderRadius: '12px',
                   border: '1.5px solid #CBD5E1',
-                  fontSize: '0.90rem',
+                  fontSize: '16px',
                   fontWeight: 600,
                   outline: 'none',
                   boxSizing: 'border-box',
@@ -284,7 +286,7 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 style={{
                   position: 'absolute',
-                  right: '12px',
+                  right: '4px',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   background: 'none',
@@ -293,7 +295,10 @@ export default function SuperAdminLogin({ onLoginSuccess, onCancel }) {
                   color: '#94A3B8',
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '4px'
+                  justifyContent: 'center',
+                  width: '38px',
+                  height: '38px',
+                  padding: '0'
                 }}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

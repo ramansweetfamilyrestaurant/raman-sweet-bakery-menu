@@ -98,21 +98,22 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
     }}>
       <div style={{
         background: '#FFFFFF', borderRadius: '24px', maxWidth: '480px', width: '100%',
-        maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+        maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
         position: 'relative', animation: 'fadeIn 0.25s ease-out'
       }}>
         {/* Header */}
         <div style={{
           background: 'linear-gradient(135deg, #0A2315 0%, #164E2A 100%)',
-          color: '#FFFFFF', padding: '20px', borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
+          color: '#FFFFFF', padding: '20px 44px', borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
           borderBottom: '3px solid #DFBA67', textAlign: 'center', position: 'relative'
         }}>
           <button
             onClick={onClose}
+            aria-label="Close modal"
             style={{
-              position: 'absolute', top: '14px', right: '14px',
+              position: 'absolute', top: '12px', right: '12px',
               background: 'rgba(255,255,255,0.15)', border: 'none', color: '#FFF',
-              borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer',
+              borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}
           >
@@ -125,14 +126,14 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
           <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#DFBA67' }}>
             Subscription & Billing
           </h3>
-          <span style={{ fontSize: '0.78rem', color: '#E2E8F0' }}>
+          <span style={{ fontSize: '0.78rem', color: '#E2E8F0', overflowWrap: 'break-word' }}>
             {restoInfo?.name || 'Your Business'} — {planTier.toUpperCase()} Plan
           </span>
         </div>
 
         {/* Content Body */}
         <div style={{ padding: '20px' }}>
-          
+
           {/* Mode Badge */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -149,7 +150,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
               padding: '12px 16px', borderRadius: '12px', fontSize: '0.84rem', fontWeight: 800,
               display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px'
             }}>
-              <CheckCircle2 size={18} color="#10B981" />
+              <CheckCircle2 size={18} color="#10B981" style={{ flexShrink: 0 }} />
               <span>{statusMsg}</span>
             </div>
           )}
@@ -160,14 +161,14 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
               padding: '12px 16px', borderRadius: '12px', fontSize: '0.84rem', fontWeight: 800,
               display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px'
             }}>
-              <AlertTriangle size={18} color="#EF4444" />
+              <AlertTriangle size={18} color="#EF4444" style={{ flexShrink: 0 }} />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {/* Pricing & Trial Box */}
           <div style={{ background: '#F8FAFC', borderRadius: '16px', padding: '16px', border: '1px solid #E2E8F0', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
               <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#334155' }}>
                 Selected Plan Rate:
               </span>
@@ -181,7 +182,7 @@ export default function PaymentModal({ restoInfo, planTier = 'pro', planPrice = 
               padding: '10px 12px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px',
               fontSize: '0.78rem', fontWeight: 800, color: '#15803D'
             }}>
-              <Sparkles size={16} />
+              <Sparkles size={16} style={{ flexShrink: 0 }} />
               <span>🎁 Free trial period applies — no charges until your trial concludes. Auto-renew can be managed anytime from settings.</span>
             </div>
           </div>

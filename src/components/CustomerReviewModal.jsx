@@ -214,7 +214,7 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
             border-bottom-right-radius: 0 !important;
             border-top-left-radius: 22px !important;
             border-top-right-radius: 22px !important;
-            max-height: 90vh !important;
+            max-height: 90dvh !important;
             border-bottom: none !important;
             margin-top: auto !important;
           }
@@ -228,7 +228,8 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
           borderRadius: '20px',
           maxWidth: '410px',
           width: '100%',
-          maxHeight: '92vh',
+          maxHeight: '90dvh',
+          boxSizing: 'border-box',
           overflowY: 'auto',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06)',
           position: 'relative',
@@ -257,10 +258,11 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: '10px',
           padding: '12px 18px 14px 18px',
           borderBottom: '1px solid #F1F5F9'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
             <div style={{
               width: '36px',
               height: '36px',
@@ -284,13 +286,14 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                 <span style={{ fontSize: '1.1rem' }}>⭐</span>
               )}
             </div>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <h3 style={{
                 margin: 0,
                 fontSize: '0.94rem',
                 fontWeight: 800,
                 color: '#0F172A',
-                lineHeight: 1.25
+                lineHeight: 1.25,
+                overflowWrap: 'break-word'
               }}>
                 {restoName}
               </h3>
@@ -319,8 +322,8 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
             onClick={onClose}
             aria-label="Close"
             style={{
-              width: '32px',
-              height: '32px',
+              width: '38px',
+              height: '38px',
               borderRadius: '50%',
               background: '#F1F5F9',
               border: 'none',
@@ -329,6 +332,7 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
               transition: 'background 0.15s ease'
             }}
           >
@@ -426,8 +430,9 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                     style={{
                       background: 'none',
                       border: 'none',
-                      padding: 0,
-                      fontSize: '0.70rem',
+                      padding: '6px 4px',
+                      minHeight: '36px',
+                      fontSize: '0.72rem',
                       fontWeight: 700,
                       color: '#2563EB',
                       cursor: 'pointer',
@@ -455,9 +460,10 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                         background: isSelected ? '#0F172A' : '#F8FAFC',
                         color: isSelected ? '#FFFFFF' : '#334155',
                         border: isSelected ? '1px solid #0F172A' : '1px solid #E2E8F0',
-                        padding: '4px 9px',
+                        padding: '6px 11px',
+                        minHeight: '36px',
                         borderRadius: '20px',
-                        fontSize: '0.70rem',
+                        fontSize: '0.72rem',
                         fontWeight: 700,
                         cursor: 'pointer',
                         display: 'inline-flex',
@@ -491,7 +497,7 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                   border: '1px solid #CBD5E1',
                   background: '#FFFFFF',
                   color: '#0F172A',
-                  fontSize: '0.76rem',
+                  fontSize: '1rem',
                   outline: 'none',
                   boxSizing: 'border-box'
                 }}
@@ -556,7 +562,7 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                 border: 'none',
                 background: 'transparent',
                 resize: 'none',
-                fontSize: '0.80rem',
+                fontSize: '1rem',
                 lineHeight: 1.45,
                 color: '#1E293B',
                 fontWeight: 500,
@@ -604,7 +610,8 @@ export default function CustomerReviewModal({ info, lang = 'en', onClose }) {
                   fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  padding: '4px 0',
+                  padding: '8px 4px',
+                  minHeight: '36px',
                   textDecoration: 'underline'
                 }}
               >

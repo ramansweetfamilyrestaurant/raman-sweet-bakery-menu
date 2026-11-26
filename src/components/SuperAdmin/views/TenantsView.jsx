@@ -41,9 +41,9 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', maxWidth: '100%' }}>
           {/* Status Filter */}
-          <div style={{ display: 'flex', background: 'var(--sa-surface-subtle)', padding: '2px', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '100%', background: 'var(--sa-surface-subtle)', padding: '3px', borderRadius: 'var(--sa-radius-md)', border: '1px solid var(--sa-border)' }}>
             <button
               onClick={() => setStatusFilter('all')}
               className={`sa-btn sa-btn-sm ${statusFilter === 'all' ? 'sa-btn-primary' : 'sa-btn-secondary'}`}
@@ -92,11 +92,11 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
       </div>
 
       {/* Desktop Responsive Table */}
-      <div className="sa-table-container sa-responsive-table">
+      <div className="sa-table-container sa-responsive-table sa-desktop-table-only">
         <table className="sa-table">
           <thead>
             <tr>
-              <th style={{ minWidth: '240px' }}>BUSINESS</th>
+              <th style={{ minWidth: 'min(220px, 100%)' }}>BUSINESS</th>
               <th style={{ minWidth: '130px' }}>TYPE</th>
               <th style={{ minWidth: '160px' }}>OWNER</th>
               <th style={{ minWidth: '130px' }}>PLAN</th>
@@ -126,7 +126,7 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
 
                 return (
                   <tr key={r.id}>
-                    <td style={{ minWidth: '240px', maxWidth: '280px' }}>
+                    <td style={{ minWidth: 'min(220px, 100%)', maxWidth: '280px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} title={r.name}>
                         <div style={{
                           width: '32px', height: '32px', borderRadius: '50%',
@@ -216,17 +216,19 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
 
           return (
             <div key={r.id} className="sa-mobile-card" onClick={() => onSelectTenant(r)} style={{ cursor: 'pointer', padding: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                <div>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 900, margin: '0 0 1px 0', color: 'var(--sa-text-main)' }}>{r.name}</h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--sa-accent)', fontWeight: 800 }}>/{r.slug}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
+                <div style={{ minWidth: 0, flex: '1 1 160px' }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 900, margin: '0 0 1px 0', color: 'var(--sa-text-main)', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{r.name}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginTop: '2px' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--sa-accent)', fontWeight: 800, overflowWrap: 'anywhere' }}>/{r.slug}</span>
                     <span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--sa-text-muted)', background: 'var(--sa-surface-subtle)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--sa-border)' }}>
                       {bizMeta.icon} {(bizMeta.label || 'Restaurant').replace(/\s*\(.*\)/, '')}
                     </span>
                   </div>
                 </div>
-                <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'suspended')} type={r.subscription_type} active={r.active} />
+                <div style={{ flexShrink: 0 }}>
+                  <StatusBadge status={r.subscription_status || (r.active !== false ? 'active' : 'suspended')} type={r.subscription_type} active={r.active} />
+                </div>
               </div>
 
               <div style={{ fontSize: '0.8rem', color: 'var(--sa-text-muted)', margin: '6px 0' }}>
@@ -237,11 +239,11 @@ export default function TenantsView({ restaurants, searchQuery, onSelectTenant, 
                 <span style={{ marginLeft: '10px' }}>· {r.dish_count || 0} dishes</span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--sa-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--sa-border)' }}>
                 <span style={{ fontSize: '0.73rem', color: 'var(--sa-text-muted)' }}>
                   Access until <strong>{isLifetime ? '♾️ Lifetime' : r.access_until ? new Date(r.access_until).toLocaleDateString('en-IN') : 'N/A'}</strong>
                 </span>
-                <button className="sa-btn sa-btn-secondary sa-btn-sm" style={{ padding: '4px 10px' }}>
+                <button className="sa-btn sa-btn-secondary sa-btn-sm" style={{ padding: '6px 10px', flexShrink: 0 }}>
                   Manage ➔
                 </button>
               </div>

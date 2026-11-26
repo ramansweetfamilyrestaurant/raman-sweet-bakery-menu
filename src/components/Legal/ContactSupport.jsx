@@ -17,7 +17,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
           setSupportPhone(data.support_whatsapp);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const [formData, setFormData] = useState({
@@ -81,20 +81,20 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
           Whether you need assistance setting up your digital QR menu, configuring Bluetooth thermal printers, managing live KOT orders, or updating your subscription plan, our dedicated support team is here to assist your restaurant.
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', margin: '24px 0' }}>
-          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '16px', margin: '24px 0' }}>
+          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', boxSizing: 'border-box' }}>
             <div style={{ color: '#D4AF37', marginBottom: '8px' }}><Phone size={20} /></div>
             <strong style={{ display: 'block', color: 'var(--km-text)', fontSize: '0.95rem' }}>Phone & WhatsApp Support</strong>
             <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Priority assistance for active Pro & Enterprise subscribers.</span>
           </div>
 
-          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', boxSizing: 'border-box' }}>
             <div style={{ color: '#10B981', marginBottom: '8px' }}><Clock size={20} /></div>
             <strong style={{ display: 'block', color: 'var(--km-text)', fontSize: '0.95rem' }}>Support Hours</strong>
             <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Monday to Saturday: 9:00 AM – 9:00 PM IST.</span>
           </div>
 
-          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', boxSizing: 'border-box' }}>
             <div style={{ color: '#6366F1', marginBottom: '8px' }}><MessageSquare size={20} /></div>
             <strong style={{ display: 'block', color: 'var(--km-text)', fontSize: '0.95rem' }}>Instant Menu Setup</strong>
             <span style={{ fontSize: '0.84rem', color: 'var(--km-muted)' }}>Start your 16-day free trial instantly without waiting.</span>
@@ -102,7 +102,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
         </div>
 
         {/* Contact Form Container */}
-        <div style={{ background: 'var(--km-white)', border: '1.5px solid var(--km-border)', borderRadius: '16px', padding: '24px', marginTop: '32px', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.03)' }}>
+        <div style={{ background: 'var(--km-white)', border: '1.5px solid var(--km-border)', borderRadius: '16px', padding: '20px 16px', marginTop: '28px', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.03)', boxSizing: 'border-box' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--km-green)', margin: '0 0 16px 0' }}>
             Send Us a Support Message
           </h3>
@@ -117,7 +117,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
             </div>
           ) : (
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--km-text)', marginBottom: '4px' }}>Your Name *</label>
                   <input
@@ -126,7 +126,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
                     placeholder="e.g. Ramesh Sharma"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box' }}
                   />
                 </div>
 
@@ -138,7 +138,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
                     placeholder="e.g. 9876543210"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -150,7 +150,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
                   placeholder="e.g. Royal Sweets, Grand Hotel, Star Cinema"
                   value={formData.restaurantName}
                   onChange={(e) => setFormData({ ...formData, restaurantName: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -159,7 +159,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
                 <select
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem', background: '#FFF' }}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '1rem', background: '#FFF', boxSizing: 'border-box' }}
                 >
                   <option value="General Support">General Support</option>
                   <option value="Account & Login">Account & Owner Login</option>
@@ -177,7 +177,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
                   placeholder="How can our support team assist your business?"
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem', resize: 'vertical' }}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '1rem', resize: 'vertical', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -188,6 +188,7 @@ export default function ContactSupport({ onOpenLogin, onStartTrial }) {
                   color: 'var(--km-gold)',
                   border: 'none',
                   padding: '12px 24px',
+                  minHeight: '46px',
                   borderRadius: '8px',
                   fontSize: '0.92rem',
                   fontWeight: 900,

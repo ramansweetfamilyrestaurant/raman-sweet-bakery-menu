@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  FileText, Shield, Key, Store, CreditCard, Sparkles, Settings, 
-  Search, RefreshCw, Download, ExternalLink, ChevronDown, ChevronUp, 
+import {
+  FileText, Shield, Key, Store, CreditCard, Sparkles, Settings,
+  Search, RefreshCw, Download, ExternalLink, ChevronDown, ChevronUp,
   X, Copy, Check, Clock, User, ArrowUpRight, Activity, Filter, AlertTriangle,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar, Archive
 } from 'lucide-react';
@@ -15,16 +15,16 @@ import {
   resolveTenantDisplay
 } from '../../../utils/auditLogHelpers';
 
-export default function AuditLogsView({ 
-  auditLogs = [], 
-  loading = false, 
+export default function AuditLogsView({
+  auditLogs = [],
+  loading = false,
   error = null,
   pagination = null,
   stats: serverStats = null,
   onFetchLogs = null,
-  onRefresh, 
-  restaurants = [], 
-  setSelectedTenant360 
+  onRefresh,
+  restaurants = [],
+  setSelectedTenant360
 }) {
   const [activeFilter, setActiveFilter] = useState('all');
   const [actorFilter, setActorFilter] = useState('all');
@@ -430,7 +430,7 @@ export default function AuditLogsView({
 
   return (
     <div className="sa-audit-container">
-      
+
       {/* 🌟 1. LUXURY SIGNATURE AUDIT HERO BANNER */}
       <div className="sa-audit-hero-card">
         {/* Ambient Glow */}
@@ -465,7 +465,7 @@ export default function AuditLogsView({
           </div>
 
           {/* Quick Triggers */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => setViewMode('archives')}
@@ -617,7 +617,7 @@ export default function AuditLogsView({
 
       {/* 🧭 2. FILTER PILLS STRIP, SEARCH, TENANT, DATE & ACTOR CONTROLS */}
       <div className="sa-audit-controls-strip">
-        
+
         {/* Category Filter Pills Strip with Touch Overflow */}
         <div className="sa-filter-strip-wrapper">
           <div className="sa-filter-pills-strip">
@@ -662,7 +662,6 @@ export default function AuditLogsView({
             value={restaurantFilter}
             onChange={handleRestaurantChange}
             className="sa-audit-actor-select"
-            style={{ maxWidth: '170px' }}
             title="Filter by Shop / Tenant"
           >
             <option value="all">🏢 All Shops & System</option>
@@ -1120,38 +1119,40 @@ export default function AuditLogsView({
         }}>
           <div style={{
             background: '#FFFFFF', width: '100%', maxWidth: '560px', borderRadius: '20px',
+            maxHeight: '90dvh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)', overflow: 'hidden', border: '1px solid var(--sa-border)'
           }}>
             {/* Modal Header */}
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '18px 22px', background: '#0A2315', color: '#DFBA67'
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexShrink: 0,
+              padding: '16px 20px', background: '#0A2315', color: '#DFBA67'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <FileText size={20} color="#DFBA67" />
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#FFFFFF' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                <FileText size={20} color="#DFBA67" style={{ flexShrink: 0 }} />
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#FFFFFF', overflowWrap: 'break-word' }}>
                   Audit Event #{selectedEvent.id}
                 </h3>
               </div>
-              <button 
-                onClick={() => setSelectedEvent(null)} 
-                style={{ background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}
+              <button
+                onClick={() => setSelectedEvent(null)}
+                aria-label="Close modal"
+                style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#FFFFFF', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '70vh', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
+            <div style={{ padding: 'clamp(14px, 4vw, 20px) clamp(14px, 4vw, 24px)', display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ minWidth: 0, flex: '1 1 180px' }}>
                   <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800 }}>EVENT ACTION</span>
-                  <h4 style={{ margin: '2px 0 0 0', fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)' }}>
+                  <h4 style={{ margin: '2px 0 0 0', fontSize: '1.05rem', fontWeight: 900, color: 'var(--sa-text-main)', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                     {selectedEvent.action}
                   </h4>
                 </div>
                 <span style={{
-                  padding: '4px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 900,
+                  padding: '4px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 900, flexShrink: 0,
                   background: getCategory(selectedEvent).bg, color: getCategory(selectedEvent).color, border: `1px solid ${getCategory(selectedEvent).border}`
                 }}>
                   {getCategory(selectedEvent).label}
@@ -1159,17 +1160,17 @@ export default function AuditLogsView({
               </div>
 
               {/* Summary Metadata Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '0.80rem' }}>
-                <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '10px', background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '0.80rem' }}>
+                <div style={{ minWidth: 0 }}>
                   <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>ACTOR / ROLE</span>
-                  <strong style={{ color: 'var(--sa-text-main)', marginTop: '2px', display: 'block' }}>
+                  <strong style={{ color: 'var(--sa-text-main)', marginTop: '2px', display: 'block', wordBreak: 'break-word' }}>
                     {getActorDetails(selectedEvent.actor_role || selectedEvent.role).label}
                   </strong>
                 </div>
 
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>BUSINESS / TENANT</span>
-                  <strong style={{ color: '#0F766E', marginTop: '2px', display: 'block' }}>
+                  <strong style={{ color: '#0F766E', marginTop: '2px', display: 'block', wordBreak: 'break-word' }}>
                     {(() => {
                       const modalTenant = resolveTenantDisplay(selectedEvent, restaurants);
                       if (modalTenant.name) {
@@ -1182,7 +1183,7 @@ export default function AuditLogsView({
                   </strong>
                 </div>
 
-                <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
                   <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>EXACT TIMESTAMP</span>
                   <strong style={{ color: 'var(--sa-text-main)', marginTop: '2px', display: 'block' }}>
                     🕒 {selectedEvent.created_at ? new Date(selectedEvent.created_at).toLocaleString('en-IN') : 'N/A'}
@@ -1193,7 +1194,7 @@ export default function AuditLogsView({
               {/* Event Human Details */}
               <div>
                 <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block', marginBottom: '4px' }}>EVENT DESCRIPTION / CONTEXT:</span>
-                <div style={{ background: '#F0FDF4', padding: '12px 14px', borderRadius: '10px', border: '1px solid #86EFAC', fontSize: '0.82rem', color: '#15803D', fontWeight: 700, lineHeight: 1.4 }}>
+                <div style={{ background: '#F0FDF4', padding: '12px 14px', borderRadius: '10px', border: '1px solid #86EFAC', fontSize: '0.82rem', color: '#15803D', fontWeight: 700, lineHeight: 1.4, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                   {selectedEvent.details || 'No additional details provided'}
                 </div>
               </div>

@@ -91,6 +91,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
           gap: '4px',
           zIndex: 5,
           pointerEvents: 'none'
@@ -148,9 +149,11 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               fontSize: '0.62rem',
               fontWeight: 900,
               boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '2px'
+              display: 'inline-block',
+              maxWidth: '48%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
             }}>
               🔥 {dish.offer_badge || dish.offer?.offer_badge}
             </div>
@@ -173,6 +176,9 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               display: 'inline-flex',
               alignItems: 'center',
               gap: '2px',
+              maxWidth: '48%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
             }}>
               ✨ {lang === 'hi' ? 'कस्टमाइज़ेबल' : 'Customizable'}
@@ -288,7 +294,11 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
               fontSize: '1.08rem',
               fontWeight: 700,
               color: 'var(--text-dark)',
-              lineHeight: 1.25
+              lineHeight: 1.25,
+              minWidth: 0,
+              flex: 1,
+              overflowWrap: 'break-word',
+              margin: 0
             }}>
               {displayName}
             </h3>
@@ -356,7 +366,9 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
           borderTop: '1px solid var(--theme-divider, var(--border-light))',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '8px'
         }}>
           <span style={{
             fontSize: '0.72rem',
@@ -369,6 +381,7 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
           <span style={{
             display: 'inline-flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             gap: '6px'
           }}>
             {onAddToCart && isAvailable && (
@@ -380,7 +393,9 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                       background: 'var(--theme-btn-secondary-bg, linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%))',
                       color: 'var(--theme-text-primary, #92400E)',
                       border: '1px solid var(--theme-card-border, #F59E0B)',
-                      padding: '4px 10px',
+                      padding: '6px 12px',
+                      minHeight: '36px',
+                      whiteSpace: 'nowrap',
                       borderRadius: 'var(--radius-pill)',
                       fontSize: '0.7rem',
                       fontWeight: 900,
@@ -399,7 +414,9 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                       background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
                       color: 'var(--theme-btn-text, #FFFFFF)',
                       border: 'none',
-                      padding: '4px 12px',
+                      padding: '6px 12px',
+                      minHeight: '36px',
+                      whiteSpace: 'nowrap',
                       borderRadius: 'var(--radius-pill)',
                       fontSize: '0.7rem',
                       fontWeight: 900,
@@ -420,7 +437,9 @@ export default function DishCard({ dish, onClick, onAddToCart, currencySymbol = 
                     background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
                     color: 'var(--theme-btn-text, #FFFFFF)',
                     border: 'none',
-                    padding: '4px 14px',
+                    padding: '6px 14px',
+                    minHeight: '36px',
+                    whiteSpace: 'nowrap',
                     borderRadius: 'var(--radius-pill)',
                     fontSize: '0.74rem',
                     fontWeight: 900,

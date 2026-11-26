@@ -242,10 +242,13 @@ export default function KdsDisplayView({
       flexDirection: 'column',
       gap: '14px',
       background: 'radial-gradient(circle at 50% 0%, #162444 0%, #0F172A 40%, #080D1A 100%)',
-      padding: '16px',
-      borderRadius: '20px',
+      padding: 'clamp(10px, 2vw, 16px)',
+      borderRadius: '16px',
       color: '#F8FAFC',
-      minHeight: '85vh',
+      minHeight: '85dvh',
+      minWidth: 0,
+      overflowX: 'hidden',
+      boxSizing: 'border-box',
       boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif'
     }}>
@@ -268,6 +271,25 @@ export default function KdsDisplayView({
           transform: translateY(-1px);
           filter: brightness(1.08);
         }
+        @media (max-width: 640px) {
+          .kds-display-controls {
+            width: 100%;
+            flex-wrap: nowrap !important;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 2px;
+          }
+          .kds-display-controls::-webkit-scrollbar {
+            display: none;
+          }
+        }
+        @media (max-width: 480px) {
+          .kds-display-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 10px !important;
+          }
+        }
       `}</style>
 
       {/* =========================================================================
@@ -285,15 +307,18 @@ export default function KdsDisplayView({
         gap: '12px'
       }}>
         {/* Left: Title & Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: '1 1 180px' }}>
+          <div style={{ minWidth: 0 }}>
             <h2 style={{
               fontSize: '0.9375rem',
               fontWeight: 600,
               color: '#F8FAFC',
               margin: 0,
               letterSpacing: '-0.01em',
-              textTransform: 'capitalize'
+              textTransform: 'capitalize',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
             }}>
               {restaurantInfo?.name || 'Kitchen Display'}
             </h2>
@@ -308,7 +333,7 @@ export default function KdsDisplayView({
         </div>
 
         {/* Right: Quick Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="kds-display-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Pop-out Standalone Tablet Display */}
           {(restaurantInfo?.slug || (typeof window !== 'undefined' && localStorage.getItem('touchqr_admin_slug'))) && (
             <button
@@ -318,8 +343,10 @@ export default function KdsDisplayView({
                 window.open(s ? `/${s}/kitchen` : '/kitchen', '_blank');
               }}
               style={{
-                height: '32px',
-                padding: '0 10px',
+                height: '38px',
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 borderRadius: '8px',
                 border: '1px solid #334155',
                 background: '#1E293B',
@@ -343,8 +370,10 @@ export default function KdsDisplayView({
             type="button"
             onClick={() => setSoundEnabled(!soundEnabled)}
             style={{
-              height: '32px',
-              padding: '0 10px',
+              height: '38px',
+              padding: '0 12px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               borderRadius: '8px',
               border: '1px solid #334155',
               background: '#1E293B',
@@ -367,8 +396,10 @@ export default function KdsDisplayView({
               type="button"
               onClick={() => setShowPrepSummary(!showPrepSummary)}
               style={{
-                height: '32px',
-                padding: '0 10px',
+                height: '38px',
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 borderRadius: '8px',
                 border: '1px solid #334155',
                 background: showPrepSummary ? 'rgba(56, 189, 248, 0.1)' : '#1E293B',
@@ -392,8 +423,10 @@ export default function KdsDisplayView({
               type="button"
               onClick={() => setShowCompletedDrawer(!showCompletedDrawer)}
               style={{
-                height: '32px',
-                padding: '0 10px',
+                height: '38px',
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 borderRadius: '8px',
                 border: '1px solid #334155',
                 background: '#1E293B',
@@ -413,7 +446,7 @@ export default function KdsDisplayView({
 
           {/* Live Kitchen Clock */}
           <div style={{
-            height: '32px',
+            height: '38px',
             background: '#1E293B',
             padding: '0 10px',
             borderRadius: '8px',
@@ -423,7 +456,9 @@ export default function KdsDisplayView({
             fontSize: '0.75rem',
             fontWeight: 500,
             color: '#94A3B8',
-            fontVariantNumeric: 'tabular-nums'
+            fontVariantNumeric: 'tabular-nums',
+            whiteSpace: 'nowrap',
+            flexShrink: 0
           }}>
             {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
           </div>
@@ -433,8 +468,9 @@ export default function KdsDisplayView({
             type="button"
             onClick={toggleFullscreen}
             style={{
-              height: '32px',
-              width: '32px',
+              height: '38px',
+              width: '38px',
+              flexShrink: 0,
               padding: 0,
               borderRadius: '8px',
               border: '1px solid #334155',
@@ -465,12 +501,13 @@ export default function KdsDisplayView({
           alignItems: 'center',
           gap: '8px',
           overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none'
         }}>
-          <span style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>
             Summary:
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap', flexShrink: 0 }}>
             {aggregatedPrepItems.map(item => (
               <div
                 key={item.name}
@@ -483,6 +520,7 @@ export default function KdsDisplayView({
                   alignItems: 'center',
                   gap: '6px',
                   whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   fontSize: '0.75rem'
                 }}
               >
@@ -514,13 +552,13 @@ export default function KdsDisplayView({
             <button
               type="button"
               onClick={() => setShowCompletedDrawer(false)}
-              style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.75rem', cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.75rem', cursor: 'pointer', minHeight: '36px', padding: '6px 10px', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
             >
               Close
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '2px' }}>
             {recentlyCompleted.map(ord => (
               <div
                 key={ord.id}
@@ -532,7 +570,8 @@ export default function KdsDisplayView({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
                 }}
               >
                 <span style={{ fontSize: '0.75rem', color: '#F8FAFC', fontWeight: 500 }}>
@@ -542,13 +581,16 @@ export default function KdsDisplayView({
                   type="button"
                   onClick={() => handleRecallOrder(ord)}
                   style={{
-                    padding: '3px 8px',
-                    borderRadius: '5px',
+                    padding: '6px 12px',
+                    minHeight: '36px',
+                    borderRadius: '6px',
                     border: '1px solid #334155',
                     background: 'transparent',
+                    display: 'inline-flex',
+                    alignItems: 'center',
                     color: '#FCD34D',
-                    fontSize: '0.70rem',
-                    fontWeight: 500,
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
                     cursor: 'pointer'
                   }}
                 >
@@ -608,9 +650,9 @@ export default function KdsDisplayView({
           </p>
         </div>
       ) : (
-        <div style={{
+        <div className="kds-display-grid" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
           gap: '12px'
         }}>
           {displayedOrders.map((order, orderIdx) => {
@@ -636,6 +678,7 @@ export default function KdsDisplayView({
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
+                  minWidth: 0,
                   overflow: 'hidden'
                 }}
               >
@@ -646,16 +689,19 @@ export default function KdsDisplayView({
                   borderBottom: '1px solid rgba(255,255,255,0.06)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '8px'
                 }}>
-                  <div>
+                  <div style={{ minWidth: 0, flex: '1 1 150px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <div style={{
                         fontSize: '1rem',
                         fontWeight: 600,
                         color: '#FFFFFF',
                         letterSpacing: '-0.01em',
-                        lineHeight: 1.2
+                        lineHeight: 1.2,
+                        overflowWrap: 'anywhere'
                       }}>
                         {formatKdsLocation(order.table_number, order.space_type, restaurantInfo?.business_type === 'hotel_resort' ? 'room' : restaurantInfo?.table_prefix)}
                       </div>
@@ -668,7 +714,8 @@ export default function KdsDisplayView({
                           borderRadius: '6px',
                           fontSize: '0.82rem',
                           fontWeight: 800,
-                          letterSpacing: '0.5px'
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
                         }}>
                           TOKEN {order.token_display || order.token_number}
                         </span>
@@ -687,13 +734,13 @@ export default function KdsDisplayView({
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 400 }}>
+                    <span style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 400, display: 'block', overflowWrap: 'anywhere' }}>
                       {order.customer_name || 'Dine-in'}
                     </span>
                   </div>
 
                   {/* Urgency Clock Badge */}
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{
                       background: isCritical ? 'rgba(239, 68, 68, 0.2)' : (isRush ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.06)'),
                       border: isCritical ? '1px solid rgba(239, 68, 68, 0.4)' : (isRush ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)'),
@@ -702,6 +749,7 @@ export default function KdsDisplayView({
                       borderRadius: '6px',
                       fontSize: '0.75rem',
                       fontWeight: 500,
+                      whiteSpace: 'nowrap',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px'
@@ -713,7 +761,7 @@ export default function KdsDisplayView({
                 </div>
 
                 {/* TICKET BODY: ITEMS LIST */}
-                <div style={{ padding: '10px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ padding: '10px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
                   {hasNotes && (
                     <div style={{
                       background: 'rgba(245, 158, 11, 0.08)',
@@ -724,15 +772,17 @@ export default function KdsDisplayView({
                       fontSize: '0.75rem',
                       fontWeight: 400,
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
+                      alignItems: 'flex-start',
+                      flexWrap: 'wrap',
+                      gap: '6px',
+                      minWidth: 0
                     }}>
-                      <span style={{ color: '#F59E0B', fontWeight: 600 }}>Note:</span>
-                      <span style={{ color: '#F1F5F9' }}>"{notesText}"</span>
+                      <span style={{ color: '#F59E0B', fontWeight: 600, flexShrink: 0 }}>Note:</span>
+                      <span style={{ color: '#F1F5F9', minWidth: 0, flex: 1, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>"{notesText}"</span>
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                     {items.map((item, idx) => {
                       const isChecked = Boolean(checkedItemsMap[`${order.id}_${idx}`]);
                       const rawMods = item.modifiers;
@@ -751,16 +801,19 @@ export default function KdsDisplayView({
                             background: isChecked ? 'rgba(30, 41, 59, 0.4)' : '#1E293B',
                             border: '1px solid rgba(255, 255, 255, 0.04)',
                             borderRadius: '8px',
-                            padding: '6px 10px',
+                            padding: '8px 10px',
+                            minHeight: '42px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             cursor: 'pointer',
                             opacity: isChecked ? 0.5 : 1,
-                            userSelect: 'none'
+                            userSelect: 'none',
+                            minWidth: 0,
+                            boxSizing: 'border-box'
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                             <div style={{
                               color: isChecked ? '#10B981' : '#64748B',
                               display: 'flex',
@@ -780,14 +833,16 @@ export default function KdsDisplayView({
                               {item.quantity || item.qty || 1}×
                             </span>
 
-                            <div style={{ minWidth: 0 }}>
+                            <div style={{ minWidth: 0, flex: 1 }}>
                               <span style={{
                                 fontSize: '0.8125rem',
                                 color: isChecked ? '#64748B' : '#F1F5F9',
                                 fontWeight: 500,
                                 textDecoration: isChecked ? 'line-through' : 'none',
                                 display: 'block',
-                                lineHeight: 1.3
+                                lineHeight: 1.3,
+                                wordBreak: 'break-word',
+                                overflowWrap: 'anywhere'
                               }}>
                                 {item.name || item.dish_name}
                               </span>
@@ -797,7 +852,9 @@ export default function KdsDisplayView({
                                   fontSize: '0.6875rem',
                                   color: '#34D399',
                                   marginTop: '2px',
-                                  lineHeight: 1.2
+                                  lineHeight: 1.2,
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'anywhere'
                                 }}>
                                   Includes: {item.includes || item.comboIncludes}
                                 </div>
@@ -805,7 +862,7 @@ export default function KdsDisplayView({
 
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
                                 {item.portion && (
-                                  <span style={{ fontSize: '0.6875rem', color: '#94A3B8', background: 'rgba(255, 255, 255, 0.05)', padding: '1px 5px', borderRadius: '4px' }}>
+                                  <span style={{ fontSize: '0.6875rem', color: '#94A3B8', background: 'rgba(255, 255, 255, 0.05)', padding: '1px 5px', borderRadius: '4px', maxWidth: '100%', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                     {item.portion}
                                   </span>
                                 )}
@@ -818,7 +875,10 @@ export default function KdsDisplayView({
                                       color: '#FCD34D',
                                       background: 'rgba(245, 158, 11, 0.1)',
                                       padding: '1px 5px',
-                                      borderRadius: '4px'
+                                      borderRadius: '4px',
+                                      maxWidth: '100%',
+                                      wordBreak: 'break-word',
+                                      overflowWrap: 'anywhere'
                                     }}
                                   >
                                     + {m.name}
@@ -845,13 +905,14 @@ export default function KdsDisplayView({
                     className="kds-action-btn"
                     style={{
                       width: '100%',
-                      height: '38px',
-                      borderRadius: '8px',
+                      height: '44px',
+                      minHeight: '44px',
+                      borderRadius: '10px',
                       border: 'none',
                       background: '#10B981',
                       color: '#FFFFFF',
-                      fontSize: '0.8125rem',
-                      fontWeight: 500,
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',

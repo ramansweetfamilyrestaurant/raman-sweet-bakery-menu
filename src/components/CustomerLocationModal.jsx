@@ -317,8 +317,10 @@ export default function CustomerLocationModal({
         background: 'var(--theme-modal-bg, #FFFFFF)',
         width: '100%',
         maxWidth: '430px',
+        maxHeight: '90dvh',
+        overflowY: 'auto',
         borderRadius: '24px',
-        padding: '26px 22px',
+        padding: '26px 20px',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.28)',
         border: '1.5px solid var(--theme-modal-border, var(--border-light, #E2E8F0))',
         color: 'var(--text-dark, #0F172A)',
@@ -336,13 +338,13 @@ export default function CustomerLocationModal({
             aria-label="Close"
             style={{
               position: 'absolute',
-              top: '16px',
-              right: '16px',
+              top: '14px',
+              right: '14px',
               background: 'var(--bg-secondary, #F1F5F9)',
               border: 'none',
               borderRadius: '50%',
-              width: '32px',
-              height: '32px',
+              width: '38px',
+              height: '38px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -437,7 +439,8 @@ export default function CustomerLocationModal({
                   fontSize: '0.80rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  padding: '6px'
+                  padding: '8px 12px',
+                  minHeight: '36px'
                 }}
               >
                 Browse Menu First

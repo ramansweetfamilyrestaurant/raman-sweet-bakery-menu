@@ -440,7 +440,8 @@ export default function LocationPickerModal({
         borderRadius: '24px',
         width: '100%',
         maxWidth: '820px',
-        maxHeight: '94vh',
+        maxHeight: '90dvh',
+        boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
         boxShadow: '0 25px 60px rgba(0,0,0,0.65)',
@@ -449,14 +450,15 @@ export default function LocationPickerModal({
       }}>
         {/* Header */}
         <div style={{
-          padding: '18px 24px',
+          padding: '14px 16px',
           borderBottom: '1px solid rgba(223, 186, 103, 0.25)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px',
+          flexShrink: 0,
           background: 'rgba(10, 35, 21, 0.95)'
         }}>
-          <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#DFBA67', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Navigation size={22} color="#DFBA67" /> High-Accuracy Restaurant Location
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#DFBA67', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <Navigation size={20} color="#DFBA67" style={{ flexShrink: 0 }} /> High-Accuracy Restaurant Location
             </h2>
             <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#94A3B8' }}>
               Multi-sample satellite GPS & HD Aerial imagery for sub-meter restaurant pinpointing.
@@ -465,9 +467,10 @@ export default function LocationPickerModal({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close modal"
             style={{
               background: 'rgba(255,255,255,0.1)', border: 'none', color: '#E2E8F0',
-              width: '34px', height: '34px', borderRadius: '50%',
+              width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
             }}
           >
@@ -476,7 +479,7 @@ export default function LocationPickerModal({
         </div>
 
         {/* Modal Body */}
-        <div style={{ padding: '18px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ padding: '14px 16px', overflowY: 'auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
           {/* Search + Action Bar */}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', position: 'relative' }}>
@@ -506,7 +509,7 @@ export default function LocationPickerModal({
             </button>
 
             {/* Address Autocomplete Input */}
-            <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
+            <div style={{ flex: 1, minWidth: 'min(220px, 100%)', position: 'relative' }}>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                   type="text"
@@ -516,7 +519,7 @@ export default function LocationPickerModal({
                   style={{
                     width: '100%', padding: '10px 36px 10px 14px', borderRadius: '12px',
                     background: '#071A0E', border: '1px solid rgba(223, 186, 103, 0.35)',
-                    color: '#FFFFFF', fontSize: '0.84rem', outline: 'none', boxSizing: 'border-box'
+                    color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                   }}
                 />
                 <div style={{ position: 'absolute', right: '12px', color: '#DFBA67' }}>
@@ -570,26 +573,35 @@ export default function LocationPickerModal({
             </div>
           )}
 
-          {/* Interactive Leaflet Map View with Layer Switcher & Quick Controls */}
-          <div style={{ position: 'relative', width: '100%', height: '340px', borderRadius: '16px', overflow: 'hidden', border: '2px solid rgba(223, 186, 103, 0.4)' }}>
-            <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+          {/* Map Quick Controls Bar (Cleanly separated from Leaflet zoom controls) */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={handleSnapToLiveGPS}
+              style={{
+                background: 'rgba(11, 32, 20, 0.92)', backdropFilter: 'blur(6px)',
+                border: '1px solid #DFBA67', color: '#DFBA67',
+                padding: '6px 12px', minHeight: '36px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 800,
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px'
+              }}
+            >
+              <Crosshair size={14} /> Snap to My Device
+            </button>
 
-            {/* Top Right: Layer Switcher (Street vs HD Aerial Satellite) */}
             <div style={{
-              position: 'absolute', top: '10px', right: '10px', zIndex: 1000,
-              background: 'rgba(11, 32, 20, 0.92)', backdropFilter: 'blur(6px)',
+              background: '#071A0E',
               padding: '4px', borderRadius: '10px', border: '1px solid rgba(223, 186, 103, 0.4)',
-              display: 'flex', gap: '4px'
+              display: 'flex', gap: '4px', flexWrap: 'wrap'
             }}>
               <button
                 type="button"
                 onClick={() => switchMapLayer('street')}
                 style={{
-                  padding: '5px 10px', borderRadius: '7px', border: 'none',
+                  padding: '6px 10px', minHeight: '36px', borderRadius: '7px', border: 'none',
                   background: mapLayerType === 'street' ? '#DFBA67' : 'transparent',
                   color: mapLayerType === 'street' ? '#0A2315' : '#E2E8F0',
                   fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '4px'
+                  display: 'inline-flex', alignItems: 'center', gap: '4px'
                 }}
               >
                 <Globe size={13} /> Street
@@ -598,36 +610,26 @@ export default function LocationPickerModal({
                 type="button"
                 onClick={() => switchMapLayer('satellite')}
                 style={{
-                  padding: '5px 10px', borderRadius: '7px', border: 'none',
+                  padding: '6px 10px', minHeight: '36px', borderRadius: '7px', border: 'none',
                   background: mapLayerType === 'satellite' ? '#DFBA67' : 'transparent',
                   color: mapLayerType === 'satellite' ? '#0A2315' : '#E2E8F0',
                   fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '4px'
+                  display: 'inline-flex', alignItems: 'center', gap: '4px'
                 }}
               >
                 <Layers size={13} /> 🛰️ HD Satellite
               </button>
             </div>
+          </div>
 
-            {/* Top Left: Quick Snap to Device GPS */}
-            <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 1000 }}>
-              <button
-                type="button"
-                onClick={handleSnapToLiveGPS}
-                style={{
-                  background: 'rgba(11, 32, 20, 0.92)', backdropFilter: 'blur(6px)',
-                  border: '1px solid #DFBA67', color: '#DFBA67',
-                  padding: '6px 12px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 800,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'
-                }}
-              >
-                <Crosshair size={14} /> Snap to My Device
-              </button>
-            </div>
+          {/* Interactive Leaflet Map View */}
+          <div style={{ position: 'relative', width: '100%', height: 'clamp(240px, 38dvh, 340px)', flexShrink: 0, borderRadius: '16px', overflow: 'hidden', border: '2px solid rgba(223, 186, 103, 0.4)' }}>
+            <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
 
             {/* Floating Guide Badge */}
             <div style={{
-              position: 'absolute', bottom: '10px', left: '10px', zIndex: 1000,
+              position: 'absolute', bottom: '10px', left: '10px', right: '10px', zIndex: 1000,
+              maxWidth: 'calc(100% - 20px)', boxSizing: 'border-box',
               background: 'rgba(11, 32, 20, 0.92)', backdropFilter: 'blur(6px)',
               padding: '6px 12px', borderRadius: '8px', border: '1px solid #DFBA67',
               fontSize: '0.72rem', fontWeight: 700, color: '#DFBA67', pointerEvents: 'none'
@@ -637,7 +639,7 @@ export default function LocationPickerModal({
           </div>
 
           {/* Coordinate Readouts & Geofencing Radius Configuration */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '12px' }}>
             <div style={{ background: '#071A0E', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
               <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#94A3B8', marginBottom: '3px' }}>LATITUDE</label>
               <input
@@ -648,7 +650,7 @@ export default function LocationPickerModal({
                   const val = parseFloat(e.target.value);
                   if (!isNaN(val)) updateMapPosition(val, lng);
                 }}
-                style={{ width: '100%', background: 'transparent', border: 'none', color: '#FFF', fontSize: '0.92rem', fontWeight: 800, outline: 'none' }}
+                style={{ width: '100%', background: 'transparent', border: 'none', color: '#FFF', fontSize: '1rem', fontWeight: 800, outline: 'none' }}
               />
             </div>
 
@@ -662,7 +664,7 @@ export default function LocationPickerModal({
                   const val = parseFloat(e.target.value);
                   if (!isNaN(val)) updateMapPosition(lat, val);
                 }}
-                style={{ width: '100%', background: 'transparent', border: 'none', color: '#FFF', fontSize: '0.92rem', fontWeight: 800, outline: 'none' }}
+                style={{ width: '100%', background: 'transparent', border: 'none', color: '#FFF', fontSize: '1rem', fontWeight: 800, outline: 'none' }}
               />
             </div>
 
@@ -673,7 +675,7 @@ export default function LocationPickerModal({
               <select
                 value={radiusMeters}
                 onChange={(e) => setRadiusMeters(Number(e.target.value))}
-                style={{ width: '100%', background: 'transparent', border: 'none', color: '#FFF', fontSize: '0.86rem', fontWeight: 800, outline: 'none', cursor: 'pointer' }}
+                style={{ width: '100%', background: 'transparent', border: 'none', color: '#FFF', fontSize: '1rem', fontWeight: 800, outline: 'none', cursor: 'pointer' }}
               >
                 <option value={50} style={{ background: '#0B2014', color: '#FFF' }}>50 meters (Strict Indoor / Outlet)</option>
                 <option value={100} style={{ background: '#0B2014', color: '#FFF' }}>100 meters (Premises / Campus)</option>
@@ -686,7 +688,7 @@ export default function LocationPickerModal({
           </div>
 
           {/* External Google Maps Verification Link */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.78rem' }}>
             <span style={{ color: '#94A3B8' }}>Golden Circle indicates allowed customer ordering radius.</span>
             <a
               href={`https://www.google.com/maps?q=${lat},${lng}`}
@@ -701,9 +703,10 @@ export default function LocationPickerModal({
 
         {/* Footer Actions */}
         <div style={{
-          padding: '16px 24px',
+          padding: '12px 16px',
           borderTop: '1px solid rgba(223, 186, 103, 0.25)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
+          flexShrink: 0,
           background: 'rgba(10, 35, 21, 0.95)'
         }}>
           <button
@@ -711,7 +714,7 @@ export default function LocationPickerModal({
             onClick={onClose}
             style={{
               background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)',
-              color: '#E2E8F0', padding: '10px 20px', borderRadius: '12px',
+              color: '#E2E8F0', padding: '10px 18px', borderRadius: '12px', minHeight: '42px',
               fontWeight: 700, fontSize: '0.86rem', cursor: 'pointer'
             }}
           >
@@ -723,9 +726,9 @@ export default function LocationPickerModal({
             onClick={handleConfirmSave}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '8px',
-              padding: '12px 28px', borderRadius: '14px', border: 'none',
+              padding: '11px 22px', borderRadius: '14px', border: 'none', minHeight: '44px',
               background: 'linear-gradient(135deg, #DFBA67 0%, #C89F43 100%)',
-              color: '#0A2315', fontWeight: 900, fontSize: '0.92rem', cursor: 'pointer',
+              color: '#0A2315', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer',
               boxShadow: '0 4px 15px rgba(223, 186, 103, 0.4)'
             }}
           >

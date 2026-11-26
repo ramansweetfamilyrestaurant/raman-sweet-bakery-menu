@@ -148,8 +148,8 @@ export default function AuditArchivesView({
         gap: '12px'
       }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Archive size={22} color="#D4AF37" />
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <Archive size={22} color="#D4AF37" style={{ flexShrink: 0 }} />
             <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900 }}>
               Cold Storage Audit Archives Vault
             </h3>
@@ -165,7 +165,7 @@ export default function AuditArchivesView({
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={onBackToLive}
@@ -202,11 +202,11 @@ export default function AuditArchivesView({
       )}
 
       {/* Archives Table */}
-      <div style={{
+      <div className="sa-table-container sa-responsive-table" style={{
         background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--sa-border, #E2E8F0)',
-        overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+        boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
       }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+        <table className="sa-table" style={{ width: '100%', minWidth: '720px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
           <thead>
             <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 800 }}>
               <th style={{ padding: '12px 16px' }}>CHUNKS & TRACK</th>
@@ -256,7 +256,7 @@ export default function AuditArchivesView({
                       <button
                         type="button"
                         onClick={() => handleCopy(a.file_sha256, a.id)}
-                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px', minWidth: '36px', minHeight: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                         title="Copy SHA-256"
                       >
                         {copiedKey === a.id ? <Check size={11} color="#059669" /> : <Copy size={11} color="#94A3B8" />}
@@ -299,40 +299,41 @@ export default function AuditArchivesView({
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 9999, padding: '20px'
+          zIndex: 9999, padding: '14px'
         }}>
           <div style={{
             background: '#FFFFFF', borderRadius: '20px', width: '100%', maxWidth: '850px',
-            maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            maxHeight: '90dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxSizing: 'border-box',
             boxShadow: '0 20px 40px rgba(0,0,0,0.25)'
           }}>
             {/* Modal Header */}
             <div style={{
-              padding: '18px 24px', background: '#0F172A', color: '#FFFFFF',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              padding: 'clamp(14px, 3vw, 18px) clamp(14px, 4vw, 24px)', background: '#0F172A', color: '#FFFFFF',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px'
             }}>
-              <div>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, overflowWrap: 'break-word' }}>
                   Inspect Archive #{selectedArchive.id} ({selectedArchive.total_records} records)
                 </h4>
-                <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '2px', fontFamily: 'monospace' }}>
+                <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '2px', fontFamily: 'monospace', wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
                   {selectedArchive.archive_key}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setSearchModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}
+                aria-label="Close modal"
+                style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#FFFFFF', cursor: 'pointer', width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
+            <div style={{ padding: 'clamp(14px, 4vw, 20px) clamp(14px, 4vw, 24px)', flex: 1, minHeight: 0, overflowY: 'auto' }}>
               
               {/* Search Bar */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
                 <input
                   type="text"
                   placeholder="Filter by action, details, restaurant ID..."
@@ -340,8 +341,8 @@ export default function AuditArchivesView({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleExecuteSearch()}
                   style={{
-                    flex: 1, padding: '10px 14px', borderRadius: '10px',
-                    border: '1.5px solid #CBD5E1', fontSize: '0.82rem'
+                    flex: '1 1 200px', minWidth: 0, padding: '10px 14px', borderRadius: '10px',
+                    border: '1.5px solid #CBD5E1', fontSize: '1rem', boxSizing: 'border-box'
                   }}
                 />
                 <button
@@ -350,7 +351,7 @@ export default function AuditArchivesView({
                   disabled={searchLoading}
                   style={{
                     padding: '10px 18px', borderRadius: '10px', background: '#D4AF37',
-                    color: '#0A2315', fontWeight: 900, border: 'none', cursor: 'pointer'
+                    color: '#0A2315', fontWeight: 900, border: 'none', cursor: 'pointer', minHeight: '42px'
                   }}
                 >
                   {searchLoading ? 'Streaming...' : 'Stream Search'}
@@ -360,14 +361,14 @@ export default function AuditArchivesView({
               {/* Restore Button */}
               <div style={{
                 background: '#F8FAFC', padding: '12px 16px', borderRadius: '12px',
-                border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px',
                 marginBottom: '16px'
               }}>
-                <div>
+                <div style={{ minWidth: 0, flex: '1 1 200px' }}>
                   <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#1E293B' }}>
                     Rehydrate into Isolated Staging Table
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', wordBreak: 'break-word' }}>
                     Loads records into <code>audit_logs_archive_staging</code> for forensic SQL exploration.
                   </div>
                 </div>
@@ -377,7 +378,7 @@ export default function AuditArchivesView({
                   disabled={restoreLoading}
                   style={{
                     padding: '8px 14px', borderRadius: '8px', background: '#1E40AF',
-                    color: '#FFFFFF', fontWeight: 800, fontSize: '0.74rem', border: 'none', cursor: 'pointer'
+                    color: '#FFFFFF', fontWeight: 800, fontSize: '0.74rem', border: 'none', cursor: 'pointer', flexShrink: 0, minHeight: '38px'
                   }}
                 >
                   {restoreLoading ? 'Rehydrating...' : 'Restore to Staging'}
@@ -410,14 +411,14 @@ export default function AuditArchivesView({
                       searchResults.map((r, i) => (
                         <div key={i} style={{
                           padding: '10px 14px', borderBottom: '1px solid #F1F5F9', fontSize: '0.76rem',
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px'
                         }}>
-                          <div>
-                            <span style={{ fontWeight: 800, color: '#0F172A' }}>#{r.id} {r.action}</span>
+                          <div style={{ minWidth: 0, flex: '1 1 200px' }}>
+                            <span style={{ fontWeight: 800, color: '#0F172A', wordBreak: 'break-word' }}>#{r.id} {r.action}</span>
                             <span style={{ color: '#64748B', marginLeft: '8px' }}>Resto #{r.restaurant_id || 'Global'}</span>
-                            <div style={{ color: '#475569', marginTop: '2px' }}>{r.details}</div>
+                            <div style={{ color: '#475569', marginTop: '2px', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{r.details}</div>
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: '#94A3B8', whiteSpace: 'nowrap', marginLeft: '12px' }}>
+                          <div style={{ fontSize: '0.7rem', color: '#94A3B8', whiteSpace: 'nowrap', flexShrink: 0 }}>
                             {new Date(r.created_at).toLocaleString()}
                           </div>
                         </div>

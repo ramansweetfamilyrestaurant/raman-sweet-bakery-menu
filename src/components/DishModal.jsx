@@ -74,7 +74,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
       padding: addonOnly ? 0 : '12px',
       animation: addonOnly ? 'sheetBackdropFade 0.2s ease-out' : undefined
     }} onClick={onClose}>
-      <div 
+      <div
         onClick={(e) => e.stopPropagation()}
         style={{
           background: 'var(--theme-modal-bg, #FFFFFF)',
@@ -82,7 +82,8 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
           overflow: 'hidden',
           width: '100%',
           maxWidth: '520px',
-          maxHeight: addonOnly ? '82vh' : '88vh',
+          maxHeight: addonOnly ? '82dvh' : '88dvh',
+          boxSizing: 'border-box',
           boxShadow: addonOnly ? '0 -12px 36px rgba(0, 0, 0, 0.28)' : 'var(--shadow-lg)',
           border: addonOnly ? '1.5px solid var(--theme-modal-border, var(--gold-border))' : '2px solid var(--theme-modal-border, var(--gold-bright))',
           borderBottom: addonOnly ? 'none' : undefined,
@@ -169,8 +170,8 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   color: 'var(--text-dark, #334155)',
                   border: 'none',
                   borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
+                  width: '36px',
+                  height: '36px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -197,9 +198,9 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                 color: '#FFFFFF',
                 border: '1px solid rgba(255,255,255,0.4)',
                 borderRadius: '50%',
-                width: '34px',
-                height: '34px',
-                minHeight: 'unset',
+                width: '36px',
+                height: '36px',
+                minHeight: '36px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -228,7 +229,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   objectFit: 'cover'
                 }}
               />
-              
+
               {/* FSSAI 100% Pure Veg Badge Overlay */}
               <div style={{
                 position: 'absolute',
@@ -272,111 +273,112 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
         <div style={{
           padding: addonOnly ? '14px 16px' : '16px 18px',
           overflowY: 'auto',
-          flex: 1
+          flex: 1,
+          minHeight: 0
         }}>
           {!addonOnly && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: '10px',
-            marginBottom: '10px'
-          }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
-                <span style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 800,
-                  color: 'var(--text-gold)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px'
-                }}>
-                  {dish.category_name || 'Chef Specialty'}
-                </span>
-                {(dish.offer_badge || dish.offer?.offer_badge) && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '10px',
+              marginBottom: '10px'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
                   <span style={{
-                    background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
-                    color: '#B45309',
-                    border: '1px solid #F59E0B',
-                    borderRadius: 'var(--radius-pill)',
-                    padding: '1.5px 7px',
-                    fontSize: '0.64rem',
-                    fontWeight: 900,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '2px'
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    color: 'var(--text-gold)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
                   }}>
-                    🔥 {dish.offer_badge || dish.offer?.offer_badge}
+                    {dish.category_name || 'Chef Specialty'}
+                  </span>
+                  {(dish.offer_badge || dish.offer?.offer_badge) && (
+                    <span style={{
+                      background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+                      color: '#B45309',
+                      border: '1px solid #F59E0B',
+                      borderRadius: 'var(--radius-pill)',
+                      padding: '1.5px 7px',
+                      fontSize: '0.64rem',
+                      fontWeight: 900,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '2px'
+                    }}>
+                      🔥 {dish.offer_badge || dish.offer?.offer_badge}
+                    </span>
+                  )}
+                </div>
+
+                <h2 style={{
+                  fontFamily: 'var(--font-heading)',
+                  fontSize: '1.25rem',
+                  fontWeight: 700,
+                  color: 'var(--primary-emerald)',
+                  lineHeight: 1.25,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  margin: '2px 0 0 0'
+                }}>
+                  {displayName}
+                </h2>
+
+                {(dish.offer?.ends_at || dish.offer_ends_at) && (
+                  <span style={{ fontSize: '0.65rem', color: 'var(--theme-price-color, var(--primary-emerald, #059669))', fontWeight: 700, marginTop: '2px', display: 'block' }}>
+                    ⏳ {lang === 'hi' ? 'ऑफर समाप्ति:' : 'Offer valid till:'} {new Date(dish.offer?.ends_at || dish.offer_ends_at).toLocaleDateString()}
                   </span>
                 )}
               </div>
 
-              <h2 style={{
-                fontFamily: 'var(--font-heading)',
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                color: 'var(--primary-emerald)',
-                lineHeight: 1.25,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                margin: '2px 0 0 0'
-              }}>
-                {displayName}
-              </h2>
-
-              {(dish.offer?.ends_at || dish.offer_ends_at) && (
-                <span style={{ fontSize: '0.65rem', color: 'var(--theme-price-color, var(--primary-emerald, #059669))', fontWeight: 700, marginTop: '2px', display: 'block' }}>
-                  ⏳ {lang === 'hi' ? 'ऑफर समाप्ति:' : 'Offer valid till:'} {new Date(dish.offer?.ends_at || dish.offer_ends_at).toLocaleDateString()}
-                </span>
-              )}
-            </div>
-
-            {/* Dynamic Active Price Tag Pill matching Chaat section */}
-            {activePrice < regularActivePrice ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
+              {/* Dynamic Active Price Tag Pill matching Chaat section */}
+              {activePrice < regularActivePrice ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
+                  <div style={{
+                    fontSize: '1.02rem',
+                    fontWeight: 900,
+                    padding: '2px 10px',
+                    borderRadius: 'var(--radius-pill)',
+                    background: 'var(--theme-badge-bg, var(--bg-card-soft, #ECFDF5))',
+                    color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
+                    border: '1.5px solid var(--theme-card-border, #A7F3D0)',
+                    boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0, 0, 0, 0.08))',
+                    whiteSpace: 'nowrap',
+                    lineHeight: 1.2
+                  }}>
+                    {symbol}{formatPriceNumber(activePrice)}
+                  </div>
+                  <div style={{
+                    fontSize: '0.72rem',
+                    color: '#94A3B8',
+                    textDecoration: 'line-through',
+                    fontWeight: 600,
+                    marginRight: '4px'
+                  }}>
+                    {symbol}{formatPriceNumber(regularActivePrice)}
+                  </div>
+                </div>
+              ) : (
                 <div style={{
-                  fontSize: '1.02rem',
+                  fontSize: '1rem',
                   fontWeight: 900,
-                  padding: '2px 10px',
+                  padding: '3px 12px',
                   borderRadius: 'var(--radius-pill)',
-                  background: 'var(--theme-badge-bg, var(--bg-card-soft, #ECFDF5))',
-                  color: 'var(--theme-price-color, var(--primary-emerald, #064E3B))',
-                  border: '1.5px solid var(--theme-card-border, #A7F3D0)',
-                  boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0, 0, 0, 0.08))',
+                  background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
+                  color: 'var(--text-dark)',
+                  border: '1.5px solid var(--theme-card-border, var(--border-light))',
+                  boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
                   whiteSpace: 'nowrap',
-                  lineHeight: 1.2
+                  lineHeight: 1.2,
+                  flexShrink: 0
                 }}>
                   {symbol}{formatPriceNumber(activePrice)}
                 </div>
-                <div style={{
-                  fontSize: '0.72rem',
-                  color: '#94A3B8',
-                  textDecoration: 'line-through',
-                  fontWeight: 600,
-                  marginRight: '4px'
-                }}>
-                  {symbol}{formatPriceNumber(regularActivePrice)}
-                </div>
-              </div>
-            ) : (
-              <div style={{
-                fontSize: '1rem',
-                fontWeight: 900,
-                padding: '3px 12px',
-                borderRadius: 'var(--radius-pill)',
-                background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
-                color: 'var(--text-dark)',
-                border: '1.5px solid var(--theme-card-border, var(--border-light))',
-                boxShadow: 'var(--theme-shadow, 0 1px 4px rgba(0,0,0,0.06))',
-                whiteSpace: 'nowrap',
-                lineHeight: 1.2,
-                flexShrink: 0
-              }}>
-                {symbol}{formatPriceNumber(activePrice)}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           )}
 
           {/* Interactive Half / Full Portion Selector */}
@@ -398,7 +400,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   style={{
                     flex: 1,
                     padding: '6px 10px',
-                    minHeight: 'unset',
+                    minHeight: '38px',
                     borderRadius: 'var(--radius-pill)',
                     fontSize: '0.8rem',
                     fontWeight: 800,
@@ -417,7 +419,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
                   style={{
                     flex: 1,
                     padding: '6px 10px',
-                    minHeight: 'unset',
+                    minHeight: '38px',
                     borderRadius: 'var(--radius-pill)',
                     fontSize: '0.8rem',
                     fontWeight: 800,
@@ -433,7 +435,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
             </div>
           ) : null}
 
-          {!addonOnly && (( !hasHalfPrice && dish.portion && dish.portion.trim() && !dish.portion.toLowerCase().includes('portion')) || (dish.taste_profile && String(dish.taste_profile).trim())) && (
+          {!addonOnly && ((!hasHalfPrice && dish.portion && dish.portion.trim() && !dish.portion.toLowerCase().includes('portion')) || (dish.taste_profile && String(dish.taste_profile).trim())) && (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {!hasHalfPrice && dish.portion && dish.portion.trim() && !dish.portion.toLowerCase().includes('portion') && (
                 <span style={{
@@ -607,135 +609,136 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
           {/* Close Scrollable Content Body */}
         </div>
 
-          {/* Sticky Bottom Action Bar (Stepper in Add-on Sheet OR Detail Total + Add Button) */}
-          <div style={{
-            padding: addonOnly ? '12px 16px calc(14px + env(safe-area-inset-bottom, 0px))' : '12px 18px 16px',
-            borderTop: addonOnly ? '1px solid var(--border-light, #E2E8F0)' : '1.5px solid var(--gold-border)',
-            background: 'var(--theme-modal-bg, #FFFFFF)',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px'
-          }}>
-            {addonOnly && isAvailable && onAddToCart ? (
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                border: '1.5px solid var(--border-light, #CBD5E1)',
-                borderRadius: 'var(--radius-pill)',
-                background: 'var(--bg-secondary, #F8FAFC)',
-                height: '42px',
-                padding: '0 4px',
-                flexShrink: 0
-              }}>
-                <button
-                  type="button"
-                  aria-label="Decrease quantity"
-                  disabled={quantity <= 1}
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  style={{
-                    width: '30px',
-                    height: '32px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: quantity <= 1 ? '#94A3B8' : 'var(--text-dark)',
-                    fontSize: '1rem',
-                    fontWeight: 900,
-                    cursor: quantity <= 1 ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  −
-                </button>
-                <span style={{ minWidth: '22px', textAlign: 'center', fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-                  {quantity}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Increase quantity"
-                  onClick={() => setQuantity(q => Math.min(20, q + 1))}
-                  style={{
-                    width: '30px',
-                    height: '32px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'var(--primary-emerald)',
-                    fontSize: '1rem',
-                    fontWeight: 900,
-                    cursor: 'pointer'
-                  }}
-                >
-                  +
-                </button>
-              </div>
-            ) : !addonOnly && (
-              <div>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #6B7280)', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>
-                  Total (incl. add-ons)
-                </span>
-                <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)' }}>
-                  {symbol}{formatPriceNumber(activePrice)}
-                </span>
-              </div>
-            )}
-
-            {isAvailable && onAddToCart ? (
+        {/* Sticky Bottom Action Bar (Stepper in Add-on Sheet OR Detail Total + Add Button) */}
+        <div style={{
+          padding: addonOnly ? '12px 16px calc(14px + env(safe-area-inset-bottom, 0px))' : '12px 16px calc(16px + env(safe-area-inset-bottom, 0px))',
+          borderTop: addonOnly ? '1px solid var(--border-light, #E2E8F0)' : '1.5px solid var(--gold-border)',
+          background: 'var(--theme-modal-bg, #FFFFFF)',
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          {addonOnly && isAvailable && onAddToCart ? (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              border: '1.5px solid var(--border-light, #CBD5E1)',
+              borderRadius: 'var(--radius-pill)',
+              background: 'var(--bg-secondary, #F8FAFC)',
+              height: '42px',
+              padding: '0 4px',
+              flexShrink: 0
+            }}>
               <button
                 type="button"
-                onClick={() => {
-                  onAddToCart(dish, selectedPortion, selectedModifiers, quantity);
-                  if (onClose) onClose();
-                }}
+                aria-label="Decrease quantity"
+                disabled={quantity <= 1}
+                onClick={() => setQuantity(q => Math.max(1, q - 1))}
                 style={{
-                  flex: 1,
-                  padding: '12px 18px',
-                  borderRadius: 'var(--radius-pill)',
-                  background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
-                  color: 'var(--theme-btn-text, #FFFFFF)',
-                  fontWeight: 900,
-                  fontSize: '0.92rem',
+                  width: '36px',
+                    height: '36px',
                   border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: 'var(--theme-shadow, 0 4px 14px rgba(0, 0, 0, 0.25))',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'transform 0.15s ease'
+                  background: 'transparent',
+                  color: quantity <= 1 ? '#94A3B8' : 'var(--text-dark)',
+                  fontSize: '1rem',
+                  fontWeight: 900,
+                  cursor: quantity <= 1 ? 'not-allowed' : 'pointer'
                 }}
               >
-                <span>➕</span>
-                <span>
-                  {addonOnly
-                    ? `${lang === 'hi' ? 'कार्ट में जोड़ें' : 'Add Item'} • ${symbol}${formatPriceNumber(totalPrice)}`
-                    : `${lang === 'hi' ? 'ऑर्डर में जोड़ें' : 'Add to Order'} • ${symbol}${formatPriceNumber(activePrice)}`}
-                </span>
+                −
               </button>
-            ) : (
+              <span style={{ minWidth: '22px', textAlign: 'center', fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                {quantity}
+              </span>
               <button
                 type="button"
-                onClick={onClose}
+                aria-label="Increase quantity"
+                onClick={() => setQuantity(q => Math.min(20, q + 1))}
                 style={{
-                  flex: 1,
-                  padding: '12px 18px',
-                  borderRadius: 'var(--radius-pill)',
-                  border: '1.5px solid var(--border-light)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-dark)',
-                  fontWeight: 800,
-                  fontSize: '0.86rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
+                  width: '36px',
+                    height: '36px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--primary-emerald)',
+                  fontSize: '1rem',
+                  fontWeight: 900,
+                  cursor: 'pointer'
                 }}
               >
-                <span>📖</span>
-                <span>{lang === 'hi' ? 'विवरण बंद करें (View Only)' : 'Close Details (View Only)'}</span>
+                +
               </button>
-            )}
-          </div>
+            </div>
+          ) : !addonOnly && (
+            <div>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #6B7280)', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>
+                Total (incl. add-ons)
+              </span>
+              <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--primary-emerald)' }}>
+                {symbol}{formatPriceNumber(activePrice)}
+              </span>
+            </div>
+          )}
+
+          {isAvailable && onAddToCart ? (
+            <button
+              type="button"
+              onClick={() => {
+                onAddToCart(dish, selectedPortion, selectedModifiers, quantity);
+                if (onClose) onClose();
+              }}
+              style={{
+                flex: 1,
+                padding: '12px 18px',
+                borderRadius: 'var(--radius-pill)',
+                background: 'var(--theme-btn-gradient, linear-gradient(135deg, var(--primary-emerald) 0%, var(--gold-primary) 100%))',
+                color: 'var(--theme-btn-text, #FFFFFF)',
+                fontWeight: 900,
+                fontSize: '0.92rem',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: 'var(--theme-shadow, 0 4px 14px rgba(0, 0, 0, 0.25))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'transform 0.15s ease'
+              }}
+            >
+              <span>➕</span>
+              <span>
+                {addonOnly
+                  ? `${lang === 'hi' ? 'कार्ट में जोड़ें' : 'Add Item'} • ${symbol}${formatPriceNumber(totalPrice)}`
+                  : `${lang === 'hi' ? 'ऑर्डर में जोड़ें' : 'Add to Order'} • ${symbol}${formatPriceNumber(activePrice)}`}
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                flex: 1,
+                padding: '12px 18px',
+                borderRadius: 'var(--radius-pill)',
+                border: '1.5px solid var(--border-light)',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-dark)',
+                fontWeight: 800,
+                fontSize: '0.86rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>📖</span>
+              <span>{lang === 'hi' ? 'विवरण बंद करें (View Only)' : 'Close Details (View Only)'}</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

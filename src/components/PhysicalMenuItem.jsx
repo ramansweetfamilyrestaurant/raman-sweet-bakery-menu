@@ -26,11 +26,12 @@ export default function PhysicalMenuItem({ dish, onClick }) {
         display: 'flex',
         alignItems: 'baseline',
         justifyContent: 'space-between',
-        gap: '12px',
+        flexWrap: 'wrap',
+        gap: '8px',
         width: '100%'
       }}>
         {/* Name & Veg Symbol */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', flexGrow: 1, minWidth: 0 }}>
           {/* FSSAI Veg Symbol */}
           <span style={{
             width: '14px',
@@ -59,6 +60,8 @@ export default function PhysicalMenuItem({ dish, onClick }) {
               fontWeight: 700,
               color: 'var(--primary-emerald)',
               lineHeight: 1.25,
+              minWidth: 0,
+              overflowWrap: 'break-word',
               cursor: 'pointer'
             }}
           >
@@ -101,7 +104,8 @@ export default function PhysicalMenuItem({ dish, onClick }) {
               style={{
                 fontSize: '0.74rem',
                 fontWeight: 700,
-                padding: '3px 9px',
+                padding: '5px 10px',
+                minHeight: '36px',
                 borderRadius: 'var(--radius-pill)',
                 background: selectedPortion === 'half' ? 'var(--primary-emerald)' : 'transparent',
                 color: selectedPortion === 'half' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--primary-emerald)'
@@ -118,7 +122,8 @@ export default function PhysicalMenuItem({ dish, onClick }) {
               style={{
                 fontSize: '0.74rem',
                 fontWeight: 700,
-                padding: '3px 9px',
+                padding: '5px 10px',
+                minHeight: '36px',
                 borderRadius: 'var(--radius-pill)',
                 background: selectedPortion === 'full' ? 'var(--primary-emerald)' : 'transparent',
                 color: selectedPortion === 'full' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--primary-emerald)'
@@ -174,7 +179,7 @@ export default function PhysicalMenuItem({ dish, onClick }) {
         gap: '14px',
         paddingLeft: '22px'
       }}>
-        <div style={{ flexGrow: 1 }}>
+        <div style={{ flexGrow: 1, minWidth: 0 }}>
           {/* Portion specification label */}
           {dish.portion && (
             <span style={{

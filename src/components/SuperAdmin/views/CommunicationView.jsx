@@ -156,8 +156,8 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
             />
 
             {/* Emoji Quick Insert + Character Counter */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
                 <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', fontWeight: 600, marginRight: '4px' }}>Quick Emojis:</span>
                 {['⚡', '🎉', '⚠️', '🛠️', 'ℹ️', '🚨', '📢', '🔥', '🚀'].map((em, idx) => (
                   <button
@@ -165,8 +165,8 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
                     type="button"
                     onClick={() => handleInsertEmoji(em)}
                     style={{
-                      background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '4px',
-                      padding: '2px 5px', fontSize: '0.80rem', cursor: 'pointer'
+                      background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '6px',
+                      padding: '4px 6px', minWidth: '36px', minHeight: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', cursor: 'pointer'
                     }}
                     title={`Insert ${em}`}
                   >
@@ -185,7 +185,7 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
             <label className="sa-settings-label" style={{ fontWeight: 800, fontSize: '0.76rem' }}>
               BANNER NOTICE TYPE
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '10px' }}>
               {[
                 { id: 'info', label: 'General Notice', desc: 'Updates & Announcements', icon: <Info size={18} color="#6366F1" />, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.08)' },
                 { id: 'success', label: 'Feature Release', desc: 'New Tools & Upgrades', icon: <Sparkles size={18} color="#10B981" />, color: '#10B981', bg: 'rgba(16, 185, 129, 0.08)' },
@@ -228,7 +228,7 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
             <label className="sa-settings-label" style={{ fontWeight: 800, fontSize: '0.76rem' }}>
               TARGET AUDIENCE
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '10px' }}>
               {[
                 { id: 'all', label: 'All Businesses', desc: 'Every registered tenant', icon: <Users size={18} color="#6366F1" />, color: '#6366F1' },
                 { id: 'active', label: 'Paid & VIP Only', desc: 'Active paid subscribers', icon: <Crown size={18} color="#10B981" />, color: '#10B981' },
@@ -268,7 +268,7 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
           {/* 1:1 Live Business Dashboard Replica Preview */}
           {message.trim() && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                 <span style={{ fontSize: '0.70rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--sa-text-muted)', letterSpacing: '0.04em' }}>
                   👁️ 1:1 Live Business Dashboard Banner Preview:
                 </span>
@@ -296,7 +296,7 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
                   }}>
                     {activeTheme.badge}
                   </span>
-                  <span style={{ wordBreak: 'break-word', fontWeight: 600, flex: 1, minWidth: '180px' }}>
+                  <span style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', fontWeight: 600, flex: '1 1 160px', minWidth: 0 }}>
                     {message}
                   </span>
                 </div>
@@ -325,7 +325,7 @@ export default function CommunicationView({ announcementsList, onSendAnnouncemen
 
       {/* 📋 Broadcast History */}
       <div className="sa-settings-main-card" style={{ padding: '20px 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '14px', borderBottom: '1px solid var(--sa-border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', paddingBottom: '14px', borderBottom: '1px solid var(--sa-border)' }}>
           <div>
             <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: '0 0 2px 0' }}>
               Active Announcements History ({announcementsList.length})

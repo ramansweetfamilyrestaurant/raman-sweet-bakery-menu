@@ -16,11 +16,12 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: '8px',
         marginBottom: '10px',
         padding: '0 4px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Flame size={20} color="var(--accent-coral)" style={{ animation: 'pulse 1.5s infinite' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+          <Flame size={20} color="var(--accent-coral)" style={{ animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
           <h3 style={{
             fontSize: '1.05rem',
             fontWeight: 800,
@@ -31,7 +32,7 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
             {lang === 'hi' ? '🔥 हमारे सबसे प्रसिद्ध व्यंजन (Must Try)' : '🔥 Must Try & Bestsellers'}
           </h3>
         </div>
-        <span style={{ fontSize: '0.78rem', color: 'var(--gold-bright)', fontWeight: 700 }}>
+        <span style={{ fontSize: '0.78rem', color: 'var(--gold-bright)', fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
           {bestsellers.length} Items
         </span>
       </div>
@@ -41,6 +42,7 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
         display: 'flex',
         gap: '14px',
         overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
         paddingBottom: '8px',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
@@ -53,7 +55,7 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
               onClick={() => onSelectDish(dish)}
               style={{
                 flexShrink: 0,
-                width: '240px',
+                width: 'clamp(200px, 68vw, 240px)',
                 background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
                 borderRadius: 'var(--radius-md)',
                 overflow: 'hidden',
@@ -99,7 +101,11 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                   padding: '3px 10px',
                   borderRadius: 'var(--radius-pill)',
                   fontSize: '0.68rem',
-                  fontWeight: 800
+                  fontWeight: 800,
+                  maxWidth: 'calc(100% - 20px)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
                 }}>
                   {dish.badge || '🔥 Bestseller'}
                 </div>
@@ -124,6 +130,8 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '6px',
                   marginTop: '8px'
                 }}>
                   {dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? (
@@ -162,8 +170,9 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, currenc
                       color: '#B45309',
                       background: '#FEF3C7',
                       border: '1px solid #F59E0B',
-                      padding: '1px 5px',
-                      borderRadius: 'var(--radius-pill)'
+                      padding: '2px 6px',
+                      borderRadius: 'var(--radius-pill)',
+                      whiteSpace: 'nowrap'
                     }}>
                       🔥 {dish.offer_badge || dish.offer?.offer_badge}
                     </span>

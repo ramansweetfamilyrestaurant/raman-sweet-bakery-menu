@@ -71,7 +71,7 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
   const [updatingTicket, setUpdatingTicket] = useState(false);
 
   // Quick Canned Response Templates
-    // Export tickets to CSV
+  // Export tickets to CSV
   const handleExportTicketsCsv = () => {
     if (!tickets || tickets.length === 0) {
       alert('No tickets available to export.');
@@ -315,18 +315,18 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
             <MessageSquare size={22} color="var(--sa-primary)" />
             <span>Support Ticket Command Center</span>
           </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '2px' }}>
             <span style={{ fontSize: '0.76rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>
               Triaging tenant inquiries, hardware setups, billing escalations, and official operator replies.
             </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 700, color: '#059669', background: '#ECFDF5', padding: '2px 8px', borderRadius: '12px', border: '1px solid #A7F3D0' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 700, color: '#059669', background: '#ECFDF5', padding: '2px 8px', borderRadius: '12px', border: '1px solid #A7F3D0', flexShrink: 0, whiteSpace: 'nowrap' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} />
               Auto-Sync Active (35s)
             </span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={handleExportTicketsCsv}
@@ -351,7 +351,7 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
       </div>
 
       {/* 2. Interactive KPI Telemetry Cards (Clickable Filter Shortcuts) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: '12px' }}>
         {/* Open */}
         <div
           onClick={() => {
@@ -695,7 +695,7 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
       )}
 
       {/* 4. Table of Tickets */}
-      <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--sa-border)', overflow: 'hidden' }}>
+      <div className="sa-table-container sa-responsive-table" style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid var(--sa-border)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <table className="sa-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
@@ -886,11 +886,11 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
 
       {/* 5. Pagination Controls */}
       {pagination.totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFFFF', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', background: '#FFFFFF', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
           <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 700 }}>
             Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total tickets)
           </span>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
               type="button"
               disabled={page <= 1}
@@ -931,7 +931,7 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
           </div>
         ) : activeTicketData?.ticket ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            
+
             {/* Action Feedback */}
             {actionSuccess && (
               <div style={{ background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', padding: '10px 14px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800 }}>
@@ -956,9 +956,9 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
               flexWrap: 'wrap',
               gap: '12px'
             }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <strong style={{ fontSize: '0.90rem', color: '#0F172A' }}>
+              <div style={{ minWidth: 0, flex: '1 1 200px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <strong style={{ fontSize: '0.90rem', color: '#0F172A', wordBreak: 'break-word' }}>
                     {activeTicketData.ticket.restaurant_name}
                   </strong>
                   {activeTicketData.ticket.business_type && (
@@ -967,7 +967,7 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
                     </span>
                   )}
                 </div>
-                <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: '2px', overflowWrap: 'anywhere' }}>
                   /{activeTicketData.ticket.restaurant_slug} · Category: <span style={{ textTransform: 'capitalize', fontWeight: 700, color: '#334155' }}>{activeTicketData.ticket.category}</span>
                 </span>
                 <span style={{ fontSize: '0.66rem', color: '#94A3B8' }}>
@@ -1068,7 +1068,7 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
               borderRadius: '14px',
               border: '1px solid var(--sa-border)',
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))',
               gap: '12px'
             }}>
               {/* Status Selector */}
@@ -1086,11 +1086,11 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
                   }}
                   style={{
                     width: '100%',
-                    height: '36px',
+                    minHeight: '40px',
                     borderRadius: '8px',
                     border: '1px solid #CBD5E1',
                     padding: '0 8px',
-                    fontSize: '0.76rem',
+                    fontSize: '1rem',
                     fontWeight: 800,
                     background: '#FAF8F5'
                   }}
@@ -1118,11 +1118,11 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
                   }}
                   style={{
                     width: '100%',
-                    height: '36px',
+                    minHeight: '40px',
                     borderRadius: '8px',
                     border: '1px solid #CBD5E1',
                     padding: '0 8px',
-                    fontSize: '0.76rem',
+                    fontSize: '1rem',
                     fontWeight: 800,
                     background: '#FAF8F5'
                   }}
@@ -1149,11 +1149,11 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
                   }}
                   style={{
                     width: '100%',
-                    height: '36px',
+                    minHeight: '40px',
                     borderRadius: '8px',
                     border: '1px solid #CBD5E1',
                     padding: '0 8px',
-                    fontSize: '0.76rem',
+                    fontSize: '1rem',
                     fontWeight: 800,
                     background: '#FAF8F5'
                   }}
@@ -1257,7 +1257,7 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
 
             {/* Message Thread History */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Conversation History ({activeTicketData.messages?.length || 0} messages)
                 </span>
@@ -1316,6 +1316,7 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
                         fontSize: '0.80rem',
                         lineHeight: 1.45,
                         wordBreak: 'break-word',
+                        overflowWrap: 'anywhere',
                         whiteSpace: 'pre-wrap'
                       }}>
                         <div style={{
@@ -1363,7 +1364,7 @@ export default function SupportTicketsView({ token, setSelectedTenant360, onImpe
                 </div>
               ) : (
                 <form onSubmit={handleSendAdminReply} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                     <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569' }}>
                       Post Official Response (Visible to Tenant)
                     </label>

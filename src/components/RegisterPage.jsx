@@ -243,13 +243,14 @@ export default function RegisterPage({ onRegisterSuccess }) {
   if (pendingApprovalData) {
     return (
       <div style={{
-        minHeight: '100vh',
+        minHeight: '100dvh',
+        boxSizing: 'border-box',
         background: 'linear-gradient(135deg, #0A0A0A 0%, #0D1B2A 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 16px calc(24px + env(safe-area-inset-bottom, 0px))'
       }}>
         <div style={{
           background: '#111827', border: '2px solid #DFBA67', borderRadius: '24px',
-          padding: '36px 20px', maxWidth: '440px', width: '100%', textAlign: 'center', color: '#FFFFFF',
+          padding: '32px 20px', maxWidth: '440px', width: '100%', boxSizing: 'border-box', textAlign: 'center', color: '#FFFFFF',
           boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
         }}>
           <div style={{ fontSize: '3rem', marginBottom: '12px' }}>⏳</div>
@@ -305,14 +306,15 @@ export default function RegisterPage({ onRegisterSuccess }) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
+      boxSizing: 'border-box',
       background: 'radial-gradient(circle at top right, #0A2315 0%, #05140B 60%, #020904 100%)',
       color: '#FFFFFF',
       fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      padding: '16px 16px 32px 16px',
+      padding: '16px 14px calc(32px + env(safe-area-inset-bottom, 0px)) 14px',
       position: 'relative',
       overflowX: 'hidden'
     }}>
@@ -358,7 +360,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
       {/* Background Ambient Glows */}
       <div style={{
         position: 'absolute', top: '-10%', right: '-10%',
-        width: '400px', height: '400px', borderRadius: '50%',
+        width: 'min(400px, 90vw)', height: 'min(400px, 90vw)', borderRadius: '50%',
         background: 'radial-gradient(circle, rgba(212,175,55,0.12) 0%, rgba(0,0,0,0) 70%)',
         filter: 'blur(50px)', pointerEvents: 'none'
       }} />
@@ -373,7 +375,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
         zIndex: 2
       }}>
         {/* Left Side: SaaS Value Offer */}
-        <div style={{ padding: '8px' }}>
+        <div style={{ padding: '8px', minWidth: 0 }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '8px',
             background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)',
@@ -383,7 +385,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
             <Sparkles size={14} /> {trialDays ? `${trialDays}-DAY ` : ''}FREE TRIAL • ₹0 TODAY
           </div>
 
-          <h1 style={{ fontSize: '2.1rem', fontWeight: 900, lineHeight: 1.2, marginBottom: '14px', letterSpacing: '-0.5px' }}>
+          <h1 style={{ fontSize: 'clamp(1.55rem, 6vw, 2.1rem)', fontWeight: 900, lineHeight: 1.2, marginBottom: '14px', letterSpacing: '-0.5px' }}>
             Launch Your Digital QR Menu in <span style={{
               background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
@@ -412,11 +414,13 @@ export default function RegisterPage({ onRegisterSuccess }) {
 
         {/* Right Side: Sleek Registration Card */}
         <div style={{
+          minWidth: 0,
+          boxSizing: 'border-box',
           background: 'rgba(17, 24, 39, 0.85)',
           backdropFilter: 'blur(16px)',
           border: '1.5px solid rgba(255,255,255,0.12)',
           borderRadius: '24px',
-          padding: '24px 20px',
+          padding: '24px 18px',
           boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
         }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 4px 0', textAlign: 'center' }}>
@@ -453,12 +457,12 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   style={{
                     width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                    color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
+                    color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                   }}
                 />
               </div>
               <div style={{ fontSize: '0.7rem', color: '#9CA3AF', marginTop: '4px' }}>
-                Live Menu URL: <span style={{ color: '#34D399', fontWeight: 700 }}>touchqr.in/{liveSlug}</span>
+                Live Menu URL: <span style={{ color: '#34D399', fontWeight: 700, overflowWrap: 'anywhere' }}>touchqr.in/{liveSlug}</span>
               </div>
             </div>
 
@@ -478,7 +482,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   style={{
                     width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                    color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
+                    color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -501,7 +505,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   style={{
                     width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                    color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
+                    color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -522,7 +526,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   style={{
                     width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                    color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
+                    color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -544,7 +548,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                   style={{
                     width: '100%', padding: '11px 12px 11px 38px', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                    color: '#FFFFFF', fontSize: '0.85rem', outline: 'none'
+                    color: '#FFFFFF', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -567,7 +571,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                     style={{
                       width: '100%', boxSizing: 'border-box', padding: '10px 10px 10px 32px', borderRadius: '12px',
                       border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                      color: '#FFFFFF', fontSize: '0.82rem', outline: 'none'
+                      color: '#FFFFFF', fontSize: '1rem', outline: 'none'
                     }}
                   />
                 </div>
@@ -588,7 +592,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                     style={{
                       width: '100%', boxSizing: 'border-box', padding: '10px 10px 10px 32px', borderRadius: '12px',
                       border: '1px solid rgba(255,255,255,0.15)', background: '#1F2937',
-                      color: '#FFFFFF', fontSize: '0.82rem', outline: 'none'
+                      color: '#FFFFFF', fontSize: '1rem', outline: 'none'
                     }}
                   />
                 </div>
@@ -600,7 +604,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
               <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#DFBA67', marginBottom: '6px' }}>
                 BUSINESS INDUSTRY & CATEGORY *
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '6px', marginBottom: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(90px, 100%), 1fr))', gap: '6px', marginBottom: '10px' }}>
                 {[
                   { id: 'restaurant', biz: 'restaurant', label: '🍽️ Restaurant', defaultPlan: 'pro' },
                   { id: 'hotel', biz: 'hotel_resort', label: '🏨 Hotel', defaultPlan: 'hotel_pro' },
@@ -672,7 +676,7 @@ export default function RegisterPage({ onRegisterSuccess }) {
                 })) : defaultFallbackPlans;
 
                 return (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(95px, 100%), 1fr))', gap: '6px' }}>
                     {plansToDisplay.map((p) => (
                       <div
                         key={p.key}

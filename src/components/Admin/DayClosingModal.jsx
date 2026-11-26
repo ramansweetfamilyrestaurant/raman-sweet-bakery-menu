@@ -255,14 +255,16 @@ export default function DayClosingModal({
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 99999,
-      padding: '16px'
+      padding: '16px',
+      overflowY: 'auto'
     }}>
       <div style={{
         background: '#FFFFFF',
         borderRadius: '20px',
         width: '100%',
         maxWidth: '560px',
-        maxHeight: '92vh',
+        maxHeight: '90dvh',
+        margin: 'auto',
         overflowY: 'auto',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         display: 'flex',
@@ -284,7 +286,7 @@ export default function DayClosingModal({
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>{isCinema ? '🎬' : isHotel ? '🏨' : '🌙'}</span>
-              <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900 }}>
+              <strong style={{ fontSize: '1.05rem', color: '#0F172A', fontWeight: 900, overflowWrap: 'anywhere' }}>
                 {isCinema
                   ? 'Cinema Concessions & Seat Shift Closing'
                   : isHotel
@@ -305,8 +307,8 @@ export default function DayClosingModal({
             style={{
               background: '#FFFFFF',
               border: '1px solid #CBD5E1',
-              width: '34px',
-              height: '34px',
+              width: '36px',
+              height: '36px',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -398,8 +400,11 @@ export default function DayClosingModal({
                     style={{
                       border: '1px solid #CBD5E1',
                       borderRadius: '8px',
-                      padding: '4px 8px',
-                      fontSize: '0.78rem',
+                      padding: '6px 10px',
+                      minHeight: '36px',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                      fontSize: '1rem',
                       fontWeight: 700,
                       color: '#0F172A',
                       outline: 'none',
@@ -463,7 +468,9 @@ export default function DayClosingModal({
                       background: '#F8FAFC',
                       border: '1.5px solid #E2E8F0',
                       borderRadius: '14px',
-                      padding: '14px'
+                      padding: '14px',
+                      minWidth: 0,
+                      overflowWrap: 'anywhere'
                     }}>
                       <div style={{ fontSize: '0.72rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         Tax Collected (GST)
@@ -490,7 +497,7 @@ export default function DayClosingModal({
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
                       {isCinema ? (
                         <>
-                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                             <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                               🎬 Seat Orders ({summary.cinema_orders || 0})
                             </div>
@@ -499,7 +506,7 @@ export default function DayClosingModal({
                             </div>
                           </div>
 
-                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                             <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                               🍿 Concession ({summary.takeaway_orders || 0})
                             </div>
@@ -509,7 +516,7 @@ export default function DayClosingModal({
                           </div>
 
                           {((summary.dine_in_orders || 0) > 0 || (summary.dine_in_sales || 0) > 0) && (
-                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                               <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                                 🍽️ Lounge ({summary.dine_in_orders || 0})
                               </div>
@@ -521,7 +528,7 @@ export default function DayClosingModal({
                         </>
                       ) : isHotel ? (
                         <>
-                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                             <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                               🏨 Room Service ({summary.room_orders || 0})
                             </div>
@@ -530,7 +537,7 @@ export default function DayClosingModal({
                             </div>
                           </div>
 
-                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                             <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                               🍽️ Restaurant ({summary.dine_in_orders || 0})
                             </div>
@@ -539,7 +546,7 @@ export default function DayClosingModal({
                             </div>
                           </div>
 
-                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                             <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                               📦 Front Desk ({summary.takeaway_orders || 0})
                             </div>
@@ -549,7 +556,7 @@ export default function DayClosingModal({
                           </div>
 
                           {((summary.delivery_orders || 0) > 0 || (summary.delivery_sales || 0) > 0) && (
-                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                               <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                                 🛵 Delivery ({summary.delivery_orders || 0})
                               </div>
@@ -561,7 +568,7 @@ export default function DayClosingModal({
                         </>
                       ) : (
                         <>
-                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                             <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                               🍽️ Dine-In ({summary.dine_in_orders || 0})
                             </div>
@@ -570,7 +577,7 @@ export default function DayClosingModal({
                             </div>
                           </div>
 
-                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                             <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                               📦 Takeaway ({summary.takeaway_orders || 0})
                             </div>
@@ -580,7 +587,7 @@ export default function DayClosingModal({
                           </div>
 
                           {((summary.delivery_orders || 0) > 0 || (summary.delivery_sales || 0) > 0) && (
-                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                               <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                                 🛵 Delivery ({summary.delivery_orders || 0})
                               </div>
@@ -591,7 +598,7 @@ export default function DayClosingModal({
                           )}
 
                           {((summary.room_orders || 0) > 0 || (summary.room_sales || 0) > 0) && (
-                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                               <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                                 🏨 Room Srv ({summary.room_orders || 0})
                               </div>
@@ -602,7 +609,7 @@ export default function DayClosingModal({
                           )}
 
                           {((summary.cinema_orders || 0) > 0 || (summary.cinema_sales || 0) > 0) && (
-                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', minWidth: 0, overflowWrap: 'anywhere' }}>
                               <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700 }}>
                                 🎬 Seat Audi ({summary.cinema_orders || 0})
                               </div>
@@ -627,7 +634,7 @@ export default function DayClosingModal({
                       Payment Channel Breakdown
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: '#F8FAFC', borderRadius: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', padding: '8px 10px', background: '#F8FAFC', borderRadius: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ fontSize: '1.1rem' }}>💵</span>
                           <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Cash Collected</span>
@@ -637,7 +644,7 @@ export default function DayClosingModal({
                         </span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: '#F8FAFC', borderRadius: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', padding: '8px 10px', background: '#F8FAFC', borderRadius: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ fontSize: '1.1rem' }}>📲</span>
                           <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>UPI / Payment QR</span>
@@ -648,7 +655,7 @@ export default function DayClosingModal({
                       </div>
 
                       {summary.card_sales > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: '#F8FAFC', borderRadius: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', padding: '8px 10px', background: '#F8FAFC', borderRadius: '10px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ fontSize: '1.1rem' }}>💳</span>
                             <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Card / POS Swipe</span>
@@ -660,7 +667,7 @@ export default function DayClosingModal({
                       )}
 
                       {summary.other_sales > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: '#F8FAFC', borderRadius: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', padding: '8px 10px', background: '#F8FAFC', borderRadius: '10px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ fontSize: '1.1rem' }}>⚡</span>
                             <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Other Payment Channels</span>
@@ -957,10 +964,12 @@ export default function DayClosingModal({
                           padding: '12px 14px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'space-between'
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '8px'
                         }}
                       >
-                        <div>
+                        <div style={{ minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <strong style={{ fontSize: '0.86rem', color: '#0F172A' }}>
                               {rec.closing_date}

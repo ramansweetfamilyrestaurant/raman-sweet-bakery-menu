@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Crown, Sparkles, ExternalLink, Edit3, Trash2, CheckCircle, XCircle, 
-  Utensils, MapPin, Phone, UserCheck, ShieldAlert, Key, DollarSign, 
-  CreditCard, Activity, Shield, Info, Layers, RefreshCw, AlertTriangle, 
+import {
+  Crown, Sparkles, ExternalLink, Edit3, Trash2, CheckCircle, XCircle,
+  Utensils, MapPin, Phone, UserCheck, ShieldAlert, Key, DollarSign,
+  CreditCard, Activity, Shield, Info, Layers, RefreshCw, AlertTriangle,
   Calendar, Check, Copy, FileText, ChevronRight, Lock, Eye, MessageSquare,
   QrCode, Store, Send, Clock, BarChart3, Radio
 } from 'lucide-react';
@@ -20,17 +20,17 @@ const getRestaurantLogoUrl = (logo) => {
   return `/api/r2-proxy/superadmin/branding/${logo}`;
 };
 
-export default function TenantDetailsView({ 
-  resto, 
-  isOpen, 
-  onClose, 
-  onImpersonate, 
-  onEdit, 
-  onGrantFree, 
-  onRevokeFree, 
-  onToggleActive, 
+export default function TenantDetailsView({
+  resto,
+  isOpen,
+  onClose,
+  onImpersonate,
+  onEdit,
+  onGrantFree,
+  onRevokeFree,
+  onToggleActive,
   onDelete,
-  token 
+  token
 }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [t360Data, setT360Data] = useState(null);
@@ -85,7 +85,7 @@ export default function TenantDetailsView({
   const copyToClipboard = (text, key) => {
     if (!text) return;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).catch(() => {});
+      navigator.clipboard.writeText(text).catch(() => { });
     }
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
@@ -121,9 +121,9 @@ export default function TenantDetailsView({
     resto.is_vip ||
     resto.is_complimentary ||
     ((sub.subscription_type === 'ADMIN_GRANTED' || resto.subscription_type === 'ADMIN_GRANTED' || resto.mandate_status === 'admin_granted') &&
-     sub.status !== 'expired' &&
-     sub.status !== 'cancelled' &&
-     (sub.access_until === 'Lifetime' || !sub.access_until || new Date(sub.access_until) >= new Date()))
+      sub.status !== 'expired' &&
+      sub.status !== 'cancelled' &&
+      (sub.access_until === 'Lifetime' || !sub.access_until || new Date(sub.access_until) >= new Date()))
   );
   const planInfo = formatTenantPlanDisplay({
     ...tenant,
@@ -270,7 +270,7 @@ export default function TenantDetailsView({
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.80rem', color: '#DFBA67', fontWeight: 800 }}>
+                <span style={{ fontSize: '0.80rem', color: '#DFBA67', fontWeight: 800, overflowWrap: 'anywhere' }}>
                   /{tenant.slug}
                 </span>
                 <span style={{ fontSize: '0.70rem', color: '#94A3B8', fontWeight: 600 }}>
@@ -281,7 +281,7 @@ export default function TenantDetailsView({
           </div>
 
           {/* Right: Quick Impersonate Command */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', flexShrink: 0 }}>
             <button
               type="button"
               onClick={() => onImpersonate(tenant.id, tenant.name)}
@@ -346,7 +346,7 @@ export default function TenantDetailsView({
       </div>
 
       {/* 🧭 2. ENHANCED LUXURY NAVIGATION TAB STRIP */}
-      <div 
+      <div
         className="sa-filter-pills-strip"
         style={{
           display: 'flex', gap: '6px',
@@ -398,18 +398,18 @@ export default function TenantDetailsView({
       {/* ========================================================================= */}
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          
+
           {/* Quick Menu URL & QR Preview Strip */}
           <div style={{
             background: '#F8FAFC', padding: '14px', borderRadius: '14px',
             border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center',
             justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '1 1 200px', minWidth: 0, maxWidth: '100%' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <QrCode size={18} />
               </div>
-              <div style={{ minWidth: 0 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <strong style={{ display: 'block', fontSize: '0.84rem', color: 'var(--sa-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   Live Customer Menu Link
                 </strong>
@@ -419,7 +419,7 @@ export default function TenantDetailsView({
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={() => copyToClipboard(publicMenuUrl, 'menu_url')}
@@ -444,14 +444,14 @@ export default function TenantDetailsView({
           </div>
 
           {/* Business & Owner Info Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '0.84rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '12px', fontSize: '0.84rem' }}>
             {/* Business Venue Type */}
-            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)', minWidth: 0 }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>BUSINESS VENUE TYPE</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                <span style={{ fontSize: '1.2rem' }}>{bizMeta.icon}</span>
-                <div>
-                  <strong style={{ color: 'var(--sa-text-main)', fontSize: '0.88rem', display: 'block' }}>
+                <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{bizMeta.icon}</span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ color: 'var(--sa-text-main)', fontSize: '0.88rem', display: 'block', wordBreak: 'break-word' }}>
                     {bizMeta.label || 'Restaurant'}
                   </strong>
                   <span style={{ fontSize: '0.68rem', color: 'var(--sa-text-muted)', display: 'block' }}>
@@ -462,20 +462,20 @@ export default function TenantDetailsView({
             </div>
 
             {/* Owner Name */}
-            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)', minWidth: 0 }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>OWNER FULL NAME</span>
-              <strong style={{ color: 'var(--sa-text-main)', fontSize: '0.90rem' }}>{owner.owner_name || tenant.name || 'Not Provided'}</strong>
+              <strong style={{ color: 'var(--sa-text-main)', fontSize: '0.90rem', wordBreak: 'break-word', display: 'block' }}>{owner.owner_name || tenant.name || 'Not Provided'}</strong>
             </div>
 
             {/* Username with Copy */}
-            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)', minWidth: 0 }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>OWNER USERNAME</span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                <strong style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: 'var(--sa-text-main)' }}>{owner.username || 'admin'}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                <strong style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: 'var(--sa-text-main)', overflowWrap: 'anywhere', minWidth: 0 }}>{owner.username || 'admin'}</strong>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(owner.username || 'admin', 'username')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: '4px' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: '6px', flexShrink: 0, minWidth: '36px', minHeight: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   title="Copy Username"
                 >
                   {copiedKey === 'username' ? <Check size={14} color="#16A34A" /> : <Copy size={14} color="var(--sa-text-muted)" />}
@@ -484,7 +484,7 @@ export default function TenantDetailsView({
             </div>
 
             {/* Contact Mobile with WhatsApp & Call */}
-            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)', minWidth: 0 }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>CONTACT MOBILE</span>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginTop: '2px' }}>
                 <strong style={{ fontSize: '0.88rem', color: 'var(--sa-text-main)' }}>{owner.phone || 'Not Provided'}</strong>
@@ -510,11 +510,11 @@ export default function TenantDetailsView({
             </div>
 
             {/* Owner Email */}
-            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)', minWidth: 0 }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>OWNER EMAIL ADDRESS</span>
-              <div style={{ marginTop: '2px' }}>
+              <div style={{ marginTop: '2px', overflowWrap: 'anywhere' }}>
                 {owner.owner_email ? (
-                  <a href={`mailto:${owner.owner_email}`} style={{ color: 'var(--sa-primary)', fontWeight: 800, fontSize: '0.84rem', textDecoration: 'none' }}>
+                  <a href={`mailto:${owner.owner_email}`} style={{ color: 'var(--sa-primary)', fontWeight: 800, fontSize: '0.84rem', textDecoration: 'none', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                     ✉️ {owner.owner_email}
                   </a>
                 ) : (
@@ -524,22 +524,22 @@ export default function TenantDetailsView({
             </div>
 
             {/* Business Type */}
-            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)', minWidth: 0 }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>BUSINESS / CUISINE TYPE</span>
-              <strong style={{ textTransform: 'capitalize', fontSize: '0.88rem', color: 'var(--sa-text-main)', marginTop: '2px', display: 'block' }}>
+              <strong style={{ textTransform: 'capitalize', fontSize: '0.88rem', color: 'var(--sa-text-main)', marginTop: '2px', display: 'block', wordBreak: 'break-word' }}>
                 🍴 {tenant.service_model === 'hotel' || tenant.business_type === 'hotel_resort' ? 'Hotel & Resort (In-Room Dining)' : tenant.service_model === 'cinema' || tenant.business_type === 'cinema_theatre' ? 'Cinema & Theatre (Seat Ordering)' : 'Dine-In Restaurant'}
               </strong>
             </div>
 
             {/* Total Tables & Cabins */}
-            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
+            <div style={{ background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)', minWidth: 0 }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block' }}>FACILITY SPACES</span>
               <strong style={{ color: 'var(--sa-text-main)', fontSize: '0.88rem', marginTop: '2px', display: 'block' }}>
                 {tenant.service_model === 'hotel'
                   ? `🏨 ${usage.rooms?.current ?? (typeof usage.rooms === 'number' ? usage.rooms : Number(tenant.total_rooms || 0))} Rooms • 🪑 ${usage.tables?.current ?? (typeof usage.tables === 'number' ? usage.tables : Number(tenant.total_tables || 0))} Dining Tables`
                   : tenant.service_model === 'cinema'
-                  ? `🎬 ${usage.screens?.current ?? (typeof usage.screens === 'number' ? usage.screens : Number(tenant.total_screens || 1))} Screens • 🎟️ ${usage.seats?.current ?? (typeof usage.seats === 'number' ? usage.seats : Number(tenant.total_seats || 150))} Seats`
-                  : `🪑 ${usage.tables?.current ?? (typeof usage.tables === 'number' ? usage.tables : Number(tenant.total_tables || 0))} Tables • 🚪 ${usage.cabins?.current ?? (typeof usage.cabins === 'number' ? usage.cabins : Number(tenant.total_cabins || 0))} Cabins`}
+                    ? `🎬 ${usage.screens?.current ?? (typeof usage.screens === 'number' ? usage.screens : Number(tenant.total_screens || 1))} Screens • 🎟️ ${usage.seats?.current ?? (typeof usage.seats === 'number' ? usage.seats : Number(tenant.total_seats || 150))} Seats`
+                    : `🪑 ${usage.tables?.current ?? (typeof usage.tables === 'number' ? usage.tables : Number(tenant.total_tables || 0))} Tables • 🚪 ${usage.cabins?.current ?? (typeof usage.cabins === 'number' ? usage.cabins : Number(tenant.total_cabins || 0))} Cabins`}
               </strong>
             </div>
           </div>
@@ -547,17 +547,17 @@ export default function TenantDetailsView({
           {tenant.address && (
             <div style={{ fontSize: '0.84rem', background: 'var(--sa-surface-subtle)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--sa-border)' }}>
               <span style={{ fontSize: '0.70rem', color: 'var(--sa-text-muted)', fontWeight: 800, display: 'block', marginBottom: '2px' }}>PHYSICAL STORE ADDRESS</span>
-              <span style={{ color: 'var(--sa-text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MapPin size={14} color="#EF4444" /> {tenant.address}
+              <span style={{ color: 'var(--sa-text-main)', display: 'flex', alignItems: 'flex-start', gap: '6px', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                <MapPin size={14} color="#EF4444" style={{ flexShrink: 0, marginTop: '2px' }} /> <span>{tenant.address}</span>
               </span>
             </div>
           )}
 
           {/* Real Support Tickets Summary */}
           <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '16px', border: '1px solid var(--sa-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
               <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MessageSquare size={13} color="var(--sa-primary)" />
+                <MessageSquare size={13} color="var(--sa-primary)" style={{ flexShrink: 0 }} />
                 <span>Support Inquiries ({support.total_tickets ?? 0} total · {support.active_tickets ?? support.open_tickets ?? 0} active)</span>
               </span>
             </div>
@@ -575,11 +575,13 @@ export default function TenantDetailsView({
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '8px',
                       fontSize: '0.76rem'
                     }}
                   >
-                    <div>
-                      <div style={{ fontWeight: 800, color: '#0F172A' }}>
+                    <div style={{ minWidth: 0, flex: '1 1 180px' }}>
+                      <div style={{ fontWeight: 800, color: '#0F172A', wordBreak: 'break-word' }}>
                         #{t.ticket_ref} · {t.subject}
                       </div>
                       <span style={{ fontSize: '0.66rem', color: '#64748B' }}>
@@ -591,6 +593,7 @@ export default function TenantDetailsView({
                       fontWeight: 900,
                       padding: '2px 6px',
                       borderRadius: '6px',
+                      flexShrink: 0,
                       background: t.status === 'resolved' ? '#ECFDF5' : (t.status === 'closed' ? '#F1F5F9' : '#FEF3C7'),
                       color: t.status === 'resolved' ? '#059669' : (t.status === 'closed' ? '#64748B' : '#D97706')
                     }}>
@@ -611,7 +614,7 @@ export default function TenantDetailsView({
             <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
               ⚡ Quick Administrative Shortcuts
             </span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '10px' }}>
               <button
                 type="button"
                 onClick={() => onImpersonate(tenant.id, tenant.name)}
@@ -640,7 +643,7 @@ export default function TenantDetailsView({
       {activeTab === 'subscription' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.85rem' }}>
           <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '16px', border: '1px solid var(--sa-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px 10px', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
               <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Current SaaS Plan:</span>
               <div style={{ textAlign: 'right' }}>
                 <strong style={{ color: isVipAuthoritative ? '#7E22CE' : 'var(--sa-primary)', fontSize: '0.94rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
@@ -655,30 +658,30 @@ export default function TenantDetailsView({
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px 10px', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
               <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Monthly Recurring Fee:</span>
               <strong style={{ fontSize: '0.94rem' }}>{(isVipAuthoritative || isLifetime || Number(sub.plan_price) === 0) ? '₹0 / Complimentary' : `₹${sub.plan_price} / month`}</strong>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px 10px', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
               <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Subscription Type:</span>
               <strong style={{ color: sub.is_complimentary ? '#7E22CE' : 'var(--sa-text-main)' }}>
                 {sub.is_complimentary ? '🎁 Complimentary VIP' : sub.subscription_type || 'PAID SAAS'}
               </strong>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px 10px', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
               <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Auto-Debit Mandate:</span>
-              <strong style={{ color: isVipAuthoritative ? 'var(--sa-text-muted)' : (sub.auto_renew ? '#15803D' : '#DC2626') }}>
+              <strong style={{ color: isVipAuthoritative ? 'var(--sa-text-muted)' : (sub.auto_renew ? '#15803D' : '#DC2626'), textAlign: 'right' }}>
                 {isVipAuthoritative
                   ? (sub.has_underlying_paid_subscription && sub.underlying_subscription_status === 'active'
-                      ? `OFF (Underlying Paid: ${sub.underlying_auto_renew ? 'Active' : 'Disabled'})`
-                      : '❌ OFF (Not Applicable for VIP)')
+                    ? `OFF (Underlying Paid: ${sub.underlying_auto_renew ? 'Active' : 'Disabled'})`
+                    : '❌ OFF (Not Applicable for VIP)')
                   : (sub.auto_renew ? '✅ Active (Auto-Renew Enabled)' : '❌ Inactive (Auto-Renew Disabled)')}
               </strong>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px 10px', padding: '10px 0', borderBottom: '1px solid var(--sa-border)' }}>
               <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Trial Validity:</span>
               <span style={{ fontWeight: 800 }}>
                 {sub.trial_start && sub.trial_end ? (
@@ -687,7 +690,7 @@ export default function TenantDetailsView({
               </span>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px 10px', padding: '10px 0' }}>
               <span style={{ color: 'var(--sa-text-muted)', fontWeight: 700 }}>Access Expiry Date:</span>
               <strong style={{ color: '#2563EB', fontSize: '0.94rem' }}>
                 {isLifetime ? '♾️ Lifetime VIP Access' : (sub.access_until && sub.access_until !== 'Lifetime') ? new Date(sub.access_until).toLocaleDateString('en-IN') : sub.access_until === 'Lifetime' ? '♾️ Lifetime' : 'Active'}
@@ -720,7 +723,7 @@ export default function TenantDetailsView({
       {/* ========================================================================= */}
       {activeTab === 'payments' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          
+
           {/* Summary Metric Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
             <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '12px', borderRadius: '14px' }}>
@@ -746,7 +749,7 @@ export default function TenantDetailsView({
           </div>
 
           {/* Filter Pills */}
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {['all', 'success', 'failed', 'recurring'].map(f => (
               <button
                 key={f}
@@ -816,7 +819,7 @@ export default function TenantDetailsView({
       {/* ========================================================================= */}
       {activeTab === 'usage' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          
+
           {/* Numeric Usage vs SaaS Plan Limits */}
           <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '16px', border: '1px solid var(--sa-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '14px' }}>
@@ -825,7 +828,7 @@ export default function TenantDetailsView({
 
             {/* Dishes Bar */}
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 800, marginBottom: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', fontSize: '0.82rem', fontWeight: 800, marginBottom: '6px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Utensils size={14} color="#059669" /> Menu Dishes Hosted
                 </span>
@@ -840,7 +843,7 @@ export default function TenantDetailsView({
 
             {/* Categories Bar */}
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 800, marginBottom: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', fontSize: '0.82rem', fontWeight: 800, marginBottom: '6px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Layers size={14} color="#2563EB" /> Menu Categories
                 </span>
@@ -866,7 +869,7 @@ export default function TenantDetailsView({
 
               return (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 800, marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', fontSize: '0.82rem', fontWeight: 800, marginBottom: '6px' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Store size={14} color={spaceColor} /> {spaceLabel}
                     </span>
@@ -884,7 +887,7 @@ export default function TenantDetailsView({
 
           {/* Feature Entitlements Matrix */}
           <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '16px', border: '1px solid var(--sa-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px 10px', marginBottom: '12px' }}>
               <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 👑 Authoritative Plan Feature Matrix
               </span>
@@ -894,7 +897,7 @@ export default function TenantDetailsView({
             </div>
 
             {usage.feature_matrix ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '10px', fontSize: '0.80rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '10px', fontSize: '0.80rem' }}>
                 {Object.entries(usage.feature_matrix).map(([key, item]) => {
                   const isAvailable = item.status === 'AVAILABLE';
                   const isUnsupported = item.status === 'UNSUPPORTED';
@@ -940,7 +943,7 @@ export default function TenantDetailsView({
                 })}
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', fontSize: '0.80rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '10px', fontSize: '0.80rem' }}>
                 {Object.entries(usage.entitlements || {}).map(([key, enabled]) => (
                   <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8FAFC', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
                     {enabled ? <CheckCircle size={15} color="#16A34A" /> : <XCircle size={15} color="#DC2626" />}
@@ -960,7 +963,7 @@ export default function TenantDetailsView({
       {/* ========================================================================= */}
       {activeTab === 'activity' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          
+
           {/* Filters */}
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {['all', 'billing', 'security', 'vip', 'tenant'].map(f => (
@@ -1002,7 +1005,7 @@ export default function TenantDetailsView({
                       {act.timestamp ? new Date(act.timestamp).toLocaleString('en-IN') : 'N/A'}
                     </span>
                   </div>
-                  <div style={{ color: '#475569', fontSize: '0.78rem', lineHeight: 1.35 }}>
+                  <div style={{ color: '#475569', fontSize: '0.78rem', lineHeight: 1.35, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                     {act.details}
                   </div>
                   <div style={{ marginTop: '6px', fontSize: '0.68rem', color: 'var(--sa-text-muted)', textTransform: 'uppercase', fontWeight: 800 }}>
@@ -1020,22 +1023,22 @@ export default function TenantDetailsView({
       {/* ========================================================================= */}
       {activeTab === 'security' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          
+
           <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '16px', border: '1px solid var(--sa-border)', fontSize: '0.84rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--sa-text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
               🛡️ Account Security & Health
             </span>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--sa-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', padding: '8px 0', borderBottom: '1px solid var(--sa-border)' }}>
               <span>Account Status:</span>
               <strong style={{ color: security.account_status === 'ACTIVE' ? '#15803D' : '#DC2626' }}>
                 {security.account_status}
               </strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--sa-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', padding: '8px 0', borderBottom: '1px solid var(--sa-border)' }}>
               <span>Impersonation Support:</span>
               <strong style={{ color: '#15803D' }}>Granted (Master Super Admin)</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px 8px', padding: '8px 0' }}>
               <span>Auto-Renew Mandate:</span>
               <strong>{security.auto_renew_enabled ? 'Active Mandate' : 'Turned Off'}</strong>
             </div>
@@ -1123,7 +1126,7 @@ export default function TenantDetailsView({
                 <span style={{ fontSize: '0.82rem', color: '#991B1B', fontWeight: 900, display: 'block', marginBottom: '10px' }}>
                   ⚠️ DANGER: This permanently deletes all items, categories, orders & tenant data!
                 </span>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     onClick={() => setDeleteConfirm(false)}

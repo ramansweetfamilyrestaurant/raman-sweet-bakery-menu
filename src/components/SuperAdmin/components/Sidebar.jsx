@@ -6,7 +6,7 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
   const [logoErr, setLogoErr] = React.useState(false);
 
   let cachedLogo = '';
-  try { cachedLogo = localStorage.getItem('touchqr_platform_logo_url') || ''; } catch {}
+  try { cachedLogo = localStorage.getItem('touchqr_platform_logo_url') || ''; } catch { }
   const effectiveLogoUrl = logoUrl || cachedLogo || '/api/r2-proxy/superadmin/branding/logo.webp';
   const resolvedUrl = resolveImageUrl(effectiveLogoUrl);
 
@@ -27,7 +27,7 @@ export default function Sidebar({ activeView, setActiveView, collapsed, setColla
 
   return (
     <aside className={`sa-sidebar ${collapsed ? 'collapsed' : ''}`}>
-      <div>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {/* Brand Bar */}
         <div className="sa-sidebar-header">
           <div className="sa-brand">

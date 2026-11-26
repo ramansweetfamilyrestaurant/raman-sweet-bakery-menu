@@ -77,7 +77,8 @@ export default function ComboModal({
           overflow: 'hidden',
           width: '100%',
           maxWidth: '480px',
-          maxHeight: '92vh',
+          maxHeight: '90dvh',
+          boxSizing: 'border-box',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
           border: '1.5px solid var(--theme-modal-border, var(--gold-bright, #DFBA67))',
           display: 'flex',
@@ -92,7 +93,7 @@ export default function ComboModal({
             .combo-view-modal {
               max-width: 100% !important;
               border-radius: 16px !important;
-              max-height: 94vh !important;
+              max-height: 90dvh !important;
             }
             .combo-header-img {
               height: 160px !important;
@@ -117,8 +118,8 @@ export default function ComboModal({
             color: '#FFFFFF',
             border: '1px solid rgba(255,255,255,0.4)',
             borderRadius: '50%',
-            width: '30px',
-            height: '30px',
+            width: '36px',
+            height: '36px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -133,6 +134,7 @@ export default function ComboModal({
         <div className="combo-header-img" style={{
           width: '100%',
           height: '200px',
+          flexShrink: 0,
           background: 'var(--theme-modal-header, linear-gradient(135deg, #05140B 0%, #0A2315 100%))',
           position: 'relative',
           overflow: 'hidden',
@@ -172,9 +174,13 @@ export default function ComboModal({
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
+              maxWidth: 'calc(100% - 68px)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
               zIndex: 2
             }}>
-              <Tag size={11} /> {lang === 'hi' ? `बचत ${symbol}${formatPriceNumber(savings)}` : `SAVE ${symbol}${formatPriceNumber(savings)}`}
+              <Tag size={11} style={{ flexShrink: 0 }} /> {lang === 'hi' ? `बचत ${symbol}${formatPriceNumber(savings)}` : `SAVE ${symbol}${formatPriceNumber(savings)}`}
             </div>
           )}
 
@@ -205,7 +211,8 @@ export default function ComboModal({
         <div className="combo-view-body" style={{
           padding: '16px 18px',
           overflowY: 'auto',
-          flex: 1
+          flex: 1,
+          minHeight: 0
         }}>
           {/* Title & Price Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
@@ -479,8 +486,8 @@ export default function ComboModal({
                         background: 'var(--bg-secondary, #F1F5F9)',
                         color: 'var(--text-dark, #0F172A)',
                         border: 'none',
-                        width: '28px',
-                        height: '28px',
+                        width: '36px',
+                        height: '36px',
                         padding: 0,
                         borderRadius: '50%',
                         fontWeight: 900,
@@ -506,8 +513,8 @@ export default function ComboModal({
                         background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                         color: 'var(--theme-btn-text, #FFFFFF)',
                         border: 'none',
-                        width: '28px',
-                        height: '28px',
+                        width: '36px',
+                        height: '36px',
                         padding: 0,
                         borderRadius: '50%',
                         fontWeight: 900,

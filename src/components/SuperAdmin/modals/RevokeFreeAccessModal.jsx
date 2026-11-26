@@ -26,19 +26,20 @@ export default function RevokeFreeAccessModal({ resto, isOpen, onClose, onConfir
     }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{
         background: '#FFFFFF', borderRadius: '24px', maxWidth: '480px', width: '100%',
-        padding: '28px 24px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #EF4444', position: 'relative'
+        maxHeight: '90dvh', overflowY: 'auto', boxSizing: 'border-box',
+        padding: 'clamp(18px, 4vw, 28px) clamp(16px, 4vw, 24px)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '2px solid #EF4444', position: 'relative'
       }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: '18px', right: '18px', background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}>
-          <X size={20} />
+        <button onClick={onClose} aria-label="Close modal" style={{ position: 'absolute', top: '14px', right: '14px', background: '#F3F4F6', border: 'none', width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4B5563' }}>
+          <X size={18} />
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--sa-danger-bg)', color: 'var(--sa-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', paddingRight: '40px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--sa-danger-bg)', color: 'var(--sa-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <XCircle size={22} />
           </div>
-          <div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0 }}>Revoke Free Access?</h3>
-            <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600 }}>Business: <strong>{resto.name}</strong></span>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--sa-text-main)', margin: 0, overflowWrap: 'break-word' }}>Revoke Free Access?</h3>
+            <span style={{ fontSize: '0.78rem', color: 'var(--sa-text-muted)', fontWeight: 600, display: 'block', overflowWrap: 'break-word' }}>Business: <strong>{resto.name}</strong></span>
           </div>
         </div>
 
@@ -49,7 +50,7 @@ export default function RevokeFreeAccessModal({ resto, isOpen, onClose, onConfir
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button onClick={onClose} className="sa-btn sa-btn-secondary">Keep Free Access</button>
           <button onClick={handleRevoke} disabled={submitting} className="sa-btn sa-btn-danger">
             {submitting ? 'Revoking...' : '🔴 Revoke Access'}
