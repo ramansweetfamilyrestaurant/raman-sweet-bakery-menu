@@ -650,14 +650,17 @@ export default function OrdersView({
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '20px',
-      width: '100%',
-      boxSizing: 'border-box',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
-    }}>
+    <div
+      className="orders-view-root"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+        width: '100%',
+        boxSizing: 'border-box',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+      }}
+    >
       <style>{`
         .orders-metric-grid {
           display: grid;
@@ -684,26 +687,229 @@ export default function OrdersView({
             gap: 12px;
           }
         }
+        @media (max-width: 768px) {
+          .orders-master-header {
+            padding: 14px !important;
+            border-radius: 14px !important;
+            gap: 10px !important;
+          }
+          .orders-header-title {
+            font-size: 1.08rem !important;
+          }
+          .orders-subnav-pills {
+            width: 100%;
+            gap: 6px !important;
+          }
+          .orders-subnav-pills > button {
+            padding: 7px 10px !important;
+            font-size: 0.74rem !important;
+            white-space: nowrap;
+          }
+          .orders-day-closing-btn {
+            margin-left: 0 !important;
+          }
+          .orders-filter-strip {
+            padding: 10px 12px !important;
+            gap: 8px !important;
+            border-radius: 14px !important;
+          }
+          .orders-status-tabs {
+            width: 100%;
+            flex-wrap: nowrap !important;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 2px;
+          }
+          .orders-status-tabs::-webkit-scrollbar {
+            display: none;
+          }
+          .orders-status-tabs > button {
+            flex-shrink: 0;
+            white-space: nowrap;
+            padding: 6px 10px !important;
+            font-size: 0.74rem !important;
+          }
+          .orders-source-wrap {
+            width: 100%;
+            justify-content: space-between;
+          }
+          .orders-source-select {
+            flex: 1;
+            min-width: 0;
+            font-size: 0.82rem !important;
+            min-height: 36px !important;
+            height: 36px !important;
+            padding: 6px 10px !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .orders-view-root {
+            gap: 12px !important;
+            min-width: 0;
+            overflow-x: hidden;
+          }
+          .orders-metric-grid {
+            gap: 10px !important;
+          }
+          .orders-metric-card {
+            padding: 12px !important;
+            gap: 10px !important;
+            border-radius: 14px !important;
+            min-width: 0;
+          }
+          .orders-metric-card > div {
+            min-width: 0;
+            overflow-wrap: anywhere;
+          }
+          .orders-metric-icon {
+            width: 34px !important;
+            height: 34px !important;
+            border-radius: 10px !important;
+          }
+          .orders-metric-value {
+            font-size: clamp(1.1rem, 4.5vw, 1.35rem) !important;
+          }
+          .orders-empty-state {
+            padding: 32px 16px !important;
+            border-radius: 14px !important;
+          }
+          .orders-mobile-card {
+            padding: 13px !important;
+            gap: 10px !important;
+            border-radius: 14px !important;
+            min-width: 0;
+          }
+          .orders-card-footer {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 10px !important;
+            border-top: 1px solid #F1F5F9;
+            padding-top: 10px !important;
+          }
+          .orders-card-total {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+          }
+          .orders-card-actions {
+            width: 100%;
+            flex-wrap: wrap !important;
+            justify-content: flex-start;
+          }
+          .orders-card-actions > button {
+            flex: 1 1 auto;
+            justify-content: center;
+            text-align: center;
+            min-height: 36px;
+          }
+          .orders-floor-counters {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+          }
+          .orders-floor-counters > div {
+            padding: 10px 11px !important;
+            min-width: 0;
+          }
+          .orders-floor-counters > div > div {
+            min-width: 0;
+            overflow-wrap: anywhere;
+          }
+          .orders-space-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+          }
+          .orders-space-card {
+            padding: 12px !important;
+            min-width: 0;
+            overflow-wrap: anywhere;
+          }
+          .orders-calls-header {
+            padding: 12px 14px !important;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+          .orders-calls-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 10px !important;
+          }
+          .orders-drawer-panel {
+            max-width: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+          }
+          .orders-drawer-header {
+            padding: 14px 16px !important;
+            gap: 10px;
+          }
+          .orders-drawer-body {
+            padding: 14px 16px !important;
+            gap: 14px !important;
+          }
+          .orders-drawer-footer {
+            padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+          }
+          .orders-reject-modal {
+            padding: 18px !important;
+            max-height: 90dvh;
+            overflow-y: auto;
+          }
+        }
+        @media (max-width: 420px) {
+          .orders-drawer-cta-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          .orders-call-btn-row > button {
+            flex: 1 1 120px;
+          }
+          .orders-reject-actions > button {
+            flex: 1 1 120px;
+          }
+        }
+        @media (max-width: 400px) {
+          .orders-metric-card {
+            padding: 10px !important;
+            gap: 8px !important;
+          }
+          .orders-metric-icon {
+            width: 30px !important;
+            height: 30px !important;
+          }
+        }
+        @media (max-width: 380px) {
+          .orders-drawer-print-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+        }
+        @media (max-width: 340px) {
+          .orders-space-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+        }
       `}</style>
 
       {/* ========================================================
           1. MASTER HEADER & OPERATIONS SUB-NAV
          ======================================================== */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '14px',
-        background: '#FFFFFF',
-        borderRadius: '18px',
-        border: '1px solid #E2E8F0',
-        padding: '18px 22px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-      }}>
+      <div
+        className="orders-master-header"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '14px',
+          background: '#FFFFFF',
+          borderRadius: '18px',
+          border: '1px solid #E2E8F0',
+          padding: '18px 22px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}
+      >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h2 className="orders-header-title" style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
               Live Orders Console
             </h2>
             <span style={{
@@ -733,7 +939,7 @@ export default function OrdersView({
         </div>
 
         {/* Sub-Navigation Pills & Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="orders-subnav-pills" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Live Orders Subtab */}
           <button
             onClick={() => setActiveSubTab && setActiveSubTab('orders')}
@@ -852,6 +1058,7 @@ export default function OrdersView({
           {/* Day Closing Button */}
           {onOpenDayClosing && (
             <button
+              className="orders-day-closing-btn"
               onClick={onOpenDayClosing}
               style={{
                 padding: '8px 14px',
@@ -885,6 +1092,7 @@ export default function OrdersView({
           <div className="orders-metric-grid">
         {/* Needs Attention (Pending) */}
         <div 
+          className="orders-metric-card"
           onClick={() => setKotFilter('pending')}
           style={{
             background: kotFilter === 'pending' ? '#FEF3C7' : '#FFFFFF',
@@ -899,7 +1107,7 @@ export default function OrdersView({
             transition: 'all 0.15s ease'
           }}
         >
-          <div style={{
+          <div className="orders-metric-icon" style={{
             width: '42px',
             height: '42px',
             borderRadius: '12px',
@@ -914,7 +1122,7 @@ export default function OrdersView({
           </div>
           <div>
             <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Needs Attention</div>
-            <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+            <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
               {pendingCount}
             </div>
             <span style={{ fontSize: '0.68rem', color: pendingCount > 0 ? '#D97706' : '#16A34A', fontWeight: 700 }}>
@@ -925,6 +1133,7 @@ export default function OrdersView({
 
         {/* Preparing */}
         <div 
+          className="orders-metric-card"
           onClick={() => setKotFilter('kitchen')}
           style={{
             background: kotFilter === 'kitchen' ? '#E0F2FE' : '#FFFFFF',
@@ -939,7 +1148,7 @@ export default function OrdersView({
             transition: 'all 0.15s ease'
           }}
         >
-          <div style={{
+          <div className="orders-metric-icon" style={{
             width: '42px',
             height: '42px',
             borderRadius: '12px',
@@ -954,7 +1163,7 @@ export default function OrdersView({
           </div>
           <div>
             <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Preparing</div>
-            <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+            <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
               {kitchenCount}
             </div>
             <span style={{ fontSize: '0.68rem', color: '#0284C7', fontWeight: 700 }}>
@@ -965,6 +1174,7 @@ export default function OrdersView({
 
         {/* Ready */}
         <div 
+          className="orders-metric-card"
           onClick={() => setKotFilter('served')}
           style={{
             background: kotFilter === 'served' ? '#DCFCE7' : '#FFFFFF',
@@ -979,7 +1189,7 @@ export default function OrdersView({
             transition: 'all 0.15s ease'
           }}
         >
-          <div style={{
+          <div className="orders-metric-icon" style={{
             width: '42px',
             height: '42px',
             borderRadius: '12px',
@@ -994,7 +1204,7 @@ export default function OrdersView({
           </div>
           <div>
             <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Ready to Bill</div>
-            <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+            <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
               {servedCount}
             </div>
             <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 700 }}>
@@ -1005,6 +1215,7 @@ export default function OrdersView({
 
         {/* Completed Today */}
         <div 
+          className="orders-metric-card"
           onClick={() => setKotFilter('completed')}
           style={{
             background: kotFilter === 'completed' ? '#F3E8FF' : '#FFFFFF',
@@ -1019,7 +1230,7 @@ export default function OrdersView({
             transition: 'all 0.15s ease'
           }}
         >
-          <div style={{
+          <div className="orders-metric-icon" style={{
             width: '42px',
             height: '42px',
             borderRadius: '12px',
@@ -1034,7 +1245,7 @@ export default function OrdersView({
           </div>
           <div>
             <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Completed Today</div>
-            <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+            <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
               {completedCount}
             </div>
             <span style={{ fontSize: '0.68rem', color: '#7E22CE', fontWeight: 700 }}>
@@ -1047,20 +1258,23 @@ export default function OrdersView({
       {/* ========================================================
           3. FILTER CONTROL STRIP
          ======================================================== */}
-      <div style={{
-        background: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #E2E8F0',
-        padding: '12px 18px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-      }}>
+      <div
+        className="orders-filter-strip"
+        style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+        }}
+      >
         {/* Status Tabs */}
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        <div className="orders-status-tabs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {[
             { id: 'all', label: `All (${validOrders.length})` },
             { id: 'pending', label: `Pending (${pendingCount})` },
@@ -1089,9 +1303,10 @@ export default function OrdersView({
         </div>
 
         {/* Source Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="orders-source-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>Source:</span>
           <select
+            className="orders-source-select"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
             style={{
@@ -1117,14 +1332,17 @@ export default function OrdersView({
           4. MAIN LIVE ORDER WORKSPACE (DESKTOP HYBRID + MOBILE)
          ======================================================== */}
       {filteredOrders.length === 0 ? (
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '18px',
-          border: '1px solid #E2E8F0',
-          padding: '48px 24px',
-          textAlign: 'center',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-        }}>
+        <div
+          className="orders-empty-state"
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '18px',
+            border: '1px solid #E2E8F0',
+            padding: '48px 24px',
+            textAlign: 'center',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}
+        >
           <div style={{
             width: '56px',
             height: '56px',
@@ -1585,6 +1803,7 @@ export default function OrdersView({
 
               return (
                 <div
+                  className="orders-mobile-card"
                   key={order.id}
                   style={{
                     background: '#FFFFFF',
@@ -1599,7 +1818,7 @@ export default function OrdersView({
                 >
                   {/* Top Bar: Order ID + Round Badge + Status Badge */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
                       {order.token_display ? (
                         <span style={{
                           padding: '2px 7px',
@@ -1658,8 +1877,8 @@ export default function OrdersView({
                   </div>
 
                   {/* Location & Source */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                    <div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', minWidth: 0, fontSize: '0.78rem' }}>
+                    <div style={{ minWidth: 0, flex: '1 1 160px' }}>
                       <span style={{ fontWeight: 700, color: '#0F172A' }}>{cleanLoc}</span>
                       {isMultiRoundSession && (
                         <div style={{
@@ -1721,15 +1940,15 @@ export default function OrdersView({
                   </div>
 
                   {/* Total & Action Buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px' }}>
-                    <div>
+                  <div className="orders-card-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', paddingTop: '4px' }}>
+                    <div className="orders-card-total">
                       <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Total Amount</span>
                       <strong style={{ fontSize: '1.1rem', color: '#0F172A' }}>
                         {currencySymbol}{Math.round(order.total_amount || order.total || 0).toLocaleString('en-IN')}
                       </strong>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div className="orders-card-actions" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                       {isPending && (
                         <>
                           <button
@@ -1971,7 +2190,7 @@ export default function OrdersView({
       {activeSubTab === 'floor-map' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Summary Operational Counters */}
-          <div style={{
+          <div className="orders-floor-counters" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
             gap: '10px'
@@ -2088,7 +2307,7 @@ export default function OrdersView({
               )}
             </div>
           ) : (
-            <div style={{
+            <div className="orders-space-grid" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
               gap: '14px'
@@ -2127,6 +2346,7 @@ export default function OrdersView({
 
               return (
                 <div
+                  className="orders-space-card"
                   key={space.id}
                   style={{
                     background: cardBg,
@@ -2142,8 +2362,8 @@ export default function OrdersView({
                   }}
                 >
                   {/* Space Header */}
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
                       <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 900 }}>
                         {space.displayLabel}
                       </strong>
@@ -2161,8 +2381,8 @@ export default function OrdersView({
 
                     {/* Active Order Details */}
                     {isOrder && space.activeOrder && (
-                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #E2E8F0', marginTop: '6px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 800 }}>
+                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #E2E8F0', marginTop: '6px', minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', fontSize: '0.74rem', fontWeight: 800 }}>
                           <span>
                             {space.activeOrders && space.activeOrders.length > 1
                               ? `Session (${space.activeOrders.length} Rounds)`
@@ -2371,7 +2591,7 @@ export default function OrdersView({
          ======================================================== */}
       {activeSubTab === 'service-requests' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="orders-calls-header" style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
             <div>
               <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                 {isHotel ? `Live Room Service Calls (${safeServiceRequests.length})` : isCinema ? `Live Seat Assistance & Usher Calls (${safeServiceRequests.length})` : `Live Service & Staff Calls (${safeServiceRequests.length})`}
@@ -2401,7 +2621,7 @@ export default function OrdersView({
               </p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+            <div className="orders-calls-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
               {safeServiceRequests.map(req => {
                 const spaceInfo = parseServiceReqSpaceLocation(req);
                 const label = formatCleanTableLabel(req.table_number, spaceInfo.space_type);
@@ -2418,11 +2638,12 @@ export default function OrdersView({
                       flexDirection: 'column',
                       justifyContent: 'space-between',
                       gap: '12px',
+                      minWidth: 0,
                       boxShadow: '0 2px 6px rgba(217, 119, 6, 0.08)'
                     }}
                   >
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                         <strong style={{ fontSize: '0.94rem', color: '#0F172A', fontWeight: 900 }}>{label}</strong>
                         <span style={{ background: '#FEF3C7', color: '#B45309', padding: '2px 8px', borderRadius: '6px', fontSize: '0.66rem', fontWeight: 800 }}>
                           🛎️ Active Call
@@ -2447,7 +2668,7 @@ export default function OrdersView({
 
                     {req.request_type === 'presence_verification' ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div className="orders-call-btn-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button
                             type="button"
                             onClick={() => handleApprove(req)}
@@ -2576,19 +2797,22 @@ export default function OrdersView({
           display: 'flex',
           justifyContent: 'flex-end'
         }}>
-          <div style={{
-            width: '100%',
-            maxWidth: '460px',
-            height: '100%',
-            background: '#FFFFFF',
-            boxShadow: '-10px 0 30px rgba(0,0,0,0.15)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            boxSizing: 'border-box'
-          }}>
+          <div
+            className="orders-drawer-panel"
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              height: '100%',
+              background: '#FFFFFF',
+              boxShadow: '-10px 0 30px rgba(0,0,0,0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxSizing: 'border-box'
+            }}
+          >
             {/* Header */}
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="orders-drawer-header" style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                   {selectedOrder.token_display ? `Token ${selectedOrder.token_display}` : formatCleanTableLabel(selectedOrder.table_number, selectedOrder.space_type, selectedOrder.token_display, selectedOrder)}
@@ -2606,7 +2830,7 @@ export default function OrdersView({
             </div>
 
             {/* Scrollable Content */}
-            <div style={{ padding: '24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div className="orders-drawer-body" style={{ padding: '24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
               {/* Status & Customer Info Card */}
               <div style={{ background: '#F8FAFC', padding: '14px 16px', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -2623,7 +2847,7 @@ export default function OrdersView({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: '#334155', borderTop: '1px solid #E2E8F0', paddingTop: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '0.76rem', color: '#334155', borderTop: '1px solid #E2E8F0', paddingTop: '8px' }}>
                   <span>Source: <strong>{getOrderSourceDisplay(selectedOrder)}</strong></span>
                   {(() => {
                     const selDetails = selectedOrder ? sessionDetailsMap.get(selectedOrder.id) : null;
@@ -2669,8 +2893,8 @@ export default function OrdersView({
                       flexDirection: 'column',
                       gap: '8px'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                           <span style={{ fontSize: '0.9rem' }}>🔗</span>
                           <strong style={{ fontSize: '0.78rem', color: '#0369A1' }}>
                             Multi-Round Dining Session ({selDetails.totalRoundsCount} Rounds)
@@ -2694,6 +2918,8 @@ export default function OrdersView({
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '6px',
                                 padding: '6px 10px',
                                 borderRadius: '8px',
                                 background: isCurrent ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
@@ -2759,8 +2985,8 @@ export default function OrdersView({
                     const hasOffer = itemRegularPrice > itemPrice && itemPrice > 0;
 
                     return (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-                        <div>
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>{itemQty}x {item.name}</strong>
                             {item.portion && (
@@ -2783,7 +3009,7 @@ export default function OrdersView({
                             ) : null;
                           })()}
                         </div>
-                        <div style={{ textAlign: 'right' }}>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
                           <span style={{ fontWeight: 800, fontSize: '0.84rem', color: '#0F172A' }}>
                             {currencySymbol}{Math.round(itemPrice * itemQty)}
                           </span>
@@ -2820,7 +3046,7 @@ export default function OrdersView({
                   </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748B', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '2px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '0.76rem', color: '#64748B', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '2px' }}>
                   <span>Payment Mode</span>
                   <span style={{ fontWeight: 700, color: '#0F172A', textTransform: 'uppercase' }}>
                     {selectedOrder.payment_method || 'Cash at Counter'} {selectedOrder.is_settled === 1 ? '• Paid' : '• Pending'}
@@ -2834,7 +3060,7 @@ export default function OrdersView({
               </div>
 
               {/* Print Actions */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div className="orders-drawer-print-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {(!isOrderCompleted(selectedOrder) && selectedOrder.status !== 'served' && selectedOrder.status !== 'ready') && (
                   <button
                     onClick={() => onDirectPrint ? onDirectPrint(selectedOrder, 'kot') : null}
@@ -2933,9 +3159,9 @@ export default function OrdersView({
             </div>
 
             {/* Bottom State Transition CTA */}
-            <div style={{ padding: '18px 24px', borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+            <div className="orders-drawer-footer" style={{ padding: '18px 24px', borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
               {(selectedOrder.status === 'pending' || selectedOrder.status === 'ordered') && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                <div className="orders-drawer-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
                   <button
                     onClick={() => {
                       const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
@@ -2987,7 +3213,7 @@ export default function OrdersView({
               )}
 
               {(selectedOrder.status === 'kitchen' || selectedOrder.status === 'accepted' || selectedOrder.status === 'preparing') && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                <div className="orders-drawer-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
                   <button
                     onClick={() => {
                       if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'served');
@@ -3130,15 +3356,18 @@ export default function OrdersView({
           zIndex: 10050,
           padding: '16px'
         }}>
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: '20px',
-            width: '100%',
-            maxWidth: '420px',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-            boxSizing: 'border-box'
-          }}>
+          <div
+            className="orders-reject-modal"
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '420px',
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              boxSizing: 'border-box'
+            }}
+          >
             <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', fontWeight: 800, color: '#DC2626' }}>
               Reject Presence Verification
             </h3>
@@ -3190,7 +3419,7 @@ export default function OrdersView({
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div className="orders-reject-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => setRejectingModalReq(null)}

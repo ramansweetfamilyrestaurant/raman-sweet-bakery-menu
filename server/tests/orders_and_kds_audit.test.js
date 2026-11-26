@@ -285,7 +285,8 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
       try {
         await esbuild.build({
           entryPoints: {
-            StandaloneKdsPage: path.join(ROOT_DIR, 'src/components/Admin/views/StandaloneKdsPage.jsx')
+            StandaloneKdsPage: path.join(ROOT_DIR, 'src/components/Admin/views/StandaloneKdsPage.jsx'),
+            OrdersView: path.join(ROOT_DIR, 'src/components/Admin/views/OrdersView.jsx')
           },
           outdir: compiledDir,
           bundle: true,
@@ -299,6 +300,7 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
         });
 
         const { default: StandaloneKdsPage } = await import(pathToFileURL(path.join(compiledDir, 'StandaloneKdsPage.mjs')).href);
+        const { default: OrdersView } = await import(pathToFileURL(path.join(compiledDir, 'OrdersView.mjs')).href);
 
         const storage = new Map();
         const localStorageMock = {
@@ -410,6 +412,9 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
             else this.attrs.delete('disabled');
           }
           get children() { return this.childNodes.filter(c => c.nodeType === 1); }
+          get options() { return this.childNodes.filter(c => c.tagName === 'OPTION'); }
+          get value() { return this._value ?? (this.attrs.get('value') || ''); }
+          set value(v) { this._value = String(v ?? ''); }
           get textContent() { return this.childNodes.map(c => c.textContent ?? '').join(''); }
           set textContent(v) {
             this.childNodes.forEach(c => { c.parentNode = null; });
@@ -675,6 +680,128 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
           await flushMicrotasks();
         });
         assert.equal(findNodes(container, n => n.tagName === 'BUTTON' && n.textContent.includes('Recall (')).length, 0, 'Explicit kitchen_prepared=0 even when absent from active orders must NOT restore order to Recall drawer');
+
+        // Verify OrdersView mobile responsive layout classes, wrapping actions, drawer, and subtabs
+        const hasClass = (node, cls) => String(node?.className || node?.getAttribute?.('class') || '').split(/\s+/).includes(cls);
+        const sampleOrders = [
+          {
+            id: 901,
+            table_number: '3',
+            customer_name: 'Aarav',
+            status: 'pending',
+            round_number: 1,
+            total_amount: 420,
+            created_at: new Date().toISOString(),
+            items: [{ name: 'Masala Dosa', price: 210, quantity: 2 }]
+          },
+          {
+            id: 902,
+            table_number: '3',
+            customer_name: 'Aarav',
+            status: 'served',
+            round_number: 2,
+            total_amount: 180,
+            created_at: new Date().toISOString(),
+            items: [{ name: 'Filter Coffee', price: 90, quantity: 2 }]
+          }
+        ];
+        const sampleReqs = [
+          { id: 301, table_number: '2', request_type: 'Water & Napkins', created_at: new Date().toISOString() }
+        ];
+        const sampleResto = { id: restoId, name: 'Orders KDS Cafe', business_type: 'restaurant', total_tables: 4 };
+
+        let currentSubTab = 'orders';
+        let currentKotFilter = 'all';
+        const renderOrdersView = async () => {
+          await React.act(async () => {
+            activeRoot.render(
+              React.createElement(OrdersView, {
+                orders: sampleOrders,
+                activeSubTab: currentSubTab,
+                setActiveSubTab: (next) => { currentSubTab = next; },
+                kotFilter: currentKotFilter,
+                setKotFilter: (next) => { currentKotFilter = next; },
+                serviceRequests: sampleReqs,
+                restaurantInfo: sampleResto,
+                ordersEnabled: true,
+                onOpenDayClosing: () => {},
+                onOpenBillModal: () => {},
+                onUpdateStatus: () => {}
+              })
+            );
+            await flushMicrotasks();
+          });
+        };
+
+        await renderOrdersView();
+
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-view-root')).length === 1, 'OrdersView renders .orders-view-root wrapper');
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-master-header')).length === 1, 'OrdersView renders .orders-master-header');
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-subnav-pills')).length === 1, 'OrdersView renders .orders-subnav-pills');
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-filter-strip')).length === 1, 'OrdersView renders .orders-filter-strip');
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-status-tabs')).length === 1, 'OrdersView renders .orders-status-tabs');
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-source-select')).length === 1, 'OrdersView renders .orders-source-select');
+        const mobileCards = findNodes(container, n => hasClass(n, 'orders-mobile-card'));
+        assert.equal(mobileCards.length, 2, 'OrdersView renders mobile order cards for every active order');
+        assert.equal(findNodes(container, n => hasClass(n, 'orders-card-actions')).length, 2, 'OrdersView renders .orders-card-actions wrapping footer bar per mobile card');
+
+        const ordersStyleText = findNodes(container, n => n.tagName === 'STYLE').map(n => n.textContent).join('\n');
+        for (const ruleToken of [
+          '@media (max-width: 768px)',
+          '@media (max-width: 640px)',
+          '.orders-card-actions',
+          '.orders-source-select',
+          '.orders-calls-grid',
+          '.orders-space-grid',
+          '.orders-drawer-cta-grid',
+          '.orders-drawer-print-grid',
+          'height: 100dvh'
+        ]) {
+          assert.ok(ordersStyleText.includes(ruleToken), `OrdersView style block includes responsive rule ${ruleToken}`);
+        }
+
+        // Open Order Details drawer on mobile card and verify drawer CTA + print grid responsive classes
+        const detailsBtn = findNodes(mobileCards[0], n => n.tagName === 'BUTTON' && n.textContent.includes('Details'))[0];
+        assert.ok(detailsBtn, 'Mobile card has Details button');
+        await React.act(async () => {
+          detailsBtn.dispatchEvent({ type: 'click', bubbles: true, target: detailsBtn });
+          await flushMicrotasks();
+        });
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-drawer-panel')).length === 1, 'Details click opens .orders-drawer-panel');
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-drawer-print-grid')).length === 1, 'Drawer includes .orders-drawer-print-grid');
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-drawer-footer')).length === 1, 'Drawer includes .orders-drawer-footer');
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-drawer-cta-grid')).length === 1, 'Pending drawer footer includes .orders-drawer-cta-grid');
+
+        // Verify Floor Map & Service Calls responsive classes
+        currentSubTab = 'floor-map';
+        await renderOrdersView();
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-floor-counters')).length === 1, 'Floor Map renders .orders-floor-counters');
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-space-grid')).length === 1, 'Floor Map renders .orders-space-grid');
+
+        currentSubTab = 'service-requests';
+        await renderOrdersView();
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-calls-header')).length === 1, 'Service Calls renders .orders-calls-header');
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-calls-grid')).length === 1, 'Service Calls renders .orders-calls-grid');
+
+        // Verify empty-orders state uses compact mobile .orders-empty-state class
+        currentSubTab = 'orders';
+        await React.act(async () => {
+          activeRoot.render(
+            React.createElement(OrdersView, {
+              orders: [],
+              activeSubTab: 'orders',
+              setActiveSubTab: () => {},
+              kotFilter: 'all',
+              setKotFilter: () => {},
+              serviceRequests: [],
+              restaurantInfo: sampleResto,
+              ordersEnabled: true
+            })
+          );
+          await flushMicrotasks();
+        });
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-empty-state')).length === 1, 'OrdersView renders .orders-empty-state when orders list is empty');
+        pass('OrdersView mobile responsive classes, drawer, floor map, service calls, and empty state verified');
       } finally {
         try {
           if (activeRoot) {
