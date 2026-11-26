@@ -269,20 +269,20 @@ export default function AnalyticsView({
     const mid1 = Math.round(maxSales / 3);
     const bot = 0;
     return [
-      { label: formatCompactCurrency(top, currencySymbol), y: 14 },
-      { label: formatCompactCurrency(mid2, currencySymbol), y: 71 },
-      { label: formatCompactCurrency(mid1, currencySymbol), y: 127 },
-      { label: formatCompactCurrency(bot, currencySymbol), y: 184 }
+      { label: formatCompactCurrency(top, currencySymbol), y: 10 },
+      { label: formatCompactCurrency(mid2, currencySymbol), y: 60 },
+      { label: formatCompactCurrency(mid1, currencySymbol), y: 110 },
+      { label: formatCompactCurrency(bot, currencySymbol), y: 160 }
     ];
   }, [maxSales, currencySymbol]);
 
   const chartPoints = useMemo(() => {
-    const chartWidth = 800;
-    const chartHeight = 210;
-    const paddingLeft = 46;
-    const paddingRight = 20;
-    const paddingTop = 14;
-    const paddingBottom = 26;
+    const chartWidth = 740;
+    const chartHeight = 170;
+    const paddingLeft = 8;
+    const paddingRight = 8;
+    const paddingTop = 10;
+    const paddingBottom = 10;
     const usableWidth = chartWidth - paddingLeft - paddingRight;
     const usableHeight = chartHeight - paddingTop - paddingBottom;
 
@@ -292,11 +292,15 @@ export default function AnalyticsView({
         : paddingLeft + usableWidth / 2;
       const salesVal = Number(d.sales || 0);
       const y = paddingTop + usableHeight - (salesVal / maxSales) * usableHeight;
+      const roundedX = Math.round(x * 10) / 10;
+      const roundedY = Math.round(y * 10) / 10;
       return {
         ...d,
         sales: salesVal,
-        x: Math.round(x * 10) / 10,
-        y: Math.round(y * 10) / 10,
+        x: roundedX,
+        y: roundedY,
+        xPercent: (roundedX / chartWidth) * 100,
+        yPercent: (roundedY / chartHeight) * 100,
         valueFormatted: `${currencySymbol}${salesVal.toLocaleString('en-IN')}`
       };
     });
@@ -325,14 +329,14 @@ export default function AnalyticsView({
     if (chartPoints.length <= 1) return '';
     const lastX = chartPoints[chartPoints.length - 1].x;
     const firstX = chartPoints[0].x;
-    return `${linePath} L ${lastX},184 L ${firstX},184 Z`;
+    return `${linePath} L ${lastX},160 L ${firstX},160 Z`;
   }, [linePath, chartPoints]);
 
   const visibleXLabels = useMemo(() => {
     if (!chartPoints || chartPoints.length === 0) return [];
     const len = chartPoints.length;
-    if (len <= 7) return chartPoints.map((pt, i) => ({ ...pt, origIndex: i }));
-    const step = Math.ceil((len - 1) / 5);
+    if (len <= 5) return chartPoints.map((pt, i) => ({ ...pt, origIndex: i }));
+    const step = Math.ceil((len - 1) / 4);
     const indices = new Set();
     indices.add(0);
     for (let i = step; i < len - 1; i += step) {
@@ -563,6 +567,251 @@ export default function AnalyticsView({
     });
   }, [analyticsData?.recent_orders, orders, isHotel, isCinema]);
 
+  const renderSalesChart = (gradientId, showBars = false) => {
+    const barWidth = Math.max(4, Math.min(28, Math.floor((680 / Math.max(chartPoints.length, 1)) * 0.55)));
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: '6px', width: '100%', minWidth: 0 }}>
+          {/* Crisp HTML Y-Axis (never squashed on mobile) */}
+          <div style={{
+            width: '42px',
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            textAlign: 'right',
+            padding: '4px 0',
+            fontSize: '0.64rem',
+            fontWeight: 600,
+            color: '#94A3B8',
+            lineHeight: 1
+          }}>
+            {yAxisTicks.map((tick, idx) => (
+              <span key={idx}>{tick.label}</span>
+            ))}
+          </div>
+
+          {/* Interactive Plot Stage */}
+          <div className="analytics-chart-stage" style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+            {activeHoverPoint && (() => {
+              const hoverPercent = activeHoverPoint.xPercent;
+              let xTransform = '-50%';
+              if (hoverPercent > 74) {
+                xTransform = '-96%';
+              } else if (hoverPercent < 26) {
+                xTransform = '-4%';
+              }
+              const yTransform = activeHoverPoint.y > 42 ? '-105%' : '10%';
+              const topPercent = `${activeHoverPoint.yPercent}%`;
+
+              return (
+                <div style={{
+                  position: 'absolute',
+                  left: `${hoverPercent}%`,
+                  top: topPercent,
+                  transform: `translate(${xTransform}, ${yTransform})`,
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '8px',
+                  padding: '5px 9px',
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.1)',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap'
+                }}>
+                  <span style={{ fontSize: '0.64rem', color: '#64748B', display: 'block' }}>
+                    {activeHoverPoint.displayDate || activeHoverPoint.date}
+                    {activeHoverPoint.isCurrentMonth ? ' · MTD' : ''}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '1px' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#EA580C' }} />
+                    <strong style={{ fontSize: '0.72rem', color: '#0F172A' }}>
+                      {activeHoverPoint.valueFormatted}
+                    </strong>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <svg viewBox="0 0 740 170" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
+              <defs>
+                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#EA580C" stopOpacity={showBars ? '0.18' : '0.26'} />
+                  <stop offset="100%" stopColor="#EA580C" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {yAxisTicks.map((tick, idx) => (
+                <line
+                  key={idx}
+                  x1="0"
+                  y1={tick.y}
+                  x2="740"
+                  y2={tick.y}
+                  stroke="#F1F5F9"
+                  strokeWidth="1"
+                  vectorEffect="non-scaling-stroke"
+                  strokeDasharray={idx === yAxisTicks.length - 1 ? 'none' : '3 3'}
+                />
+              ))}
+
+              {areaPath && <path d={areaPath} fill={`url(#${gradientId})`} />}
+
+              {showBars && chartPoints.map((pt, idx) => {
+                const colH = Math.max(160 - pt.y, 0);
+                const isHovered = activeHoverPoint?.date === pt.date;
+                return (
+                  <g key={`col-${idx}`}>
+                    <rect
+                      x={pt.x - barWidth / 2}
+                      y={pt.y}
+                      width={barWidth}
+                      height={colH}
+                      fill="#EA580C"
+                      fillOpacity={isHovered ? 0.16 : 0.05}
+                    />
+                    <line
+                      x1={pt.x}
+                      y1={pt.y}
+                      x2={pt.x}
+                      y2="160"
+                      stroke="#EA580C"
+                      strokeWidth="1"
+                      vectorEffect="non-scaling-stroke"
+                      strokeDasharray="2 2"
+                      strokeOpacity={isHovered ? 0.5 : 0.2}
+                    />
+                  </g>
+                );
+              })}
+
+              {linePath && (
+                <path
+                  d={linePath}
+                  fill="none"
+                  stroke="#EA580C"
+                  strokeWidth="2.5"
+                  vectorEffect="non-scaling-stroke"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+            </svg>
+
+            {/* Non-overlapping plot-level hit strips (preserve independent selection per sample) */}
+            {chartPoints.map((pt, idx) => {
+              const prevMid = idx === 0 ? 0 : (chartPoints[idx - 1].xPercent + pt.xPercent) / 2;
+              const nextMid = idx === chartPoints.length - 1 ? 100 : (pt.xPercent + chartPoints[idx + 1].xPercent) / 2;
+              return (
+                <button
+                  key={`hit-${idx}`}
+                  type="button"
+                  aria-label={`${pt.displayDate || pt.date}: ${pt.valueFormatted}`}
+                  onMouseEnter={() => setChartHoverIndex(idx)}
+                  onFocus={() => setChartHoverIndex(idx)}
+                  onClick={() => setChartHoverIndex(idx)}
+                  style={{
+                    position: 'absolute',
+                    left: `${prevMid}%`,
+                    width: `${Math.max(nextMid - prevMid, 0)}%`,
+                    top: 0,
+                    bottom: 0,
+                    padding: 0,
+                    margin: 0,
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    zIndex: 4
+                  }}
+                />
+              );
+            })}
+
+            {/* Visible circular point markers (decoupled from hit regions so markers never block nearby points) */}
+            {chartPoints.map((pt, idx) => {
+              const isHovered = activeHoverPoint?.date === pt.date;
+              return (
+                <span
+                  key={`pt-${idx}`}
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    left: `${pt.xPercent}%`,
+                    top: `${pt.yPercent}%`,
+                    transform: 'translate(-50%, -50%)',
+                    width: isHovered ? '16px' : '8px',
+                    height: isHovered ? '16px' : '8px',
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: isHovered ? 6 : 3
+                  }}
+                >
+                  {isHovered && (
+                    <span style={{
+                      position: 'absolute',
+                      width: '15px',
+                      height: '15px',
+                      borderRadius: '50%',
+                      background: 'rgba(234, 88, 12, 0.22)'
+                    }} />
+                  )}
+                  <span style={{
+                    width: isHovered ? '9px' : '6px',
+                    height: isHovered ? '9px' : '6px',
+                    borderRadius: '50%',
+                    background: '#EA580C',
+                    border: '1.5px solid #FFFFFF',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
+                    display: 'block'
+                  }} />
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Crisp HTML X-Axis Date Labels positioned strictly at each sample's xPercent */}
+        <div style={{
+          position: 'relative',
+          marginLeft: '48px',
+          height: '18px',
+          minWidth: 0
+        }}>
+          {visibleXLabels.map((pt, idx) => {
+            const isActive = activeHoverPoint?.date === pt.date;
+            const isFirst = idx === 0 && visibleXLabels.length > 1 && pt.xPercent < 15;
+            const isLast = idx === visibleXLabels.length - 1 && visibleXLabels.length > 1 && pt.xPercent > 85;
+            const xAlignTransform = isFirst ? 'translateX(0%)' : isLast ? 'translateX(-100%)' : 'translateX(-50%)';
+            const textAlign = isFirst ? 'left' : isLast ? 'right' : 'center';
+            return (
+              <span
+                key={idx}
+                style={{
+                  position: 'absolute',
+                  left: `${pt.xPercent}%`,
+                  top: 0,
+                  transform: xAlignTransform,
+                  textAlign,
+                  fontSize: '0.64rem',
+                  color: isActive ? '#0F172A' : '#94A3B8',
+                  fontWeight: isActive ? 800 : 600,
+                  whiteSpace: 'nowrap',
+                  lineHeight: '18px',
+                  pointerEvents: 'none'
+                }}
+              >
+                {pt.displayDate || pt.date}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="analytics-container">
       <style>{`
@@ -576,20 +825,118 @@ export default function AnalyticsView({
           max-width: 1600px;
           margin: 0 auto;
           width: 100%;
+          min-width: 0;
+          overflow-x: hidden;
+          box-sizing: border-box;
+        }
+        .analytics-header-title {
+          font-size: 1.65rem;
+          font-weight: 900;
+          color: #0F172A;
+          letter-spacing: -0.03em;
+          margin: 0;
+          line-height: 1.15;
+        }
+        .analytics-header-subtitle {
+          font-size: 0.84rem;
+          color: #64748B;
+          margin: 3px 0 0 0;
+          font-weight: 500;
+        }
+        .analytics-period-box {
+          position: relative;
+          display: flex;
+          align-items: center;
+          background: #FFFFFF;
+          border: 1px solid #E2E8F0;
+          border-radius: 10px;
+          padding: 0 12px;
+          height: 38px;
+          min-height: 38px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+          cursor: pointer;
+          box-sizing: border-box;
+          min-width: 0;
+        }
+        .analytics-period-select {
+          appearance: none;
+          -webkit-appearance: none;
+          background: transparent;
+          border: none;
+          font-size: 0.80rem !important;
+          font-weight: 700;
+          color: #0F172A;
+          cursor: pointer;
+          outline: none;
+          padding: 0 20px 0 0;
+          width: 100%;
+          min-width: 0;
+          height: 100%;
+          min-height: 0 !important;
+          line-height: 1.2;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .analytics-refresh-pill {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: #FFFFFF;
+          border: 1px solid #E2E8F0;
+          border-radius: 10px;
+          padding: 0 12px;
+          height: 38px;
+          min-height: 38px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+          white-space: nowrap;
+          box-sizing: border-box;
+        }
+        .analytics-export-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 0 14px;
+          height: 38px;
+          min-height: 38px;
+          border-radius: 10px;
+          background: #EA580C;
+          color: #FFFFFF;
+          border: none;
+          font-size: 0.78rem;
+          font-weight: 800;
+          box-shadow: 0 2px 4px rgba(234, 88, 12, 0.2);
+          transition: all 0.2s ease;
+          white-space: nowrap;
+          box-sizing: border-box;
+        }
+        .analytics-sync-badge {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          border-radius: 10px;
+          padding: 0 10px;
+          height: 38px;
+          min-height: 38px;
+          font-size: 0.73rem;
+          font-weight: 700;
           box-sizing: border-box;
         }
         .analytics-subtabs-row {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 4px;
           border-bottom: 1px solid #E2E8F0;
           margin-bottom: 2px;
           overflow-x: auto;
+          overflow-y: hidden;
           white-space: nowrap;
           -webkit-overflow-scrolling: touch;
           scrollbar-width: none;
           -ms-overflow-style: none;
-          padding-bottom: 1px;
         }
         .analytics-subtabs-row::-webkit-scrollbar {
           display: none;
@@ -597,13 +944,14 @@ export default function AnalyticsView({
         .analytics-subtab-btn {
           background: none;
           border: none;
-          padding: 9px 16px;
+          padding: 9px 14px;
           font-size: 0.82rem;
           font-weight: 600;
           color: #64748B;
           cursor: pointer;
           position: relative;
           white-space: nowrap;
+          flex-shrink: 0;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           border-radius: 8px 8px 0 0;
         }
@@ -618,9 +966,9 @@ export default function AnalyticsView({
         .analytics-subtab-btn.active::after {
           content: '';
           position: absolute;
-          bottom: -2px;
-          left: 0;
-          right: 0;
+          bottom: 0;
+          left: 8px;
+          right: 8px;
           height: 2.5px;
           background: #EA580C;
           border-radius: 2px 2px 0 0;
@@ -629,6 +977,12 @@ export default function AnalyticsView({
           display: grid;
           grid-template-columns: repeat(5, minmax(0, 1fr));
           gap: 12px;
+        }
+        .analytics-kpi-card {
+          min-width: 0;
+        }
+        .analytics-kpi-val {
+          word-break: break-word;
         }
         .analytics-row-1 {
           display: grid;
@@ -640,6 +994,38 @@ export default function AnalyticsView({
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 14px;
         }
+        .analytics-telemetry-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px;
+        }
+        .analytics-heatmap-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+          gap: 8px;
+        }
+        .analytics-drilldown-kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 14px;
+        }
+        .analytics-pm-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+        .analytics-chart-stage {
+          height: 195px;
+        }
+        .analytics-desktop-table {
+          display: block;
+          overflow-x: auto;
+          width: 100%;
+        }
+        .analytics-mobile-list {
+          display: none;
+        }
         .analytics-card {
           background: #FFFFFF;
           border-radius: 16px;
@@ -650,6 +1036,8 @@ export default function AnalyticsView({
           flex-direction: column;
           position: relative;
           overflow: hidden;
+          min-width: 0;
+          box-sizing: border-box;
           transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .analytics-card:hover {
@@ -693,8 +1081,8 @@ export default function AnalyticsView({
         /* Tablets (768px - 1024px) */
         @media (max-width: 1024px) {
           .analytics-container {
-            padding: 18px;
-            gap: 16px;
+            padding: 16px;
+            gap: 14px;
           }
           .analytics-row-1 {
             grid-template-columns: 1fr !important;
@@ -702,24 +1090,41 @@ export default function AnalyticsView({
           }
         }
 
-        /* Small Tablets & Large Mobiles (640px - 768px) */
+        /* Small Tablets & Large Mobiles (<= 768px) */
         @media (max-width: 768px) {
           .analytics-container {
-            padding: 14px;
-            gap: 14px;
+            padding: 4px 2px;
+            gap: 12px;
           }
           .analytics-header-row {
             flex-direction: column !important;
             align-items: stretch !important;
-            gap: 12px !important;
+            gap: 10px !important;
           }
           .analytics-header-controls {
-            flex-wrap: wrap !important;
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) auto !important;
             width: 100% !important;
             gap: 8px !important;
+            align-items: stretch !important;
           }
-          .analytics-header-control-item {
-            flex: 1 1 auto;
+          .analytics-period-box,
+          .analytics-refresh-pill,
+          .analytics-export-btn,
+          .analytics-sync-badge {
+            height: 40px !important;
+            min-height: 40px !important;
+          }
+          .analytics-period-select {
+            font-size: 0.85rem !important;
+            min-height: 0 !important;
+            height: 100% !important;
+          }
+          .analytics-sync-badge,
+          .analytics-export-btn {
+            grid-column: 1 / -1;
+            width: 100%;
+            justify-content: center;
           }
           .analytics-kpi-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -735,26 +1140,70 @@ export default function AnalyticsView({
           .analytics-row-2 > div:nth-child(3) {
             grid-column: span 1 !important;
           }
+          .analytics-telemetry-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+        }
+
+        /* Mobile Screens (<= 640px) */
+        @media (max-width: 640px) {
+          .analytics-header-title {
+            font-size: 1.38rem !important;
+          }
+          .analytics-header-subtitle {
+            font-size: 0.78rem !important;
+          }
+          .analytics-chart-stage {
+            height: 155px !important;
+          }
+          .analytics-desktop-table {
+            display: none !important;
+          }
+          .analytics-mobile-list {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+          }
+          .analytics-drilldown-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+          }
+          .analytics-drilldown-kpi-grid > div:nth-child(3) {
+            grid-column: span 2 !important;
+          }
+          .analytics-pm-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+          }
+          .analytics-heatmap-grid {
+            grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)) !important;
+            gap: 6px !important;
+          }
         }
 
         /* Mobile Screens (<480px) */
         @media (max-width: 480px) {
           .analytics-container {
-            padding: 10px;
-            gap: 12px;
+            padding: 2px 0;
+            gap: 10px;
+          }
+          .analytics-subtab-btn {
+            padding: 8px 11px !important;
+            font-size: 0.78rem !important;
           }
           .analytics-card {
             padding: 14px !important;
             border-radius: 14px !important;
           }
           .analytics-kpi-card {
-            padding: 12px 10px !important;
+            padding: 12px 11px !important;
           }
           .analytics-kpi-title {
-            font-size: 0.68rem !important;
+            font-size: 0.70rem !important;
           }
           .analytics-kpi-val {
-            font-size: 1.20rem !important;
+            font-size: clamp(1.06rem, 4.4vw, 1.24rem) !important;
           }
           .analytics-kpi-icon {
             width: 26px !important;
@@ -762,13 +1211,13 @@ export default function AnalyticsView({
           }
           .analytics-payment-layout {
             flex-direction: column !important;
-            align-items: center !important;
-            gap: 16px !important;
+            align-items: stretch !important;
+            gap: 14px !important;
           }
         }
 
-        /* Ultra Small Mobile (<360px) */
-        @media (max-width: 360px) {
+        /* Ultra Small Mobile (<330px) */
+        @media (max-width: 330px) {
           .analytics-kpi-grid {
             grid-template-columns: 1fr !important;
           }
@@ -788,22 +1237,11 @@ export default function AnalyticsView({
         flexWrap: 'wrap',
         gap: '12px'
       }}>
-        <div>
-          <h1 style={{
-            fontSize: '1.65rem',
-            fontWeight: 900,
-            color: '#0F172A',
-            letterSpacing: '-0.03em',
-            margin: 0
-          }}>
+        <div style={{ minWidth: 0 }}>
+          <h1 className="analytics-header-title">
             Analytics
           </h1>
-          <p style={{
-            fontSize: '0.84rem',
-            color: '#64748B',
-            margin: '3px 0 0 0',
-            fontWeight: 500
-          }}>
+          <p className="analytics-header-subtitle">
             Track your business performance and insights
           </p>
         </div>
@@ -812,35 +1250,16 @@ export default function AnalyticsView({
         <div className="analytics-header-controls" style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px'
+          gap: '10px',
+          flexWrap: 'wrap'
         }}>
           {/* Date Range Selector Pill */}
-          <div className="analytics-header-control-item" style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            borderRadius: '10px',
-            padding: '7px 12px',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-            cursor: 'pointer'
-          }}>
-            <Calendar size={14} color="#64748B" style={{ marginRight: '8px' }} />
+          <div className="analytics-header-control-item analytics-period-box">
+            <Calendar size={14} color="#64748B" style={{ marginRight: '8px', flexShrink: 0 }} />
             <select
+              className="analytics-period-select"
               value={requestedPeriod}
               onChange={handlePeriodChange}
-              style={{
-                appearance: 'none',
-                background: 'transparent',
-                border: 'none',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                color: '#0F172A',
-                cursor: 'pointer',
-                outline: 'none',
-                paddingRight: '16px'
-              }}
             >
               <option value="today">Today</option>
               <option value="7d">Last 7 Days</option>
@@ -859,16 +1278,9 @@ export default function AnalyticsView({
           </div>
 
           {isPeriodSyncing && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
+            <div className="analytics-sync-badge" style={{
               background: '#FFF7ED',
               border: '1px solid #FED7AA',
-              borderRadius: '10px',
-              padding: '7px 10px',
-              fontSize: '0.73rem',
-              fontWeight: 700,
               color: '#C2410C'
             }}>
               <span>Updating to {requestedDateRangeLabel}…</span>
@@ -876,19 +1288,15 @@ export default function AnalyticsView({
           )}
 
           {isPeriodSyncError && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: '#FEF2F2',
-              border: '1px solid #FECACA',
-              borderRadius: '10px',
-              padding: '6px 10px',
-              fontSize: '0.73rem',
-              fontWeight: 700,
-              color: '#B91C1C'
-            }}
-            title={syncError || 'Analytics sync failed'}
+            <div
+              className="analytics-sync-badge"
+              style={{
+                background: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#B91C1C',
+                gap: '8px'
+              }}
+              title={syncError || 'Analytics sync failed'}
             >
               <span>Sync failed ({requestedDateRangeLabel})</span>
               {typeof onRetrySync === 'function' && (
@@ -913,20 +1321,10 @@ export default function AnalyticsView({
           )}
 
           {/* Auto-Refresh Live Pill */}
-          <div className="analytics-header-control-item" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            borderRadius: '10px',
-            padding: '7px 12px',
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            color: syncStatus === 'error' ? '#B91C1C' : '#64748B',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+          <div className="analytics-header-control-item analytics-refresh-pill" style={{
+            color: syncStatus === 'error' ? '#B91C1C' : '#64748B'
           }}>
-            <RefreshCw size={12} color={syncStatus === 'error' ? '#DC2626' : '#16A34A'} />
+            <RefreshCw size={12} color={syncStatus === 'error' ? '#DC2626' : '#16A34A'} style={{ flexShrink: 0 }} />
             <span>
               {syncStatus === 'loading'
                 ? 'Refreshing…'
@@ -941,21 +1339,9 @@ export default function AnalyticsView({
             <button
               onClick={handleExportClick}
               disabled={isExporting}
-              className="analytics-header-control-item"
+              className="analytics-header-control-item analytics-export-btn"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 14px',
-                borderRadius: '10px',
-                background: '#EA580C',
-                color: '#FFFFFF',
-                border: 'none',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: isExporting ? 'not-allowed' : 'pointer',
-                boxShadow: '0 2px 4px rgba(234, 88, 12, 0.2)',
-                transition: 'all 0.2s ease'
+                cursor: isExporting ? 'not-allowed' : 'pointer'
               }}
             >
               <Download size={13} />
@@ -1285,12 +1671,12 @@ export default function AnalyticsView({
             {/* Sales Trend Chart */}
             <div className="analytics-card" style={{ padding: '20px' }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                     <h3 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
                       Sales Trend ({activeDateRangeLabel})
                     </h3>
-                    <Info size={13} color="#94A3B8" />
+                    <Info size={13} color="#94A3B8" style={{ flexShrink: 0 }} />
                   </div>
 
                   <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
@@ -1320,194 +1706,9 @@ export default function AnalyticsView({
                 </div>
               </div>
 
-              {/* Dynamic SVG Area Line Chart with Full Horizontal Width */}
-              <div style={{ position: 'relative', width: '100%', height: '240px', marginTop: '4px' }}>
-                {activeHoverPoint && (() => {
-                  const hoverPercent = (activeHoverPoint.x / 800) * 100;
-                  let xTransform = '-50%';
-                  if (hoverPercent > 78) {
-                    xTransform = '-95%';
-                  } else if (hoverPercent < 22) {
-                    xTransform = '-5%';
-                  }
-                  const yTransform = activeHoverPoint.y > 45 ? '-100%' : '0%';
-                  const topPercent = activeHoverPoint.y > 45
-                    ? `${(activeHoverPoint.y / 210) * 100 - 10}%`
-                    : `${(activeHoverPoint.y / 210) * 100 + 10}%`;
-
-                  return (
-                    <div style={{
-                      position: 'absolute',
-                      left: `${hoverPercent}%`,
-                      top: topPercent,
-                      transform: `translate(${xTransform}, ${yTransform})`,
-                      background: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '8px',
-                      padding: '6px 10px',
-                      boxShadow: '0 6px 16px rgba(0,0,0,0.1)',
-                      pointerEvents: 'none',
-                      zIndex: 10,
-                      textAlign: 'center',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block' }}>
-                        {activeHoverPoint.displayDate || activeHoverPoint.date}
-                        {activeHoverPoint.isCurrentMonth ? ' · Month to date' : ''}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#EA580C' }} />
-                        <strong style={{ fontSize: '0.74rem', color: '#0F172A' }}>
-                          Sales {activeHoverPoint.valueFormatted}
-                          {activeHoverPoint.isCurrentMonth ? ' (to date)' : ''}
-                        </strong>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                <svg viewBox="0 0 800 210" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                  <defs>
-                    <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#EA580C" stopOpacity="0.18" />
-                      <stop offset="100%" stopColor="#EA580C" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Dynamic Y-Axis Values & Horizontal Grid Lines */}
-                  {yAxisTicks.map((tick, idx) => (
-                    <g key={idx}>
-                      <line
-                        x1="46"
-                        y1={tick.y}
-                        x2="780"
-                        y2={tick.y}
-                        stroke="#F1F5F9"
-                        strokeWidth="1"
-                        strokeDasharray={idx === yAxisTicks.length - 1 ? 'none' : '3 3'}
-                      />
-                      <text
-                        x="40"
-                        y={tick.y + 3}
-                        textAnchor="end"
-                        fill="#94A3B8"
-                        fontSize="8.5"
-                        fontWeight="600"
-                        fontFamily="system-ui, -apple-system, sans-serif"
-                      >
-                        {tick.label}
-                      </text>
-                    </g>
-                  ))}
-
-                  {/* Transparent Area Fill */}
-                  {areaPath && (
-                    <path
-                      d={areaPath}
-                      fill="url(#salesGradient)"
-                    />
-                  )}
-
-                  {/* Data Anchor Pillars & Point Drop-lines */}
-                  {chartPoints.map((pt, idx) => {
-                    const colH = Math.max(184 - pt.y, 0);
-                    const barWidth = Math.max(4, Math.min(32, Math.floor((700 / Math.max(chartPoints.length, 1)) * 0.55)));
-                    const isHovered = activeHoverPoint?.date === pt.date;
-                    return (
-                      <g key={`col-${idx}`}>
-                        <rect
-                          x={pt.x - barWidth / 2}
-                          y={pt.y}
-                          width={barWidth}
-                          height={colH}
-                          rx="4"
-                          fill="#EA580C"
-                          fillOpacity={isHovered ? 0.16 : 0.05}
-                          style={{ transition: 'all 0.2s ease' }}
-                        />
-                        <line
-                          x1={pt.x}
-                          y1={pt.y}
-                          x2={pt.x}
-                          y2="184"
-                          stroke="#EA580C"
-                          strokeWidth="1"
-                          strokeDasharray="2 2"
-                          strokeOpacity={isHovered ? 0.5 : 0.2}
-                        />
-                        <circle
-                          cx={pt.x}
-                          cy={pt.y}
-                          r={isHovered ? 4.5 : 3}
-                          fill="#EA580C"
-                          stroke="#FFFFFF"
-                          strokeWidth="1.5"
-                        />
-                      </g>
-                    );
-                  })}
-
-                  {/* Smooth Real Data Line */}
-                  {linePath && (
-                    <path
-                      d={linePath}
-                      fill="none"
-                      stroke="#EA580C"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  )}
-
-                  {/* Highlighted Active Hover Point with Outer Ring Halo */}
-                  {activeHoverPoint && (
-                    <g pointerEvents="none">
-                      <circle
-                        cx={activeHoverPoint.x}
-                        cy={activeHoverPoint.y}
-                        r="7.5"
-                        fill="#EA580C"
-                        fillOpacity="0.22"
-                      />
-                      <circle
-                        cx={activeHoverPoint.x}
-                        cy={activeHoverPoint.y}
-                        r="4.5"
-                        fill="#EA580C"
-                        stroke="#FFFFFF"
-                        strokeWidth="2"
-                      />
-                    </g>
-                  )}
-
-                  {/* Invisible Hit Targets for Hover Interaction */}
-                  {chartPoints.map((pt, idx) => (
-                    <g key={idx} onMouseEnter={() => setChartHoverIndex(idx)} onClick={() => setChartHoverIndex(idx)} style={{ cursor: 'pointer' }}>
-                      <circle
-                        cx={pt.x}
-                        cy={pt.y}
-                        r="18"
-                        fill="transparent"
-                      />
-                    </g>
-                  ))}
-
-                  {/* Adaptive X-Axis Labels Aligned with Data Points */}
-                  {visibleXLabels.map((pt, idx) => (
-                    <text
-                      key={idx}
-                      x={pt.x}
-                      y="198"
-                      textAnchor="middle"
-                      fill={activeHoverPoint?.date === pt.date ? '#0F172A' : '#94A3B8'}
-                      fontSize="9"
-                      fontWeight={activeHoverPoint?.date === pt.date ? '800' : '500'}
-                      fontFamily="system-ui, -apple-system, sans-serif"
-                    >
-                      {pt.displayDate || pt.date}
-                    </text>
-                  ))}
-                </svg>
+              {/* Dynamic SVG Area Line Chart with Crisp HTML Axes */}
+              <div style={{ width: '100%', marginTop: '4px' }}>
+                {renderSalesChart('salesGradient', true)}
               </div>
             </div>
 
@@ -1564,7 +1765,7 @@ export default function AnalyticsView({
                     </div>
 
                     {/* Payment Breakdown Legend with Mini Progress Bars */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, width: '100%', minWidth: 0 }}>
                       {paymentAnalytics.slices.map((item, idx) => (
                         <div key={idx} style={{ background: '#F8FAFC', padding: '7px 10px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '4px' }}>
@@ -1958,10 +2159,10 @@ export default function AnalyticsView({
             </div>
 
             {/* Sub-grid: 24h Hourly Curve + Top Locations */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+            <div className="analytics-telemetry-grid">
               {/* Hourly Activity Bar Chart */}
-              <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '12px', border: '1px solid #E2E8F0', minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '4px' }}>
                   <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155' }}>
                     Today's Hourly Scan Curve (IST)
                   </span>
@@ -1970,7 +2171,7 @@ export default function AnalyticsView({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '100px', paddingTop: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '100px', paddingTop: '10px', width: '100%', minWidth: 0 }}>
                   {hourlyScansToday.map((slot) => {
                     const maxVal = Math.max(...hourlyScansToday.map(s => s.count), 1);
                     const barHeight = slot.count > 0 ? Math.max(12, Math.round((slot.count / maxVal) * 80)) : 4;
@@ -1981,6 +2182,7 @@ export default function AnalyticsView({
                         title={`${slot.label}: ${slot.count} scans`}
                         style={{
                           flex: 1,
+                          minWidth: 0,
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -1998,7 +2200,7 @@ export default function AnalyticsView({
                           }}
                         />
                         {slot.hour % 6 === 0 && (
-                          <span style={{ fontSize: '0.58rem', color: '#94A3B8', fontWeight: 600 }}>
+                          <span style={{ fontSize: '0.56rem', color: '#94A3B8', fontWeight: 600 }}>
                             {slot.hour === 0 ? '12A' : slot.hour === 6 ? '6A' : slot.hour === 12 ? '12P' : '6P'}
                           </span>
                         )}
@@ -2009,8 +2211,8 @@ export default function AnalyticsView({
               </div>
 
               {/* Top Scanned Locations Breakdown */}
-              <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '4px' }}>
                   <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155' }}>
                     Top Scanned {spacePlural} Today
                   </span>
@@ -2028,21 +2230,24 @@ export default function AnalyticsView({
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '6px',
                           background: '#FFFFFF',
-                          padding: '8px 12px',
+                          padding: '8px 10px',
                           borderRadius: '8px',
-                          border: '1px solid #F1F5F9'
+                          border: '1px solid #F1F5F9',
+                          minWidth: 0
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                          <span style={{ fontSize: '0.85rem', flexShrink: 0 }}>
                             {entry.space_type === 'room' ? '🏨' : entry.space_type === 'cinema_seat' ? '🎬' : entry.space_type === 'counter' ? '⚡' : entry.space_type === 'cabin' ? '🛋️' : entry.space_type === 'vip' ? '👑' : '🍽️'}
                           </span>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1E293B' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {entry.label || (entry.table ? `${entry.table}` : 'Direct Link')}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                           <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#7E22CE' }}>
                             {entry.count} scans
                           </span>
@@ -2087,11 +2292,7 @@ export default function AnalyticsView({
                   </div>
                 </div>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))',
-                  gap: '8px'
-                }}>
+                <div className="analytics-heatmap-grid">
                   {analyticsData.space_heatmap.map((space) => {
                     const isHot = space.status === 'hot';
                     const isActive = space.status === 'active';
@@ -2155,8 +2356,8 @@ export default function AnalyticsView({
               )}
             </div>
 
-            {/* Table */}
-            <div style={{ overflowX: 'auto', width: '100%' }}>
+            {/* Desktop Table */}
+            <div className="analytics-desktop-table">
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #F1F5F9', color: '#94A3B8', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase' }}>
@@ -2234,6 +2435,83 @@ export default function AnalyticsView({
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Stacked Cards (Zero horizontal table scrolling on phone) */}
+            <div className="analytics-mobile-list">
+              {recentOrdersList.length > 0 ? (
+                recentOrdersList.map(order => {
+                  const st = String(order.status || '').toLowerCase();
+                  const isDone = st === 'completed' || st === 'delivered' || st === 'served';
+                  const isInProgress = st === 'accepted' || st === 'kitchen' || st === 'preparing' || st === 'ready';
+                  return (
+                    <div
+                      key={order.id}
+                      style={{
+                        background: '#F8FAFC',
+                        border: '1px solid #F1F5F9',
+                        borderRadius: '12px',
+                        padding: '10px 12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                          <strong style={{ fontSize: '0.78rem', color: '#0F172A' }}>{order.orderNumber}</strong>
+                          <span style={{ fontSize: '0.70rem', fontWeight: 700, color: '#475569', background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '1px 6px', borderRadius: '6px' }}>
+                            {order.table}
+                          </span>
+                        </div>
+                        <span style={{
+                          padding: '2px 7px',
+                          borderRadius: '6px',
+                          background: isDone ? '#DCFCE7' : isInProgress ? '#EFF6FF' : '#FEF3C7',
+                          color: isDone ? '#16A34A' : isInProgress ? '#1D4ED8' : '#D97706',
+                          fontSize: '0.66rem',
+                          fontWeight: 800,
+                          textTransform: 'capitalize',
+                          flexShrink: 0
+                        }}>
+                          {order.status}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '0.72rem' }}>
+                          <span style={{ color: '#475569', fontWeight: 600 }}>
+                            {order.items} items • {order.payment}
+                          </span>
+                          <strong style={{ fontSize: '0.84rem', color: '#0F172A', flexShrink: 0 }}>
+                            {currencySymbol}{order.amount.toLocaleString('en-IN')}
+                          </strong>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', color: '#64748B', lineHeight: 1.3 }}>
+                          {order.dateTime}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ padding: '20px 0', textAlign: 'center', color: '#94A3B8', fontSize: '0.76rem' }}>
+                  {totalOrders > 0 ? (
+                    <span>
+                      No recent orders available in this view.{' '}
+                      {onViewOrders && (
+                        <button
+                          onClick={onViewOrders}
+                          style={{ background: 'none', border: 'none', color: '#0284C7', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                        >
+                          View complete history in Orders →
+                        </button>
+                      )}
+                    </span>
+                  ) : (
+                    'No recent orders recorded yet.'
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Timezone Footer */}
@@ -2247,11 +2525,11 @@ export default function AnalyticsView({
           4. TAB: SALES DRILLDOWN
          ======================================================== */}
       {activeTab === 'sales' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="analytics-drilldown-kpi-grid">
             <div className="analytics-card">
               <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Total Period Revenue</span>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
+              <div className="analytics-kpi-val" style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
                 {currencySymbol}{totalSales.toLocaleString('en-IN')}
               </div>
               <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 800, display: 'block', marginTop: '4px' }}>
@@ -2261,7 +2539,7 @@ export default function AnalyticsView({
 
             <div className="analytics-card">
               <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Total Orders</span>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
+              <div className="analytics-kpi-val" style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
                 {totalOrders.toLocaleString('en-IN')}
               </div>
               <span style={{ fontSize: '0.68rem', color: '#0284C7', fontWeight: 800, display: 'block', marginTop: '4px' }}>
@@ -2271,7 +2549,7 @@ export default function AnalyticsView({
 
             <div className="analytics-card">
               <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Average Order Value</span>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
+              <div className="analytics-kpi-val" style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
                 {currencySymbol}{aov.toLocaleString('en-IN')}
               </div>
               <span style={{ fontSize: '0.68rem', color: '#9333EA', fontWeight: 800, display: 'block', marginTop: '4px' }}>
@@ -2281,8 +2559,8 @@ export default function AnalyticsView({
           </div>
 
           {/* Detailed Timeline */}
-          <div className="analytics-card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div className="analytics-card" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
               <div>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                   Detailed Sales Timeline
@@ -2296,85 +2574,8 @@ export default function AnalyticsView({
               </span>
             </div>
 
-            <div style={{ position: 'relative', width: '100%', height: '240px', marginTop: '16px' }}>
-              {activeHoverPoint && (() => {
-                const hoverPercent = (activeHoverPoint.x / 800) * 100;
-                let xTransform = '-50%';
-                if (hoverPercent > 78) {
-                  xTransform = '-95%';
-                } else if (hoverPercent < 22) {
-                  xTransform = '-5%';
-                }
-                const yTransform = activeHoverPoint.y > 45 ? '-100%' : '0%';
-                const topPercent = activeHoverPoint.y > 45
-                  ? `${(activeHoverPoint.y / 210) * 100 - 10}%`
-                  : `${(activeHoverPoint.y / 210) * 100 + 10}%`;
-
-                return (
-                  <div style={{
-                    position: 'absolute',
-                    left: `${hoverPercent}%`,
-                    top: topPercent,
-                    transform: `translate(${xTransform}, ${yTransform})`,
-                    background: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
-                    pointerEvents: 'none',
-                    zIndex: 10,
-                    textAlign: 'center',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
-                      {activeHoverPoint.displayDate || activeHoverPoint.date}
-                      {activeHoverPoint.isCurrentMonth ? ' · Month to date' : ''}
-                    </span>
-                    <strong style={{ fontSize: '0.80rem', color: '#0F172A' }}>
-                      {activeHoverPoint.valueFormatted}
-                      {activeHoverPoint.isCurrentMonth ? ' (to date)' : ''}
-                    </strong>
-                  </div>
-                );
-              })()}
-
-              <svg viewBox="0 0 800 210" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                <defs>
-                  <linearGradient id="salesGradientTab" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#EA580C" stopOpacity="0.28" />
-                    <stop offset="100%" stopColor="#EA580C" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-
-                {yAxisTicks.map((tick, idx) => (
-                  <g key={idx}>
-                    <line x1="46" y1={tick.y} x2="780" y2={tick.y} stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-                    <text x="40" y={tick.y + 3} textAnchor="end" fill="#94A3B8" fontSize="8.5" fontWeight="600">{tick.label}</text>
-                  </g>
-                ))}
-
-                {areaPath && <path d={areaPath} fill="url(#salesGradientTab)" />}
-                {linePath && <path d={linePath} fill="none" stroke="#EA580C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
-
-                {activeHoverPoint && (
-                  <g pointerEvents="none">
-                    <circle cx={activeHoverPoint.x} cy={activeHoverPoint.y} r="7.5" fill="#EA580C" fillOpacity="0.18" />
-                    <circle cx={activeHoverPoint.x} cy={activeHoverPoint.y} r="4.5" fill="#EA580C" stroke="#FFFFFF" strokeWidth="2" />
-                  </g>
-                )}
-
-                {chartPoints.map((pt, idx) => (
-                  <g key={idx} onMouseEnter={() => setChartHoverIndex(idx)} onClick={() => setChartHoverIndex(idx)} style={{ cursor: 'pointer' }}>
-                    <circle cx={pt.x} cy={pt.y} r="18" fill="transparent" />
-                  </g>
-                ))}
-
-                {visibleXLabels.map((pt, idx) => (
-                  <text key={idx} x={pt.x} y="198" textAnchor="middle" fill={activeHoverPoint?.date === pt.date ? '#0F172A' : '#94A3B8'} fontSize="9" fontWeight={activeHoverPoint?.date === pt.date ? '800' : '500'}>
-                    {pt.displayDate || pt.date}
-                  </text>
-                ))}
-              </svg>
+            <div style={{ width: '100%', marginTop: '8px' }}>
+              {renderSalesChart('salesGradientTab', false)}
             </div>
           </div>
         </div>
@@ -2384,9 +2585,9 @@ export default function AnalyticsView({
           5. TAB: TOP ITEMS DRILLDOWN
          ======================================================== */}
       {activeTab === 'top_items' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          <div className="analytics-card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="analytics-card" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <div>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                   {itemSingular} Sales &amp; Velocity Ranking
@@ -2397,7 +2598,7 @@ export default function AnalyticsView({
               </div>
             </div>
 
-            <div style={{ overflowX: 'auto', width: '100%' }}>
+            <div className="analytics-desktop-table">
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #F1F5F9', color: '#94A3B8', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase' }}>
@@ -2458,6 +2659,67 @@ export default function AnalyticsView({
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Top Items Cards */}
+            <div className="analytics-mobile-list">
+              {topDishesList.length > 0 ? (
+                topDishesList.map(item => (
+                  <div
+                    key={item.rank}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                      background: '#F8FAFC',
+                      border: '1px solid #F1F5F9',
+                      borderRadius: '12px',
+                      padding: '10px 12px',
+                      minWidth: 0
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                      <span style={{
+                        width: '22px',
+                        height: '22px',
+                        borderRadius: '50%',
+                        background: item.rank === 1 ? '#FFF7ED' : item.rank === 2 ? '#FEFCE8' : '#F1F5F9',
+                        color: item.rank === 1 ? '#EA580C' : item.rank === 2 ? '#CA8A04' : '#64748B',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.68rem',
+                        fontWeight: 900,
+                        flexShrink: 0
+                      }}>
+                        {item.rank}
+                      </span>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '8px', overflow: 'hidden', background: '#FFFFFF', flexShrink: 0 }}>
+                        <img
+                          src={item.img}
+                          alt={item.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <strong style={{ fontSize: '0.78rem', color: '#0F172A', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.name}
+                        </strong>
+                        <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>{item.qty} units sold</span>
+                      </div>
+                    </div>
+                    <strong style={{ fontSize: '0.82rem', color: '#0F172A', flexShrink: 0 }}>
+                      {currencySymbol}{item.sales.toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '24px 0', textAlign: 'center', color: '#94A3B8', fontSize: '0.76rem' }}>
+                  No items sold in {activeDateRangeLabel}.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -2466,9 +2728,9 @@ export default function AnalyticsView({
           6. TAB: CATEGORIES DRILLDOWN
          ======================================================== */}
       {activeTab === 'categories' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          <div className="analytics-card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="analytics-card" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <div>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                   Complete Category Breakdown
@@ -2479,16 +2741,16 @@ export default function AnalyticsView({
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {categoriesList.length > 0 ? (
                 categoriesList.map((cat, idx) => (
-                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#F8FAFC', padding: '14px 16px', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.80rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: cat.color }} />
-                        <strong style={{ color: '#0F172A' }}>{cat.name}</strong>
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#F8FAFC', padding: '12px 14px', borderRadius: '12px', border: '1px solid #F1F5F9', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '0.80rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: cat.color, flexShrink: 0 }} />
+                        <strong style={{ color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</strong>
                       </div>
-                      <div>
+                      <div style={{ flexShrink: 0 }}>
                         <strong style={{ color: '#0F172A' }}>{currencySymbol}{cat.amount.toLocaleString('en-IN')}</strong>
                         <span style={{ color: '#64748B', marginLeft: '6px', fontSize: '0.72rem' }}>({cat.percentage}%)</span>
                       </div>
@@ -2512,9 +2774,9 @@ export default function AnalyticsView({
           7. TAB: PAYMENT MODES DRILLDOWN
          ======================================================== */}
       {activeTab === 'payment_modes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          <div className="analytics-card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="analytics-card" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <div>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                   Settlement &amp; Payment Mode Analysis
@@ -2525,14 +2787,14 @@ export default function AnalyticsView({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+            <div className="analytics-pm-grid">
               {paymentAnalytics.slices.map((item, idx) => (
-                <div key={idx} style={{ background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                <div key={idx} style={{ background: '#F8FAFC', padding: '14px', borderRadius: '12px', border: '1px solid #F1F5F9', minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color }} />
                     <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 700 }}>{item.name}</span>
                   </div>
-                  <div style={{ fontSize: '1.30rem', fontWeight: 900, color: '#0F172A' }}>
+                  <div className="analytics-kpi-val" style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A' }}>
                     {currencySymbol}{item.amount.toLocaleString('en-IN')}
                   </div>
                   <span style={{ fontSize: '0.72rem', color: item.color, fontWeight: 800, marginTop: '2px', display: 'block' }}>

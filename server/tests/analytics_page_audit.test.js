@@ -756,6 +756,99 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
         })
       );
       assert.ok(htmlError.includes('Sync failed (Today)') && htmlError.includes('>Retry<') && htmlError.includes('Last synced'), 'AnalyticsView shows retry action and last sync time on error');
+      assert.ok(
+        htmlLoading.includes('analytics-period-box') &&
+        htmlLoading.includes('analytics-period-select') &&
+        htmlLoading.includes('analytics-refresh-pill') &&
+        htmlLoading.includes('min-height: 0 !important') &&
+        htmlLoading.includes('analytics-mobile-list') &&
+        htmlLoading.includes('analytics-telemetry-grid') &&
+        !htmlLoading.includes('minmax(280px, 1fr)') &&
+        htmlLoading.includes('vector-effect="non-scaling-stroke"'),
+        'AnalyticsView includes mobile-safe header controls, non-distorted chart markers, telemetry grid, and mobile order cards'
+      );
+
+      // 8b-2. Verify non-overlapping chart hit strips, xPercent-aligned x-axis edge labels, and readable mobile order timestamps
+      const htmlChartMulti = renderToStaticMarkup(
+        React.createElement(AnalyticsView, {
+          analyticsData: {
+            selected_period: '7d',
+            period_sales: 1200,
+            total_sales: 1200,
+            period_orders: 3,
+            total_orders: 3,
+            daily_chart_data: [
+              { date: '2026-06-10', displayDate: 'Jun 10', sales: 200 },
+              { date: '2026-06-11', displayDate: 'Jun 11', sales: 500 },
+              { date: '2026-06-12', displayDate: 'Jun 12', sales: 150 },
+              { date: '2026-06-13', displayDate: 'Jun 13', sales: 350 }
+            ],
+            recent_orders: [
+              { id: 42, table_number: '5', total_amount: 450, payment_method: 'upi', status: 'completed', created_at: '2026-06-13T14:30:00Z', items: [{ name: 'Tea', quantity: 2 }] }
+            ]
+          }
+        })
+      );
+      assert.ok(htmlChartMulti.includes('transform:translateX(0%);text-align:left') && htmlChartMulti.includes('transform:translateX(-100%);text-align:right'), 'X-axis edge labels clamp alignment within chart bounds');
+
+      // Inspect every chart hit button's geometry and label directly
+      const hitButtons = [];
+      const hitBtnRe = /<button\b([^>]*\baria-label="([^"]+)"[^>]*)>/gi;
+      let hitMatch;
+      while ((hitMatch = hitBtnRe.exec(htmlChartMulti)) !== null) {
+        const attrsStr = hitMatch[1];
+        const ariaLabel = hitMatch[2];
+        const styleMatch = attrsStr.match(/\bstyle="([^"]*)"/i);
+        const styleStr = styleMatch ? styleMatch[1] : '';
+        const leftMatch = styleStr.match(/\bleft\s*:\s*([0-9.]+)%/i);
+        const widthMatch = styleStr.match(/\bwidth\s*:\s*([0-9.]+)%/i);
+        hitButtons.push({
+          ariaLabel,
+          styleStr,
+          leftPct: leftMatch ? Number(leftMatch[1]) : NaN,
+          widthPct: widthMatch ? Number(widthMatch[1]) : NaN
+        });
+      }
+      assert.deepEqual(
+        hitButtons.map(b => b.ariaLabel),
+        ['Jun 10: ₹200', 'Jun 11: ₹500', 'Jun 12: ₹150', 'Jun 13: ₹350'],
+        'All four chart samples must render with their exact interactive hit-button aria-labels'
+      );
+      for (let hIdx = 0; hIdx < hitButtons.length; hIdx++) {
+        const hb = hitButtons[hIdx];
+        assert.ok(!/\b(?:width|height)\s*:\s*[^;]*px/i.test(hb.styleStr), `Hit region ${hIdx} must not use fixed-px box (${hb.styleStr})`);
+        assert.ok(Number.isFinite(hb.leftPct) && Number.isFinite(hb.widthPct) && hb.widthPct > 0, `Hit region ${hIdx} must declare valid percentage left/width`);
+        if (hIdx === 0) {
+          assert.ok(Math.abs(hb.leftPct - 0) < 0.01, 'First chart hit region starts cleanly at 0%');
+        } else {
+          const prev = hitButtons[hIdx - 1];
+          assert.ok(Math.abs((prev.leftPct + prev.widthPct) - hb.leftPct) < 0.01, `Hit region ${hIdx} must abut previous region cleanly with zero overlap`);
+        }
+        if (hIdx === hitButtons.length - 1) {
+          assert.ok(Math.abs((hb.leftPct + hb.widthPct) - 100) < 0.01, 'Last chart hit region extends cleanly to 100%');
+        }
+      }
+
+      // Inspect the mobile stacked order card block for separate, untruncated timestamp element
+      const mobileListIdx = htmlChartMulti.indexOf('class="analytics-mobile-list"');
+      assert.ok(mobileListIdx !== -1, 'Mobile stacked order card list must render');
+      const mobileListSlice = htmlChartMulti.slice(mobileListIdx, mobileListIdx + 2500);
+      const sampleOrderDate = new Date('2026-06-13T14:30:00Z');
+      const expectedDateTime = `${sampleOrderDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Kolkata' })} ${sampleOrderDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}`;
+      const escapedExpectedDateTime = expectedDateTime.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const tsSpanMatch = mobileListSlice.match(new RegExp(`<span\\s+style="([^"]*)"[^>]*>${escapedExpectedDateTime}<\\/span>`));
+      assert.ok(tsSpanMatch, `Mobile order card must render complete timestamp "${expectedDateTime}" on its own dedicated element`);
+      const tsStyle = tsSpanMatch[1];
+      assert.ok(
+        !/text-overflow\s*:\s*ellipsis/i.test(tsStyle) &&
+        !/white-space\s*:\s*nowrap/i.test(tsStyle) &&
+        !/overflow\s*:\s*hidden/i.test(tsStyle),
+        `Mobile order timestamp span must not apply single-line truncation (style="${tsStyle}")`
+      );
+      assert.ok(
+        new RegExp(`2 items • UPI<\\/span>\\s*<strong[^>]*>₹450<\\/strong>\\s*<\\/div>\\s*<span[^>]*>${escapedExpectedDateTime}<\\/span>`).test(mobileListSlice),
+        'Mobile order card must keep amount beside items/payment row and place timestamp on a separate row'
+      );
 
       // 8c. Mount real AdminDashboard with minimal DOM harness & deferred fetch responses
       const createTestDom = (search = '?tab=analytics') => {
@@ -962,6 +1055,57 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
       };
 
       try {
+        // Test 0: Verify interactive click selection across all 4 chart samples in mounted AnalyticsView
+        const envChart = createTestDom('?tab=analytics');
+        applyDomGlobals(envChart);
+        const chartContainer = envChart.doc.createElement('div');
+        envChart.doc.body.appendChild(chartContainer);
+        const chartRoot = createRoot(chartContainer);
+        const chartSamples = [
+          { date: '2026-06-10', displayDate: 'Jun 10', sales: 200 },
+          { date: '2026-06-11', displayDate: 'Jun 11', sales: 500 },
+          { date: '2026-06-12', displayDate: 'Jun 12', sales: 150 },
+          { date: '2026-06-13', displayDate: 'Jun 13', sales: 350 }
+        ];
+        await act(async () => {
+          chartRoot.render(
+            React.createElement(AnalyticsView, {
+              analyticsData: {
+                selected_period: '7d',
+                period_sales: 1200,
+                total_sales: 1200,
+                period_orders: 3,
+                total_orders: 3,
+                daily_chart_data: chartSamples
+              }
+            })
+          );
+          await flushMicrotasks();
+        });
+        const sampleBtns = findNodes(chartContainer, n => n.tagName === 'BUTTON' && String(n.getAttribute('aria-label') || '').startsWith('Jun '));
+        assert.deepEqual(
+          sampleBtns.map(b => b.getAttribute('aria-label')),
+          ['Jun 10: ₹200', 'Jun 11: ₹500', 'Jun 12: ₹150', 'Jun 13: ₹350'],
+          'Mounted AnalyticsView exposes all 4 independent sample hit buttons'
+        );
+        for (const s of chartSamples) {
+          const targetLabel = `${s.displayDate}: ₹${s.sales}`;
+          const btn = sampleBtns.find(b => b.getAttribute('aria-label') === targetLabel);
+          await act(async () => {
+            btn.dispatchEvent({ type: 'click', bubbles: true, target: btn });
+            await flushMicrotasks();
+          });
+          assert.ok(
+            chartContainer.textContent.includes(`${s.displayDate}₹${s.sales}`) ||
+            (chartContainer.textContent.includes(s.displayDate) && chartContainer.textContent.includes(`₹${s.sales}`)),
+            `Clicking sample hit button "${targetLabel}" selects that sample in tooltip`
+          );
+        }
+        await act(async () => {
+          chartRoot.unmount();
+          await flushMicrotasks();
+        });
+
         // Test A: Already on Analytics tab — change filter before deferred older poll resolves
         const envA = createTestDom('?tab=analytics');
         const { localStorageMock } = envA;
