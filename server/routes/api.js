@@ -1638,7 +1638,7 @@ router.post('/orders/verify-location', locationVerifyRateLimiter, async (req, re
       resolvedSpaceNum,
       resto.qr_secret,
       receivedQrToken,
-      { restaurantId: resto.id, requireHmac: true }
+      { restaurantId: resto.id, requireHmac: true, rawSpaceNumber: rawTable }
     );
 
     if (!qrResult || !qrResult.valid) {
@@ -1885,7 +1885,7 @@ router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (
       resolvedSpaceNum,
       resto.qr_secret,
       receivedQrToken,
-      { restaurantId: resto.id, requireHmac: true }
+      { restaurantId: resto.id, requireHmac: true, rawSpaceNumber: rawTable }
     );
 
     if (!qrResult || !qrResult.valid) {
@@ -2206,7 +2206,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       resolvedSpaceNum,
       resto.qr_secret,
       receivedQrToken,
-      { restaurantId: resto.id, requireHmac: true }
+      { restaurantId: resto.id, requireHmac: true, rawSpaceNumber: rawTable }
     );
 
     if (!qrResult || !qrResult.valid) {
@@ -2619,6 +2619,9 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         if (resolvedSpaceType !== 'counter') {
           const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
           try {
+            if (getDbType() === 'postgres') {
+              await txQuery('SAVEPOINT open_orders_sp');
+            }
             openOrders = await txQuery(`
               SELECT id, session_id, round_number, customer_name, customer_phone, items, total_amount, status
               FROM orders
@@ -2626,9 +2629,18 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
                 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
                 AND (is_settled = 0 OR is_settled IS NULL)
                 AND created_at >= $3
-              ORDER BY id ASC
+              ORDER BY id ASC FOR UPDATE
             `, [targetId, cleanTable, twelveHoursAgo]);
+            if (getDbType() === 'postgres') {
+              await txQuery('RELEASE SAVEPOINT open_orders_sp');
+            }
           } catch (openErr) {
+            if (openErr && (openErr.code === '40P01' || openErr.code === '40001')) {
+              throw openErr;
+            }
+            if (getDbType() === 'postgres') {
+              try { await txQuery('ROLLBACK TO SAVEPOINT open_orders_sp'); } catch (e) {}
+            }
             try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)'); } catch (e) {}
             try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1'); } catch (e) {}
             try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT'); } catch (e) {}
@@ -2640,7 +2652,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
                 AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
                 AND (is_settled = 0 OR is_settled IS NULL)
                 AND created_at >= $3
-              ORDER BY id ASC
+              ORDER BY id ASC FOR UPDATE
             `, [targetId, cleanTable, twelveHoursAgo]);
           }
         }
@@ -3088,7 +3100,7 @@ router.get('/orders/active-table', async (req, res) => {
         resolvedSpaceNum,
         resto.qr_secret,
         receivedQrToken,
-        { restaurantId: resto.id, requireHmac: true }
+        { restaurantId: resto.id, requireHmac: true, rawSpaceNumber: rawTable }
       );
 
       if (!qrResult || !qrResult.valid) {
@@ -3273,7 +3285,7 @@ router.post('/service-requests', serviceRequestRateLimiter, async (req, res) => 
       resolvedSpaceNum,
       resto.qr_secret,
       receivedQrToken,
-      { restaurantId: resto.id, requireHmac: true }
+      { restaurantId: resto.id, requireHmac: true, rawSpaceNumber: rawTable }
     );
 
     if (!qrResult || !qrResult.valid) {
@@ -3588,10 +3600,35 @@ router.get('/kitchen/orders', async (req, res) => {
       };
     });
 
+    const rawReconcileParam = typeof req.query.reconcile_ids === 'string' ? req.query.reconcile_ids : '';
+    const reconcileIds = rawReconcileParam
+      .split(',')
+      .map(v => parseInt(v.trim(), 10))
+      .filter(n => Number.isInteger(n) && n > 0)
+      .slice(0, 50);
+
+    let reconcileStatuses = undefined;
+    if (reconcileIds.length > 0) {
+      const recPlaceholders = reconcileIds.map((_, idx) => `$${idx + 2}`).join(', ');
+      const recRows = await query(
+        `SELECT id, status, kitchen_prepared FROM orders WHERE restaurant_id = $1 AND id IN (${recPlaceholders})`,
+        [targetId, ...reconcileIds]
+      );
+      reconcileStatuses = {};
+      for (const r of recRows || []) {
+        reconcileStatuses[String(r.id)] = {
+          id: r.id,
+          status: String(r.status || '').toLowerCase(),
+          kitchen_prepared: Number(r.kitchen_prepared) === 1 ? 1 : 0
+        };
+      }
+    }
+
     res.json({
       success: true,
       restaurant: { id: targetId, name: resto.name, slug: resto.slug },
-      orders: formatted
+      orders: formatted,
+      ...(reconcileStatuses ? { reconcile_statuses: reconcileStatuses } : {})
     });
   } catch (err) {
     console.error('Fetch kitchen orders error:', err);

@@ -96,8 +96,32 @@ const generateSparklineAreaPath = (linePath, width = 100, height = 24) => {
   return `${linePath} L ${width},${height} L 0,${height} Z`;
 };
 
+const formatAnalyticsPeriodLabel = (period) => {
+  if (period === 'today') return 'Today';
+  if (period === '7d') return 'Last 7 Days';
+  if (period === '30d') return 'Last 30 Days';
+  if (period === '6m') return 'Last 6 Months';
+  if (period === 'all') return 'All Time';
+  if (typeof period === 'string' && period.startsWith('month:')) {
+    const parts = period.replace('month:', '').split('-');
+    if (parts.length === 2) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      if (y && m >= 1 && m <= 12) {
+        const d = new Date(Date.UTC(y, m - 1, 15, 12, 0, 0));
+        return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
+      }
+    }
+  }
+  return 'Selected Period';
+};
+
 export default function AnalyticsView({
   analyticsData = {},
+  selectedFilterPeriod = null,
+  syncStatus = 'idle',
+  syncError = null,
+  onRetrySync = null,
   onExportReport,
   onDownloadAllCSV,
   onFilterPeriod,
@@ -129,15 +153,39 @@ export default function AnalyticsView({
 
   const [activeTab, setActiveTab] = useState('overview');
   const [chartHoverIndex, setChartHoverIndex] = useState(null);
-  const [refreshCountdown, setRefreshCountdown] = useState(30);
+  const [refreshCountdown, setRefreshCountdown] = useState(10);
 
-  // Periodic visual countdown for auto-refresh
+  const payloadPeriod = analyticsData?.selected_period || 'all';
+  const requestedPeriod = selectedFilterPeriod || payloadPeriod;
+  const isPeriodSyncing = syncStatus === 'loading' && requestedPeriod !== payloadPeriod;
+  const isPeriodSyncError = syncStatus === 'error';
+  const lastUpdatedTimeLabel = useMemo(() => {
+    if (!analyticsData?.last_updated) return null;
+    try {
+      return new Date(analyticsData.last_updated).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Kolkata'
+      });
+    } catch (e) {
+      return null;
+    }
+  }, [analyticsData?.last_updated]);
+
+  // Sync visual countdown with 10s backend poll interval (paused while actively refreshing or errored)
   useEffect(() => {
+    setRefreshCountdown(10);
+  }, [analyticsData?.last_updated, payloadPeriod, syncStatus]);
+
+  useEffect(() => {
+    if (syncStatus !== 'idle' || !analyticsData?.last_updated) return undefined;
     const timer = setInterval(() => {
-      setRefreshCountdown(prev => (prev <= 1 ? 30 : prev - 1));
+      setRefreshCountdown(prev => (prev <= 1 ? 10 : prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [syncStatus, analyticsData?.last_updated]);
 
   const isExporting = exporting || exportingAll;
 
@@ -151,24 +199,9 @@ export default function AnalyticsView({
     ? Number(analyticsData.growth_percentage)
     : null;
 
-  const selectedPeriod = analyticsData?.selected_period || 'all';
-
-  // Format date range label
-  const activeDateRangeLabel = useMemo(() => {
-    if (selectedPeriod === 'today') return 'Today';
-    if (selectedPeriod === '7d') return 'Last 7 Days';
-    if (selectedPeriod === '30d') return 'Last 30 Days';
-    if (selectedPeriod === '6m') return 'Last 6 Months';
-    if (selectedPeriod === 'all') return 'All Time';
-    if (selectedPeriod.startsWith('month:')) {
-      const parts = selectedPeriod.replace('month:', '').split('-');
-      if (parts.length === 2) {
-        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
-        return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      }
-    }
-    return 'Selected Period';
-  }, [selectedPeriod]);
+  // Format date range label strictly for the currently rendered payload period (IST-safe UTC midpoint)
+  const activeDateRangeLabel = useMemo(() => formatAnalyticsPeriodLabel(payloadPeriod), [payloadPeriod]);
+  const requestedDateRangeLabel = useMemo(() => formatAnalyticsPeriodLabel(requestedPeriod), [requestedPeriod]);
 
   const handlePeriodChange = (e) => {
     const val = e.target.value;
@@ -186,7 +219,15 @@ export default function AnalyticsView({
   const handleExportClick = () => {
     if (isExporting) return;
     const exportFn = onExportReport || onDownloadAllCSV;
-    if (exportFn) exportFn(selectedPeriod, null, null);
+    if (!exportFn) return;
+    if (requestedPeriod.startsWith('month:')) {
+      const parts = requestedPeriod.replace('month:', '').split('-');
+      if (parts.length === 2) {
+        exportFn('month', parseInt(parts[0], 10), parseInt(parts[1], 10));
+        return;
+      }
+    }
+    exportFn(requestedPeriod, null, null);
   };
 
   // Compact currency formatter for Y-axis guidance
@@ -199,14 +240,14 @@ export default function AnalyticsView({
   };
 
   const chartTrendSubtitle = useMemo(() => {
-    if (selectedPeriod === 'today') return "Today's Trend";
-    if (selectedPeriod === '7d') return '7-Day Trend';
-    if (selectedPeriod === '30d') return '30-Day Trend';
-    if (selectedPeriod === '6m') return '6-Month Trend';
-    if (selectedPeriod === 'all') return 'Lifetime Trend';
-    if (selectedPeriod.startsWith('month:')) return 'Monthly Trend';
+    if (payloadPeriod === 'today') return "Today's Trend";
+    if (payloadPeriod === '7d') return '7-Day Trend';
+    if (payloadPeriod === '30d') return '30-Day Trend';
+    if (payloadPeriod === '6m') return '6-Month Trend';
+    if (payloadPeriod === 'all') return 'Lifetime Trend';
+    if (payloadPeriod.startsWith('month:')) return 'Monthly Trend';
     return 'Sales Trend';
-  }, [selectedPeriod]);
+  }, [payloadPeriod]);
 
   // 2. Dynamic Daily Sales Chart Data Points (SVG Area & Line)
   const rawChartData = useMemo(() => {
@@ -310,6 +351,10 @@ export default function AnalyticsView({
     }
     return chartPoints[chartPoints.length - 1] || null;
   }, [chartHoverIndex, chartPoints]);
+
+  useEffect(() => {
+    setChartHoverIndex(null);
+  }, [payloadPeriod, rawChartData.length]);
 
   // Dynamic Live Sparkline Paths for KPI Cards (Strictly Data-Driven)
   const salesSparklinePath = useMemo(() => {
@@ -424,23 +469,6 @@ export default function AnalyticsView({
     }));
   }, [analyticsData?.category_sales]);
 
-  // Category Donut Slices
-  const categoryDonutSlices = useMemo(() => {
-    const circumference = 87.96;
-    let accumulatedOffset = 0;
-    return categoriesList.map(item => {
-      const strokeLen = (item.percentage / 100) * circumference;
-      const strokeDasharray = `${strokeLen.toFixed(2)} ${(circumference - strokeLen).toFixed(2)}`;
-      const strokeDashoffset = (-accumulatedOffset).toFixed(2);
-      accumulatedOffset += strokeLen;
-      return {
-        ...item,
-        strokeDasharray,
-        strokeDashoffset
-      };
-    });
-  }, [categoriesList]);
-
   // 5. Dynamic Payment Methods Donut Breakdown
   const paymentAnalytics = useMemo(() => {
     const pmSource = analyticsData?.period_payment_methods || analyticsData?.payment_methods || {};
@@ -482,6 +510,31 @@ export default function AnalyticsView({
       : (Array.isArray(orders) ? orders : []);
 
     if (rawList.length === 0) return [];
+    const formatOrderSpace = (order) => {
+      const raw = order.table_number ? String(order.table_number).trim() : '';
+      if (!raw) return 'Takeaway';
+      let inferredType = '';
+      if (!order.space_type) {
+        if (raw.toUpperCase() === 'COUNTER') inferredType = 'counter';
+        else if (/^table\b/i.test(raw)) inferredType = 'table';
+        else if (/^room\b/i.test(raw)) inferredType = 'room';
+        else if (/^cabin\b/i.test(raw)) inferredType = 'cabin';
+        else if (/^vip\b/i.test(raw)) inferredType = 'vip';
+        else if (/^(?:screen\s*\d+|s?\d+[\-_:][a-zA-Z]+[\-_:]\d+|seat\b)/i.test(raw)) inferredType = 'cinema_seat';
+      }
+      const sType = String(order.space_type || inferredType || (isHotel ? 'room' : isCinema ? 'cinema_seat' : 'table')).toLowerCase();
+      if (sType === 'counter' || raw.toUpperCase() === 'COUNTER') return 'Counter';
+      if (sType === 'room') return `Room ${raw.replace(/^room\s*#?/i, '').trim() || raw}`;
+      if (sType === 'cinema_seat' || sType === 'cinema') return `Seat ${raw.replace(/^seat\s*#?/i, '').trim() || raw}`;
+      if (sType === 'cabin') return `Cabin ${raw.replace(/^cabin\s*#?/i, '').trim() || raw}`;
+      if (sType === 'vip') return `VIP ${raw.replace(/^vip\s*#?/i, '').trim() || raw}`;
+      if (sType === 'table') {
+        const cleanTbl = raw.replace(/^table\s*#?/i, '').trim() || raw;
+        return /^\d+$/.test(cleanTbl) ? `T-${cleanTbl.padStart(2, '0')}` : raw;
+      }
+      return /^\d+$/.test(raw) ? `T-${raw.padStart(2, '0')}` : raw;
+    };
+
     return rawList.slice(0, 5).map(o => {
       let itemsCount = 1;
       try {
@@ -500,7 +553,7 @@ export default function AnalyticsView({
       return {
         id: o.id,
         orderNumber: `#ORD-${String(o.id).padStart(4, '0')}`,
-        table: o.table_number ? `T-${String(o.table_number).padStart(2, '0')}` : 'Takeaway',
+        table: formatOrderSpace(o),
         dateTime: `${dateStr} ${timeStr}`,
         items: itemsCount,
         amount: Number(o.total_amount || 0),
@@ -508,7 +561,7 @@ export default function AnalyticsView({
         status: o.status || 'completed'
       };
     });
-  }, [orders]);
+  }, [analyticsData?.recent_orders, orders, isHotel, isCinema]);
 
   return (
     <div className="analytics-container">
@@ -775,7 +828,7 @@ export default function AnalyticsView({
           }}>
             <Calendar size={14} color="#64748B" style={{ marginRight: '8px' }} />
             <select
-              value={selectedPeriod}
+              value={requestedPeriod}
               onChange={handlePeriodChange}
               style={{
                 appearance: 'none',
@@ -797,9 +850,67 @@ export default function AnalyticsView({
               {Array.isArray(analyticsData?.available_months) && analyticsData.available_months.map(m => (
                 <option key={m.key} value={`month:${m.key}`}>{m.label}</option>
               ))}
+              {requestedPeriod.startsWith('month:') &&
+                !(Array.isArray(analyticsData?.available_months) && analyticsData.available_months.some(m => `month:${m.key}` === requestedPeriod)) && (
+                  <option value={requestedPeriod}>{requestedDateRangeLabel}</option>
+                )}
             </select>
             <ChevronDown size={13} color="#94A3B8" style={{ position: 'absolute', right: '10px', pointerEvents: 'none' }} />
           </div>
+
+          {isPeriodSyncing && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#FFF7ED',
+              border: '1px solid #FED7AA',
+              borderRadius: '10px',
+              padding: '7px 10px',
+              fontSize: '0.73rem',
+              fontWeight: 700,
+              color: '#C2410C'
+            }}>
+              <span>Updating to {requestedDateRangeLabel}…</span>
+            </div>
+          )}
+
+          {isPeriodSyncError && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#FEF2F2',
+              border: '1px solid #FECACA',
+              borderRadius: '10px',
+              padding: '6px 10px',
+              fontSize: '0.73rem',
+              fontWeight: 700,
+              color: '#B91C1C'
+            }}
+            title={syncError || 'Analytics sync failed'}
+            >
+              <span>Sync failed ({requestedDateRangeLabel})</span>
+              {typeof onRetrySync === 'function' && (
+                <button
+                  type="button"
+                  onClick={onRetrySync}
+                  style={{
+                    border: '1px solid #FCA5A5',
+                    background: '#FFFFFF',
+                    color: '#B91C1C',
+                    borderRadius: '6px',
+                    padding: '2px 8px',
+                    fontSize: '0.70rem',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Auto-Refresh Live Pill */}
           <div className="analytics-header-control-item" style={{
@@ -812,11 +923,17 @@ export default function AnalyticsView({
             padding: '7px 12px',
             fontSize: '0.75rem',
             fontWeight: 600,
-            color: '#64748B',
+            color: syncStatus === 'error' ? '#B91C1C' : '#64748B',
             boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
           }}>
-            <RefreshCw size={12} color="#16A34A" />
-            <span>Auto refresh in {String(refreshCountdown).padStart(2, '0')}s</span>
+            <RefreshCw size={12} color={syncStatus === 'error' ? '#DC2626' : '#16A34A'} />
+            <span>
+              {syncStatus === 'loading'
+                ? 'Refreshing…'
+                : (syncStatus === 'error' || !lastUpdatedTimeLabel)
+                  ? (lastUpdatedTimeLabel ? `Last synced ${lastUpdatedTimeLabel}` : 'Sync unavailable')
+                  : `Auto refresh in ${String(refreshCountdown).padStart(2, '0')}s`}
+            </span>
           </div>
 
           {/* Export Report Button */}
@@ -1197,7 +1314,7 @@ export default function AnalyticsView({
                       Peak: {currencySymbol}{Math.max(...rawChartData.map(d => Number(d.sales || 0)), 0).toLocaleString('en-IN')}
                     </div>
                     <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '7px', padding: '3px 8px', fontSize: '0.68rem', color: '#475569', fontWeight: 700 }}>
-                      {rawChartData.length} {selectedPeriod === 'all' ? 'Months' : 'Days'} Tracked
+                      {rawChartData.length} {payloadPeriod === 'all' ? 'Months' : 'Days'} Tracked
                     </div>
                   </div>
                 </div>
@@ -1294,13 +1411,14 @@ export default function AnalyticsView({
                   {/* Data Anchor Pillars & Point Drop-lines */}
                   {chartPoints.map((pt, idx) => {
                     const colH = Math.max(184 - pt.y, 0);
+                    const barWidth = Math.max(4, Math.min(32, Math.floor((700 / Math.max(chartPoints.length, 1)) * 0.55)));
                     const isHovered = activeHoverPoint?.date === pt.date;
                     return (
                       <g key={`col-${idx}`}>
                         <rect
-                          x={pt.x - 16}
+                          x={pt.x - barWidth / 2}
                           y={pt.y}
-                          width="32"
+                          width={barWidth}
                           height={colH}
                           rx="4"
                           fill="#EA580C"
@@ -1827,11 +1945,15 @@ export default function AnalyticsView({
                 <div style={{ background: '#FAF5FF', border: '1px solid #F3E8FF', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: '#7E22CE', fontWeight: 700 }}>
                   🎯 {analyticsData?.scan_conversion_rate_today ?? 0}% Scan-to-Order
                 </div>
-                {analyticsData?.standee_health && (
+                {analyticsData?.standee_health ? (
                   <div style={{ background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: '#1D4ED8', fontWeight: 700 }}>
                     🛡️ {analyticsData.standee_health.health_score ?? 0}% Standee Health
                   </div>
-                )}
+                ) : analyticsData?.heatmap_unavailable ? (
+                  <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: '#B91C1C', fontWeight: 700 }}>
+                    🛡️ Standee Health: Unavailable
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -2059,17 +2181,24 @@ export default function AnalyticsView({
                         <td style={{ padding: '10px', fontWeight: 800 }}>{currencySymbol}{order.amount.toLocaleString('en-IN')}</td>
                         <td style={{ padding: '10px', fontWeight: 600, color: '#64748B' }}>{order.payment}</td>
                         <td style={{ padding: '10px' }}>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            background: order.status === 'completed' || order.status === 'delivered' ? '#DCFCE7' : '#FEF3C7',
-                            color: order.status === 'completed' || order.status === 'delivered' ? '#16A34A' : '#D97706',
-                            fontSize: '0.68rem',
-                            fontWeight: 800,
-                            textTransform: 'capitalize'
-                          }}>
-                            {order.status}
-                          </span>
+                          {(() => {
+                            const st = String(order.status || '').toLowerCase();
+                            const isDone = st === 'completed' || st === 'delivered' || st === 'served';
+                            const isInProgress = st === 'accepted' || st === 'kitchen' || st === 'preparing' || st === 'ready';
+                            return (
+                              <span style={{
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                background: isDone ? '#DCFCE7' : isInProgress ? '#EFF6FF' : '#FEF3C7',
+                                color: isDone ? '#16A34A' : isInProgress ? '#1D4ED8' : '#D97706',
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                textTransform: 'capitalize'
+                              }}>
+                                {order.status}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td style={{ padding: '10px', textAlign: 'right' }}>
                           <button

@@ -16,6 +16,7 @@ import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, Layers, Utensils, Q
 import PaymentModal from '../PaymentModal';
 import DayClosingModal from './DayClosingModal';
 import { calculateBillDetails, formatOrderLocation, buildUpiPaymentUri } from '../../utils/billingHelper';
+import { startAnalyticsPolling } from '../../utils/analyticsPolling';
 
 import './styles/Admin.css';
 import AdminSidebar from './components/AdminSidebar';
@@ -232,9 +233,12 @@ export default function AdminDashboard({
   const [orders, setOrders] = useState(() => getInitialAdminState('orders', []));
   const [serviceRequests, setServiceRequests] = useState([]);
   const [analyticsData, setAnalyticsData] = useState(() => getInitialAdminState('analytics', null));
+  const [lifetimeAnalyticsData, setLifetimeAnalyticsData] = useState(() => getInitialAdminState('analytics', null));
   const [billOrderModal, setBillOrderModal] = useState(null);
   const [showModalUpiQr, setShowModalUpiQr] = useState(false);
   const [modalUpiQrUrl, setModalUpiQrUrl] = useState(null);
+  const [modalUpiQrSnapshotKey, setModalUpiQrSnapshotKey] = useState(null);
+  const modalQrRequestRef = useRef(0);
   const [acceptRoutingModal, setAcceptRoutingModal] = useState(null); // { order, show: true }
   const [isRoutingSubmitting, setIsRoutingSubmitting] = useState(false);
   const [kotFilter, setKotFilter] = useState('all');
@@ -281,7 +285,13 @@ export default function AdminDashboard({
         custom_domain: infoData.custom_domain || '',
         watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
         custom_domain_enabled: infoData.custom_domain_enabled === 1 || infoData.custom_domain_enabled === true || infoData.custom_domain_enabled === '1',
-        analytics_export_enabled: infoData.analytics_export_enabled === 1 || infoData.analytics_export_enabled === true || infoData.analytics_export_enabled === '1',
+        analytics_export_enabled: Boolean(
+          infoData.is_vip ||
+          infoData.is_complimentary ||
+          infoData.analytics_export_enabled === 1 ||
+          infoData.analytics_export_enabled === true ||
+          infoData.analytics_export_enabled === '1'
+        ),
         gst_invoice_enabled: infoData.gst_invoice_enabled === 1 || infoData.gst_invoice_enabled === true || infoData.gst_invoice_enabled === '1',
         ai_review_enabled: infoData.ai_review_enabled === 1 || infoData.ai_review_enabled === true || infoData.ai_review_enabled === '1',
         bluetooth_kot_enabled: infoData.bluetooth_kot_enabled === 1 || infoData.bluetooth_kot_enabled === true || infoData.bluetooth_kot_enabled === '1',
@@ -380,16 +390,33 @@ export default function AdminDashboard({
       .catch(() => { });
   }, []);
 
+  const getModalQrSnapshotKey = (modalOrder, billData, upiId = '', payeeName = '') => {
+    if (!modalOrder || !billData) return null;
+    const sessionIds = Array.isArray(billData.sessionOrders)
+      ? billData.sessionOrders.map(o => String(o.id)).join(',')
+      : String(modalOrder.id);
+    return `${modalOrder.id}|${sessionIds}|${Number(billData.grandTotal || 0).toFixed(2)}|${billData.spaceLabel || ''}|${upiId || ''}|${payeeName || ''}`;
+  };
+
   useEffect(() => {
+    const requestId = ++modalQrRequestRef.current;
+    let cancelled = false;
+
+    setModalUpiQrUrl(null);
+    setModalUpiQrSnapshotKey(null);
+
     if (!billOrderModal) {
       setShowModalUpiQr(false);
-      setModalUpiQrUrl(null);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
+
     const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
     const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
     if (upiId) {
-      const billData = calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
+      const billData = billOrderModal.__billSnapshot || calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
+      const snapshotKey = getModalQrSnapshotKey(billOrderModal, billData, upiId, payeeName);
       const uri = buildUpiPaymentUri({
         upiId,
         payeeName,
@@ -399,11 +426,23 @@ export default function AdminDashboard({
       });
       if (uri) {
         QRCode.toDataURL(uri, { width: 220, margin: 1, errorCorrectionLevel: 'M' })
-          .then(url => setModalUpiQrUrl(url))
-          .catch(() => setModalUpiQrUrl(null));
+          .then(url => {
+            if (cancelled || modalQrRequestRef.current !== requestId) return;
+            setModalUpiQrUrl(url);
+            setModalUpiQrSnapshotKey(snapshotKey);
+          })
+          .catch(() => {
+            if (cancelled || modalQrRequestRef.current !== requestId) return;
+            setModalUpiQrUrl(null);
+            setModalUpiQrSnapshotKey(null);
+          });
       }
     }
-  }, [billOrderModal, restaurantInfo, settingsForm, orders]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [billOrderModal, restaurantInfo, settingsForm]);
 
   const getDaysRemaining = (expiryStr) => {
     if (!expiryStr) return null;
@@ -670,105 +709,177 @@ export default function AdminDashboard({
 
   const prevServiceReqIdsRef = useRef(new Set());
   const isInitialServiceReqFetchRef = useRef(true);
+  const prevPendingCountRef = useRef(0);
+  const serviceRequestsTenantKeyRef = useRef('');
+
+  const ordersRequestSeqRef = useRef(0);
+  const serviceReqSeqRef = useRef(0);
+  const activeTokenRef = useRef(token);
+  const lastAcceptedOrdersRef = useRef(orders);
+  const notifiedPreparedIdsRef = useRef(new Set());
+
+  useEffect(() => {
+    return () => {
+      activeTokenRef.current = '';
+      if (lifetimeRetryTimerRef.current) {
+        clearTimeout(lifetimeRetryTimerRef.current);
+        lifetimeRetryTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const fetchOrdersOnly = async () => {
+    if (!token || activeTokenRef.current !== token) return;
+    const reqToken = token;
+    const reqTenantKey = activeTenantKeyRef.current || `${reqToken}_${propSlug || localStorage.getItem('touchqr_admin_slug') || ''}`;
+    const ordersSeq = ++ordersRequestSeqRef.current;
+    const FETCH_FAILED = Symbol('fetchFailed');
+
+    const data = await fetchAdminOrders(reqToken).catch((err) => {
+      if (err && (err.isUnauthorized || err.status === 401 || err.message?.includes('401'))) {
+        if (onLogout && isMountedRef.current && activeTokenRef.current === reqToken) onLogout(reqToken);
+      }
+      return FETCH_FAILED;
+    });
+
+    const isCurrentTenant = !activeTenantKeyRef.current || activeTenantKeyRef.current === reqTenantKey;
+    if (!isMountedRef.current || activeTokenRef.current !== reqToken || ordersSeq !== ordersRequestSeqRef.current || !isCurrentTenant) {
+      return;
+    }
+    if (data === FETCH_FAILED) {
+      return;
+    }
+    const safeData = (Array.isArray(data) ? data : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
+
+    // Total active live orders (pending + kitchen + accepted, strictly excluding already-settled orders)
+    const activeOrderCount = safeData.filter(o => {
+      const isSettled = Boolean(o.is_settled === 1 || o.is_settled === '1' || o.is_settled === true);
+      return !isSettled && ['pending', 'kitchen', 'accepted', 'preparing'].includes(o.status);
+    }).length;
+    if (activeOrderCount > prevPendingCountRef.current) {
+      triggerBackgroundNotification(activeOrderCount);
+    }
+    prevPendingCountRef.current = activeOrderCount;
+    setPrevPendingCount(activeOrderCount);
+
+    // Merge safeData with pendingUpdatesRef so optimistic state is never overwritten during background polling
+    const mergedOrders = safeData.map(backendOrd => {
+      const override = pendingUpdatesRef.current.get(String(backendOrd.id));
+      if (override) {
+        return { ...backendOrd, ...override };
+      }
+      return backendOrd;
+    });
+
+    // Compare authoritative server snapshots outside setOrders updater and collect every newly prepared order
+    const prevOrders = lastAcceptedOrdersRef.current;
+    if (Array.isArray(prevOrders) && prevOrders.length > 0) {
+      const prevPreparedMap = new Map(
+        prevOrders.map(o => [String(o.id), o.kitchen_prepared === 1 || o.kitchen_prepared === true || o.kitchen_prepared === '1'])
+      );
+      const newlyPreparedList = safeData.filter(newOrd => {
+        const oid = String(newOrd.id);
+        if (notifiedPreparedIdsRef.current.has(oid)) return false;
+        const newIsPrep = newOrd.kitchen_prepared === 1 || newOrd.kitchen_prepared === true || newOrd.kitchen_prepared === '1';
+        const oldIsPrep = prevPreparedMap.get(oid) === true;
+        return newIsPrep && !oldIsPrep;
+      });
+
+      if (newlyPreparedList.length > 0) {
+        newlyPreparedList.forEach(o => notifiedPreparedIdsRef.current.add(String(o.id)));
+        playWaiterAlert();
+        const labels = newlyPreparedList.map(o => (o.table_number ? `Table ${o.table_number}` : `Order ${o.id}`));
+        const combinedLabel = labels.join(', ');
+        triggerFoodPreparedNotification(combinedLabel);
+        setToastMessage(
+          newlyPreparedList.length === 1
+            ? `🛎️ ${labels[0]} Food is PREPARED in Kitchen! Ready to Serve.`
+            : `🛎️ ${newlyPreparedList.length} Orders PREPARED in Kitchen (${combinedLabel})! Ready to Serve.`
+        );
+        setTimeout(() => {
+          if (isMountedRef.current) setToastMessage('');
+        }, 7000);
+      }
+    }
+    lastAcceptedOrdersRef.current = safeData;
+    setOrders(mergedOrders);
+    try {
+      const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+      if (currentSlug) {
+        localStorage.setItem(`admin_cache_${currentSlug}_orders`, JSON.stringify(mergedOrders));
+      }
+      localStorage.setItem('admin_cache_orders', JSON.stringify(mergedOrders));
+    } catch (e) { }
+  };
+
+  const fetchServiceRequestsOnly = async () => {
+    if (!token || activeTokenRef.current !== token) return;
+    const reqToken = token;
+    const reqTenantKey = activeTenantKeyRef.current || `${reqToken}_${propSlug || localStorage.getItem('touchqr_admin_slug') || ''}`;
+    const reqsSeq = ++serviceReqSeqRef.current;
+    const FETCH_FAILED = Symbol('fetchFailed');
+
+    const reqsData = await fetchServiceRequests(reqToken).catch((err) => {
+      if (err && (err.isUnauthorized || err.status === 401 || err.message?.includes('401'))) {
+        if (onLogout && isMountedRef.current && activeTokenRef.current === reqToken) onLogout(reqToken);
+      }
+      return FETCH_FAILED;
+    });
+
+    const isCurrentTenant = !activeTenantKeyRef.current || activeTenantKeyRef.current === reqTenantKey;
+    if (!isMountedRef.current || activeTokenRef.current !== reqToken || reqsSeq !== serviceReqSeqRef.current || !isCurrentTenant) {
+      return;
+    }
+    if (reqsData === FETCH_FAILED) {
+      if (serviceRequestsTenantKeyRef.current !== reqTenantKey) {
+        setServiceRequests([]);
+        prevServiceReqIdsRef.current = new Set();
+        isInitialServiceReqFetchRef.current = true;
+      }
+      return;
+    }
+    const safeReqs = Array.isArray(reqsData) ? reqsData : [];
+
+    // 🛎️ Dedicated Waiter Call / Service Request Alert Trigger
+    const newServiceCalls = safeReqs.filter(r => !prevServiceReqIdsRef.current.has(String(r.id)));
+    if (newServiceCalls.length > 0 && !isInitialServiceReqFetchRef.current) {
+      const presenceCalls = newServiceCalls.filter(r => r.request_type === 'presence_verification');
+      const waiterCalls = newServiceCalls.filter(r => r.request_type !== 'presence_verification');
+
+      if (presenceCalls.length > 0) {
+        const latestCall = presenceCalls[0];
+        const rawTbl = String(latestCall.table_number || '1');
+        const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
+          ? rawTbl
+          : `Table ${rawTbl}`;
+        console.log('[SOUND_DEBUG] presence_request_detected', { id: latestCall.id, table: formattedTbl });
+        playPresenceAlert();
+        triggerPresenceVerificationNotification(formattedTbl, latestCall.id);
+        setToastMessage(`🛡️ ${formattedTbl}: Presence Verification Requested!`);
+      } else if (waiterCalls.length > 0) {
+        const latestCall = waiterCalls[0];
+        const rawTbl = String(latestCall.table_number || '1');
+        const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
+          ? rawTbl
+          : `Table ${rawTbl}`;
+        console.log('[SOUND_DEBUG] waiter_request_detected', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
+        playWaiterAlert();
+        setToastMessage(`🛎️ ${formattedTbl} Calling Staff: "${latestCall.request_type}"!`);
+      }
+      setTimeout(() => {
+        if (isMountedRef.current) setToastMessage('');
+      }, 7000);
+    }
+    isInitialServiceReqFetchRef.current = false;
+    prevServiceReqIdsRef.current = new Set(safeReqs.map(r => String(r.id)));
+    serviceRequestsTenantKeyRef.current = reqTenantKey;
+    setServiceRequests(safeReqs);
+  };
 
   const loadOrders = async () => {
-    if (!token) return;
+    if (!token || activeTokenRef.current !== token) return;
     try {
-      const [data, reqsData] = await Promise.all([
-        fetchAdminOrders(token).catch((err) => {
-          if (err && (err.isUnauthorized || err.status === 401 || err.message?.includes('401'))) {
-            if (onLogout) onLogout();
-          }
-          return [];
-        }),
-        fetchServiceRequests(token).catch((err) => {
-          if (err && (err.isUnauthorized || err.status === 401 || err.message?.includes('401'))) {
-            if (onLogout) onLogout();
-          }
-          return [];
-        })
-      ]);
-      const safeData = (Array.isArray(data) ? data : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
-      const safeReqs = Array.isArray(reqsData) ? reqsData : [];
-
-      // 🛎️ Dedicated Waiter Call / Service Request Alert Trigger
-      const newServiceCalls = safeReqs.filter(r => !prevServiceReqIdsRef.current.has(String(r.id)));
-      if (newServiceCalls.length > 0 && !isInitialServiceReqFetchRef.current) {
-        const presenceCalls = newServiceCalls.filter(r => r.request_type === 'presence_verification');
-        const waiterCalls = newServiceCalls.filter(r => r.request_type !== 'presence_verification');
-
-        if (presenceCalls.length > 0) {
-          const latestCall = presenceCalls[0];
-          const rawTbl = String(latestCall.table_number || '1');
-          const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
-            ? rawTbl
-            : `Table ${rawTbl}`;
-          console.log('[SOUND_DEBUG] presence_request_detected', { id: latestCall.id, table: formattedTbl });
-          playPresenceAlert();
-          triggerPresenceVerificationNotification(formattedTbl, latestCall.id);
-          setToastMessage(`🛡️ ${formattedTbl}: Presence Verification Requested!`);
-        } else if (waiterCalls.length > 0) {
-          const latestCall = waiterCalls[0];
-          const rawTbl = String(latestCall.table_number || '1');
-          const formattedTbl = (rawTbl.toLowerCase().includes('table') || rawTbl.toLowerCase().includes('cabin') || rawTbl.toLowerCase().includes('room') || rawTbl.toLowerCase().includes('vip'))
-            ? rawTbl
-            : `Table ${rawTbl}`;
-          console.log('[SOUND_DEBUG] waiter_request_detected', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
-          playWaiterAlert();
-          setToastMessage(`🛎️ ${formattedTbl} Calling Staff: "${latestCall.request_type}"!`);
-        }
-        setTimeout(() => setToastMessage(''), 7000);
-      }
-      isInitialServiceReqFetchRef.current = false;
-      prevServiceReqIdsRef.current = new Set(safeReqs.map(r => String(r.id)));
-
-      // Total active live orders (pending + kitchen + accepted, strictly excluding already-settled orders)
-      const activeOrderCount = safeData.filter(o => {
-        const isSettled = Boolean(o.is_settled === 1 || o.is_settled === '1' || o.is_settled === true);
-        return !isSettled && ['pending', 'kitchen', 'accepted', 'preparing'].includes(o.status);
-      }).length;
-      if (activeOrderCount > prevPendingCount) {
-        triggerBackgroundNotification(activeOrderCount);
-      }
-      setPrevPendingCount(activeOrderCount);
-
-      // Merge safeData with pendingUpdatesRef so optimistic state is never overwritten during background polling
-      const mergedOrders = safeData.map(backendOrd => {
-        const override = pendingUpdatesRef.current.get(String(backendOrd.id));
-        if (override) {
-          return { ...backendOrd, ...override };
-        }
-        return backendOrd;
-      });
-
-      // 🛎️ Cross-device/Cross-tab detection: check if any order newly became kitchen_prepared === 1
-      setOrders(prevOrders => {
-        if (Array.isArray(prevOrders) && prevOrders.length > 0) {
-          const newlyPrepared = mergedOrders.find(newOrd => {
-            const newIsPrep = newOrd.kitchen_prepared === 1 || newOrd.kitchen_prepared === true || newOrd.kitchen_prepared === '1';
-            const oldOrd = prevOrders.find(o => String(o.id) === String(newOrd.id));
-            const oldIsPrep = oldOrd && (oldOrd.kitchen_prepared === 1 || oldOrd.kitchen_prepared === true || oldOrd.kitchen_prepared === '1');
-            return newIsPrep && !oldIsPrep;
-          });
-
-          if (newlyPrepared) {
-            playWaiterAlert();
-            const tblNum = newlyPrepared.table_number ? `Table ${newlyPrepared.table_number}` : `Order ${newlyPrepared.id}`;
-            triggerFoodPreparedNotification(tblNum);
-            setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
-            setTimeout(() => setToastMessage(''), 7000);
-          }
-        }
-        return mergedOrders;
-      });
-      try {
-        const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
-        if (currentSlug) {
-          localStorage.setItem(`admin_cache_${currentSlug}_orders`, JSON.stringify(mergedOrders));
-        }
-        localStorage.setItem('admin_cache_orders', JSON.stringify(mergedOrders));
-      } catch (e) { }
-      setServiceRequests(safeReqs);
+      await Promise.all([fetchOrdersOnly(), fetchServiceRequestsOnly()]);
     } catch (err) {
       console.error('Failed to load orders & requests:', err);
     }
@@ -1301,8 +1412,8 @@ export default function AdminDashboard({
   const [printToast, setPrintToast] = useState(null);
   const [printedOrdersMap, setPrintedOrdersMap] = useState({}); // { orderId_type: count }
 
-  const showPrintToast = (type, message, order = null, printType = null, paymentMode = 'CASH') => {
-    setPrintToast({ type, message, order, printType, paymentMode });
+  const showPrintToast = (type, message, order = null, printType = null, paymentMode = 'CASH', billDataOverride = null) => {
+    setPrintToast({ type, message, order, printType, paymentMode, billDataOverride });
     if (type === 'success') {
       setTimeout(() => {
         setPrintToast(prev => (prev?.message === message ? null : prev));
@@ -1466,7 +1577,7 @@ export default function AdminDashboard({
     `;
   };
 
-  const getBillHTML = (order, paymentMode = 'CASH', isReprint = false, paperWidth = '80mm', upiQrDataUrl = null, upiDetails = null) => {
+  const getBillHTML = (order, paymentMode = 'CASH', isReprint = false, paperWidth = '80mm', upiQrDataUrl = null, upiDetails = null, billDataOverride = null) => {
     const gstin = restaurantInfo?.gstin_number || '';
     const fssai = restaurantInfo?.fssai_lic_no || '';
     const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null) ? restaurantInfo.currency_symbol : '₹';
@@ -1474,7 +1585,8 @@ export default function AdminDashboard({
     const bodyWidth = selectedWidth === '58mm' ? '48mm' : '72mm';
 
     const billData = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
-    const { sessionOrders, totalRoundsCount, subtotal, cgst, sgst, grandTotal, serviceChargeAmount, spaceLabel } = billData;
+    const activeBillData = billDataOverride || billData;
+    const { sessionOrders, totalRoundsCount, subtotal, cgst, sgst, grandTotal, serviceChargeAmount, spaceLabel } = activeBillData;
     const resolvedSpace = spaceLabel || formatOrderLocation(order, restaurantInfo || settingsForm);
     const isGst = Boolean((restaurantInfo?.gst_enabled ?? settingsForm?.gst_enabled) || (cgst > 0) || (sgst > 0));
     const bizType = String(restaurantInfo?.business_type || '').toLowerCase();
@@ -1738,15 +1850,24 @@ export default function AdminDashboard({
     }
   };
 
+  const openBillModalWithSnapshot = (order) => {
+    if (!order) {
+      setBillOrderModal(null);
+      return;
+    }
+    const capturedSnapshot = order.__billSnapshot || calculateBillDetails(order, orders, restaurantInfo, settingsForm);
+    setBillOrderModal({ ...order, __billSnapshot: capturedSnapshot });
+  };
+
   const handleDirectBluetoothPrint = (order, printType = 'kot') => {
     if (printType === 'kot') {
       handlePrintKOT(order);
     } else {
-      setBillOrderModal(order);
+      openBillModalWithSnapshot(order);
     }
   };
 
-  const handlePrintCustomerBill = async (order, paymentMode = 'CASH') => {
+  const handlePrintCustomerBill = async (order, paymentMode = 'CASH', billDataOverride = null) => {
     if (!order || (printingOrderId === order.id && printingType === 'bill')) return;
     setPrintingOrderId(order.id);
     setPrintingType('bill');
@@ -1790,7 +1911,7 @@ export default function AdminDashboard({
       let upiQrDataUrl = null;
       let upiUri = null;
       if (printUpiQr && upiId && isUnsettledSlip) {
-        const billData = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
+        const billData = billDataOverride || calculateBillDetails(order, orders, restaurantInfo, settingsForm);
         upiUri = buildUpiPaymentUri({
           upiId,
           payeeName,
@@ -1812,23 +1933,23 @@ export default function AdminDashboard({
         }
       }
 
-      const htmlContent = getBillHTML(order, paymentMode, isReprint, paperWidth, upiQrDataUrl, { upiId, payeeName });
+      const htmlContent = getBillHTML(order, paymentMode, isReprint, paperWidth, upiQrDataUrl, { upiId, payeeName }, billDataOverride);
       await silentIframePrint(htmlContent, order, 'bill', isReprint, paymentMode, upiUri);
       setPrintedOrdersMap(prev => ({ ...prev, [printKey]: (prev[printKey] || 0) + 1 }));
       setPrintingOrderId(null);
       setPrintingType(null);
-      showPrintToast('success', isReprint ? '✓ Bill re-printed' : '✓ Bill printed', order, 'bill', paymentMode);
+      showPrintToast('success', isReprint ? '✓ Bill re-printed' : '✓ Bill printed', order, 'bill', paymentMode, billDataOverride);
     } catch (err) {
       console.error('Bill printing error:', err);
       setPrintingOrderId(null);
       setPrintingType(null);
-      showPrintToast('error', '⚠ Printer unavailable', order, 'bill', paymentMode);
+      showPrintToast('error', '⚠ Printer unavailable', order, 'bill', paymentMode, billDataOverride);
     }
   };
 
   const [isSettlingOrder, setIsSettlingOrder] = useState(false);
 
-  const handleSettleAndCompleteOrder = async (order, paymentMode = 'CASH') => {
+  const handleSettleAndCompleteOrder = async (order, paymentMode = 'CASH', explicitSnapshot = null) => {
     if (!order || isSettlingOrder) return;
     setIsSettlingOrder(true);
 
@@ -1837,10 +1958,28 @@ export default function AdminDashboard({
     const key = String(orderId);
 
     try {
-      // 1. Execute authorized backend settlement transaction through existing API contract
+      // 1. Compare retained payment-time snapshot with current live orders before settling
+      const paidSnapshot = explicitSnapshot || order.__billSnapshot || (billOrderModal?.id === orderId ? billOrderModal.__billSnapshot : null) || calculateBillDetails(order, orders, restaurantInfo, settingsForm);
+      const latestBillSnapshot = calculateBillDetails(order, orders, restaurantInfo, settingsForm);
+      const paidIds = Array.isArray(paidSnapshot?.sessionOrders) ? paidSnapshot.sessionOrders.map(o => String(o.id)) : [key];
+      const latestIds = Array.isArray(latestBillSnapshot?.sessionOrders) ? latestBillSnapshot.sessionOrders.map(o => String(o.id)) : [key];
+      const paidIdSet = new Set(paidIds);
+      const idsChanged = paidIds.length !== latestIds.length || latestIds.some(id => !paidIdSet.has(id));
+      const totalChanged = Math.abs(Number(paidSnapshot?.grandTotal || 0) - Number(latestBillSnapshot?.grandTotal || 0)) > 0.01;
+      if (idsChanged || totalChanged) {
+        setBillOrderModal({ ...order, __billSnapshot: latestBillSnapshot });
+        alert('Bill updated after new order activity. Please review the updated bill and confirm payment again.');
+        return;
+      }
+
+      const expectedOrderIds = Array.isArray(paidSnapshot?.sessionOrders)
+        ? paidSnapshot.sessionOrders.map(o => o.id)
+        : [orderId];
       const settleResult = await updateOrderStatus(orderId, 'completed', token, {
         settle: {
-          method: settleMethod
+          method: settleMethod,
+          expected_order_ids: expectedOrderIds,
+          expected_total: paidSnapshot?.grandTotal
         }
       });
 
@@ -1885,14 +2024,17 @@ export default function AdminDashboard({
       // 4. Authoritative reload from server
       await loadOrders();
 
-      // 5. Generate / Print Customer Bill (Safe, post-settlement distinct outcome)
+      // 5. Generate / Print Customer Bill using the retained paid snapshot
       try {
-        await handlePrintCustomerBill(order, paymentMode);
+        await handlePrintCustomerBill(order, paymentMode, paidSnapshot);
       } catch (printErr) {
         console.warn('Post-settlement print notice:', printErr);
       }
     } catch (err) {
       console.error('Settlement error:', err);
+      if (err && (err.status === 409 || err.code === 'bill_snapshot_stale')) {
+        await loadOrders().catch(() => {});
+      }
       alert(err.message || 'Payment settlement failed. Order remains unsettled.');
     } finally {
       setIsSettlingOrder(false);
@@ -1956,48 +2098,98 @@ export default function AdminDashboard({
     printWindow.document.close();
   };
 
+  const [analyticsFilterState, setAnalyticsFilterState] = useState({ period: 'all', year: null, month: null });
+  const analyticsFilterRef = useRef({ period: 'all', year: null, month: null });
+  const analyticsRequestSeqRef = useRef(0);
+  const lifetimeRequestSeqRef = useRef(0);
+  const lifetimeAcceptedSeqRef = useRef(0);
+  const lifetimeInFlightKeyRef = useRef('');
+  const lifetimeRetryCountRef = useRef(0);
+  const lifetimeRetryTimerRef = useRef(null);
+  const [lifetimeRetryTick, setLifetimeRetryTick] = useState(0);
+  const isMountedRef = useRef(true);
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  const prevAnalyticsTokenRef = useRef(token);
+  const [analyticsSyncState, setAnalyticsSyncState] = useState({ status: 'idle', error: null });
+  const [analyticsRetryKey, setAnalyticsRetryKey] = useState(0);
+
   useEffect(() => {
-    loadOrders();
-    const interval = setInterval(loadOrders, 2000);
-    return () => clearInterval(interval);
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const acceptLifetimeAnalytics = (data, reqSeq) => {
+    if (!isMountedRef.current || !data || reqSeq === null || reqSeq === undefined) return false;
+    if (data.selected_period && data.selected_period !== 'all') return false;
+    if (reqSeq !== lifetimeRequestSeqRef.current || reqSeq <= lifetimeAcceptedSeqRef.current) {
+      return false;
+    }
+    lifetimeAcceptedSeqRef.current = reqSeq;
+    setLifetimeAnalyticsData(data);
+    return true;
+  };
+
+  useEffect(() => {
+    analyticsFilterRef.current = analyticsFilterState;
+  }, [analyticsFilterState]);
+
+  useEffect(() => {
+    if (prevAnalyticsTokenRef.current === token) return;
+    prevAnalyticsTokenRef.current = token;
+    const resetFilter = { period: 'all', year: null, month: null };
+    analyticsFilterRef.current = resetFilter;
+    setAnalyticsFilterState(resetFilter);
+    setAnalyticsSyncState({ status: 'idle', error: null });
+    analyticsRequestSeqRef.current += 1;
+    lifetimeRequestSeqRef.current += 1;
+    lifetimeAcceptedSeqRef.current = lifetimeRequestSeqRef.current;
   }, [token]);
 
-  const [analyticsFilterState, setAnalyticsFilterState] = useState({ period: 'all', year: null, month: null });
-  const analyticsFetchRef = useRef(false);
-
   useEffect(() => {
-    let interval = null;
-    if (activeTab === 'analytics' && token) {
-      const fetchAnalyticsNow = async () => {
-        if (analyticsFetchRef.current) return;
-        analyticsFetchRef.current = true;
-        try {
-          const data = await fetchAdminAnalytics(token, analyticsFilterState.period, analyticsFilterState.year, analyticsFilterState.month);
-          if (data) setAnalyticsData(data);
-        } catch (err) {
-          console.warn('Analytics polling notice:', err);
-        } finally {
-          analyticsFetchRef.current = false;
+    if (activeTab !== 'analytics' || !token) return undefined;
+    const effectToken = token;
+    const effectTenantKey = activeTenantKeyRef.current || `${effectToken}_${propSlug || localStorage.getItem('touchqr_admin_slug') || ''}`;
+    const isAllTimeFilter =
+      analyticsFilterState.period === 'all' &&
+      !analyticsFilterState.year &&
+      !analyticsFilterState.month;
+
+    return startAnalyticsPolling({
+      fetchAnalytics: async () => {
+        const pollLifetimeSeq = isAllTimeFilter ? ++lifetimeRequestSeqRef.current : null;
+        const data = await fetchAdminAnalytics(
+          effectToken,
+          analyticsFilterState.period,
+          analyticsFilterState.year,
+          analyticsFilterState.month
+        );
+        if (
+          pollLifetimeSeq !== null &&
+          activeTokenRef.current === effectToken &&
+          (!activeTenantKeyRef.current || effectTenantKey === activeTenantKeyRef.current)
+        ) {
+          acceptLifetimeAnalytics(data, pollLifetimeSeq);
         }
-      };
+        return data;
+      },
+      onSuccess: (data) => {
+        setAnalyticsData(data);
+      },
+      onStatusChange: (nextState) => setAnalyticsSyncState(nextState),
+      onError: (err) => console.warn('Analytics polling notice:', err),
+      seqRef: analyticsRequestSeqRef,
+      intervalMs: 10000
+    });
+  }, [activeTab, token, analyticsFilterState, analyticsRetryKey]);
 
-      fetchAnalyticsNow();
-      interval = setInterval(fetchAnalyticsNow, 10000); // 10s auto-refresh when tab is active
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [activeTab, token, analyticsFilterState]);
-
-  const handleFilterAnalytics = async (period = 'all', year = null, month = null) => {
-    setAnalyticsFilterState({ period, year, month });
-    if (!token) return;
-    try {
-      const data = await fetchAdminAnalytics(token, period, year, month);
-      if (data) setAnalyticsData(data);
-    } catch (err) {
-      console.warn('Filter analytics error:', err);
-    }
+  const handleFilterAnalytics = (period = 'all', year = null, month = null) => {
+    const nextFilter = { period, year, month };
+    analyticsFilterRef.current = nextFilter;
+    analyticsRequestSeqRef.current += 1;
+    setAnalyticsFilterState(nextFilter);
   };
 
   useEffect(() => {
@@ -2262,14 +2454,23 @@ export default function AdminDashboard({
       setLoading(true);
     }
     try {
+      const isAnalyticsTabActive = activeTabRef.current === 'analytics';
+      const loadAnalyticsSeq = isAnalyticsTabActive ? null : ++analyticsRequestSeqRef.current;
+      const loadLifetimeSeq = isAnalyticsTabActive ? null : ++lifetimeRequestSeqRef.current;
+      if (!isAnalyticsTabActive) {
+        lifetimeInFlightKeyRef.current = requestTenantKey;
+      }
       let [catData, dishData, infoData, comboData, subStatusData, analyticsResp] = await Promise.all([
         fetchCategories({ adminView: true, token, slug: currentSlug }).catch(() => null),
         fetchDishes({ adminView: true, token, slug: currentSlug }).catch(() => null),
         fetchRestaurantInfo({ token, slug: currentSlug }).catch((err) => { console.warn('[MENU] fetchRestaurantInfo notice:', err); return null; }),
         fetchAdminCombos(token).catch(() => null),
         fetch('/api/admin/subscription-status', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetchAdminAnalytics(token, 'all').catch(() => null)
+        isAnalyticsTabActive ? Promise.resolve(undefined) : fetchAdminAnalytics(token, 'all').catch(() => null)
       ]);
+      if (lifetimeInFlightKeyRef.current === requestTenantKey) {
+        lifetimeInFlightKeyRef.current = '';
+      }
 
       // Guard: Late response from an earlier tenant request or superseded request must not overwrite current state
       if (requestId !== activeRequestIdRef.current || (activeTenantKeyRef.current && requestTenantKey !== activeTenantKeyRef.current)) {
@@ -2297,17 +2498,46 @@ export default function AdminDashboard({
         setRestaurantInfo(currentSlug ? getInitialAdminState('info', null) : null);
       }
 
+      const shouldApplyLoadAnalytics =
+        loadAnalyticsSeq !== null &&
+        activeTabRef.current !== 'analytics' &&
+        analyticsFilterRef.current.period === 'all' &&
+        !analyticsFilterRef.current.year &&
+        loadAnalyticsSeq === analyticsRequestSeqRef.current;
+
       if (currentSlug) {
         if (safeCats.length > 0) localStorage.setItem(`admin_cache_${currentSlug}_categories`, JSON.stringify(safeCats));
         if (safeDishes.length > 0) localStorage.setItem(`admin_cache_${currentSlug}_dishes`, JSON.stringify(safeDishes));
         if (infoData) localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(infoData));
         if (safeCombos.length > 0) localStorage.setItem(`admin_cache_${currentSlug}_combos`, JSON.stringify(safeCombos));
-        if (analyticsResp) localStorage.setItem(`admin_cache_${currentSlug}_analytics`, JSON.stringify(analyticsResp));
+        if (shouldApplyLoadAnalytics && analyticsResp) {
+          localStorage.setItem(`admin_cache_${currentSlug}_analytics`, JSON.stringify(analyticsResp));
+        }
         if (subStatusData) localStorage.setItem(`admin_cache_${currentSlug}_subscription_status`, JSON.stringify(subStatusData));
       }
 
       setSubscriptionStatus(subStatusData || null);
-      setAnalyticsData(analyticsResp || null);
+      if (analyticsResp) {
+        lifetimeRetryCountRef.current = 0;
+        acceptLifetimeAnalytics(analyticsResp, loadLifetimeSeq);
+      } else if (analyticsResp === null && !isAnalyticsTabActive) {
+        const needsHomeLifetime = ['home', 'dishes', 'categories', 'combos'].includes(activeTabRef.current);
+        const hasExistingLifetime = Boolean(
+          lifetimeAnalyticsData && (!lifetimeAnalyticsData.selected_period || lifetimeAnalyticsData.selected_period === 'all')
+        );
+        if (needsHomeLifetime && !hasExistingLifetime && lifetimeRetryCountRef.current < 2) {
+          lifetimeRetryCountRef.current += 1;
+          if (lifetimeRetryTimerRef.current) clearTimeout(lifetimeRetryTimerRef.current);
+          lifetimeRetryTimerRef.current = setTimeout(() => {
+            if (isMountedRef.current && activeTokenRef.current === token) {
+              setLifetimeRetryTick(t => t + 1);
+            }
+          }, 1200 * lifetimeRetryCountRef.current);
+        }
+      }
+      if (shouldApplyLoadAnalytics) {
+        setAnalyticsData(analyticsResp || null);
+      }
       if (infoData) {
         const defaultVis = { must_try: true, combo: true, special: true, under100: true, veg: true, nonveg: true, egg: true, customizable: true };
         setSettingsForm({
@@ -2341,7 +2571,13 @@ export default function AdminDashboard({
           custom_domain: infoData.custom_domain || '',
           watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
           custom_domain_enabled: infoData.custom_domain_enabled === 1 || infoData.custom_domain_enabled === true || infoData.custom_domain_enabled === '1',
-          analytics_export_enabled: infoData.analytics_export_enabled === 1 || infoData.analytics_export_enabled === true || infoData.analytics_export_enabled === '1',
+          analytics_export_enabled: Boolean(
+          infoData.is_vip ||
+          infoData.is_complimentary ||
+          infoData.analytics_export_enabled === 1 ||
+          infoData.analytics_export_enabled === true ||
+          infoData.analytics_export_enabled === '1'
+        ),
           gst_invoice_enabled: infoData.gst_invoice_enabled === 1 || infoData.gst_invoice_enabled === true || infoData.gst_invoice_enabled === '1',
           ai_review_enabled: infoData.ai_review_enabled === 1 || infoData.ai_review_enabled === true || infoData.ai_review_enabled === '1',
           ai_review_tone: infoData.ai_review_tone || 'warm',
@@ -2393,6 +2629,7 @@ export default function AdminDashboard({
     const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || '';
     const currentTenantKey = `${token}_${currentSlug}`;
     const isTenantSwitch = activeTenantKeyRef.current !== '' && activeTenantKeyRef.current !== currentTenantKey;
+    activeTokenRef.current = token;
     activeTenantKeyRef.current = currentTenantKey;
 
     if (isTenantSwitch) {
@@ -2402,9 +2639,31 @@ export default function AdminDashboard({
       setDishes(currentSlug ? getInitialAdminState('dishes', []) : []);
       setCombos(currentSlug ? getInitialAdminState('combos', []) : []);
       setOrders(currentSlug ? getInitialAdminState('orders', []) : []);
+      setServiceRequests([]);
+      setBillOrderModal(null);
+      prevServiceReqIdsRef.current = new Set();
+      isInitialServiceReqFetchRef.current = true;
+      serviceRequestsTenantKeyRef.current = currentTenantKey;
+      prevPendingCountRef.current = 0;
+      setPrevPendingCount(0);
+      ordersRequestSeqRef.current += 1;
+      serviceReqSeqRef.current += 1;
       setAnalyticsData(currentSlug ? getInitialAdminState('analytics', null) : null);
+      lifetimeRequestSeqRef.current += 1;
+      lifetimeAcceptedSeqRef.current = lifetimeRequestSeqRef.current;
+      lifetimeInFlightKeyRef.current = '';
+      lifetimeRetryCountRef.current = 0;
+      if (lifetimeRetryTimerRef.current) {
+        clearTimeout(lifetimeRetryTimerRef.current);
+        lifetimeRetryTimerRef.current = null;
+      }
+      notifiedPreparedIdsRef.current = new Set();
+      lastAcceptedOrdersRef.current = [];
+      setLifetimeAnalyticsData(currentSlug ? getInitialAdminState('analytics', null) : null);
       setSubscriptionStatus(currentSlug ? getInitialAdminState('subscription_status', null) : null);
       setSettingsForm({});
+    } else if (!serviceRequestsTenantKeyRef.current) {
+      serviceRequestsTenantKeyRef.current = currentTenantKey;
     }
 
     loadData();
@@ -2412,6 +2671,92 @@ export default function AdminDashboard({
       if (Array.isArray(data)) { setAnnouncements(data); try { localStorage.setItem('touchqr_cached_announcements', JSON.stringify(data)); } catch {} }
     }).catch(() => { });
   }, [token, propSlug]);
+
+  // Independent sequential polling loops run AFTER tenant-switch state reset so switching tenants clears A cleanly first
+  useEffect(() => {
+    if (!token) return undefined;
+    ordersRequestSeqRef.current += 1;
+    serviceReqSeqRef.current += 1;
+
+    let cancelled = false;
+    let ordersTimerId = null;
+    let serviceReqTimerId = null;
+
+    const pollOrders = async () => {
+      if (cancelled) return;
+      await fetchOrdersOnly();
+      if (!cancelled) {
+        ordersTimerId = setTimeout(pollOrders, 2000);
+      }
+    };
+
+    const pollServiceRequests = async () => {
+      if (cancelled) return;
+      await fetchServiceRequestsOnly();
+      if (!cancelled) {
+        serviceReqTimerId = setTimeout(pollServiceRequests, 2000);
+      }
+    };
+
+    void pollOrders();
+    void pollServiceRequests();
+    return () => {
+      cancelled = true;
+      if (ordersTimerId) clearTimeout(ordersTimerId);
+      if (serviceReqTimerId) clearTimeout(serviceReqTimerId);
+    };
+  }, [token, propSlug]);
+
+  // Fetch tenant-scoped lifetime analytics whenever Home or Menu needs it and no lifetime snapshot is available (with bounded retry)
+  useEffect(() => {
+    const needsLifetime = activeTab === 'home' || ['dishes', 'categories', 'combos'].includes(activeTab);
+    if (!needsLifetime || !token) return undefined;
+    const hasValidLifetime = Boolean(
+      lifetimeAnalyticsData &&
+      (!lifetimeAnalyticsData.selected_period || lifetimeAnalyticsData.selected_period === 'all')
+    );
+    if (hasValidLifetime) return undefined;
+
+    const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+    const requestTenantKey = `${token}_${currentSlug}`;
+    if (lifetimeInFlightKeyRef.current === requestTenantKey) return undefined;
+
+    lifetimeInFlightKeyRef.current = requestTenantKey;
+    const reqToken = token;
+    const reqSeq = ++lifetimeRequestSeqRef.current;
+
+    fetchAdminAnalytics(reqToken, 'all')
+      .then((data) => {
+        const isCurrentTenant = !activeTenantKeyRef.current || activeTenantKeyRef.current === requestTenantKey;
+        if (!isMountedRef.current || activeTokenRef.current !== reqToken || !isCurrentTenant) return;
+        lifetimeRetryCountRef.current = 0;
+        acceptLifetimeAnalytics(data, reqSeq);
+      })
+      .catch(() => {
+        const isCurrentTenant = !activeTenantKeyRef.current || activeTenantKeyRef.current === requestTenantKey;
+        if (isMountedRef.current && activeTokenRef.current === reqToken && isCurrentTenant && lifetimeRetryCountRef.current < 2) {
+          lifetimeRetryCountRef.current += 1;
+          if (lifetimeRetryTimerRef.current) clearTimeout(lifetimeRetryTimerRef.current);
+          lifetimeRetryTimerRef.current = setTimeout(() => {
+            if (isMountedRef.current && activeTokenRef.current === reqToken) {
+              setLifetimeRetryTick(t => t + 1);
+            }
+          }, 1200 * lifetimeRetryCountRef.current);
+        }
+      })
+      .finally(() => {
+        if (lifetimeInFlightKeyRef.current === requestTenantKey) {
+          lifetimeInFlightKeyRef.current = '';
+        }
+      });
+
+    return () => {
+      if (lifetimeRetryTimerRef.current) {
+        clearTimeout(lifetimeRetryTimerRef.current);
+        lifetimeRetryTimerRef.current = null;
+      }
+    };
+  }, [activeTab, token, propSlug, lifetimeRetryTick]);
 
   // 📢 Real-Time Platform Broadcast Sync (Cross-Tab BroadcastChannel + Tab Focus + 45s Polling)
   useEffect(() => {
@@ -4004,7 +4349,7 @@ export default function AdminDashboard({
               {activeTab === 'home' && (
                 <HomeView
                   restaurantInfo={mergedRestaurantInfo}
-                  analyticsData={analyticsData}
+                  analyticsData={lifetimeAnalyticsData || (!analyticsData?.selected_period || analyticsData.selected_period === 'all' ? analyticsData : null)}
                   orders={orders}
                   serviceRequests={serviceRequests}
                   dishes={safeDishes}
@@ -4042,7 +4387,7 @@ export default function AdminDashboard({
                       handleUpdateStatus(order.id, 'accepted', { sent_to_kds: 0 });
                     }
                   }}
-                  onOpenBillModal={setBillOrderModal}
+                  onOpenBillModal={openBillModalWithSnapshot}
                   onPrintBill={(order, mode) => handlePrintCustomerBill(order, mode || 'CASH')}
                   serviceRequests={serviceRequests}
                   onResolveServiceRequest={handleResolveServiceRequest}
@@ -4104,9 +4449,17 @@ export default function AdminDashboard({
               {activeTab === 'analytics' && (
                 <AnalyticsView
                   analyticsData={analyticsData}
+                  selectedFilterPeriod={
+                    analyticsFilterState.year && analyticsFilterState.month
+                      ? `month:${analyticsFilterState.year}-${String(analyticsFilterState.month).padStart(2, '0')}`
+                      : analyticsFilterState.period
+                  }
                   onExportReport={handleExportSalesReport}
                   onDownloadAllCSV={handleDownloadAllSalesReport}
                   onFilterPeriod={handleFilterAnalytics}
+                  syncStatus={analyticsSyncState.status}
+                  syncError={analyticsSyncState.error}
+                  onRetrySync={() => setAnalyticsRetryKey(prev => prev + 1)}
                   exporting={exportingReport}
                   exportingAll={exportingReport}
                   analyticsExportEnabled={tenantCaps.analytics_export_enabled}
@@ -4150,7 +4503,7 @@ export default function AdminDashboard({
                   onRefreshData={loadData}
                   onReturnToMenu={onReturnToMenu}
                   restaurantInfo={mergedRestaurantInfo}
-                  analyticsData={analyticsData}
+                  analyticsData={lifetimeAnalyticsData || (!analyticsData?.selected_period || analyticsData.selected_period === 'all' ? analyticsData : null)}
                   currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                   maxDishes={tenantCaps.max_dishes}
                   maxCategories={tenantCaps.max_categories}
@@ -4639,54 +4992,79 @@ export default function AdminDashboard({
       )}
 
       {/* 🧾 Select Payment Mode Modal before Printing Bill */}
-      {billOrderModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.7)',
-          backdropFilter: 'blur(6px)',
-          zIndex: 10020,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px'
-        }}>
+      {billOrderModal && (() => {
+        const billData = billOrderModal.__billSnapshot || calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
+        const liveBillData = calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
+        const capIds = Array.isArray(billData?.sessionOrders) ? billData.sessionOrders.map(o => String(o.id)) : [String(billOrderModal.id)];
+        const liveIds = Array.isArray(liveBillData?.sessionOrders) ? liveBillData.sessionOrders.map(o => String(o.id)) : [String(billOrderModal.id)];
+        const capIdSet = new Set(capIds);
+        const hasBillSnapshotChanged = capIds.length !== liveIds.length || liveIds.some(id => !capIdSet.has(id)) || Math.abs(Number(billData?.grandTotal || 0) - Number(liveBillData?.grandTotal || 0)) > 0.01;
+        const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'));
+        const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
+        const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
+        const currentQrSnapshotKey = getModalQrSnapshotKey(billOrderModal, billData, upiId, payeeName);
+
+        return (
           <div style={{
-            background: '#FFFFFF',
-            borderRadius: '20px',
-            maxWidth: '380px',
-            width: '100%',
-            padding: '24px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
-            textAlign: 'center'
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 10020,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
           }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0A2315', marginBottom: '4px' }}>
-              🧾 Print Final Customer Bill
-            </h3>
-            {(() => {
-              const billData = calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
-              const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'));
-              if (billData.isMultiRound) {
-                return (
-                  <span id="payment-modal-order-summary" style={{ fontSize: '0.78rem', color: '#0F766E', fontWeight: 800, display: 'block', marginBottom: '16px' }}>
-                    Session Total: {currency}{billData.grandTotal} • {billData.totalRoundsCount} Rounds
-                  </span>
-                );
-              }
-              return (
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '380px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+              textAlign: 'center'
+            }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0A2315', marginBottom: '4px' }}>
+                🧾 Print Final Customer Bill
+              </h3>
+              {billData.isMultiRound ? (
+                <span id="payment-modal-order-summary" style={{ fontSize: '0.78rem', color: '#0F766E', fontWeight: 800, display: 'block', marginBottom: '16px' }}>
+                  Session Total: {currency}{billData.grandTotal} • {billData.totalRoundsCount} Rounds
+                </span>
+              ) : (
                 <span id="payment-modal-order-summary" style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
                   Order {billOrderModal.id} • Total: {currency}{billOrderModal.total_amount}
                 </span>
-              );
-            })()}
+              )}
 
-            {/* Dynamic UPI On-Screen QR Option */}
-            {(() => {
-              const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
-              if (!upiId) return null;
-              const billData = calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
-              const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'));
-              return (
+              {hasBillSnapshotChanged && (
+                <div style={{ marginBottom: '14px', padding: '10px 12px', background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '10px', textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#92400E', marginBottom: '4px' }}>
+                    ⚠ Order updated! New total: {currency}{liveBillData.grandTotal} ({liveBillData.totalRoundsCount} rounds)
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBillOrderModal({ ...billOrderModal, __billSnapshot: liveBillData })}
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px',
+                      background: '#D97706',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Review & Use Updated Bill
+                  </button>
+                </div>
+              )}
+
+              {/* Dynamic UPI On-Screen QR Option */}
+              {upiId && (
                 <div style={{ marginBottom: '14px' }}>
                   <button
                     type="button"
@@ -4710,7 +5088,7 @@ export default function AdminDashboard({
                     <span>{showModalUpiQr ? '▲ Hide On-Screen UPI QR' : '📱 Show UPI QR Code on Screen'}</span>
                   </button>
 
-                  {showModalUpiQr && modalUpiQrUrl && (
+                  {showModalUpiQr && modalUpiQrUrl && modalUpiQrSnapshotKey === currentQrSnapshotKey && (
                     <div style={{ marginTop: '10px', padding: '12px', background: '#F8FAFC', borderRadius: '14px', border: '1.5px dashed #3B82F6' }}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 900, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
                         Scan & Pay via GPay • PhonePe • Paytm
@@ -4725,59 +5103,59 @@ export default function AdminDashboard({
                     </div>
                   )}
                 </div>
-              );
-            })()}
+              )}
 
-            <p style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', marginBottom: '12px' }}>
-              Select Payment Method for Receipt:
-            </p>
+              <p style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', marginBottom: '12px' }}>
+                Select Payment Method for Receipt:
+              </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-              {[
-                { id: 'CASH', label: '💵 CASH PAYMENT', bg: '#10B981', color: '#FFFFFF' },
-                { id: 'UPI / QR', label: '📱 UPI / GPAY / PAYTM', bg: '#2563EB', color: '#FFFFFF' },
-                { id: 'CARD', label: '💳 CREDIT / DEBIT CARD', bg: '#7C3AED', color: '#FFFFFF' }
-              ].map(m => (
-                <button
-                  key={m.id}
-                  id={`settle-payment-btn-${m.id.toLowerCase().replace(/[^a-z]/g, '')}`}
-                  disabled={isSettlingOrder}
-                  onClick={() => handleSettleAndCompleteOrder(billOrderModal, m.id)}
-                  style={{
-                    background: isSettlingOrder ? '#9CA3AF' : m.bg,
-                    color: m.color,
-                    border: 'none',
-                    padding: '12px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontWeight: 900,
-                    fontSize: '0.88rem',
-                    cursor: isSettlingOrder ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-                    opacity: isSettlingOrder ? 0.7 : 1
-                  }}
-                >
-                  {isSettlingOrder ? '⏳ Processing Settlement...' : m.label}
-                </button>
-              ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                {[
+                  { id: 'CASH', label: '💵 CASH PAYMENT', bg: '#10B981', color: '#FFFFFF' },
+                  { id: 'UPI / QR', label: '📱 UPI / GPAY / PAYTM', bg: '#2563EB', color: '#FFFFFF' },
+                  { id: 'CARD', label: '💳 CREDIT / DEBIT CARD', bg: '#7C3AED', color: '#FFFFFF' }
+                ].map(m => (
+                  <button
+                    key={m.id}
+                    id={`settle-payment-btn-${m.id.toLowerCase().replace(/[^a-z]/g, '')}`}
+                    disabled={isSettlingOrder || hasBillSnapshotChanged}
+                    onClick={() => handleSettleAndCompleteOrder(billOrderModal, m.id, billData)}
+                    style={{
+                      background: (isSettlingOrder || hasBillSnapshotChanged) ? '#9CA3AF' : m.bg,
+                      color: m.color,
+                      border: 'none',
+                      padding: '12px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontWeight: 900,
+                      fontSize: '0.88rem',
+                      cursor: (isSettlingOrder || hasBillSnapshotChanged) ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                      opacity: (isSettlingOrder || hasBillSnapshotChanged) ? 0.7 : 1
+                    }}
+                  >
+                    {isSettlingOrder ? '⏳ Processing Settlement...' : m.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                disabled={isSettlingOrder}
+                onClick={() => !isSettlingOrder && setBillOrderModal(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: isSettlingOrder ? '#D1D5DB' : '#9CA3AF',
+                  fontSize: '0.8rem',
+                  cursor: isSettlingOrder ? 'not-allowed' : 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Cancel
+              </button>
             </div>
-
-            <button
-              disabled={isSettlingOrder}
-              onClick={() => !isSettlingOrder && setBillOrderModal(null)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: isSettlingOrder ? '#D1D5DB' : '#9CA3AF',
-                fontSize: '0.8rem',
-                cursor: isSettlingOrder ? 'not-allowed' : 'pointer',
-                textDecoration: 'underline'
-              }}
-            >
-              Cancel
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 📖 Interactive System Help & Video Guide Modal */}
       {showHelpModal && (
@@ -5104,7 +5482,7 @@ export default function AdminDashboard({
                 if (printToast.printType === 'kot') {
                   handlePrintKOT(printToast.order);
                 } else {
-                  handlePrintCustomerBill(printToast.order, printToast.paymentMode);
+                  handlePrintCustomerBill(printToast.order, printToast.paymentMode, printToast.billDataOverride ?? null);
                 }
               }}
               style={{

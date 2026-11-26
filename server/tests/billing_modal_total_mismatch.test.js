@@ -13,10 +13,16 @@
 
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import assert from 'assert';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { pathToFileURL } from 'node:url';
+import esbuild from 'esbuild';
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+const { act } = React;
 
 import { calculateBillDetails, safeParseItems, safeParseModifiers } from '../../src/utils/billingHelper.js';
 
@@ -237,6 +243,24 @@ async function runTests() {
     );
     record('UI_CODE', 'Opening payment modal is purely local React state and performs zero mutations', true);
 
+    // 2.6: Verify printToast preserves billDataOverride on failure & Retry forwards it
+    assert.ok(
+      /const showPrintToast = \([^)]*billDataOverride\s*=\s*null/.test(adminDashboardCode) &&
+      adminDashboardCode.includes('handlePrintCustomerBill(printToast.order, printToast.paymentMode, printToast.billDataOverride ?? null)'),
+      'Print-failure Retry must retain and pass billDataOverride to preserve paid receipt snapshots'
+    );
+    record('UI_CODE', 'Print retry toast retains and forwards billDataOverride snapshot', true);
+
+    // 2.7: Verify modal UPI QR clears on snapshot change and gates rendering by snapshot key
+    assert.ok(
+      adminDashboardCode.includes('setModalUpiQrUrl(null);') &&
+      adminDashboardCode.includes('setModalUpiQrSnapshotKey(null);') &&
+      adminDashboardCode.includes('modalQrRequestRef.current !== requestId') &&
+      adminDashboardCode.includes('modalUpiQrSnapshotKey === currentQrSnapshotKey'),
+      'Modal UPI QR effect must clear stale URLs, guard async promises, and match rendered snapshot key'
+    );
+    record('UI_CODE', 'Modal UPI QR clears stale state, guards async promises, and renders only matching snapshot key', true);
+
     // -------------------------------------------------------------------------
     // SECTION 3: Live API Settlement & Audit Record Reconciliation
     // -------------------------------------------------------------------------
@@ -401,6 +425,458 @@ async function runTests() {
     `, [restoId]);
     assert.strictEqual(auditAfterRepeat.length, 2, 'Repeated settlement MUST NOT create duplicate audit logs');
     record('AUDIT_IDEMPOTENCY', 'Repeated settlements on session rounds create ZERO duplicate audit records (remains 2)', true);
+
+    // -------------------------------------------------------------------------
+    // SECTION 4: Live AdminDashboard UI Tests (Modal UPI QR Race & Print Retry Snapshot)
+    // -------------------------------------------------------------------------
+    console.log('\n--- SECTION 4: AdminDashboard Live UI Modal QR & Print Retry Tests ---');
+    const ROOT_DIR = path.resolve('.');
+    const cacheRoot = path.join(ROOT_DIR, 'node_modules/.cache');
+    fs.mkdirSync(cacheRoot, { recursive: true });
+    const compiledUiDir = fs.mkdtempSync(path.join(cacheRoot, 'billing-ui-test-'));
+
+    const savedUiKeys = ['window', 'document', 'localStorage', 'fetch', 'IS_REACT_ACT_ENVIRONMENT', 'Notification', 'history', 'HTMLElement', 'Element', 'Node', 'Audio', 'navigator', 'setTimeout', 'clearTimeout', '__qrMockHandler'];
+    const prevUiGlobals = Object.fromEntries(savedUiKeys.map(k => [k, globalThis[k]]));
+
+    try {
+      const uiTestStubPlugin = {
+        name: 'billing-ui-test-stubs',
+        setup(build) {
+          build.onResolve({ filter: /\.css$/ }, (args) => ({ path: args.path, namespace: 'css-stub' }));
+          build.onLoad({ filter: /.*/, namespace: 'css-stub' }, () => ({ contents: 'export default {};', loader: 'js' }));
+          build.onResolve({ filter: /^leaflet$/ }, () => ({ path: 'leaflet', namespace: 'leaflet-stub' }));
+          build.onLoad({ filter: /.*/, namespace: 'leaflet-stub' }, () => ({
+            contents: 'const makeProxy = () => new Proxy(function(){}, { get: (_t, k) => k === "__esModule" ? false : makeProxy(), apply: () => makeProxy() }); export default makeProxy();',
+            loader: 'js'
+          }));
+          build.onResolve({ filter: /^qrcode$/ }, () => ({ path: 'qrcode', namespace: 'qr-stub' }));
+          build.onLoad({ filter: /.*/, namespace: 'qr-stub' }, () => ({
+            contents: 'export default { toDataURL: (uri, opts) => globalThis.__qrMockHandler(uri, opts) };',
+            loader: 'js'
+          }));
+        }
+      };
+
+      await esbuild.build({
+        entryPoints: {
+          AdminDashboard: path.join(ROOT_DIR, 'src/components/Admin/AdminDashboard.jsx')
+        },
+        outdir: compiledUiDir,
+        bundle: true,
+        format: 'esm',
+        platform: 'neutral',
+        mainFields: ['module', 'main'],
+        jsx: 'automatic',
+        external: ['react', 'react-dom', 'react/jsx-runtime', 'react-dom/client', 'lucide-react'],
+        plugins: [uiTestStubPlugin],
+        outExtension: { '.js': '.mjs' }
+      });
+
+      const { default: AdminDashboard } = await import(pathToFileURL(path.join(compiledUiDir, 'AdminDashboard.mjs')).href);
+
+      const storage = new Map();
+      const localStorageMock = {
+        getItem: (k) => (storage.has(k) ? storage.get(k) : null),
+        setItem: (k, v) => storage.set(k, String(v)),
+        removeItem: (k) => storage.delete(k),
+        clear: () => storage.clear()
+      };
+      const createEventBus = () => {
+        const listeners = new Map();
+        return {
+          addEventListener(t, fn) { if (!listeners.has(t)) listeners.set(t, new Set()); listeners.get(t).add(fn); },
+          removeEventListener(t, fn) { listeners.get(t)?.delete(fn); },
+          dispatchEvent(evt) {
+            const event = typeof evt === 'string' ? { type: evt, bubbles: true } : evt;
+            if (!event.target) event.target = this;
+            event.currentTarget = this;
+            event.preventDefault = event.preventDefault || (() => {});
+            event.stopPropagation = event.stopPropagation || (() => { event._stopped = true; });
+            const set = listeners.get(event.type);
+            if (set) for (const fn of Array.from(set)) fn.call(this, event);
+            if (event.bubbles && !event._stopped && this.parentNode?.dispatchEvent) this.parentNode.dispatchEvent(event);
+            return true;
+          }
+        };
+      };
+
+      const capturedPrintHtmls = [];
+      let shouldFailPrint = false;
+
+      const doc = { nodeType: 9 };
+      class FakeNode {
+        constructor(nodeType, nodeName) {
+          this.nodeType = nodeType;
+          this.nodeName = nodeName;
+          this.ownerDocument = doc;
+          this.parentNode = null;
+          this.childNodes = [];
+          Object.assign(this, createEventBus());
+        }
+        get firstChild() { return this.childNodes[0] || null; }
+        get lastChild() { return this.childNodes[this.childNodes.length - 1] || null; }
+        get nextSibling() {
+          if (!this.parentNode) return null;
+          const idx = this.parentNode.childNodes.indexOf(this);
+          return idx >= 0 ? (this.parentNode.childNodes[idx + 1] || null) : null;
+        }
+        get previousSibling() {
+          if (!this.parentNode) return null;
+          const idx = this.parentNode.childNodes.indexOf(this);
+          return idx > 0 ? this.parentNode.childNodes[idx - 1] : null;
+        }
+        appendChild(child) {
+          if (child.parentNode) child.parentNode.removeChild(child);
+          child.parentNode = this;
+          this.childNodes.push(child);
+          return child;
+        }
+        insertBefore(child, ref) {
+          if (!ref) return this.appendChild(child);
+          if (child.parentNode) child.parentNode.removeChild(child);
+          const idx = this.childNodes.indexOf(ref);
+          child.parentNode = this;
+          if (idx === -1) this.childNodes.push(child);
+          else this.childNodes.splice(idx, 0, child);
+          return child;
+        }
+        removeChild(child) {
+          const idx = this.childNodes.indexOf(child);
+          if (idx !== -1) { this.childNodes.splice(idx, 1); child.parentNode = null; }
+          return child;
+        }
+        remove() { if (this.parentNode) this.parentNode.removeChild(this); }
+        contains(target) { let c = target; while (c) { if (c === this) return true; c = c.parentNode; } return false; }
+      }
+      class FakeText extends FakeNode {
+        constructor(t) { super(3, '#text'); this._data = String(t ?? ''); }
+        get data() { return this._data; } set data(v) { this._data = String(v ?? ''); }
+        get nodeValue() { return this._data; } set nodeValue(v) { this._data = String(v ?? ''); }
+        get textContent() { return this._data; } set textContent(v) { this._data = String(v ?? ''); }
+      }
+      class FakeComment extends FakeNode {
+        constructor(t) { super(8, '#comment'); this.data = String(t ?? ''); this.nodeValue = this.data; }
+      }
+      class FakeElement extends FakeNode {
+        constructor(tag) {
+          const upper = String(tag).toUpperCase();
+          super(1, upper);
+          this.tagName = upper;
+          this.attrs = new Map();
+          this._value = '';
+          this.selected = false;
+          this.disabled = false;
+          this.style = { setProperty() {}, removeProperty() {} };
+          this.className = '';
+          if (upper === 'IFRAME') {
+            this.contentWindow = {
+              focus() {},
+              print() { if (shouldFailPrint) throw new Error('Simulated printer offline'); },
+              document: {
+                open() {},
+                write(html) { capturedPrintHtmls.push(String(html)); },
+                close() {},
+                querySelectorAll() { return []; }
+              }
+            };
+            this.contentDocument = this.contentWindow.document;
+          }
+        }
+        get children() { return this.childNodes.filter(c => c.nodeType === 1); }
+        get options() { return this.childNodes.filter(c => c.nodeType === 1 && c.tagName === 'OPTION'); }
+        get value() { return this._value; } set value(v) { this._value = String(v ?? ''); }
+        get textContent() { return this.childNodes.map(c => c.textContent ?? '').join(''); }
+        set textContent(v) {
+          this.childNodes.forEach(c => { c.parentNode = null; });
+          this.childNodes = [];
+          if (v !== '' && v !== null && v !== undefined) this.appendChild(new FakeText(v));
+        }
+        set innerHTML(v) { this.textContent = v ? '' : ''; }
+        get innerHTML() { return this.textContent; }
+        setAttribute(k, v) {
+          const key = String(k);
+          this.attrs.set(key, String(v));
+          if (key === 'value') this._value = String(v);
+          if (key === 'class') this.className = String(v);
+          if (key === 'src') this.src = String(v);
+          if (key === 'alt') this.alt = String(v);
+          if (key === 'title') this.title = String(v);
+          if (key === 'id') this.id = String(v);
+        }
+        getAttribute(k) { return this.attrs.has(k) ? this.attrs.get(k) : null; }
+        removeAttribute(k) { this.attrs.delete(k); }
+        focus() {} blur() {}
+      }
+
+      const win = {
+        ...createEventBus(),
+        location: { search: '?tab=orders', pathname: '/admin', href: 'http://localhost/admin?tab=orders' },
+        history: { replaceState() {}, pushState() {} },
+        innerWidth: 1280,
+        Node: FakeNode,
+        Element: FakeElement,
+        HTMLElement: FakeElement,
+        HTMLIFrameElement: class HTMLIFrameElement extends FakeElement {},
+        HTMLInputElement: FakeElement,
+        HTMLSelectElement: FakeElement,
+        HTMLTextAreaElement: FakeElement,
+        localStorage: localStorageMock,
+        navigator: { onLine: true, userAgent: 'Mozilla/5.0' },
+        matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
+        Notification: { permission: 'default' }
+      };
+      Object.assign(doc, createEventBus(), {
+        defaultView: win,
+        activeElement: null,
+        documentElement: new FakeElement('html'),
+        head: new FakeElement('head'),
+        body: new FakeElement('body'),
+        createElement: (tag) => new FakeElement(tag),
+        createElementNS: (_ns, tag) => new FakeElement(tag),
+        createTextNode: (t) => new FakeText(t),
+        createComment: (t) => new FakeComment(t)
+      });
+      doc.documentElement.appendChild(doc.head);
+      doc.documentElement.appendChild(doc.body);
+      win.document = doc;
+
+      globalThis.window = win;
+      globalThis.document = doc;
+      globalThis.localStorage = localStorageMock;
+      globalThis.Notification = win.Notification;
+      globalThis.history = win.history;
+      globalThis.HTMLElement = win.HTMLElement;
+      globalThis.Element = win.Element;
+      globalThis.Node = win.Node;
+      globalThis.navigator = win.navigator;
+      globalThis.Audio = function FakeAudio() { return { play: () => Promise.resolve(), pause() {} }; };
+      globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+      const realSetTimeout = prevUiGlobals.setTimeout;
+      const realClearTimeout = prevUiGlobals.clearTimeout;
+      let pollCallbacks = [];
+      let nextTimerId = 9000;
+      globalThis.setTimeout = (fn, delay = 0, ...args) => {
+        if (delay >= 1500) {
+          const id = ++nextTimerId;
+          pollCallbacks.push({ id, fn: () => fn(...args) });
+          return id;
+        }
+        return realSetTimeout(fn, Math.min(delay, 25), ...args);
+      };
+      globalThis.clearTimeout = (id) => {
+        pollCallbacks = pollCallbacks.filter(p => p.id !== id);
+        return realClearTimeout(id);
+      };
+
+      const findNodes = (node, pred, acc = []) => {
+        if (!node) return acc;
+        if (pred(node)) acc.push(node);
+        for (const ch of node.childNodes || []) findNodes(ch, pred, acc);
+        return acc;
+      };
+      const flushMicrotasks = async (rounds = 10) => {
+        for (let i = 0; i < rounds; i++) await Promise.resolve();
+      };
+      const runPollCycle = async () => {
+        const current = pollCallbacks.splice(0, pollCallbacks.length);
+        for (const p of current) {
+          await p.fn();
+        }
+        await flushMicrotasks();
+      };
+
+      const deferredQrs = [];
+      globalThis.__qrMockHandler = (uri) => new Promise((resolve) => {
+        deferredQrs.push({ uri: String(uri), resolve });
+      });
+
+      const uiSessionId = 'sess_ui_qr_retry_700';
+      const uiRound1 = {
+        id: 701, round_number: 1, session_id: uiSessionId, table_number: '5',
+        customer_name: 'Alice UI', status: 'served', is_settled: 0, total_amount: 320,
+        created_at: '2026-06-15T10:00:00Z',
+        items: JSON.stringify([{ id: 101, name: 'Veg Biryani', price: 320, quantity: 1 }])
+      };
+      const uiRound2 = {
+        id: 702, round_number: 2, session_id: uiSessionId, table_number: '5',
+        customer_name: 'Alice UI', status: 'served', is_settled: 0, total_amount: 400,
+        created_at: '2026-06-15T10:10:00Z',
+        items: JSON.stringify([{ id: 102, name: 'Paneer Tikka', price: 400, quantity: 1 }])
+      };
+      const uiRound3 = {
+        id: 703, round_number: 3, session_id: uiSessionId, table_number: '5',
+        customer_name: 'Alice UI', status: 'served', is_settled: 0, total_amount: 100,
+        created_at: '2026-06-15T10:15:00Z',
+        items: JSON.stringify([{ id: 103, name: 'Masala Chai', price: 100, quantity: 1 }])
+      };
+      const uiPostSettleNewRound4 = {
+        id: 704, round_number: 4, session_id: uiSessionId, table_number: '5',
+        customer_name: 'Alice UI', status: 'served', is_settled: 0, total_amount: 500,
+        created_at: '2026-06-15T10:25:00Z',
+        items: JSON.stringify([{ id: 104, name: 'Post Settle Dessert', price: 500, quantity: 1 }])
+      };
+
+      let liveOrdersResponse = [uiRound1];
+      const jsonRes = (body) => ({
+        ok: true, status: 200, headers: new Headers(),
+        text: async () => JSON.stringify(body),
+        json: async () => body
+      });
+
+      globalThis.fetch = async (url, init = {}) => {
+        const u = String(url);
+        if (u.includes('/api/info')) {
+          return jsonRes({
+            id: 99, name: 'Bill Audit Cafe', slug: 'bill-audit-cafe',
+            plan_tier: 'pro', gst_enabled: 0, upi_id: 'audit@upi', upi_payee_name: 'Bill Audit'
+          });
+        }
+        if (u.includes('/api/admin/orders/') && u.includes('/status') && init.method === 'PATCH') {
+          liveOrdersResponse = [
+            { ...uiRound1, status: 'completed', is_settled: 1, payment_method: 'cash' },
+            { ...uiRound2, status: 'completed', is_settled: 1, payment_method: 'cash' },
+            { ...uiRound3, status: 'completed', is_settled: 1, payment_method: 'cash' },
+            uiPostSettleNewRound4
+          ];
+          return jsonRes({ status: 'completed', is_settled: 1 });
+        }
+        if (u.includes('/api/admin/orders')) return jsonRes(liveOrdersResponse);
+        if (u.includes('/api/admin/subscription-status')) return jsonRes({ status: 'active', plan_tier: 'pro' });
+        if (u.includes('/api/admin/print/log')) return jsonRes({ ok: true });
+        return jsonRes([]);
+      };
+
+      localStorageMock.setItem('touchqr_admin_slug', 'bill-audit-cafe');
+      const container = doc.createElement('div');
+      doc.body.appendChild(container);
+      const root = createRoot(container);
+
+      await act(async () => {
+        root.render(React.createElement(AdminDashboard, { token: 'tok-ui-bill', slug: 'bill-audit-cafe' }));
+        await flushMicrotasks();
+      });
+
+      // 4.1 Open bill modal on Round 1 (₹320) and toggle UPI QR
+      const openBillBtn = findNodes(container, n =>
+        n.tagName === 'BUTTON' &&
+        (String(n.getAttribute('title') || '').includes('Open Bill & Settle Payment') || String(n.getAttribute('title') || '').includes('Combined Bill'))
+      )[0];
+      assert.ok(openBillBtn, 'OrdersView must render Open Bill button for Round 1');
+      await act(async () => {
+        openBillBtn.dispatchEvent({ type: 'click', bubbles: true, target: openBillBtn });
+        await flushMicrotasks();
+      });
+
+      const toggleQrBtn = findNodes(container, n => n.tagName === 'BUTTON' && n.textContent.includes('Show UPI QR Code on Screen'))[0];
+      assert.ok(toggleQrBtn, 'Show UPI QR button must render when upi_id is configured');
+      await act(async () => {
+        toggleQrBtn.dispatchEvent({ type: 'click', bubbles: true, target: toggleQrBtn });
+        await flushMicrotasks();
+      });
+
+      // Resolve QR #1 (₹320) and verify displayed QR matches ₹320
+      const qrReq1 = deferredQrs.find(q => q.uri.includes('am=320.00'));
+      assert.ok(qrReq1, 'First QR generation must target ₹320.00');
+      await act(async () => {
+        qrReq1.resolve('data:image/png;base64,QR_320');
+        await flushMicrotasks();
+      });
+      let qrImgs = findNodes(container, n => n.tagName === 'IMG' && n.getAttribute('alt') === 'UPI Payment QR');
+      assert.strictEqual(qrImgs.length, 1);
+      assert.strictEqual(qrImgs[0].getAttribute('src'), 'data:image/png;base64,QR_320');
+
+      // Update live orders to include Round 2 (+400 -> 720), accept updated snapshot -> stale QR_320 must clear BEFORE QR_720 resolves
+      liveOrdersResponse = [uiRound1, uiRound2];
+      await act(async () => { await runPollCycle(); });
+
+      const acceptUpdatedBtn = findNodes(container, n => n.tagName === 'BUTTON' && n.textContent.includes('Review & Use Updated Bill'))[0];
+      assert.ok(acceptUpdatedBtn, 'Modal must detect new round and offer Review & Use Updated Bill');
+      await act(async () => {
+        acceptUpdatedBtn.dispatchEvent({ type: 'click', bubbles: true, target: acceptUpdatedBtn });
+        await flushMicrotasks();
+      });
+
+      qrImgs = findNodes(container, n => n.tagName === 'IMG' && n.getAttribute('alt') === 'UPI Payment QR');
+      assert.strictEqual(qrImgs.length, 0, 'Stale QR_320 must be cleared immediately when bill snapshot changes');
+      const qrReq2 = deferredQrs.find(q => q.uri.includes('am=720.00'));
+      assert.ok(qrReq2, 'Updated snapshot must start QR generation for ₹720.00');
+
+      // Before QR_720 resolves, update orders to Round 3 (+100 -> 820) and accept updated snapshot,
+      // then resolve QR_820 FIRST and obsolete QR_720 LAST -> QR_820 must remain displayed!
+      liveOrdersResponse = [uiRound1, uiRound2, uiRound3];
+      await act(async () => { await runPollCycle(); });
+      const acceptUpdatedBtn2 = findNodes(container, n => n.tagName === 'BUTTON' && n.textContent.includes('Review & Use Updated Bill'))[0];
+      await act(async () => {
+        acceptUpdatedBtn2.dispatchEvent({ type: 'click', bubbles: true, target: acceptUpdatedBtn2 });
+        await flushMicrotasks();
+      });
+
+      const qrReq3 = deferredQrs.find(q => q.uri.includes('am=820.00'));
+      assert.ok(qrReq3, 'Third snapshot must start QR generation for ₹820.00');
+
+      await act(async () => {
+        qrReq3.resolve('data:image/png;base64,QR_820');
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        qrReq2.resolve('data:image/png;base64,QR_720_STALE');
+        await flushMicrotasks();
+      });
+
+      qrImgs = findNodes(container, n => n.tagName === 'IMG' && n.getAttribute('alt') === 'UPI Payment QR');
+      assert.strictEqual(qrImgs.length, 1);
+      assert.strictEqual(qrImgs[0].getAttribute('src'), 'data:image/png;base64,QR_820', 'Obsolete QR_720 promise must never overwrite newer QR_820');
+      record('UI_QR_SNAPSHOT', 'Modal clears stale UPI QR on snapshot change and rejects out-of-order obsolete QR promises', true);
+
+      // 4.2 Settle ₹820 (3 rounds) while post-settlement loadOrders returns settled rounds + new unsettled Round 4 (₹500),
+      // fail initial print, then click Retry and verify retained paidSnapshot (₹820, 3 Rounds) prints!
+      shouldFailPrint = true;
+      const settleCashBtn = findNodes(container, n => n.tagName === 'BUTTON' && n.getAttribute('id') === 'settle-payment-btn-cash')[0];
+      assert.ok(settleCashBtn, 'Cash payment button must be enabled once bill snapshot is updated');
+      await act(async () => {
+        settleCashBtn.dispatchEvent({ type: 'click', bubbles: true, target: settleCashBtn });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        await new Promise(r => realSetTimeout(r, 80));
+        await flushMicrotasks();
+      });
+
+      assert.strictEqual(capturedPrintHtmls.length, 1, 'Initial post-settlement print attempt wrote HTML before failing');
+      assert.ok(capturedPrintHtmls[0].includes('₹820') && capturedPrintHtmls[0].includes('3 Rounds'), 'Initial print used ₹820 across 3 Rounds');
+
+      const retryBtn = findNodes(container, n => n.tagName === 'BUTTON' && n.textContent.includes('Retry'))[0];
+      assert.ok(retryBtn, 'Print failure toast must display Retry button');
+
+      shouldFailPrint = false;
+      await act(async () => {
+        retryBtn.dispatchEvent({ type: 'click', bubbles: true, target: retryBtn });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        await new Promise(r => realSetTimeout(r, 80));
+        await flushMicrotasks();
+      });
+
+      assert.strictEqual(capturedPrintHtmls.length, 2, 'Clicking Retry triggers a second print attempt');
+      const retryHtml = capturedPrintHtmls[1];
+      assert.ok(retryHtml.includes('₹820') && retryHtml.includes('PAID (CASH)'), 'Retry must retain original paidSnapshot grandTotal (₹820) after loadOrders refresh');
+      assert.ok(retryHtml.includes('3 Rounds'), 'Retry must retain original 3 Rounds paidSnapshot count');
+      assert.ok(!retryHtml.includes('Post Settle Dessert') && !retryHtml.includes('₹500') && !retryHtml.includes('1,320'), 'Retry must NOT recalculate paid receipt from post-settlement refreshed orders');
+      record('UI_PRINT_RETRY', 'Print-failure Retry retains paidSnapshot (billDataOverride) across loadOrders() refresh', true);
+
+      await act(async () => {
+        root.unmount();
+        await flushMicrotasks();
+      });
+    } finally {
+      for (const [k, v] of Object.entries(prevUiGlobals)) {
+        if (v === undefined) delete globalThis[k];
+        else globalThis[k] = v;
+      }
+      fs.rmSync(compiledUiDir, { recursive: true, force: true });
+    }
 
   } finally {
     if (server) {

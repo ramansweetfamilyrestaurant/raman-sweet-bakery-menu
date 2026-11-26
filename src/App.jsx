@@ -357,6 +357,8 @@ export default function App() {
   };
 
   const [adminToken, setAdminToken] = useState(getInitialToken());
+  const adminTokenRef = useRef(adminToken);
+  adminTokenRef.current = adminToken;
   const [adminUsername, setAdminUsername] = useState(getInitialUser());
   const [adminSlug, setAdminSlug] = useState(getInitialSlug());
   const [newlyRegisteredResto, setNewlyRegisteredResto] = useState(null);
@@ -1678,7 +1680,10 @@ export default function App() {
     }).catch(() => {});
   };
 
-  const handleAdminLogout = () => {
+  const handleAdminLogout = (expectedToken = null) => {
+    if (typeof expectedToken === 'string' && expectedToken && expectedToken !== adminTokenRef.current) {
+      return;
+    }
     const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
     localStorage.removeItem('touchqr_admin_token');
     localStorage.removeItem('touchqr_admin_user');

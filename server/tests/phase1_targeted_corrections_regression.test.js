@@ -19,7 +19,7 @@ import http from 'http';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/jwt.js';
-import { query, initDb, withTransaction, assertPhase1SchemaPresence, isDatabaseInitialized, resetDbForTesting } from '../db.js';
+import { query, initDb, withTransaction, assertPhase1SchemaPresence, isDatabaseInitialized, resetDbForTesting, configurePgPoolForTesting } from '../db.js';
 import {
   validateMigrationTargetUrl,
   getCliUrl as getMigrationCliUrl,
@@ -1956,6 +1956,368 @@ async function runTestSuite() {
       // Invariants: Replays the same order and same tracking token
       assert.strictEqual(data2.order_id, data1.order_id, 'Presence-bound retry must return identical order_id');
       assert.strictEqual(data2.tracking_token, data1.tracking_token, 'Presence-bound retry must return identical tracking_token');
+    });
+
+    // Test 7.1: withTransaction validates maxRetries as finite positive integer
+    await testAsync('withTransaction: Rejects non-positive / non-integer maxRetries and preserves default', async () => {
+      for (const bad of [0, -1, 1.5, NaN, Infinity, '3', null]) {
+        await assert.rejects(() => withTransaction(async () => {}, { maxRetries: bad }), TypeError);
+      }
+      const okVal = await withTransaction(async () => 42);
+      assert.strictEqual(okVal, 42);
+    });
+
+    // Test 7.2: Counter kitchen audit requires an actual routing transition
+    await testAsync('Counter Kitchen Audit: Matching preparing status without routing change does not write audit log', async () => {
+      const counterPreparing = await query(`
+        INSERT INTO orders (restaurant_id, table_number, status, sent_to_kds, total_amount, is_settled)
+        VALUES ($1, 'Counter', 'preparing', 0, 120, 0)
+        RETURNING id
+      `, [testRestaurantId]);
+      const cid = counterPreparing[0].id;
+
+      const noopRes = await fetch(`${baseUrl}/api/admin/orders/${cid}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          status: 'preparing',
+          counter_acknowledgement: { confirmed: true }
+        })
+      });
+      assert.strictEqual(noopRes.status, 200);
+
+      let ackAudits = await query(`
+        SELECT details FROM audit_logs WHERE restaurant_id = $1 AND action = 'COUNTER_ORDER_KITCHEN_ACKNOWLEDGED'
+      `, [testRestaurantId]);
+      assert.strictEqual(
+        ackAudits.filter(r => String(JSON.parse(r.details).order_id) === String(cid)).length,
+        0,
+        'No-op status=preparing must not record COUNTER_ORDER_KITCHEN_ACKNOWLEDGED'
+      );
+      const afterNoopOrder = await query('SELECT sent_to_kds FROM orders WHERE id = $1', [cid]);
+      assert.strictEqual(afterNoopOrder[0].sent_to_kds, 0, 'sent_to_kds must remain 0 after non-transitioning preparing request');
+
+      const routeRes = await fetch(`${baseUrl}/api/admin/orders/${cid}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          status: 'preparing',
+          sent_to_kds: 1,
+          counter_acknowledgement: { confirmed: true }
+        })
+      });
+      assert.strictEqual(routeRes.status, 200);
+      const afterRouteOrder = await query('SELECT sent_to_kds FROM orders WHERE id = $1', [cid]);
+      assert.strictEqual(afterRouteOrder[0].sent_to_kds, 1, 'sent_to_kds must become 1 after transitioning preparing request');
+      ackAudits = await query(`
+        SELECT details FROM audit_logs WHERE restaurant_id = $1 AND action = 'COUNTER_ORDER_KITCHEN_ACKNOWLEDGED'
+      `, [testRestaurantId]);
+      assert.strictEqual(
+        ackAudits.filter(r => String(JSON.parse(r.details).order_id) === String(cid)).length,
+        1,
+        'Transitioning sent_to_kds to 1 must record COUNTER_ORDER_KITCHEN_ACKNOWLEDGED'
+      );
+    });
+
+    // Test 7.3: Partial sibling settlement logs settled_order_ids separately from requested order_id and settles root-without-session groups
+    await testAsync('Settlement Audit & Root Group: Records settled_order_ids separately from requested order_id', async () => {
+      const rootIns = await query(`
+        INSERT INTO orders (restaurant_id, table_number, status, total_amount, is_settled, payment_method)
+        VALUES ($1, '9', 'completed', 200, 1, 'cash') RETURNING id
+      `, [testRestaurantId]);
+      const rootId = rootIns[0].id;
+      const childIns = await query(`
+        INSERT INTO orders (restaurant_id, parent_order_id, table_number, status, total_amount, is_settled, payment_method)
+        VALUES ($1, $2, '9', 'served', 150, 0, 'cash') RETURNING id
+      `, [testRestaurantId, rootId]);
+      const childId = childIns[0].id;
+
+      const sRes = await fetch(`${baseUrl}/api/admin/orders/${rootId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({ status: 'completed', settle: { method: 'upi' } })
+      });
+      assert.strictEqual(sRes.status, 200);
+
+      const rootCheck = await query('SELECT is_settled, payment_method FROM orders WHERE id = $1', [rootId]);
+      assert.strictEqual(rootCheck[0].is_settled, 1);
+      assert.strictEqual(rootCheck[0].payment_method, 'cash', 'Already-settled root order must retain its original cash payment_method');
+
+      const childCheck = await query('SELECT is_settled, payment_method FROM orders WHERE id = $1', [childId]);
+      assert.strictEqual(childCheck[0].is_settled, 1);
+      assert.strictEqual(childCheck[0].payment_method, 'upi');
+
+      const audits = await query(`
+        SELECT details FROM audit_logs WHERE restaurant_id = $1 AND action = 'ORDER_BILL_SETTLED'
+      `, [testRestaurantId]);
+      const matchingAudits = audits
+        .map(a => JSON.parse(a.details))
+        .filter(d => String(d.order_id) === String(rootId));
+      assert.strictEqual(matchingAudits.length, 1, 'Expected exactly one ORDER_BILL_SETTLED audit entry for requested rootId');
+      const match = matchingAudits[0];
+      assert.deepStrictEqual(match.settled_order_ids.map(Number), [Number(childId)], 'settled_order_ids must list the newly settled round(s)');
+      assert.strictEqual(match.payment_method, 'upi');
+    });
+
+    // Test 7.4: Stale bill snapshot check rejects settlement when unbilled round exists outside expected_order_ids
+    await testAsync('Settlement Stale Snapshot Guard: Rejects 409 bill_snapshot_stale when new unbilled round exists', async () => {
+      const rootIns = await query(`
+        INSERT INTO orders (restaurant_id, table_number, status, total_amount, is_settled, payment_method)
+        VALUES ($1, '12', 'preparing', 180, 0, 'cash') RETURNING id
+      `, [testRestaurantId]);
+      const rootId = Number(rootIns[0].id);
+      const childIns = await query(`
+        INSERT INTO orders (restaurant_id, parent_order_id, table_number, status, total_amount, is_settled, payment_method)
+        VALUES ($1, $2, '12', 'preparing', 120, 0, 'cash') RETURNING id
+      `, [testRestaurantId, rootId]);
+      const childId = Number(childIns[0].id);
+
+      const staleRes = await fetch(`${baseUrl}/api/admin/orders/${rootId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          status: 'completed',
+          settle: { method: 'upi', expected_order_ids: [rootId] }
+        })
+      });
+      assert.strictEqual(staleRes.status, 409, 'Settlement with stale expected_order_ids must return 409');
+      const staleBody = await staleRes.json();
+      assert.strictEqual(staleBody.code, 'bill_snapshot_stale');
+
+      const afterCheck = await query('SELECT id, is_settled FROM orders WHERE id IN ($1, $2) ORDER BY id', [rootId, childId]);
+      assert.strictEqual(afterCheck[0].is_settled, 0);
+      assert.strictEqual(afterCheck[1].is_settled, 0);
+    });
+
+    // Test 7.5: PostgreSQL withTransaction releases client before retry backoff after 40001 serialization failure
+    await testAsync('PG withTransaction Retry: Releases PG client strictly before retry delay on 40001 serialization failure', async () => {
+      const events = [];
+      let recordedDelayMs = null;
+      let attempt = 0;
+      const origSetTimeout = globalThis.setTimeout;
+      let restorePg = null;
+      try {
+        globalThis.setTimeout = (fn, ms, ...args) => {
+          if (ms >= 15 && ms <= 49 && events.includes('rollback:1')) {
+            recordedDelayMs = ms;
+            events.push(`delay:${ms}`);
+          }
+          return origSetTimeout(fn, ms, ...args);
+        };
+
+        const mockPool = {
+          connect: async () => {
+            attempt += 1;
+            const clientNum = attempt;
+            events.push(`connect:${clientNum}`);
+            return {
+              query: async (sql) => {
+                const norm = String(sql).trim().toUpperCase();
+                if (norm === 'BEGIN' || norm === 'COMMIT') {
+                  events.push(`${norm.toLowerCase()}:${clientNum}`);
+                  return { rows: [] };
+                }
+                if (norm === 'ROLLBACK') {
+                  events.push(`rollback:${clientNum}`);
+                  return { rows: [] };
+                }
+                events.push(`sql:${clientNum}`);
+                return { rows: [{ ok: clientNum }] };
+              },
+              release: () => {
+                events.push(`release:${clientNum}`);
+              }
+            };
+          }
+        };
+
+        restorePg = configurePgPoolForTesting(mockPool, 'postgres');
+        let cbCount = 0;
+        const result = await withTransaction(async (txQuery) => {
+          cbCount += 1;
+          const rows = await txQuery('SELECT 1 AS ok');
+          if (cbCount === 1) {
+            const err = new Error('could not serialize access due to concurrent update');
+            err.code = '40001';
+            throw err;
+          }
+          return rows[0];
+        });
+        assert.strictEqual(result.ok, 2);
+        assert.strictEqual(cbCount, 2);
+        const rel1Idx = events.indexOf('release:1');
+        const rollback1Idx = events.indexOf('rollback:1');
+        const delayIdx = events.findIndex(e => e.startsWith('delay:'));
+        const conn2Idx = events.indexOf('connect:2');
+        assert.ok(recordedDelayMs >= 15 && recordedDelayMs <= 49, `Expected jittered retry delay within 15..49ms, got ${recordedDelayMs}`);
+        assert.ok(rollback1Idx !== -1 && rel1Idx > rollback1Idx, 'ROLLBACK precedes release on failed attempt');
+        assert.ok(delayIdx > rel1Idx, 'Retry delay runs strictly AFTER PG client is released in finally');
+        assert.ok(conn2Idx > delayIdx, 'Second connect occurs after retry backoff');
+      } finally {
+        globalThis.setTimeout = origSetTimeout;
+        if (typeof restorePg === 'function') restorePg();
+      }
+    });
+
+    // Test 7.6: PostgreSQL settlement unsettledRows uses contiguous $1, $2 placeholders for matching IDs, stale total, and replay
+    await testAsync('PG Settlement Snapshot Placeholders: Contiguous $1/$2 params enforce IDs, rounded total, and genuine replay', async () => {
+      const capturedSelectQueries = [];
+      let orderState = {
+        id: 501,
+        restaurant_id: testRestaurantId,
+        table_number: '15',
+        session_id: 'sess_pg_501',
+        parent_order_id: null,
+        status: 'served',
+        sent_to_kds: 1,
+        kitchen_prepared: 1,
+        is_settled: 0,
+        payment_method: 'cash',
+        terminal_at: null,
+        total_amount: 105,
+        subtotal_amount: 100,
+        items: JSON.stringify([{ name: 'Paneer', price: 100, quantity: 1 }])
+      };
+
+      const runPgQuery = async (sql, params = []) => {
+        const s = String(sql).trim();
+        if (/^BEGIN|^COMMIT|^ROLLBACK/i.test(s)) return { rows: [] };
+        if (s.includes('FROM restaurants WHERE id')) {
+          return { rows: [{ id: testRestaurantId, active: 1, plan_tier: 'pro', subscription_type: 'ADMIN_GRANTED', mandate_status: 'admin_granted', trial_ends_at: '2030-01-01T00:00:00Z', plan_expires_at: '2030-01-01T00:00:00Z', gst_enabled: 1 }] };
+        }
+        if (s.includes('FROM subscriptions WHERE restaurant_id')) return { rows: [] };
+        if (s.includes('pg_advisory_xact_lock')) return { rows: [{ ok: 1 }] };
+        if (s.includes('SELECT id, total_amount, subtotal_amount')) {
+          capturedSelectQueries.push({ sql: s, params });
+          // Enforce contiguous placeholder numbering ($1, $2 only) matching params length
+          assert.ok(s.includes('$1') && s.includes('$2') && !/\$3\b|\$7\b|\$8\b/.test(s), `Snapshot query must use contiguous $1/$2 placeholders: ${s}`);
+          assert.strictEqual(params.length, 2, 'Snapshot query params must match contiguous placeholders');
+          return { rows: orderState.is_settled ? [] : [orderState] };
+        }
+        if (s.includes('SELECT gst_enabled FROM restaurants')) return { rows: [{ gst_enabled: 1 }] };
+        if (s.includes('FROM orders') && s.includes('id = $1 AND restaurant_id = $2')) return { rows: [orderState] };
+        if (s.includes('FROM orders') && s.includes('FOR UPDATE')) {
+          if (s.includes('table_number, session_id')) return { rows: [orderState] };
+          return { rows: [{ id: orderState.id }] };
+        }
+        if (s.startsWith('UPDATE orders')) {
+          if (orderState.is_settled) return { rows: [] };
+          orderState = { ...orderState, status: 'completed', is_settled: 1, payment_method: params[5] || 'upi' };
+          return { rows: [orderState] };
+        }
+        if (s.includes('SELECT id, status, sent_to_kds') && s.includes('FROM orders')) {
+          return { rows: [orderState] };
+        }
+        if (s.startsWith('INSERT INTO audit_logs')) return { rows: [] };
+        return { rows: [] };
+      };
+
+      const mockPgPool = {
+        query: runPgQuery,
+        connect: async () => ({
+          query: runPgQuery,
+          release: () => {}
+        })
+      };
+
+      let restorePg = null;
+      try {
+        restorePg = configurePgPoolForTesting(mockPgPool, 'postgres');
+
+        // Stale total must return 409 bill_snapshot_stale before UPDATE
+        const staleTotalRes = await fetch(`${baseUrl}/api/admin/orders/501/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+          body: JSON.stringify({ status: 'completed', settle: { method: 'upi', expected_order_ids: [501], expected_total: 90 } })
+        });
+        assert.strictEqual(staleTotalRes.status, 409);
+        const staleTotalBody = await staleTotalRes.json();
+        assert.strictEqual(staleTotalBody.code, 'bill_snapshot_stale');
+        assert.strictEqual(orderState.is_settled, 0);
+
+        // Matching payable ID + rounded GST total (100 + 2.5 + 2.5 = 105) succeeds
+        const validRes = await fetch(`${baseUrl}/api/admin/orders/501/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+          body: JSON.stringify({ status: 'completed', settle: { method: 'upi', expected_order_ids: [501], expected_total: 105 } })
+        });
+        assert.strictEqual(validRes.status, 200);
+        const validBody = await validRes.json();
+        assert.strictEqual(validBody.already_settled, false);
+        assert.strictEqual(orderState.is_settled, 1);
+
+        // Genuine replay when all rounds are already settled returns 200 already_settled=true
+        const replayRes = await fetch(`${baseUrl}/api/admin/orders/501/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+          body: JSON.stringify({ status: 'completed', settle: { method: 'upi', expected_order_ids: [501], expected_total: 105 } })
+        });
+        assert.strictEqual(replayRes.status, 200);
+        const replayBody = await replayRes.json();
+        assert.strictEqual(replayBody.already_settled, true);
+        assert.strictEqual(capturedSelectQueries.length, 3);
+      } finally {
+        if (typeof restorePg === 'function') restorePg();
+      }
+    });
+
+    // Test 7.7: SQLite withTransaction serializes sqliteDb ownership across awaited tx and blocks unrelated queries until commit/rollback
+    await testAsync('SQLite withTransaction Serialization: Blocks unrelated queries across awaited callback and isolates rollback', async () => {
+      const txLog = [];
+      let releaseHold;
+      const holdPromise = new Promise(r => { releaseHold = r; });
+      const uniqueTable = `tx_lock_test_${Date.now()}`;
+
+      await query(`CREATE TABLE IF NOT EXISTS ${uniqueTable} (id INTEGER PRIMARY KEY, label TEXT)`);
+      try {
+        // Start tx1 which inserts a row, awaits holdPromise, then throws to force ROLLBACK
+        const tx1Promise = withTransaction(async (txQuery) => {
+          txLog.push('tx1:start');
+          await txQuery(`INSERT INTO ${uniqueTable} (label) VALUES ($1)`, ['tx1_rolled_back']);
+          await holdPromise;
+          txLog.push('tx1:throwing');
+          throw new Error('forced rollback');
+        }).catch((err) => {
+          txLog.push(`tx1:rolledback:${err.message}`);
+        });
+
+        // Wait one tick so tx1 is suspended inside its awaited callback holding BEGIN TRANSACTION
+        await new Promise(r => setTimeout(r, 10));
+
+        // Fire unrelated query() AND a concurrent withTransaction() while tx1 is suspended
+        const unrelatedPromise = query(`INSERT INTO ${uniqueTable} (label) VALUES ($1)`, ['unrelated_committed']).then(() => {
+          txLog.push('unrelated:done');
+        });
+        let seenAtTx2Start = [];
+        const tx2Promise = withTransaction(async (txQuery) => {
+          txLog.push('tx2:start');
+          seenAtTx2Start = (await txQuery(`SELECT label FROM ${uniqueTable} ORDER BY id ASC`)).map(r => r.label);
+          await txQuery(`INSERT INTO ${uniqueTable} (label) VALUES ($1)`, ['tx2_committed']);
+          txLog.push('tx2:done');
+        });
+
+        // Release tx1 after a brief pause -> unrelated & tx2 must only complete AFTER tx1 rolls back
+        await new Promise(r => setTimeout(r, 15));
+        releaseHold();
+        await Promise.all([tx1Promise, unrelatedPromise, tx2Promise]);
+
+        const rbIdx = txLog.indexOf('tx1:rolledback:forced rollback');
+        const unIdx = txLog.indexOf('unrelated:done');
+        const tx2StartIdx = txLog.indexOf('tx2:start');
+        const tx2DoneIdx = txLog.indexOf('tx2:done');
+        assert.ok(rbIdx !== -1 && unIdx > rbIdx, 'Unrelated query must wait until owning SQLite transaction finishes');
+        assert.ok(tx2StartIdx > rbIdx && tx2DoneIdx > unIdx, 'Concurrent SQLite transaction executes strictly after preceding queued query');
+        assert.deepStrictEqual(seenAtTx2Start, ['unrelated_committed'], 'SQLite tx2 sees prior queued write and never sees tx1 rolled-back write');
+
+        const persistedRows = await query(`SELECT label FROM ${uniqueTable} ORDER BY id ASC`);
+        assert.deepStrictEqual(
+          persistedRows.map(r => r.label),
+          ['unrelated_committed', 'tx2_committed'],
+          'Unrelated write and tx2 must remain committed while tx1 write rolls back cleanly'
+        );
+      } finally {
+        await query(`DROP TABLE IF EXISTS ${uniqueTable}`);
+      }
     });
 
   } finally {

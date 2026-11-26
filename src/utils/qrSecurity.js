@@ -59,13 +59,13 @@ export function normalizeSpaceNumber(raw) {
 
   const cinemaMatch = s.match(/^(?:screen\s*(\d+)[\s\-_•|,]+row\s*([a-zA-Z]+)[\s\-_•|,]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
   if (cinemaMatch) {
-    const screen = cinemaMatch[1] || cinemaMatch[4];
+    const screen = String(parseInt(cinemaMatch[1] || cinemaMatch[4], 10));
     const row = (cinemaMatch[2] || cinemaMatch[5]).toUpperCase();
-    const seat = cinemaMatch[3] || cinemaMatch[6];
+    const seat = String(parseInt(cinemaMatch[3] || cinemaMatch[6], 10));
     return `S${screen}-${row}-${seat}`;
   }
 
-  const cleaned = s.replace(/^(table|cabin|room|vip|counter|tbl|🍽️|🛋️|🏨|👑|🎬|🧾|\s)+/i, '').trim();
+  const cleaned = s.replace(/^(?:table|cabin|room|vip|counter|tbl|seat(?:[\s#.\-:]+|(?=\d|$))|#(?=\d)|🍽️|🛋️|🏨|👑|🎬|🧾|\s)+/i, '').trim();
   if (/^\d+$/.test(cleaned)) {
     return String(parseInt(cleaned, 10));
   }

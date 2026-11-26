@@ -112,8 +112,8 @@ export default function KdsDisplayView({
     if (!order) return;
     setRecentlyCompleted(prev => [
       { ...order, completedAt: new Date() },
-      ...prev.slice(0, 9)
-    ]);
+      ...prev.filter(o => o.id !== order.id)
+    ].slice(0, 10));
     if (onUpdateStatus) {
       onUpdateStatus(order.id, 'kitchen', { kitchen_prepared: 1 });
     }
@@ -143,7 +143,7 @@ export default function KdsDisplayView({
     }
 
     const cleanSpaceType = spaceType ? String(spaceType).trim().toLowerCase() : null;
-    if (cleanSpaceType === 'cinema_seat' || cleanSpaceType === 'cinema') return `Seat ${str.replace(/^seat\s*#?/i, '').toUpperCase()}`;
+    if (cleanSpaceType === 'cinema_seat' || cleanSpaceType === 'cinema') return `Seat ${str.replace(/^seat(?:[\s#.\-:]+|(?=\d|$))/i, '').trim().toUpperCase()}`;
     if (cleanSpaceType === 'room' || /^room\s*#?\d+/i.test(str)) return `Room ${str.replace(/^room\s*#?/i, '').trim()}`;
     if (cleanSpaceType === 'cabin' || /^cabin\s*#?\d+/i.test(str)) return `Cabin ${str.replace(/^cabin\s*#?/i, '').trim()}`;
     if (cleanSpaceType === 'vip' || /^vip\s*#?\d+/i.test(str)) return `VIP ${str.replace(/^vip\s*#?/i, '').trim()}`;
@@ -163,6 +163,7 @@ export default function KdsDisplayView({
       if (cleanFallback === 'room') return `Room ${str}`;
       if (cleanFallback === 'cabin') return `Cabin ${str}`;
       if (cleanFallback === 'vip') return `VIP ${str}`;
+      if (cleanFallback === 'cinema_seat' || cleanFallback === 'cinema') return `Seat ${str.replace(/^seat(?:[\s#.\-:]+|(?=\d|$))/i, '').trim().toUpperCase()}`;
     }
 
     return `Table ${str}`;

@@ -3090,23 +3090,43 @@ router.post('/support/tickets/:id/reply', authenticateToken, requireSuperAdmin, 
     // Transition status to 'waiting_on_tenant' unless ticket was already 'in_progress' and caller explicitly kept it
     const targetStatus = req.body?.status === 'in_progress' ? 'in_progress' : 'waiting_on_tenant';
 
-    const newMsg = await withTransaction(async (txQuery) => {
+    const replyResult = await withTransaction(async (txQuery) => {
+      // Lock ticket row first and verify non-closed state on each attempt
+      const txTicketRes = await txQuery(
+        'SELECT id, status FROM support_tickets WHERE id = $1 FOR UPDATE',
+        [ticket.id]
+      );
+      const txTicketRows = txTicketRes.rows || txTicketRes;
+      const txTicket = txTicketRows && txTicketRows[0];
+      if (!txTicket) {
+        const notFoundErr = new Error('Support ticket not found.');
+        notFoundErr.httpStatus = 404;
+        notFoundErr.code = 'NOT_FOUND';
+        throw notFoundErr;
+      }
+      if (txTicket.status === 'closed') {
+        const closedErr = new Error('This ticket is closed. Please reopen it before sending replies.');
+        closedErr.httpStatus = 400;
+        closedErr.code = 'TICKET_CLOSED';
+        throw closedErr;
+      }
+
       const msgRes = await txQuery(`
         INSERT INTO support_ticket_messages (
           ticket_id, sender_type, sender_id, sender_name, message, created_at
         ) VALUES (
           $1, 'superadmin', $2, $3, $4, CURRENT_TIMESTAMP
         ) RETURNING id, ticket_id, sender_type, sender_id, sender_name, message, created_at
-      `, [ticket.id, senderId, senderName, replyText]);
+      `, [txTicket.id, senderId, senderName, replyText]);
       const msgRows = msgRes.rows || msgRes;
 
       await txQuery(`
         UPDATE support_tickets 
         SET status = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
-      `, [targetStatus, ticket.id]);
+      `, [targetStatus, txTicket.id]);
 
-      return msgRows[0] || (await txQuery('SELECT * FROM support_ticket_messages WHERE ticket_id = $1 ORDER BY id DESC LIMIT 1', [ticket.id]))[0];
+      return msgRows[0] || (await txQuery('SELECT * FROM support_ticket_messages WHERE ticket_id = $1 ORDER BY id DESC LIMIT 1', [txTicket.id]))[0];
     });
 
     await logAudit(
@@ -3118,10 +3138,13 @@ router.post('/support/tickets/:id/reply', authenticateToken, requireSuperAdmin, 
 
     res.status(201).json({
       success: true,
-      message: newMsg,
+      message: replyResult,
       ticket_status: targetStatus
     });
   } catch (err) {
+    if (err && err.httpStatus) {
+      return res.status(err.httpStatus).json({ error: err.code || 'REQUEST_FAILED', code: err.code || 'REQUEST_FAILED', message: err.message });
+    }
     console.error('Super Admin post reply error:', err.message);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to post reply.' });
   }

@@ -3,10 +3,12 @@ import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 dotenv.config();
 
 import { getVerifiedTestDatabaseUrl, verifyTestDatabaseIdentity } from './tests/testDbGuard.js';
+import { extractRawDishId, parseJsonItems } from './utils/analyticsHelper.js';
 
 let dbType = 'sqlite';
 let pgPool = null;
@@ -130,7 +132,7 @@ async function initDb(options = {}) {
   }
 
   // PRODUCTION & NORMAL RUNTIME:
-  if (process.env.DATABASE_URL) {
+  if (!isTestRun && process.env.DATABASE_URL) {
     try {
       if (!pgPool) {
         pgPool = new pg.Pool({
@@ -2437,6 +2439,62 @@ async function seedData(options = {}) {
 
 let initDbPromise = null;
 
+let sqliteAccessQueue = Promise.resolve();
+const sqliteTxContext = new AsyncLocalStorage();
+let activeSqliteTxToken = null;
+let sqliteSavepointSeq = 0;
+
+function enqueueSqliteExclusive(fn) {
+  const prev = sqliteAccessQueue;
+  let release;
+  const next = new Promise(resolve => { release = resolve; });
+  sqliteAccessQueue = prev.then(() => next, () => next);
+  return prev.then(async () => {
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  }, async () => {
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  });
+}
+
+function executeSqliteQuerySync(text, params = []) {
+  let sql = text;
+  // Strip PostgreSQL typecasts (e.g. ::text, ::boolean, ::int, ::bigint)
+  sql = sql.replace(/::[a-zA-Z_]+/g, '');
+  // Strip PostgreSQL row-level locking clauses (e.g. FOR UPDATE, FOR SHARE, FOR NO KEY UPDATE, SKIP LOCKED)
+  sql = sql.replace(/\s+FOR\s+(UPDATE|NO\s+KEY\s+UPDATE|SHARE|KEY\s+SHARE)(\s+OF\s+[a-zA-Z0-9_,\s]+)?(\s+(NOWAIT|SKIP\s+LOCKED))?/gi, '');
+
+  // Convert booleans to 1 or 0 for SQLite
+  const sanitizedParams = params.map(p => (typeof p === 'boolean' ? (p ? 1 : 0) : p));
+
+  // Convert numbered $1, $2 placeholders to SQLite ? while mapping exact positional values
+  const reorderedParams = [];
+  sql = sql.replace(/\$(\d+)/g, (_, num) => {
+    const idx = parseInt(num, 10) - 1;
+    reorderedParams.push(sanitizedParams[idx]);
+    return '?';
+  });
+
+  const upperSql = sql.trim().toUpperCase();
+  const isQueryReturning = upperSql.includes('RETURNING');
+  const isSelectOrWith = upperSql.startsWith('SELECT') || upperSql.startsWith('WITH') || upperSql.startsWith('PRAGMA');
+
+  if (isSelectOrWith || isQueryReturning) {
+    const stmt = sqliteDb.prepare(sql);
+    return stmt.all(reorderedParams);
+  } else {
+    const stmt = sqliteDb.prepare(sql);
+    return stmt.run(reorderedParams);
+  }
+}
+
 async function query(text, params = []) {
   if (!isDbInitialized || (!pgPool && !sqliteDb)) {
     if (!initDbPromise) {
@@ -2452,34 +2510,11 @@ async function query(text, params = []) {
     const res = await pgPool.query(text, params);
     return res.rows;
   } else if (sqliteDb) {
-    let sql = text;
-    // Strip PostgreSQL typecasts (e.g. ::text, ::boolean, ::int, ::bigint)
-    sql = sql.replace(/::[a-zA-Z_]+/g, '');
-    // Strip PostgreSQL row-level locking clauses (e.g. FOR UPDATE, FOR SHARE, FOR NO KEY UPDATE, SKIP LOCKED)
-    sql = sql.replace(/\s+FOR\s+(UPDATE|NO\s+KEY\s+UPDATE|SHARE|KEY\s+SHARE)(\s+OF\s+[a-zA-Z0-9_,\s]+)?(\s+(NOWAIT|SKIP\s+LOCKED))?/gi, '');
-
-    // Convert booleans to 1 or 0 for SQLite
-    const sanitizedParams = params.map(p => (typeof p === 'boolean' ? (p ? 1 : 0) : p));
-
-    // Convert numbered $1, $2 placeholders to SQLite ? while mapping exact positional values
-    const reorderedParams = [];
-    sql = sql.replace(/\$(\d+)/g, (_, num) => {
-      const idx = parseInt(num, 10) - 1;
-      reorderedParams.push(sanitizedParams[idx]);
-      return '?';
-    });
-
-    const upperSql = sql.trim().toUpperCase();
-    const isQueryReturning = upperSql.includes('RETURNING');
-    const isSelectOrWith = upperSql.startsWith('SELECT') || upperSql.startsWith('WITH') || upperSql.startsWith('PRAGMA');
-
-    if (isSelectOrWith || isQueryReturning) {
-      const stmt = sqliteDb.prepare(sql);
-      return stmt.all(reorderedParams);
-    } else {
-      const stmt = sqliteDb.prepare(sql);
-      return stmt.run(reorderedParams);
+    const ctxToken = sqliteTxContext.getStore();
+    if (activeSqliteTxToken && ctxToken === activeSqliteTxToken) {
+      return executeSqliteQuerySync(text, params);
     }
+    return enqueueSqliteExclusive(() => executeSqliteQuerySync(text, params));
   } else {
     throw new Error('Database connection not initialized');
   }
@@ -2511,275 +2546,347 @@ async function logAudit(restaurantId, actorRole, action, details) {
 const compactionLocks = new Set();
 
 async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null) {
-  const lockKey = targetRestaurantId ? `resto_${targetRestaurantId}` : 'global';
-  if (compactionLocks.has(lockKey)) {
-    return { summarized_days: 0, purged_orders: 0, message: 'Compaction already in progress for this tenant' };
-  }
-  compactionLocks.add(lockKey);
-  try {
-    const parseSafeDate = (dateVal) => {
-      if (!dateVal) return null;
-      if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
-      let str = String(dateVal).trim();
-      if (str.includes(' ') && !str.includes('T')) {
-        str = str.replace(' ', 'T');
-      }
-      const d = new Date(str);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
-    const getFormattedLocalDate = (dateObj) => {
-      const d = parseSafeDate(dateObj);
-      if (!d) return '';
-      try {
-        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
-      } catch (e) {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      }
-    };
-
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-    const cutoffDateStr = getFormattedLocalDate(cutoffDate);
-
-    let sql = 'SELECT * FROM orders WHERE 1=1';
-    const params = [];
-    if (targetRestaurantId) {
-      sql += ' AND restaurant_id = $1';
-      params.push(targetRestaurantId);
+  const parseSafeDate = (dateVal) => {
+    if (!dateVal) return null;
+    if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
+    let str = String(dateVal).trim();
+    if (str.includes(' ') && !str.includes('T')) {
+      str = str.replace(' ', 'T');
     }
-    sql += ' ORDER BY created_at ASC';
+    str = str.replace(/([+-]\d{2})$/, '$1:00');
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  };
 
-    const allOrders = await query(sql, params);
-    if (!allOrders || allOrders.length === 0) {
-      return { summarized_days: 0, purged_orders: 0, message: 'No orders found to summarize' };
-    }
-
-    const grouped = {};
-    const invalidOrderIds = [];
-
-    for (const o of allOrders) {
-      if (!o.restaurant_id) continue;
-      const restoId = o.restaurant_id;
-
-      const dStr = getFormattedLocalDate(o.created_at);
-      if (!dStr || dStr > cutoffDateStr) {
-        continue; // Only process orders on or before the cutoff date
-      }
-
-      // Exclude cancelled and rejected orders from sales summaries (they will still be purged)
-      const st = String(o.status || '').toLowerCase();
-      if (st === 'rejected' || st === 'cancelled') {
-        invalidOrderIds.push(o.id);
-        continue;
-      }
-
-      const key = `${restoId}_${dStr}`;
-      if (!grouped[key]) {
-        grouped[key] = {
-          restaurant_id: restoId,
-          summary_date: dStr,
-          total_sales: 0,
-          total_orders: 0,
-          itemsMap: {},
-          paymentMethods: { upi: 0, cash: 0, card: 0, other: 0 },
-          orderIds: []
-        };
-      }
-
-      const orderAmt = Number(o.total_amount) || 0;
-      grouped[key].total_sales += orderAmt;
-      grouped[key].total_orders += 1;
-      grouped[key].orderIds.push(o.id);
-
-      // Payment method
-      const pMethod = String(o.payment_method || 'cash').toLowerCase();
-      if (pMethod.includes('upi') || pMethod.includes('online') || pMethod.includes('paytm') || pMethod.includes('gpay') || pMethod.includes('phonepe')) {
-        grouped[key].paymentMethods.upi += orderAmt;
-      } else if (pMethod.includes('card')) {
-        grouped[key].paymentMethods.card += orderAmt;
-      } else if (pMethod.includes('cash')) {
-        grouped[key].paymentMethods.cash += orderAmt;
-      } else {
-        grouped[key].paymentMethods.other += orderAmt;
-      }
-
-      let itemsList = [];
-      try {
-        itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []);
-      } catch (e) { itemsList = []; }
-
-      if (Array.isArray(itemsList)) {
-        for (const item of itemsList) {
-          const name = item.name || item.dish_name || item.title || 'Item';
-          const qty = Number(item.quantity || item.qty || 1);
-          const price = Number(item.price) || 0;
-          const lineTotal = price * qty;
-          const dishId = item.id || item.dish_id || null;
-
-          if (!grouped[key].itemsMap[name]) {
-            grouped[key].itemsMap[name] = { dish_id: dishId, name, quantity: 0, revenue: 0 };
-          }
-          grouped[key].itemsMap[name].quantity += qty;
-          grouped[key].itemsMap[name].revenue += lineTotal;
-        }
-      }
-    }
-
-    let summarizedDaysCount = 0;
-    let purgedOrdersCount = 0;
-
-    for (const key in grouped) {
-      const summary = grouped[key];
-
-      // Fetch existing summary for this date if any
-      const existingRows = await query(
-        'SELECT * FROM daily_sales_summaries WHERE restaurant_id = $1 AND summary_date = $2',
-        [summary.restaurant_id, summary.summary_date]
-      );
-
-      let finalSales = summary.total_sales;
-      let finalOrders = summary.total_orders;
-      let finalItemsMap = { ...summary.itemsMap };
-      let finalPaymentMethods = { ...summary.paymentMethods };
-
-      if (existingRows && existingRows.length > 0) {
-        const exist = existingRows[0];
-        finalSales += Number(exist.total_sales) || 0;
-        finalOrders += Number(exist.total_orders) || 0;
-
-        // Merge existing items_summary or top_dishes_summary
-        let existingItems = [];
-        try {
-          if (exist.items_summary) {
-            existingItems = typeof exist.items_summary === 'string' ? JSON.parse(exist.items_summary) : exist.items_summary;
-          } else if (exist.top_dishes_summary) {
-            existingItems = typeof exist.top_dishes_summary === 'string' ? JSON.parse(exist.top_dishes_summary) : exist.top_dishes_summary;
-          }
-        } catch (e) {}
-
-        if (Array.isArray(existingItems)) {
-          for (const ei of existingItems) {
-            const eName = ei.name || 'Dish';
-            const eQty = Number(ei.quantity || ei.qty || 0);
-            const eRev = Number(ei.revenue || 0);
-            if (!finalItemsMap[eName]) {
-              finalItemsMap[eName] = { dish_id: ei.dish_id || null, name: eName, quantity: 0, revenue: 0 };
-            }
-            finalItemsMap[eName].quantity += eQty;
-            finalItemsMap[eName].revenue += eRev;
-          }
-        }
-
-        // Merge existing payment_methods_summary
-        let existPayments = {};
-        try {
-          if (exist.payment_methods_summary) {
-            existPayments = typeof exist.payment_methods_summary === 'string' ? JSON.parse(exist.payment_methods_summary) : exist.payment_methods_summary;
-          }
-        } catch (e) {}
-
-        finalPaymentMethods.upi += Number(existPayments.upi || existPayments.upi?.amount || 0);
-        finalPaymentMethods.cash += Number(existPayments.cash || existPayments.cash?.amount || 0);
-        finalPaymentMethods.card += Number(existPayments.card || existPayments.card?.amount || 0);
-        finalPaymentMethods.other += Number(existPayments.other || existPayments.other?.amount || 0);
-      }
-
-      const allItemsList = Object.values(finalItemsMap);
-      const topDishesList = [...allItemsList].sort((a, b) => b.quantity - a.quantity).slice(0, 10).map(d => ({ name: d.name, qty: d.quantity, revenue: d.revenue }));
-      const itemsSummaryJson = JSON.stringify(allItemsList);
-      const topDishesJson = JSON.stringify(topDishesList);
-      const paymentMethodsJson = JSON.stringify(finalPaymentMethods);
-
-      if (dbType === 'postgres') {
-        await query(`
-          INSERT INTO daily_sales_summaries (restaurant_id, summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (restaurant_id, summary_date)
-          DO UPDATE SET total_sales = EXCLUDED.total_sales,
-                        total_orders = EXCLUDED.total_orders,
-                        top_dishes_summary = EXCLUDED.top_dishes_summary,
-                        items_summary = EXCLUDED.items_summary,
-                        payment_methods_summary = EXCLUDED.payment_methods_summary
-        `, [summary.restaurant_id, summary.summary_date, finalSales, finalOrders, topDishesJson, itemsSummaryJson, paymentMethodsJson]);
-      } else {
-        if (existingRows && existingRows.length > 0) {
-          await query(`
-            UPDATE daily_sales_summaries
-            SET total_sales = $1, total_orders = $2, top_dishes_summary = $3, items_summary = $4, payment_methods_summary = $5
-            WHERE restaurant_id = $6 AND summary_date = $7
-          `, [finalSales, finalOrders, topDishesJson, itemsSummaryJson, paymentMethodsJson, summary.restaurant_id, summary.summary_date]);
-        } else {
-          await query(`
-            INSERT INTO daily_sales_summaries (restaurant_id, summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-          `, [summary.restaurant_id, summary.summary_date, finalSales, finalOrders, topDishesJson, itemsSummaryJson, paymentMethodsJson]);
-        }
-      }
-
-      // Purge only after summary is successfully saved
-      for (const orderId of summary.orderIds) {
-        await query('DELETE FROM orders WHERE id = $1', [orderId]);
-        purgedOrdersCount++;
-      }
-
-      summarizedDaysCount++;
-    }
-
-    // Purge any old cancelled/rejected orders
-    for (const invId of invalidOrderIds) {
-      await query('DELETE FROM orders WHERE id = $1', [invId]);
-      purgedOrdersCount++;
-    }
-
-    if (targetRestaurantId) {
-      await logAudit(targetRestaurantId, 'SYSTEM', 'AUTO_SUMMARIZATION', `Summarized ${summarizedDaysCount} days, purged ${purgedOrdersCount} old individual orders older than ${daysOld} days`);
-    }
-
-    return {
-      summarized_days: summarizedDaysCount,
-      purged_orders: purgedOrdersCount,
-      message: `Successfully summarized ${summarizedDaysCount} days and compressed ${purgedOrdersCount} individual order records into daily rollups!`
-    };
-  } catch (err) {
-    console.error('Data Summarization Engine Error:', err);
-    throw err;
-  } finally {
-    compactionLocks.delete(lockKey);
-  }
-}
-
-async function withTransaction(callback) {
-  if (dbType === 'postgres') {
-    const client = await pgPool.connect();
+  const getFormattedLocalDate = (dateObj) => {
+    const d = parseSafeDate(dateObj);
+    if (!d) return '';
     try {
-      await client.query('BEGIN');
-      const txQuery = async (text, params = []) => {
-        const res = await client.query(text, params);
-        return res.rows;
-      };
-      const result = await callback(txQuery);
-      await client.query('COMMIT');
-      return result;
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+    } catch (e) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  };
+
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+  const cutoffDateStr = getFormattedLocalDate(cutoffDate);
+
+  let tenantIds = [];
+  if (targetRestaurantId) {
+    tenantIds = [targetRestaurantId];
+  } else {
+    const tenantRows = await query('SELECT DISTINCT restaurant_id FROM orders WHERE restaurant_id IS NOT NULL ORDER BY restaurant_id ASC');
+    tenantIds = (tenantRows || []).map(r => r.restaurant_id).filter(Boolean);
+  }
+
+  if (tenantIds.length === 0) {
+    return { summarized_days: 0, purged_orders: 0, message: 'No orders found to summarize' };
+  }
+
+  let summarizedDaysCount = 0;
+  let purgedOrdersCount = 0;
+
+  for (const restoId of tenantIds) {
+    const lockKey = `resto_${restoId}`;
+    if (compactionLocks.has(lockKey)) {
+      if (targetRestaurantId) {
+        return { summarized_days: 0, purged_orders: 0, message: 'Compaction already in progress for this tenant' };
+      }
+      continue;
+    }
+    compactionLocks.add(lockKey);
+    let tenantResult = { summarizedDays: 0, purgedOrders: 0 };
+    try {
+      tenantResult = await withTransaction(async (txQuery) => {
+        if (dbType === 'postgres') {
+          await txQuery('SELECT pg_advisory_xact_lock(hashtext($1))', [`compact_${restoId}`]);
+        }
+        const lockSuffix = dbType === 'postgres' ? ' FOR UPDATE' : '';
+        const tenantOrders = await txQuery(
+          `SELECT * FROM orders WHERE restaurant_id = $1 ORDER BY created_at ASC${lockSuffix}`,
+          [restoId]
+        );
+        if (!tenantOrders || tenantOrders.length === 0) {
+          return { summarizedDays: 0, purgedOrders: 0 };
+        }
+
+        const grouped = {};
+        const invalidOrderIds = [];
+
+        for (const o of tenantOrders) {
+          const dStr = getFormattedLocalDate(o.created_at);
+          if (!dStr || dStr > cutoffDateStr) {
+            continue; // Only process orders on or before the cutoff date
+          }
+
+          // Exclude cancelled and rejected orders from sales summaries (they will still be purged)
+          const st = String(o.status || '').toLowerCase();
+          if (st === 'rejected' || st === 'cancelled') {
+            invalidOrderIds.push(o.id);
+            continue;
+          }
+
+          const key = `${restoId}_${dStr}`;
+          if (!grouped[key]) {
+            grouped[key] = {
+              restaurant_id: restoId,
+              summary_date: dStr,
+              total_sales: 0,
+              total_orders: 0,
+              itemsMap: {},
+              paymentMethods: { upi: 0, cash: 0, card: 0, other: 0 },
+              orderIds: []
+            };
+          }
+
+          const orderAmt = Number(o.total_amount) || 0;
+          grouped[key].total_sales += orderAmt;
+          grouped[key].total_orders += 1;
+          grouped[key].orderIds.push(o.id);
+
+          const pMethod = String(o.payment_method || 'cash').toLowerCase();
+          if (pMethod.includes('upi') || pMethod.includes('online') || pMethod.includes('paytm') || pMethod.includes('gpay') || pMethod.includes('phonepe')) {
+            grouped[key].paymentMethods.upi += orderAmt;
+          } else if (pMethod.includes('card')) {
+            grouped[key].paymentMethods.card += orderAmt;
+          } else if (pMethod.includes('cash')) {
+            grouped[key].paymentMethods.cash += orderAmt;
+          } else {
+            grouped[key].paymentMethods.other += orderAmt;
+          }
+
+          const itemsList = parseJsonItems(o.items);
+          for (const item of itemsList) {
+            const rawName = String(item.name || item.dish_name || item.title || '').trim();
+            const name = rawName || null;
+            const qtyVal = item.quantity ?? item.qty ?? item.count;
+            const qty = (qtyVal !== undefined && qtyVal !== null) ? (Number(qtyVal) || 0) : 1;
+            const price = Number(item.price) || 0;
+            const lineTotal = price * qty;
+            const rawDishId = extractRawDishId(item);
+            const dishId = (rawDishId !== null && rawDishId !== undefined && String(rawDishId).trim() !== '') ? rawDishId : null;
+            const mapKey = dishId !== null
+              ? (String(dishId).trim().startsWith('combo:') ? String(dishId).trim() : `id:${String(dishId).trim()}`)
+              : (rawName ? `name:${rawName.toLowerCase()}` : `unknown:${Object.keys(grouped[key].itemsMap).length + 1}`);
+
+            if (!grouped[key].itemsMap[mapKey]) {
+              grouped[key].itemsMap[mapKey] = { dish_id: dishId, name, quantity: 0, revenue: 0 };
+            } else if (!grouped[key].itemsMap[mapKey].name && name) {
+              grouped[key].itemsMap[mapKey].name = name;
+            }
+            grouped[key].itemsMap[mapKey].quantity += qty;
+            grouped[key].itemsMap[mapKey].revenue += lineTotal;
+          }
+        }
+
+        let txDays = 0;
+        let txPurged = 0;
+
+        for (const key in grouped) {
+          const summary = grouped[key];
+          // Claim source orders inside this transaction so only owned rows contribute
+          const claimedIds = [];
+          for (const oid of summary.orderIds) {
+            const delRows = await txQuery('DELETE FROM orders WHERE id = $1 RETURNING id', [oid]);
+            if (Array.isArray(delRows) && delRows.length > 0) {
+              claimedIds.push(oid);
+            }
+          }
+          if (claimedIds.length === 0) {
+            continue;
+          }
+
+          const existingRows = await txQuery(
+            `SELECT * FROM daily_sales_summaries WHERE restaurant_id = $1 AND summary_date = $2${lockSuffix}`,
+            [summary.restaurant_id, summary.summary_date]
+          );
+
+          let finalSales = summary.total_sales;
+          let finalOrders = summary.total_orders;
+          // Deep-clone item entries so any transaction retry starts cleanly from original item values
+          let finalItemsMap = Object.fromEntries(
+            Object.entries(summary.itemsMap).map(([k, v]) => [k, { ...v }])
+          );
+          let finalPaymentMethods = { ...summary.paymentMethods };
+
+          if (existingRows && existingRows.length > 0) {
+            const exist = existingRows[0];
+            finalSales += Number(exist.total_sales) || 0;
+            finalOrders += Number(exist.total_orders) || 0;
+
+            const existingItems = parseJsonItems(exist.items_summary || exist.top_dishes_summary);
+            for (const ei of existingItems) {
+              const rawEName = String(ei.name || ei.dish_name || ei.title || '').trim();
+              const eName = rawEName || null;
+              const rawEQty = ei.quantity ?? ei.qty ?? ei.count;
+              const eQty = (rawEQty !== undefined && rawEQty !== null) ? (Number(rawEQty) || 0) : 0;
+              const eRev = Number(ei.revenue || 0);
+              const eRawId = extractRawDishId(ei);
+              const eDishId = (eRawId !== null && eRawId !== undefined && String(eRawId).trim() !== '') ? eRawId : null;
+              const eKey = eDishId !== null
+                ? (String(eDishId).trim().startsWith('combo:') ? String(eDishId).trim() : `id:${String(eDishId).trim()}`)
+                : (rawEName ? `name:${rawEName.toLowerCase()}` : `unknown:${Object.keys(finalItemsMap).length + 1}`);
+              if (!finalItemsMap[eKey]) {
+                finalItemsMap[eKey] = { dish_id: eDishId, name: eName, quantity: 0, revenue: 0 };
+              } else if (!finalItemsMap[eKey].name && eName) {
+                finalItemsMap[eKey].name = eName;
+              }
+              finalItemsMap[eKey].quantity += eQty;
+              finalItemsMap[eKey].revenue += eRev;
+            }
+
+            let existPayments = {};
+            try {
+              if (exist.payment_methods_summary) {
+                existPayments = typeof exist.payment_methods_summary === 'string' ? JSON.parse(exist.payment_methods_summary) : exist.payment_methods_summary;
+              }
+            } catch (e) {}
+
+            finalPaymentMethods.upi += Number(existPayments.upi || existPayments.upi?.amount || 0);
+            finalPaymentMethods.cash += Number(existPayments.cash || existPayments.cash?.amount || 0);
+            finalPaymentMethods.card += Number(existPayments.card || existPayments.card?.amount || 0);
+            finalPaymentMethods.other += Number(existPayments.other || existPayments.other?.amount || 0);
+          }
+
+          const allItemsList = Object.values(finalItemsMap);
+          const topDishesList = [...allItemsList].sort((a, b) => b.quantity - a.quantity).slice(0, 10).map(d => ({ name: d.name || 'Item', qty: d.quantity, revenue: d.revenue }));
+          const itemsSummaryJson = JSON.stringify(allItemsList);
+          const topDishesJson = JSON.stringify(topDishesList);
+          const paymentMethodsJson = JSON.stringify(finalPaymentMethods);
+
+          if (dbType === 'postgres') {
+            await txQuery(`
+              INSERT INTO daily_sales_summaries (restaurant_id, summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary)
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
+              ON CONFLICT (restaurant_id, summary_date)
+              DO UPDATE SET total_sales = EXCLUDED.total_sales,
+                            total_orders = EXCLUDED.total_orders,
+                            top_dishes_summary = EXCLUDED.top_dishes_summary,
+                            items_summary = EXCLUDED.items_summary,
+                            payment_methods_summary = EXCLUDED.payment_methods_summary
+            `, [summary.restaurant_id, summary.summary_date, finalSales, finalOrders, topDishesJson, itemsSummaryJson, paymentMethodsJson]);
+          } else {
+            if (existingRows && existingRows.length > 0) {
+              await txQuery(`
+                UPDATE daily_sales_summaries
+                SET total_sales = $1, total_orders = $2, top_dishes_summary = $3, items_summary = $4, payment_methods_summary = $5
+                WHERE restaurant_id = $6 AND summary_date = $7
+              `, [finalSales, finalOrders, topDishesJson, itemsSummaryJson, paymentMethodsJson, summary.restaurant_id, summary.summary_date]);
+            } else {
+              await txQuery(`
+                INSERT INTO daily_sales_summaries (restaurant_id, summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+              `, [summary.restaurant_id, summary.summary_date, finalSales, finalOrders, topDishesJson, itemsSummaryJson, paymentMethodsJson]);
+            }
+          }
+
+          txPurged += claimedIds.length;
+          txDays += 1;
+        }
+
+        for (const invId of invalidOrderIds) {
+          const delInv = await txQuery('DELETE FROM orders WHERE id = $1 RETURNING id', [invId]);
+          if (Array.isArray(delInv) && delInv.length > 0) {
+            txPurged += 1;
+          }
+        }
+
+        return { summarizedDays: txDays, purgedOrders: txPurged };
+      });
     } catch (err) {
-      await client.query('ROLLBACK');
+      console.error('Data Summarization Engine Error:', err);
       throw err;
     } finally {
-      client.release();
+      compactionLocks.delete(lockKey);
+    }
+
+    summarizedDaysCount += tenantResult.summarizedDays;
+    purgedOrdersCount += tenantResult.purgedOrders;
+  }
+
+  if (targetRestaurantId) {
+    await logAudit(targetRestaurantId, 'SYSTEM', 'AUTO_SUMMARIZATION', `Summarized ${summarizedDaysCount} days, purged ${purgedOrdersCount} old individual orders older than ${daysOld} days`);
+  }
+
+  return {
+    summarized_days: summarizedDaysCount,
+    purged_orders: purgedOrdersCount,
+    message: `Successfully summarized ${summarizedDaysCount} days and compressed ${purgedOrdersCount} individual order records into daily rollups!`
+  };
+}
+
+async function withTransaction(callback, options = {}) {
+  const rawMaxRetries = (options && options.maxRetries !== undefined) ? options.maxRetries : 3;
+  if (typeof rawMaxRetries !== 'number' || !Number.isInteger(rawMaxRetries) || rawMaxRetries < 1) {
+    throw new TypeError(`withTransaction invalid maxRetries: expected a finite positive integer, got ${String(rawMaxRetries)}`);
+  }
+
+  if (dbType === 'postgres') {
+    const maxAttempts = rawMaxRetries;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const client = await pgPool.connect();
+      let retryDelayMs = 0;
+      try {
+        await client.query(options && options.readOnlyRepeatable
+          ? 'BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY'
+          : 'BEGIN');
+        const txQuery = async (text, params = []) => {
+          const res = await client.query(text, params);
+          return res.rows;
+        };
+        const result = await callback(txQuery);
+        await client.query('COMMIT');
+        return result;
+      } catch (err) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        const isRetryablePgConflict = err && (err.code === '40P01' || err.code === '40001');
+        if (isRetryablePgConflict && attempt < maxAttempts) {
+          retryDelayMs = 15 + Math.floor(Math.random() * 35);
+        } else {
+          throw err;
+        }
+      } finally {
+        client.release();
+      }
+      if (retryDelayMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+      }
     }
   } else {
-    try {
-      sqliteDb.exec('BEGIN TRANSACTION');
-      const result = await callback(query);
-      sqliteDb.exec('COMMIT');
-      return result;
-    } catch (err) {
-      sqliteDb.exec('ROLLBACK');
-      throw err;
+    const currentCtx = sqliteTxContext.getStore();
+    if (activeSqliteTxToken && currentCtx === activeSqliteTxToken) {
+      const spName = `nested_sp_${++sqliteSavepointSeq}`;
+      sqliteDb.exec(`SAVEPOINT ${spName}`);
+      try {
+        const result = await callback(query);
+        sqliteDb.exec(`RELEASE SAVEPOINT ${spName}`);
+        return result;
+      } catch (err) {
+        try { sqliteDb.exec(`ROLLBACK TO SAVEPOINT ${spName}`); } catch (_) {}
+        try { sqliteDb.exec(`RELEASE SAVEPOINT ${spName}`); } catch (_) {}
+        throw err;
+      }
     }
+
+    return enqueueSqliteExclusive(async () => {
+      const myToken = Symbol('sqlite_tx');
+      activeSqliteTxToken = myToken;
+      sqliteDb.exec('BEGIN TRANSACTION');
+      try {
+        const result = await sqliteTxContext.run(myToken, () => callback(query));
+        sqliteDb.exec('COMMIT');
+        return result;
+      } catch (err) {
+        try { sqliteDb.exec('ROLLBACK'); } catch (_) {}
+        throw err;
+      } finally {
+        activeSqliteTxToken = null;
+      }
+    });
   }
 }
 
@@ -3025,4 +3132,19 @@ function getRawDb() {
   return { pgPool, sqliteDb };
 }
 
-export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting, getPaymentIndexStatus, isDatabaseInitialized, getRawDb, isDemoSeedPermitted, bootstrapSuperAdminUser, seedData };
+function configurePgPoolForTesting(mockPool, activeDbType = 'postgres') {
+  if (process.env.NODE_ENV !== 'test') {
+    throw new Error('configurePgPoolForTesting is restricted to test environments');
+  }
+  const prev = { pgPool, dbType, isDbInitialized };
+  pgPool = mockPool;
+  dbType = activeDbType;
+  isDbInitialized = true;
+  return () => {
+    pgPool = prev.pgPool;
+    dbType = prev.dbType;
+    isDbInitialized = prev.isDbInitialized;
+  };
+}
+
+export { initDb, query, logAudit, runAutoDataSummarization, withTransaction, getDbType, closeDbPool, pingDb, resetDbForTesting, getPaymentIndexStatus, isDatabaseInitialized, getRawDb, configurePgPoolForTesting, isDemoSeedPermitted, bootstrapSuperAdminUser, seedData };

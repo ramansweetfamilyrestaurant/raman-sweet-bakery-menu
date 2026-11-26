@@ -149,7 +149,7 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
 
   const isBoolTrue = (val, fallback = false) => {
     if (val === undefined || val === null) return fallback;
-    return val === 1 || val === true || val === '1' || val === 'true';
+    return val === 1 || val === true || val === '1' || String(val).trim().toLowerCase() === 'true';
   };
 
   const getNum = (val, fallback = 9999) => {
@@ -230,7 +230,15 @@ export function resolveTenantCapabilities(restaurantInfo = {}, settingsForm = {}
     cinema_ordering_enabled: isCinema && !isBasic ? isBoolTrue(perms?.cinema_ordering_enabled ?? actualResto?.cinema_ordering_enabled, isUnlimitedPlan) : false,
     room_ordering_enabled: isHotel && !isBasic ? isBoolTrue(perms?.room_ordering_enabled ?? actualResto?.room_ordering_enabled, isUnlimitedPlan) : false,
     gst_invoice_enabled: isBoolTrue(actualResto?.gst_invoice_enabled ?? perms?.gst_invoice_enabled, true),
-    analytics_export_enabled: isBoolTrue(actualResto?.analytics_export_enabled ?? perms?.analytics_export_enabled, true),
+    analytics_export_enabled: isComplimentary
+      ? true
+      : isBoolTrue(
+          actualSub?.analytics_export_enabled ??
+          actualSub?.permissions?.analytics_export_enabled ??
+          perms?.analytics_export_enabled ??
+          actualResto?.analytics_export_enabled,
+          true
+        ),
     modifiers_enabled: isBoolTrue(actualResto?.modifiers_enabled ?? perms?.modifiers_enabled, true),
     google_reviews_enabled: isBoolTrue(actualResto?.google_reviews_enabled ?? perms?.google_reviews_enabled, !isBasic),
     ai_review_enabled: isBoolTrue(actualResto?.ai_review_enabled ?? perms?.ai_review_enabled, true),

@@ -13,6 +13,23 @@ import { JWT_SECRET } from '../config/jwt.js';
 import { adminLoginRateLimiter, supportTicketCreateRateLimiter, supportTicketReplyRateLimiter } from '../middleware/rateLimiters.js';
 import { generateTicketReference, validateTicketInput, validateReplyInput, VALID_CATEGORIES, VALID_PRIORITIES, VALID_STATUSES } from '../services/supportTicketService.js';
 import { clearRestoResolveCache, clearMenuBundleCache, calculateOrderTax } from './api.js';
+import {
+  parseSafeDate,
+  getFormattedLocalDate,
+  getISTDateOffset,
+  formatISTMonthLabel,
+  resolveAnalyticsPeriod,
+  isDateInPeriod,
+  classifyPaymentMethod,
+  escapeCSVCell,
+  sanitizeAttachmentFilename,
+  isAnalyticsExportAllowed,
+  resolvePlanAnalyticsExport,
+  extractRawDishId,
+  extractRawDishName,
+  parseJsonItems,
+  scanCompactDishRefsFromJson
+} from '../utils/analyticsHelper.js';
 import { normalizeVerificationMode } from '../utils/presenceVerification.js';
 import {
   generateHmacQrToken,
@@ -417,7 +434,10 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
     const saasPlan = planRows[0] || {};
 
     const planPrice = Number(r.plan_price || saasPlan.price || (tierKey === 'enterprise' ? 1999 : tierKey === 'basic' ? 499 : 999));
-    const isValTrue = (val, def = true) => val !== undefined && val !== null ? (val === 1 || val === true || val === '1') : def;
+    const isValTrue = (val, def = true) => {
+      if (val === undefined || val === null) return def;
+      return val === 1 || val === true || val === '1' || String(val).trim().toLowerCase() === 'true';
+    };
 
     const mandateStatus = (r.mandate_status || (r.mandate_id ? 'active' : 'pending')).toLowerCase();
     const isComplimentary = Boolean(subInfo.isComplimentary || isAuthoritativeComplimentaryTenant(r, sub));
@@ -459,7 +479,7 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       ai_review_enabled: isValTrue(saasPlan.ai_review_enabled, true),
       stories_enabled: isValTrue(saasPlan.stories_enabled, true),
       gst_invoice_enabled: isValTrue(saasPlan.gst_invoice_enabled, true),
-      analytics_export_enabled: isValTrue(saasPlan.analytics_export_enabled, true),
+      analytics_export_enabled: resolvePlanAnalyticsExport(isComplimentary, planRows && planRows.length > 0 ? planRows[0] : null),
       multi_language_enabled: isValTrue(saasPlan.multi_language_enabled, true),
       watermark_removal_enabled: isValTrue(saasPlan.watermark_removal_enabled, true),
       custom_domain_enabled: isValTrue(saasPlan.custom_domain_enabled, isUnlimitedPlan),
@@ -547,6 +567,7 @@ router.get('/subscription-status', authenticateToken, async (req, res) => {
       google_reviews_enabled: matrixPermissions.google_reviews_enabled,
       kds_enabled: matrixPermissions.kds_enabled,
       dual_printer_enabled: matrixPermissions.dual_printer_enabled,
+      analytics_export_enabled: matrixPermissions.analytics_export_enabled,
       max_combos: matrixPermissions.max_combos,
       permissions: matrixPermissions,
       default_trial_days: defaultTrialDays,
@@ -3291,13 +3312,6 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const numericId = parseInt(id, 10);
     const orderId = isNaN(numericId) ? id : numericId;
 
-    let kdsVal = (sent_to_kds === 1 || sent_to_kds === true || sent_to_kds === '1' || status === 'kitchen') ? 1 : 0;
-    if (status === 'accepted' && (sent_to_kds === 0 || sent_to_kds === '0')) {
-      kdsVal = 0;
-    }
-
-    let prepVal = (kitchen_prepared === 1 || kitchen_prepared === true || kitchen_prepared === '1') ? 1 : 0;
-
     // 1. Fetch target order strictly bound to authenticated restaurant
     const existing = await query(`
       SELECT id, session_id, parent_order_id, table_number, status, sent_to_kds,
@@ -3311,28 +3325,46 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       return res.status(404).json({ error: 'Order not found or does not belong to this restaurant' });
     }
 
+    // Distinguish explicitly supplied status & lifecycle flags from stored fallback values
+    const currentStatus = String(targetOrder.status || 'pending').toLowerCase();
+    const explicitStatus = (status !== undefined && status !== null && String(status).trim() !== '')
+      ? String(status).trim().toLowerCase()
+      : null;
+    const normalizedNewStatus = explicitStatus;
+    const hasExplicitKds = sent_to_kds !== undefined && sent_to_kds !== null;
+    const hasExplicitPrep = kitchen_prepared !== undefined && kitchen_prepared !== null;
+    const requestedKdsVal = hasExplicitKds
+      ? ((sent_to_kds === 1 || sent_to_kds === true || sent_to_kds === '1') ? 1 : 0)
+      : null;
+    const requestedPrepVal = hasExplicitPrep
+      ? ((kitchen_prepared === 1 || kitchen_prepared === true || kitchen_prepared === '1') ? 1 : 0)
+      : null;
+
     // 2. Strict Role Authorization (Zero Fallback)
     const callerRole = String(req.user?.role || '').trim();
     const VALID_STAFF_ROLES = ['restaurant_admin', 'superadmin'];
 
-    // 3. Terminal Lifecycle & Stable terminal_at Logic
+    // 3. Terminal Lifecycle Guard (re-checked against locked transaction row below)
     const TERMINAL_STATUSES = Object.freeze(['completed', 'cancelled', 'rejected']);
-    const currentStatus = String(targetOrder.status || 'pending').toLowerCase();
-    const newStatus = status ? String(status).toLowerCase() : currentStatus;
     const isCurrentTerminal = TERMINAL_STATUSES.includes(currentStatus);
-    const isTargetTerminal = TERMINAL_STATUSES.includes(newStatus);
+    const isTargetTerminal = normalizedNewStatus ? TERMINAL_STATUSES.includes(normalizedNewStatus) : isCurrentTerminal;
 
     // Enforce Policy: Prohibit reopening terminal orders
-    if (isCurrentTerminal && !isTargetTerminal) {
+    if (normalizedNewStatus && isCurrentTerminal && !isTargetTerminal) {
       return res.status(400).json({
         error: 'order_already_terminal',
         message: `Order #${orderId} is already in terminal state '${currentStatus}' and cannot be reopened.`
       });
     }
 
-    // 4. Counter Identification & Kitchen Acknowledgement Guard
+    // 4. Counter Identification & Kitchen Acknowledgement Guard (prior routing determined strictly by sent_to_kds)
     const isCounterOrder = String(targetOrder.table_number || '').trim().toLowerCase() === 'counter';
-    if (isCounterOrder && (status === 'kitchen' || status === 'preparing' || kdsVal === 1)) {
+    const isAlreadyRoutedToKds = Number(targetOrder.sent_to_kds) === 1;
+    const isKitchenRoutingRequested =
+      requestedKdsVal === 1 ||
+      normalizedNewStatus === 'kitchen' ||
+      normalizedNewStatus === 'preparing';
+    if (isCounterOrder && !isCurrentTerminal && !isTargetTerminal && !isAlreadyRoutedToKds && isKitchenRoutingRequested) {
       if (!VALID_STAFF_ROLES.includes(callerRole)) {
         return res.status(403).json({ error: 'ADMIN_ROLE_REQUIRED', message: 'Staff role required to authorize counter order preparation' });
       }
@@ -3352,17 +3384,6 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     if (status === 'rejected' || status === 'cancelled') {
       await query('DELETE FROM orders WHERE id = $1 AND restaurant_id = $2', [orderId, targetId]);
       return res.json({ success: true, id: orderId, status: 'cancelled', deleted: true });
-    }
-
-    let finalTerminalAt = targetOrder.terminal_at || null;
-    if (!isCurrentTerminal && isTargetTerminal) {
-      // First entry into terminal state
-      finalTerminalAt = new Date().toISOString();
-    } else if (isCurrentTerminal && isTargetTerminal) {
-      // Subsequent updates to already-terminal orders strictly preserve existing value (including NULL on legacy records)
-      finalTerminalAt = targetOrder.terminal_at || null;
-    } else {
-      finalTerminalAt = null;
     }
 
     // 6. Decoupled Financial Settlement Validation
@@ -3387,77 +3408,288 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       }
     }
 
-    // 7. Atomic Transaction: Concurrency-Protected Settlement & Order State Updates
-    let finalSettled = targetOrder.is_settled || 0;
-    let finalPaymentMethod = targetOrder.payment_method || 'cash';
+    // 7. Atomic Transaction: Validate & Update Against Target Row
     let alreadySettled = false;
-    let didSettleTransition = false;
     let updatedOrderRecord = null;
 
     await withTransaction(async (txQuery) => {
+      let groupLocked = false;
       if (isSettlementRequested) {
-        let settleSql = '';
-        let settleParams = [];
-
-        if (!isCounterOrder && targetOrder.session_id) {
-          // Settle dining table session conditionally (only unsettled rows transition)
-          // Preserves individual status, sent_to_kds, and kitchen_prepared flags of other rounds in the session
-          settleSql = `
-            UPDATE orders
-            SET status = CASE WHEN id = $1 THEN $2 ELSE status END,
-                sent_to_kds = CASE WHEN id = $1 THEN $3 ELSE sent_to_kds END,
-                kitchen_prepared = CASE WHEN id = $1 THEN $4 ELSE kitchen_prepared END,
-                terminal_at = CASE WHEN id = $1 THEN $5 ELSE terminal_at END,
-                is_settled = 1,
-                payment_method = $6,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE restaurant_id = $7 AND session_id = $8 AND (is_settled = 0 OR is_settled IS NULL)
-            RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
-          `;
-          settleParams = [orderId, newStatus, kdsVal, prepVal, finalTerminalAt, reqPaymentMethod, targetId, targetOrder.session_id];
-        } else if (!isCounterOrder && targetOrder.parent_order_id) {
-          // Settle dining table session linked via parent_order_id
-          settleSql = `
-            UPDATE orders
-            SET status = CASE WHEN id = $1 THEN $2 ELSE status END,
-                sent_to_kds = CASE WHEN id = $1 THEN $3 ELSE sent_to_kds END,
-                kitchen_prepared = CASE WHEN id = $1 THEN $4 ELSE kitchen_prepared END,
-                terminal_at = CASE WHEN id = $1 THEN $5 ELSE terminal_at END,
-                is_settled = 1,
-                payment_method = $6,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE restaurant_id = $7 AND (id = $8 OR parent_order_id = $8) AND (is_settled = 0 OR is_settled IS NULL)
-            RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
-          `;
-          settleParams = [orderId, newStatus, kdsVal, prepVal, finalTerminalAt, reqPaymentMethod, targetId, targetOrder.parent_order_id];
-        } else {
-          // Settle single order conditionally (and any attached child rounds)
-          settleSql = `
-            UPDATE orders
-            SET status = CASE WHEN id = $1 THEN $2 ELSE status END,
-                sent_to_kds = CASE WHEN id = $1 THEN $3 ELSE sent_to_kds END,
-                kitchen_prepared = CASE WHEN id = $1 THEN $4 ELSE kitchen_prepared END,
-                terminal_at = CASE WHEN id = $1 THEN $5 ELSE terminal_at END,
-                is_settled = 1,
-                payment_method = $6,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE restaurant_id = $7 AND (id = $1 OR parent_order_id = $1) AND (is_settled = 0 OR is_settled IS NULL)
-            RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
-          `;
-          settleParams = [orderId, newStatus, kdsVal, prepVal, finalTerminalAt, reqPaymentMethod, targetId];
+        const seedRows = await txQuery(
+          'SELECT id, session_id, parent_order_id, table_number FROM orders WHERE id = $1 AND restaurant_id = $2',
+          [orderId, targetId]
+        );
+        const seedRow = seedRows && seedRows[0];
+        if (!seedRow) {
+          const notFoundErr = new Error('Order not found or does not belong to this restaurant');
+          notFoundErr.httpStatus = 404;
+          notFoundErr.code = 'order_not_found';
+          throw notFoundErr;
         }
+        const isSeedCounterOrder = String(seedRow.table_number || '').trim().toLowerCase() === 'counter';
+        if (!isSeedCounterOrder) {
+          // Coordinate with concurrent add-round creation using shared table advisory lock in PostgreSQL
+          if (getDbType() === 'postgres' && seedRow.table_number) {
+            await txQuery('SELECT pg_advisory_xact_lock(hashtext($1))', [`order_lock_${targetId}_${seedRow.table_number}`]);
+          }
+          // Lock group rows in ascending ID order before locking individual target row (including root orders without a session)
+          if (seedRow.session_id) {
+            await txQuery(
+              'SELECT id FROM orders WHERE restaurant_id = $1 AND session_id = $2 ORDER BY id ASC FOR UPDATE',
+              [targetId, seedRow.session_id]
+            );
+            groupLocked = 'session';
+          } else {
+            const rootGroupId = seedRow.parent_order_id || orderId;
+            await txQuery(
+              'SELECT id FROM orders WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) ORDER BY id ASC FOR UPDATE',
+              [targetId, rootGroupId]
+            );
+            groupLocked = 'parent';
+          }
+        }
+      }
+
+      const txRows = await txQuery(`
+        SELECT id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at, table_number, session_id, parent_order_id
+        FROM orders
+        WHERE id = $1 AND restaurant_id = $2
+        FOR UPDATE
+      `, [orderId, targetId]);
+
+      const txRow = txRows && txRows[0];
+      if (!txRow) {
+        const notFoundErr = new Error('Order not found or does not belong to this restaurant');
+        notFoundErr.httpStatus = 404;
+        notFoundErr.code = 'order_not_found';
+        throw notFoundErr;
+      }
+
+      const txCurrentStatus = String(txRow.status || 'pending').toLowerCase();
+      const isTxCurrentTerminal = TERMINAL_STATUSES.includes(txCurrentStatus);
+      const isTxTargetTerminal = normalizedNewStatus ? TERMINAL_STATUSES.includes(normalizedNewStatus) : isTxCurrentTerminal;
+      const isTxCounterOrder = String(txRow.table_number || '').trim().toLowerCase() === 'counter';
+      const wasTxRoutedToKds = Number(txRow.sent_to_kds) === 1;
+
+      if (normalizedNewStatus && isTxCurrentTerminal && !isTxTargetTerminal) {
+        const reopenErr = new Error(`Order #${orderId} is already in terminal state '${txCurrentStatus}' and cannot be reopened.`);
+        reopenErr.httpStatus = 400;
+        reopenErr.code = 'order_already_terminal';
+        throw reopenErr;
+      }
+
+      if (isTxCounterOrder && !wasTxRoutedToKds && requestedKdsVal === 1 && isTxTargetTerminal) {
+        const termRouteErr = new Error('Cannot newly route a terminal counter order to the kitchen display.');
+        termRouteErr.httpStatus = 400;
+        termRouteErr.code = 'terminal_kitchen_routing_not_allowed';
+        throw termRouteErr;
+      }
+
+      let counterKitchenAckValidated = false;
+      if (isTxCounterOrder && !isTxCurrentTerminal && !isTxTargetTerminal && !wasTxRoutedToKds && isKitchenRoutingRequested) {
+        if (!VALID_STAFF_ROLES.includes(callerRole)) {
+          const authErr = new Error('Staff role required to authorize counter order preparation');
+          authErr.httpStatus = 403;
+          authErr.code = 'ADMIN_ROLE_REQUIRED';
+          throw authErr;
+        }
+        const isAcknowledged = Boolean(
+          counter_acknowledgement &&
+          (counter_acknowledgement.confirmed === true || counter_acknowledgement.confirmed === 'true' || counter_acknowledgement.acknowledged === true)
+        );
+        if (!isAcknowledged) {
+          const ackErr = new Error('Staff acknowledgement is required before sending a counter order to the kitchen.');
+          ackErr.httpStatus = 400;
+          ackErr.code = 'counter_acknowledgement_required';
+          throw ackErr;
+        }
+        counterKitchenAckValidated = true;
+      }
+
+      const isExplicitKitchenTransition = normalizedNewStatus === 'kitchen' && txCurrentStatus !== 'kitchen';
+      const sqlKdsParam = hasExplicitKds
+        ? requestedKdsVal
+        : (isExplicitKitchenTransition ? 1 : null);
+      const sqlPrepParam = requestedPrepVal;
+      const sqlStatusParam = normalizedNewStatus;
+
+      let txTerminalAt = txRow.terminal_at ?? null;
+      if (sqlStatusParam !== null) {
+        if (!isTxCurrentTerminal && isTxTargetTerminal) {
+          txTerminalAt = txRow.terminal_at || new Date().toISOString();
+        } else if (isTxCurrentTerminal && isTxTargetTerminal) {
+          txTerminalAt = txRow.terminal_at ?? null;
+        } else {
+          txTerminalAt = null;
+        }
+      }
+
+      const applyAlreadySettledLifecycleUpdate = async (targetRecord) => {
+        const currentRecordStatus = String(targetRecord.status || 'pending').toLowerCase();
+        const isRecordTerminal = TERMINAL_STATUSES.includes(currentRecordStatus);
+        const hasStatusChange = Boolean(sqlStatusParam && sqlStatusParam !== currentRecordStatus);
+        const hasExplicitFlagChange = sqlKdsParam !== null || sqlPrepParam !== null;
+
+        if (hasStatusChange && isRecordTerminal && !isTxTargetTerminal) {
+          const reopenErr = new Error(`Order #${orderId} is already in terminal state '${currentRecordStatus}' and cannot be reopened.`);
+          reopenErr.httpStatus = 400;
+          reopenErr.code = 'order_already_terminal';
+          throw reopenErr;
+        }
+
+        if ((hasStatusChange && (!isRecordTerminal || isTxTargetTerminal)) || hasExplicitFlagChange) {
+          const nextTerminalAt = hasStatusChange
+            ? (!isRecordTerminal && isTxTargetTerminal
+                ? (targetRecord.terminal_at || new Date().toISOString())
+                : (targetRecord.terminal_at ?? null))
+            : (targetRecord.terminal_at ?? null);
+          const statusUpdateRes = await txQuery(`
+            UPDATE orders
+            SET status = COALESCE($1, status),
+                sent_to_kds = COALESCE($2, sent_to_kds),
+                kitchen_prepared = COALESCE($3, kitchen_prepared),
+                terminal_at = $4,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $5 AND restaurant_id = $6
+            RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
+          `, [hasStatusChange ? sqlStatusParam : null, sqlKdsParam, sqlPrepParam, nextTerminalAt, orderId, targetId]);
+          if (statusUpdateRes && statusUpdateRes.length > 0) {
+            return statusUpdateRes[0];
+          }
+        }
+        return targetRecord;
+      };
+
+      if (isSettlementRequested) {
+        let settleWhere = 'WHERE restaurant_id = $7 AND (id = $1 OR parent_order_id = $1) AND (is_settled = 0 OR is_settled IS NULL)';
+        const settleParams = [orderId, sqlStatusParam, sqlKdsParam, sqlPrepParam, txTerminalAt, reqPaymentMethod, targetId];
+
+        if (!isTxCounterOrder && txRow.session_id) {
+          if (groupLocked !== 'session') {
+            await txQuery(
+              'SELECT id FROM orders WHERE restaurant_id = $1 AND session_id = $2 ORDER BY id ASC FOR UPDATE',
+              [targetId, txRow.session_id]
+            );
+          }
+          settleWhere = 'WHERE restaurant_id = $7 AND session_id = $8 AND (is_settled = 0 OR is_settled IS NULL)';
+          settleParams.push(txRow.session_id);
+        } else if (!isTxCounterOrder && txRow.parent_order_id) {
+          if (groupLocked !== 'parent') {
+            await txQuery(
+              'SELECT id FROM orders WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) ORDER BY id ASC FOR UPDATE',
+              [targetId, txRow.parent_order_id]
+            );
+          }
+          settleWhere = 'WHERE restaurant_id = $7 AND (id = $8 OR parent_order_id = $8) AND (is_settled = 0 OR is_settled IS NULL)';
+          settleParams.push(txRow.parent_order_id);
+        } else if (!isTxCounterOrder && groupLocked !== 'parent') {
+          await txQuery(
+            'SELECT id FROM orders WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) ORDER BY id ASC FOR UPDATE',
+            [targetId, orderId]
+          );
+        }
+
+        const expectedOrderIds = Array.isArray(settle.expected_order_ids)
+          ? new Set(settle.expected_order_ids.map(id => String(id)))
+          : null;
+        if (expectedOrderIds) {
+          let snapshotWhere = "WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) AND (is_settled = 0 OR is_settled IS NULL) AND status NOT IN ('rejected', 'cancelled')";
+          let snapshotParams = [targetId, orderId];
+          if (!isTxCounterOrder && txRow.session_id) {
+            snapshotWhere = "WHERE restaurant_id = $1 AND session_id = $2 AND (is_settled = 0 OR is_settled IS NULL) AND status NOT IN ('rejected', 'cancelled')";
+            snapshotParams = [targetId, txRow.session_id];
+          } else if (!isTxCounterOrder && txRow.parent_order_id) {
+            snapshotWhere = "WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) AND (is_settled = 0 OR is_settled IS NULL) AND status NOT IN ('rejected', 'cancelled')";
+            snapshotParams = [targetId, txRow.parent_order_id];
+          }
+          const unsettledRows = await txQuery(
+            `SELECT id, total_amount, subtotal_amount, tax_amount, cgst_amount, sgst_amount, items FROM orders ${snapshotWhere} ORDER BY id ASC`,
+            snapshotParams
+          );
+          if (unsettledRows && unsettledRows.length > 0) {
+            const unbilledIds = unsettledRows
+              .map(r => r.id)
+              .filter(id => !expectedOrderIds.has(String(id)));
+            const unsettledIdSet = new Set(unsettledRows.map(r => String(r.id)));
+            const missingExpectedIds = Array.from(expectedOrderIds).filter(id => !unsettledIdSet.has(id));
+
+            let hasTotalMismatch = false;
+            let authoritativeGrandTotal = null;
+            if (settle.expected_total !== undefined && settle.expected_total !== null && Number.isFinite(Number(settle.expected_total))) {
+              const restoGstRows = await txQuery('SELECT gst_enabled FROM restaurants WHERE id = $1', [targetId]);
+              const gstFlag = restoGstRows && restoGstRows[0] ? restoGstRows[0].gst_enabled : false;
+              const isGst = Boolean(gstFlag === 1 || gstFlag === '1' || gstFlag === true);
+              let billSubtotal = 0;
+              for (const uRow of unsettledRows) {
+                const parsedItems = parseJsonItems(uRow.items);
+                if (parsedItems.length > 0) {
+                  for (const item of parsedItems) {
+                    billSubtotal += Number(item.price || 0) * Number(item.quantity || 1);
+                  }
+                } else if (Number(uRow.subtotal_amount) > 0) {
+                  billSubtotal += Number(uRow.subtotal_amount);
+                } else if (Number(uRow.total_amount) > 0) {
+                  const tot = Number(uRow.total_amount);
+                  const tax = Number(uRow.tax_amount || (Number(uRow.cgst_amount || 0) + Number(uRow.sgst_amount || 0)));
+                  if (tax > 0 && tot >= tax) {
+                    billSubtotal += (tot - tax);
+                  } else if (isGst) {
+                    billSubtotal += Math.round((tot / 1.05) * 100) / 100;
+                  } else {
+                    billSubtotal += tot;
+                  }
+                }
+              }
+              const cgst = isGst ? Math.round(billSubtotal * 0.025 * 100) / 100 : 0;
+              const sgst = isGst ? Math.round(billSubtotal * 0.025 * 100) / 100 : 0;
+              authoritativeGrandTotal = isGst
+                ? Math.round((billSubtotal + cgst + sgst) * 100) / 100
+                : Math.round(billSubtotal * 100) / 100;
+              const expectedRoundedTotal = Math.round(Number(settle.expected_total) * 100) / 100;
+              hasTotalMismatch = Math.abs(authoritativeGrandTotal - expectedRoundedTotal) > 0.01;
+            }
+
+            if (unbilledIds.length > 0 || missingExpectedIds.length > 0 || hasTotalMismatch) {
+              const staleBillErr = new Error('Bill changed after calculation. Please review the updated bill before settling.');
+              staleBillErr.httpStatus = 409;
+              staleBillErr.code = 'bill_snapshot_stale';
+              staleBillErr.unbilled_order_ids = unbilledIds;
+              if (authoritativeGrandTotal !== null) {
+                staleBillErr.authoritative_total = authoritativeGrandTotal;
+              }
+              throw staleBillErr;
+            }
+          }
+        }
+
+        const settleSql = `
+          UPDATE orders
+          SET status = CASE WHEN id = $1 THEN COALESCE($2, status) ELSE status END,
+              sent_to_kds = CASE WHEN id = $1 THEN COALESCE($3, sent_to_kds) ELSE sent_to_kds END,
+              kitchen_prepared = CASE WHEN id = $1 THEN COALESCE($4, kitchen_prepared) ELSE kitchen_prepared END,
+              terminal_at = CASE WHEN id = $1 THEN $5 ELSE terminal_at END,
+              is_settled = 1,
+              payment_method = $6,
+              updated_at = CURRENT_TIMESTAMP
+          ${settleWhere}
+          RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
+        `;
 
         const settleRes = await txQuery(settleSql, settleParams);
 
         if (settleRes && settleRes.length > 0) {
-          // Winning transaction that performed the settlement transition
-          didSettleTransition = true;
-          alreadySettled = false;
-          finalSettled = 1;
-          finalPaymentMethod = reqPaymentMethod;
-          updatedOrderRecord = settleRes.find(r => String(r.id) === String(orderId)) || settleRes[0];
+          const targetSettledRow = settleRes.find(r => String(r.id) === String(orderId)) || null;
+          if (targetSettledRow) {
+            alreadySettled = false;
+            updatedOrderRecord = targetSettledRow;
+          } else {
+            // Only sibling rounds were unsettled; keep requested order lifecycle updated and return requested order, never a sibling
+            alreadySettled = Boolean(txRow.is_settled === 1 || txRow.is_settled === '1' || txRow.is_settled === true);
+            updatedOrderRecord = await applyAlreadySettledLifecycleUpdate(txRow);
+          }
 
-          // Atomic Audit: Financial Settlement (only logged once by winning transition)
+          const settledOrderIds = settleRes.map(r => r.id);
+          const settledPaymentMethod = settleRes[0].payment_method || reqPaymentMethod;
           await txQuery(`
             INSERT INTO audit_logs (restaurant_id, actor_role, action, details)
             VALUES ($1, $2, $3, $4)
@@ -3467,14 +3699,15 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
             'ORDER_BILL_SETTLED',
             JSON.stringify({
               order_id: orderId,
-              table_number: targetOrder.table_number,
-              payment_method: finalPaymentMethod,
+              settled_order_ids: settledOrderIds,
+              table_number: txRow.table_number,
+              payment_method: settledPaymentMethod,
               settled_by: req.user.username || req.user.id,
               timestamp: new Date().toISOString()
             })
           ]);
         } else {
-          // Losing concurrent transaction or already-settled order: fetch authoritative state
+          // Losing concurrent transaction or already-settled order: fetch authoritative state without re-settling
           const currentRows = await txQuery(`
             SELECT id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
             FROM orders
@@ -3485,51 +3718,35 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
             throw new Error('ORDER_UPDATE_FAILED');
           }
 
-          updatedOrderRecord = currentRows[0];
-          alreadySettled = Boolean(updatedOrderRecord.is_settled === 1 || updatedOrderRecord.is_settled === '1' || updatedOrderRecord.is_settled === true);
-          finalSettled = updatedOrderRecord.is_settled || 1;
-          finalPaymentMethod = updatedOrderRecord.payment_method || reqPaymentMethod;
-          finalTerminalAt = updatedOrderRecord.terminal_at || finalTerminalAt;
-
-          // If caller also provided a status update, only apply if not reopening an already-terminal order
-          const currentRecordStatus = String(updatedOrderRecord.status || 'pending').toLowerCase();
-          const isRecordTerminal = TERMINAL_STATUSES.includes(currentRecordStatus);
-          if (newStatus !== currentRecordStatus && (!isRecordTerminal || isTargetTerminal)) {
-            const statusUpdateRes = await txQuery(`
-              UPDATE orders
-              SET status = $1, sent_to_kds = $2, kitchen_prepared = $3, terminal_at = $4, updated_at = CURRENT_TIMESTAMP
-              WHERE id = $5 AND restaurant_id = $6
-              RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
-            `, [newStatus, kdsVal, prepVal, finalTerminalAt, orderId, targetId]);
-            if (statusUpdateRes && statusUpdateRes.length > 0) {
-              updatedOrderRecord = statusUpdateRes[0];
-            }
-          }
+          alreadySettled = Boolean(currentRows[0].is_settled === 1 || currentRows[0].is_settled === '1' || currentRows[0].is_settled === true);
+          updatedOrderRecord = await applyAlreadySettledLifecycleUpdate(currentRows[0]);
         }
       } else {
-        // Non-settlement status update: Preserves existing is_settled and payment_method untouched
+        // Non-settlement update: COALESCE preserves omitted status, KDS, and prep flags on target row
         const updateSql = `
           UPDATE orders
-          SET status = $1, sent_to_kds = $2, kitchen_prepared = $3, terminal_at = $4, updated_at = CURRENT_TIMESTAMP
+          SET status = COALESCE($1, status),
+              sent_to_kds = COALESCE($2, sent_to_kds),
+              kitchen_prepared = COALESCE($3, kitchen_prepared),
+              terminal_at = $4,
+              updated_at = CURRENT_TIMESTAMP
           WHERE id = $5 AND restaurant_id = $6
           RETURNING id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at
         `;
-        const updateRes = await txQuery(updateSql, [newStatus, kdsVal, prepVal, finalTerminalAt, orderId, targetId]);
+        const updateRes = await txQuery(updateSql, [sqlStatusParam, sqlKdsParam, sqlPrepParam, txTerminalAt, orderId, targetId]);
         if (!updateRes || updateRes.length === 0) {
           throw new Error('ORDER_UPDATE_FAILED');
         }
         updatedOrderRecord = updateRes[0];
-        finalSettled = updatedOrderRecord.is_settled || 0;
-        finalPaymentMethod = updatedOrderRecord.payment_method || 'cash';
-        finalTerminalAt = updatedOrderRecord.terminal_at;
       }
 
-      // Atomic Audit 1: Counter Kitchen Authorization (only if transitioning into kitchen)
-      const isEnteringKitchen = isCounterOrder &&
-        (newStatus === 'kitchen' || newStatus === 'preparing' || kdsVal === 1) &&
-        currentStatus !== 'kitchen' && currentStatus !== 'preparing';
+      const nextTxStatus = String(updatedOrderRecord.status || '').toLowerCase();
+      const didKdsRouteTransition = !wasTxRoutedToKds && Number(updatedOrderRecord.sent_to_kds) === 1;
+      const didStatusRouteTransition =
+        (normalizedNewStatus === 'kitchen' || normalizedNewStatus === 'preparing') &&
+        nextTxStatus !== txCurrentStatus;
 
-      if (isEnteringKitchen) {
+      if (counterKitchenAckValidated && (didKdsRouteTransition || didStatusRouteTransition)) {
         await txQuery(`
           INSERT INTO audit_logs (restaurant_id, actor_role, action, details)
           VALUES ($1, $2, $3, $4)
@@ -3549,18 +3766,33 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       }
     });
 
+    const finalStatus = String(updatedOrderRecord.status || 'pending').toLowerCase();
+    const finalKds = Number(updatedOrderRecord.sent_to_kds) === 1 ? 1 : 0;
+    const finalPrep = Number(updatedOrderRecord.kitchen_prepared) === 1 ? 1 : 0;
+    const finalSettled = updatedOrderRecord.is_settled || 0;
+    const finalPaymentMethod = updatedOrderRecord.payment_method || 'cash';
+    const finalTerminalAt = updatedOrderRecord.terminal_at ?? null;
+
     res.json({
       success: true,
       id: orderId,
-      status: newStatus,
-      sent_to_kds: kdsVal,
-      kitchen_prepared: prepVal,
+      status: finalStatus,
+      sent_to_kds: finalKds,
+      kitchen_prepared: finalPrep,
       is_settled: finalSettled,
       payment_method: finalPaymentMethod,
       terminal_at: finalTerminalAt,
       already_settled: alreadySettled
     });
   } catch (err) {
+    if (err && err.httpStatus) {
+      return res.status(err.httpStatus).json({
+        error: err.code || 'order_update_rejected',
+        code: err.code || 'order_update_rejected',
+        message: err.message,
+        ...(err.unbilled_order_ids ? { unbilled_order_ids: err.unbilled_order_ids } : {})
+      });
+    }
     console.error('Update order status error:', err);
     res.status(500).json({ error: 'Failed to update order status' });
   }
@@ -3852,103 +4084,56 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     }
 
     const { period: qPeriod, year: qYear, month: qMonth } = req.query;
-    const selectedPeriod = qPeriod || (qYear && qMonth ? `month:${qYear}-${String(qMonth).padStart(2, '0')}` : 'all');
-    const selectedYear = qYear ? parseInt(qYear, 10) : null;
-    const selectedMonth = qMonth ? parseInt(qMonth, 10) : null;
+    const referenceNow = Date.now();
+    const {
+      selectedPeriod,
+      year: selectedYear,
+      month: selectedMonth,
+      todayStr,
+      periodStartDate,
+      periodEndDate
+    } = resolveAnalyticsPeriod(qPeriod, qYear, qMonth, referenceNow);
 
-    const parseSafeDate = (dateVal) => {
-      if (!dateVal) return null;
-      if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
-      let str = String(dateVal).trim();
-      if (str.includes(' ') && !str.includes('T')) {
-        str = str.replace(' ', 'T');
-      }
-      if (!str.endsWith('Z') && !str.includes('+') && !str.slice(10).includes('-')) {
-        str = str + 'Z';
-      }
-      const d = new Date(str);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
-    const getFormattedLocalDate = (dateObj) => {
-      const d = parseSafeDate(dateObj);
-      if (!d) return '';
-      try {
-        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
-      } catch (e) {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      }
-    };
-
-    const now = new Date();
-    const todayStr = getFormattedLocalDate(now);
-
-    // Calculate IST Date boundaries
-    const getISTDateOffset = (daysBack) => {
-      const d = new Date();
-      d.setDate(d.getDate() - daysBack);
-      return getFormattedLocalDate(d);
-    };
-
-    const sevenDaysAgoStr = getISTDateOffset(6); // Today + 6 previous days = 7 days
-    const thirtyDaysAgoStr = getISTDateOffset(29); // Today + 29 previous days = 30 days
-    const sixtyDaysAgoStr = getISTDateOffset(59);
-    const sixMonthsAgoStr = getISTDateOffset(180);
+    const sevenDaysAgoStr = getISTDateOffset(6, referenceNow); // Today + 6 previous days = 7 days
+    const thirtyDaysAgoStr = getISTDateOffset(29, referenceNow); // Today + 29 previous days = 30 days
+    const sixtyDaysAgoStr = getISTDateOffset(59, referenceNow);
+    const sixMonthsAgoStr = getISTDateOffset(180, referenceNow);
 
     // Initialize daily chart keys based on selected filter
     const dailySalesMap = {};
     const dailyOrdersMap = {};
-    let periodStartDate = null;
-    let periodEndDate = null;
 
     if (selectedYear && selectedMonth) {
-      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+      const daysInMonth = new Date(Date.UTC(selectedYear, selectedMonth, 0)).getUTCDate();
       const monthPrefix = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
-      periodStartDate = `${monthPrefix}-01`;
-      periodEndDate = `${monthPrefix}-${String(daysInMonth).padStart(2, '0')}`;
       for (let day = 1; day <= daysInMonth; day++) {
         const dayStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
         dailySalesMap[dayStr] = 0;
         dailyOrdersMap[dayStr] = 0;
       }
     } else if (selectedPeriod === 'today') {
-      periodStartDate = todayStr;
-      periodEndDate = todayStr;
       dailySalesMap[todayStr] = 0;
       dailyOrdersMap[todayStr] = 0;
     } else if (selectedPeriod === '7d') {
-      periodStartDate = sevenDaysAgoStr;
-      periodEndDate = todayStr;
       for (let i = 6; i >= 0; i--) {
-        const dStr = getISTDateOffset(i);
+        const dStr = getISTDateOffset(i, referenceNow);
         dailySalesMap[dStr] = 0;
         dailyOrdersMap[dStr] = 0;
       }
     } else if (selectedPeriod === '30d') {
-      periodStartDate = thirtyDaysAgoStr;
-      periodEndDate = todayStr;
       for (let i = 29; i >= 0; i--) {
-        const dStr = getISTDateOffset(i);
+        const dStr = getISTDateOffset(i, referenceNow);
         dailySalesMap[dStr] = 0;
         dailyOrdersMap[dStr] = 0;
       }
     } else if (selectedPeriod === '6m') {
-      periodStartDate = sixMonthsAgoStr;
-      periodEndDate = todayStr;
       for (let i = 180; i >= 0; i -= 5) {
-        const dStr = getISTDateOffset(i);
+        const dStr = getISTDateOffset(i, referenceNow);
         dailySalesMap[dStr] = 0;
         dailyOrdersMap[dStr] = 0;
       }
       dailySalesMap[todayStr] = 0;
       dailyOrdersMap[todayStr] = 0;
-    } else {
-      // 'all' -> Full lifetime (periodStartDate & periodEndDate remain null)
-      periodStartDate = null;
-      periodEndDate = null;
     }
 
     const monthlySalesMap = {};
@@ -3958,7 +4143,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     // Query active non-cancelled orders for tenant
     const orders = await query(
-      "SELECT id, total_amount, status, payment_method, items, created_at, table_number FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
+      "SELECT id, total_amount, status, payment_method, items, created_at, table_number, order_type, session_id, customer_name FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
       [targetId]
     );
 
@@ -3968,13 +4153,117 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       [targetId]
     );
 
-    // Load tenant categories, dishes and scan events
-    const [tenantCategories, tenantDishes, tenantScanEvents, restoRow] = await Promise.all([
+    // Load tenant categories, dishes, 7-day scan hour buckets, today aggregated space scans, configured cinema seats, and explicit cinema config counts
+    let restoConfigFailed = false;
+    let scanQueryFailed = false;
+    let seatQueryFailed = false;
+    const sevenDaysStartUtcMs = new Date(`${sevenDaysAgoStr}T00:00:00+05:30`).getTime();
+    const todayStartUtcMs = new Date(`${todayStr}T00:00:00+05:30`).getTime();
+    const todayEndUtcMs = todayStartUtcMs + 86400000;
+    const formatUtcSql = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+    const sevenDaysStartUtcSql = formatUtcSql(sevenDaysStartUtcMs);
+    const todayStartUtcSql = formatUtcSql(todayStartUtcMs);
+    const todayEndUtcSql = formatUtcSql(todayEndUtcMs);
+    const scanAggSql = getDbType() === 'postgres'
+      ? `SELECT to_char(created_at + INTERVAL '5 hours 30 minutes', 'YYYY-MM-DD') AS ist_date,
+                EXTRACT(HOUR FROM (created_at + INTERVAL '5 hours 30 minutes'))::int AS ist_hour,
+                space_type,
+                table_number,
+                COUNT(*)::int AS scan_count
+         FROM qr_scan_events
+         WHERE restaurant_id = $1 AND created_at >= $2::timestamp AND created_at < $3::timestamp
+         GROUP BY ist_date, ist_hour, space_type, table_number`
+      : `SELECT strftime('%Y-%m-%d', datetime(created_at, '+330 minutes')) AS ist_date,
+                CAST(strftime('%H', datetime(created_at, '+330 minutes')) AS INTEGER) AS ist_hour,
+                space_type,
+                table_number,
+                COUNT(*) AS scan_count
+         FROM qr_scan_events
+         WHERE restaurant_id = $1 AND datetime(created_at) >= $2 AND datetime(created_at) < $3
+         GROUP BY ist_date, ist_hour, space_type, table_number`;
+
+    const [tenantCategories, tenantDishes, scanAggRows, restoRow, tenantCinemaSeats, cinemaConfigMeta] = await Promise.all([
       query('SELECT id, name FROM categories WHERE restaurant_id = $1 ORDER BY sort_order ASC, id ASC', [targetId]),
       query('SELECT id, name, category_id FROM dishes WHERE restaurant_id = $1', [targetId]),
-      query('SELECT id, space_type, table_number, created_at FROM qr_scan_events WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 5000', [targetId]).catch(() => []),
-      query('SELECT scan_count, total_tables, total_rooms, total_screens, total_seats, service_model, business_type FROM restaurants WHERE id = $1', [targetId]).catch(() => [])
+      query(scanAggSql, [targetId, sevenDaysStartUtcSql, todayEndUtcSql]).catch((err) => {
+        scanQueryFailed = true;
+        console.warn('QR scan events aggregation query error:', err.message);
+        return null;
+      }),
+      query('SELECT scan_count, total_tables, total_rooms, total_screens, total_seats, service_model, business_type FROM restaurants WHERE id = $1', [targetId]).catch((err) => {
+        restoConfigFailed = true;
+        console.warn('Restaurant heatmap config query error:', err.message);
+        return null;
+      }),
+      query(
+        'SELECT s.seat_number, s.row_label, sc.screen_number FROM restaurant_cinema_seats s JOIN restaurant_cinema_screens sc ON s.screen_id = sc.id WHERE s.restaurant_id = $1 AND s.active IS NOT FALSE AND sc.active IS NOT FALSE ORDER BY sc.screen_number ASC, s.row_label ASC, s.seat_number ASC',
+        [targetId]
+      ).catch((err) => {
+        seatQueryFailed = true;
+        console.warn('Cinema seats heatmap query error:', err.message);
+        return null;
+      }),
+      query(
+        `SELECT
+           (SELECT COUNT(*) FROM restaurant_cinema_screens WHERE restaurant_id = $1) AS screen_count,
+           (SELECT COUNT(*) FROM restaurant_cinema_seats WHERE restaurant_id = $1) AS seat_count`,
+        [targetId]
+      ).catch((err) => {
+        seatQueryFailed = true;
+        console.warn('Cinema configuration metadata query error:', err.message);
+        return null;
+      })
     ]);
+
+    const restoData = restoRow?.[0] || {};
+    const sModel = (restoData.service_model || '').toLowerCase();
+    const bType = (restoData.business_type || '').toLowerCase();
+    const isHotelModel = sModel === 'hotel' || bType === 'hotel_resort';
+    const isCinemaModel = sModel === 'cinema' || bType === 'cinema_theatre';
+    const hasConfiguredDineInVenue = Boolean(
+      !isHotelModel && !isCinemaModel && Number(restoData.total_rooms || 0) === 0 &&
+      (sModel === 'dine_in' || bType === 'restaurant' || bType === 'cafe' || bType === 'bar_lounge')
+    );
+
+    const inferOrderSpaceType = (orderOrTable) => {
+      const isObj = orderOrTable && typeof orderOrTable === 'object';
+      const raw = String(isObj ? (orderOrTable.table_number || '') : (orderOrTable || '')).trim();
+      const rawOrderType = isObj ? String(orderOrTable.order_type || '').trim().toLowerCase() : '';
+      const rawSession = isObj ? String(orderOrTable.session_id || '').trim().toLowerCase() : '';
+      const rawCust = isObj ? String(orderOrTable.customer_name || '').trim().toLowerCase() : '';
+
+      if (!raw && !rawOrderType) return 'table';
+      if (raw.toLowerCase() === 'counter' || rawOrderType === 'takeaway' || rawOrderType === 'parcel' || /^sess_\d+_counter_/i.test(rawSession)) return 'counter';
+      if (/^(?:screen\s*\d+|s?\d+[\-_:][a-zA-Z]+[\-_:]\d+)/i.test(raw)) return 'cinema_seat';
+      if (/^room\b/i.test(raw)) return 'room';
+      if (/^cabin\b/i.test(raw)) return 'cabin';
+      if (/^vip\b/i.test(raw)) return 'vip';
+      if (/^table\b/i.test(raw)) return 'table';
+
+      if (rawOrderType === 'room_service' || rawOrderType === 'room' || /\broom\b/.test(rawSession)) {
+        return 'room';
+      }
+      if (/\btable\b/.test(rawSession) || (rawOrderType === 'dine_in' && Boolean(raw) && !isCinemaModel && !isHotelModel)) {
+        return 'table';
+      }
+      if (isHotelModel) {
+        return 'room';
+      }
+      if (isCinemaModel) {
+        return 'cinema_seat';
+      }
+      if (hasConfiguredDineInVenue) {
+        return 'table';
+      }
+      if (/^room\s*(?:guest|service|customer|\d+)/i.test(rawCust)) {
+        return 'room';
+      }
+      if (/^table\s*(?:customer|guest|\d+)/i.test(rawCust)) {
+        return 'table';
+      }
+
+      return 'table';
+    };
 
     const dishIdToCategory = {};
     const dishNameToCategory = {};
@@ -3998,7 +4287,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     // Compute authorative live scan telemetry (Today, Yesterday, Hourly curve, Top tables)
     const totalLifetimeScans = Number(restoRow?.[0]?.scan_count || 0);
-    const yesterdayStr = getISTDateOffset(1);
+    const yesterdayStr = getISTDateOffset(1, referenceNow);
     let todayScans = 0;
     let yesterdayScans = 0;
     let weeklyScans = 0;
@@ -4011,39 +4300,34 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     const tableScansMap = {};
 
-    (tenantScanEvents || []).forEach(ev => {
-      const evDate = parseSafeDate(ev.created_at);
-      if (!evDate) return;
-      const dStr = getFormattedLocalDate(evDate);
-
+    (scanAggRows || []).forEach(b => {
+      const cnt = Number(b.scan_count || 0);
+      if (cnt <= 0) return;
+      const dStr = String(b.ist_date || '').trim();
       if (dStr >= sevenDaysAgoStr && dStr <= todayStr) {
-        weeklyScans++;
+        weeklyScans += cnt;
       }
-
       if (dStr === todayStr) {
-        todayScans++;
-        try {
-          const hourStr = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', hourCycle: 'h23' }).format(evDate);
-          const hNum = parseInt(hourStr, 10);
-          if (hNum >= 0 && hNum < 24) {
-            hourlyScansToday[hNum].count++;
-          }
-        } catch (e) {
-          const hNum = evDate.getHours();
-          if (hNum >= 0 && hNum < 24) hourlyScansToday[hNum].count++;
+        todayScans += cnt;
+        const hNum = parseInt(b.ist_hour, 10);
+        if (hNum >= 0 && hNum < 24) {
+          hourlyScansToday[hNum].count += cnt;
         }
-
-        const tblKey = ev.table_number ? `${ev.space_type || 'table'}:${ev.table_number}` : (ev.space_type || 'general');
+        const normType = b.space_type
+          ? normalizeSpaceType(b.space_type)
+          : inferOrderSpaceType({ table_number: b.table_number });
+        const normTable = b.table_number ? normalizeSpaceNumber(b.table_number) : '';
+        const tblKey = normTable ? `${normType}:${normTable}` : normType;
         if (!tableScansMap[tblKey]) {
           tableScansMap[tblKey] = {
-            table: ev.table_number || 'Direct/Counter',
-            space_type: ev.space_type || 'table',
+            table: normTable || 'Direct/Counter',
+            space_type: normType,
             count: 0
           };
         }
-        tableScansMap[tblKey].count++;
+        tableScansMap[tblKey].count += cnt;
       } else if (dStr === yesterdayStr) {
-        yesterdayScans++;
+        yesterdayScans += cnt;
       }
     });
 
@@ -4055,9 +4339,9 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       if (spaceType === 'cinema_seat') {
         const cMatch = String(num).match(/^(?:screen\s*(\d+)[\s\-_•|]+row\s*([a-zA-Z]+)[\s\-_•|]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
         if (cMatch) {
-          const sc = cMatch[1] || cMatch[4];
+          const sc = String(parseInt(cMatch[1] || cMatch[4], 10));
           const rw = (cMatch[2] || cMatch[5]).toUpperCase();
-          const st = cMatch[3] || cMatch[6];
+          const st = String(parseInt(cMatch[3] || cMatch[6], 10));
           return `🎬 Screen ${sc} • Row ${rw} • Seat ${st}`;
         }
         return `🎬 Seat ${num}`;
@@ -4106,15 +4390,6 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const periodPaymentMethods = { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 }, other: { count: 0, amount: 0 } };
     const tableOrdersTodayMap = {};
 
-    const isDateInPeriod = (dStr) => {
-      if (!dStr) return false;
-      if (selectedPeriod === 'all') return true;
-      if (periodStartDate && periodEndDate) {
-        return dStr >= periodStartDate && dStr <= periodEndDate;
-      }
-      return true;
-    };
-
     // 1. Process Live Orders
     orders.forEach(o => {
       const amt = Number(o.total_amount) || 0;
@@ -4130,23 +4405,13 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         const mYear = parseInt(dateStr.substring(0, 4), 10);
         const mMonth = parseInt(dateStr.substring(5, 7), 10);
         if (mYear >= 2020 && !availableMonthsMap[mKey]) {
-          const monthLabel = createdAtDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          const monthLabel = formatISTMonthLabel(mYear, mMonth, 'long');
           availableMonthsMap[mKey] = { key: mKey, label: monthLabel, year: mYear, month: mMonth };
         }
       }
 
       // Payment method breakdown
-      const pMethod = String(o.payment_method || 'cash').toLowerCase();
-      let pCategory = 'cash';
-      if (pMethod.includes('upi') || pMethod.includes('online') || pMethod.includes('paytm') || pMethod.includes('gpay') || pMethod.includes('phonepe')) {
-        pCategory = 'upi';
-      } else if (pMethod.includes('card')) {
-        pCategory = 'card';
-      } else if (pMethod.includes('cash')) {
-        pCategory = 'cash';
-      } else {
-        pCategory = 'other';
-      }
+      const pCategory = classifyPaymentMethod(o.payment_method);
 
       allTimePaymentMethods[pCategory].count += 1;
       allTimePaymentMethods[pCategory].amount += amt;
@@ -4155,8 +4420,12 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         todaySales += amt;
         todayOrders += 1;
         if (o.table_number) {
-          const tblClean = String(o.table_number).trim();
-          tableOrdersTodayMap[tblClean] = (tableOrdersTodayMap[tblClean] || 0) + 1;
+          const oType = inferOrderSpaceType(o);
+          const oNum = normalizeSpaceNumber(o.table_number);
+          if (oNum) {
+            const scopedKey = `${oType}:${oNum}`;
+            tableOrdersTodayMap[scopedKey] = (tableOrdersTodayMap[scopedKey] || 0) + 1;
+          }
         }
       }
       if (dateStr >= sevenDaysAgoStr) {
@@ -4168,7 +4437,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         prevMonthSales += amt;
       }
 
-      const inPeriod = isDateInPeriod(dateStr);
+      const inPeriod = isDateInPeriod(dateStr, selectedPeriod, periodStartDate, periodEndDate);
       if (inPeriod) {
         periodSales += amt;
         periodOrdersCount += 1;
@@ -4191,17 +4460,14 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         dailyOrdersMap[dateStr] = (dailyOrdersMap[dateStr] || 0) + 1;
       }
 
-      let itemsList = [];
-      try {
-        itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
-      } catch (e) {}
+      const itemsList = parseJsonItems(o.items);
 
       itemsList.forEach(item => {
         const dishName = item.name || item.title || item.dish_name || 'Unknown Dish';
         const qty = Number(item.quantity || item.qty || 1);
         const price = Number(item.price) || 0;
         const lineTotal = price * qty;
-        const dishId = item.id || item.dish_id || null;
+        const dishId = extractRawDishId(item);
 
         if (!allTimeDishSalesMap[dishName]) {
           allTimeDishSalesMap[dishName] = { dish_id: dishId, name: dishName, quantity: 0, revenue: 0 };
@@ -4250,7 +4516,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         const mYear = parseInt(summaryDateStr.substring(0, 4), 10);
         const mMonth = parseInt(summaryDateStr.substring(5, 7), 10);
         if (mYear >= 2020 && !availableMonthsMap[mKey]) {
-          const monthLabel = dDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          const monthLabel = formatISTMonthLabel(mYear, mMonth, 'long');
           availableMonthsMap[mKey] = { key: mKey, label: monthLabel, year: mYear, month: mMonth };
         }
       }
@@ -4262,7 +4528,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         prevMonthSales += amt;
       }
 
-      const inPeriod = isDateInPeriod(summaryDateStr);
+      const inPeriod = isDateInPeriod(summaryDateStr, selectedPeriod, periodStartDate, periodEndDate);
       if (inPeriod) {
         periodSales += amt;
         periodOrdersCount += orderCnt;
@@ -4313,21 +4579,14 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       }
 
       // Process items summary
-      let itemsList = [];
-      try {
-        if (s.items_summary) {
-          itemsList = typeof s.items_summary === 'string' ? JSON.parse(s.items_summary) : s.items_summary;
-        } else if (s.top_dishes_summary) {
-          itemsList = typeof s.top_dishes_summary === 'string' ? JSON.parse(s.top_dishes_summary) : s.top_dishes_summary;
-        }
-      } catch (e) {}
+      const itemsList = parseJsonItems(s.items_summary || s.top_dishes_summary);
 
       if (Array.isArray(itemsList)) {
         itemsList.forEach(td => {
           const dName = td.name || 'Dish';
-          const dQty = Number(td.quantity ?? td.qty ?? 1);
+          const dQty = Number(td.quantity ?? td.qty ?? td.count ?? 1);
           const dRev = Number(td.revenue || 0);
-          const dishId = td.dish_id || td.id || null;
+          const dishId = extractRawDishId(td);
 
           if (!allTimeDishSalesMap[dName]) {
             allTimeDishSalesMap[dName] = { dish_id: dishId, name: dName, quantity: 0, revenue: 0 };
@@ -4417,8 +4676,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
       dailyChartData = contiguousMonthKeys.map(mKey => {
         const [y, m] = mKey.split('-');
-        const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
-        const displayDate = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const displayDate = formatISTMonthLabel(y, m, 'short');
         return {
           date: mKey,
           displayDate: displayDate,
@@ -4442,7 +4700,8 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const scanConversionRateToday = todayScans > 0 ? Math.min(100, Math.round((todayOrders / todayScans) * 100)) : 0;
 
     const enrichedTopTablesScannedToday = topTablesScannedToday.map(item => {
-      const ordersCount = tableOrdersTodayMap[String(item.table)] || 0;
+      const scopedOrderKey = `${normalizeSpaceType(item.space_type || 'table')}:${normalizeSpaceNumber(item.table)}`;
+      const ordersCount = tableOrdersTodayMap[scopedOrderKey] || 0;
       const convRate = item.count > 0 ? Math.min(100, Math.round((ordersCount / item.count) * 100)) : 0;
       return {
         ...item,
@@ -4452,47 +4711,109 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     });
 
     // 💡 Suggestion 2: Space Heatmap & Standee Health Tracker (Dine-In Tables, Hotel Rooms, Cinema Seats)
-    const restoData = restoRow?.[0] || {};
-    const sModel = (restoData.service_model || '').toLowerCase();
-    const bType = (restoData.business_type || '').toLowerCase();
-    const isHotelModel = sModel === 'hotel' || bType === 'hotel_resort';
-    const isCinemaModel = sModel === 'cinema' || bType === 'cinema_theatre';
-
-    const maxSpacesToMap = isHotelModel
-      ? Math.min(Number(restoData.total_rooms) || 12, 50)
-      : isCinemaModel
-        ? Math.min(Number(restoData.total_seats) || 24, 60)
-        : Math.min(Number(restoData.total_tables) || 12, 50);
-
     const spaceHeatmap = [];
+    let totalHeatmapSpaces = 0;
     let activeSpacesCount = 0;
     let dormantSpacesCount = 0;
+    const isHeatmapUnavailable = Boolean(restoConfigFailed || scanQueryFailed || (isCinemaModel && seatQueryFailed));
 
-    for (let i = 1; i <= maxSpacesToMap; i++) {
-      const sNum = String(i);
-      const sKey = isHotelModel ? `room:${sNum}` : isCinemaModel ? `cinema_seat:${sNum}` : `table:${sNum}`;
-      const scanEntry = tableScansMap[sKey] || tableScansMap[`table:${sNum}`] || tableScansMap[sNum] || null;
-      const sCount = scanEntry ? scanEntry.count : 0;
-      const oCount = tableOrdersTodayMap[sNum] || 0;
-      const cRate = sCount > 0 ? Math.min(100, Math.round((oCount / sCount) * 100)) : 0;
-      const sLabel = isHotelModel ? `Room ${sNum}` : isCinemaModel ? `Seat ${sNum}` : `Table ${sNum}`;
-      const status = sCount >= 5 ? 'hot' : sCount >= 1 ? 'active' : 'dormant';
+    if (restoConfigFailed || scanQueryFailed) {
+      // Leave spaceHeatmap empty and standee_health unknown when config or scan query failed
+    } else if (isCinemaModel) {
+      if (!seatQueryFailed) {
+        const allCinemaSpaces = Array.isArray(tenantCinemaSeats) ? tenantCinemaSeats : [];
+        const configMeta = Array.isArray(cinemaConfigMeta) && cinemaConfigMeta[0] ? cinemaConfigMeta[0] : {};
+        const hasExplicitCinemaConfig = (Number(configMeta.screen_count || 0) > 0) || (Number(configMeta.seat_count || 0) > 0);
+        if (allCinemaSpaces.length > 0) {
+          totalHeatmapSpaces = allCinemaSpaces.length;
+          allCinemaSpaces.forEach((seat, idx) => {
+            const rw = String(seat.row_label || 'A').trim().toUpperCase();
+            const rawSeatCode = `S${seat.screen_number}-${rw}-${seat.seat_number}`;
+            const sNum = normalizeSpaceNumber(rawSeatCode);
+            const sKey = `cinema_seat:${sNum}`;
+            const scanEntry = tableScansMap[sKey] || null;
+            const sCount = scanEntry ? scanEntry.count : 0;
+            if (sCount > 0) activeSpacesCount++;
+            else dormantSpacesCount++;
+            if (idx < 60) {
+              const oCount = tableOrdersTodayMap[sKey] || 0;
+              const cRate = sCount > 0 ? Math.min(100, Math.round((oCount / sCount) * 100)) : 0;
+              const status = sCount >= 5 ? 'hot' : sCount >= 1 ? 'active' : 'dormant';
+              spaceHeatmap.push({
+                space_number: sNum,
+                label: `Screen ${seat.screen_number} • ${rw}-${seat.seat_number}`,
+                space_type: 'cinema_seat',
+                scans_today: sCount,
+                orders_today: oCount,
+                conversion_rate: cRate,
+                status
+              });
+            }
+          });
+        } else if (!hasExplicitCinemaConfig) {
+          // Fallback only when no explicit screens or seat rows are configured (count-only cinema)
+          const fullSeatCount = Math.max(0, Number(restoData.total_seats ?? 0) || 0);
+          totalHeatmapSpaces = fullSeatCount;
+          for (let i = 1; i <= fullSeatCount; i++) {
+            const sNum = normalizeSpaceNumber(String(i));
+            const sKey = `cinema_seat:${sNum}`;
+            const scanEntry = tableScansMap[sKey] || null;
+            const sCount = scanEntry ? scanEntry.count : 0;
+            if (sCount > 0) activeSpacesCount++;
+            else dormantSpacesCount++;
+            if (i <= 50) {
+              const oCount = tableOrdersTodayMap[sKey] || 0;
+              const cRate = sCount > 0 ? Math.min(100, Math.round((oCount / sCount) * 100)) : 0;
+              const status = sCount >= 5 ? 'hot' : sCount >= 1 ? 'active' : 'dormant';
+              spaceHeatmap.push({
+                space_number: sNum,
+                label: `Seat ${sNum}`,
+                space_type: 'cinema_seat',
+                scans_today: sCount,
+                orders_today: oCount,
+                conversion_rate: cRate,
+                status
+              });
+            }
+          }
+        }
+      }
+    } else {
+      const configuredCap = Math.max(
+        0,
+        (isHotelModel ? Number(restoData.total_rooms ?? 0) : Number(restoData.total_tables ?? 0)) || 0
+      );
+      totalHeatmapSpaces = configuredCap;
 
-      if (sCount > 0) activeSpacesCount++;
-      else dormantSpacesCount++;
+      for (let i = 1; i <= configuredCap; i++) {
+        const rawSpaceLabel = isHotelModel ? `Room ${i}` : `Table ${i}`;
+        const sNum = normalizeSpaceNumber(rawSpaceLabel);
+        const spaceTypeKey = inferOrderSpaceType({ table_number: rawSpaceLabel });
+        const sKey = `${spaceTypeKey}:${sNum}`;
+        const scanEntry = tableScansMap[sKey] || null;
+        const sCount = scanEntry ? scanEntry.count : 0;
+        if (sCount > 0) activeSpacesCount++;
+        else dormantSpacesCount++;
 
-      spaceHeatmap.push({
-        space_number: sNum,
-        label: sLabel,
-        space_type: isHotelModel ? 'room' : isCinemaModel ? 'cinema_seat' : 'table',
-        scans_today: sCount,
-        orders_today: oCount,
-        conversion_rate: cRate,
-        status
-      });
+        if (i <= 50) {
+          const oCount = tableOrdersTodayMap[sKey] || 0;
+          const cRate = sCount > 0 ? Math.min(100, Math.round((oCount / sCount) * 100)) : 0;
+          const sLabel = isHotelModel ? `Room ${sNum}` : `Table ${sNum}`;
+          const status = sCount >= 5 ? 'hot' : sCount >= 1 ? 'active' : 'dormant';
+          spaceHeatmap.push({
+            space_number: sNum,
+            label: sLabel,
+            space_type: spaceTypeKey,
+            scans_today: sCount,
+            orders_today: oCount,
+            conversion_rate: cRate,
+            status
+          });
+        }
+      }
     }
 
-    const standeeHealthScore = maxSpacesToMap > 0 ? Math.round((activeSpacesCount / maxSpacesToMap) * 100) : 0;
+    const standeeHealthScore = totalHeatmapSpaces > 0 ? Math.round((activeSpacesCount / totalHeatmapSpaces) * 100) : 0;
 
     res.json({
       period_sales: periodSales,
@@ -4513,12 +4834,15 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       hourly_scans_today: hourlyScansToday,
       top_tables_scanned_today: enrichedTopTablesScannedToday,
       space_heatmap: spaceHeatmap,
-      standee_health: {
-        total_spaces: maxSpacesToMap,
-        active_spaces: activeSpacesCount,
-        dormant_spaces: dormantSpacesCount,
-        health_score: standeeHealthScore
-      },
+      heatmap_unavailable: isHeatmapUnavailable,
+      standee_health: isHeatmapUnavailable
+        ? null
+        : {
+            total_spaces: totalHeatmapSpaces,
+            active_spaces: activeSpacesCount,
+            dormant_spaces: dormantSpacesCount,
+            health_score: standeeHealthScore
+          },
       peak_scan_hour: peakScanHour,
       weekly_sales: weeklySales,
       days_7_revenue: weeklySales,
@@ -4538,6 +4862,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       recent_orders: orders.slice(0, 5).map(o => ({
         id: o.id,
         table_number: o.table_number || null,
+        space_type: o.table_number ? inferOrderSpaceType(o) : null,
         total_amount: Number(o.total_amount) || 0,
         payment_method: o.payment_method || 'cash',
         status: o.status || 'completed',
@@ -4547,7 +4872,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       daily_chart_data: dailyChartData,
       daily_chart: dailyChartData,
       summarized_days_count: summaries.length,
-      last_updated: new Date().toISOString(),
+      last_updated: new Date(referenceNow).toISOString(),
       status: 'success'
     });
   } catch (err) {
@@ -4555,6 +4880,20 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     res.status(500).json({ error: 'Failed to fetch analytics' });
   }
 });
+
+async function resolveAdminExportEntitlement(targetId, restoRow) {
+  if (!restoRow) return false;
+  const subRows = await query(
+    'SELECT * FROM subscriptions WHERE restaurant_id = $1 ORDER BY id DESC LIMIT 1',
+    [targetId]
+  );
+  const latestSub = subRows && subRows.length > 0 ? subRows[0] : null;
+  return isAnalyticsExportAllowed(
+    query,
+    (r) => isAuthoritativeComplimentaryTenant(r, latestSub),
+    restoRow
+  );
+}
 
 // GET /api/admin/analytics/export/csv — Server-side RFC 4180 CSV export with Plan Entitlement Check
 router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription, async (req, res) => {
@@ -4564,17 +4903,10 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
       return res.status(401).json({ error: 'Restaurant identity is missing' });
     }
 
-    // Check SaaS plan entitlement for analytics_export_enabled
-    const restoRows = await query('SELECT plan_tier, name, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
+    // Check SaaS plan entitlement for analytics_export_enabled (with subscription row parity)
+    const restoRows = await query('SELECT plan_tier, plan_price, plan_expires_at, name, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
     const currentResto = restoRows[0] || {};
-    const planTier = currentResto.plan_tier || 'pro';
-    const restoName = currentResto.name || 'Restaurant';
-    const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
-
-    const planRows = await query('SELECT analytics_export_enabled FROM saas_plans WHERE key = $1', [planTier]);
-    const exportEnabled = isComplimentary || (planRows.length > 0
-      ? (planRows[0].analytics_export_enabled === 1 || planRows[0].analytics_export_enabled === true || planRows[0].analytics_export_enabled === '1')
-      : true);
+    const exportEnabled = await resolveAdminExportEntitlement(targetId, currentResto);
 
     if (!exportEnabled) {
       return res.status(403).json({
@@ -4584,86 +4916,25 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
     }
 
     const { period: qPeriod, year: qYear, month: qMonth } = req.query;
-    const selectedPeriod = qPeriod || (qYear && qMonth ? `month:${qYear}-${String(qMonth).padStart(2, '0')}` : 'all');
+    const {
+      selectedPeriod,
+      todayStr,
+      periodStartDate,
+      periodEndDate,
+      filePeriodSlug
+    } = resolveAnalyticsPeriod(qPeriod, qYear, qMonth);
 
-    const parseSafeDate = (dateVal) => {
-      if (!dateVal) return null;
-      if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
-      let str = String(dateVal).trim();
-      if (str.includes(' ') && !str.includes('T')) {
-        str = str.replace(' ', 'T');
-      }
-      if (!str.endsWith('Z') && !str.includes('+') && !str.slice(10).includes('-')) {
-        str = str + 'Z';
-      }
-      const d = new Date(str);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
-    const getFormattedLocalDate = (dateObj) => {
-      const d = parseSafeDate(dateObj);
-      if (!d) return '';
-      try {
-        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
-      } catch (e) {
-        return d.toISOString().split('T')[0];
-      }
-    };
-
-    const now = new Date();
-    const todayStr = getFormattedLocalDate(now);
-    const getISTDateOffset = (daysBack) => {
-      const d = new Date();
-      d.setDate(d.getDate() - daysBack);
-      return getFormattedLocalDate(d);
-    };
-
-    let periodStartDate = null;
-    let periodEndDate = null;
-
-    if (qYear && qMonth) {
-      const daysInMonth = new Date(parseInt(qYear, 10), parseInt(qMonth, 10), 0).getDate();
-      const monthPrefix = `${qYear}-${String(qMonth).padStart(2, '0')}`;
-      periodStartDate = `${monthPrefix}-01`;
-      periodEndDate = `${monthPrefix}-${String(daysInMonth).padStart(2, '0')}`;
-    } else if (selectedPeriod === 'today') {
-      periodStartDate = todayStr;
-      periodEndDate = todayStr;
-    } else if (selectedPeriod === '7d') {
-      periodStartDate = getISTDateOffset(6);
-      periodEndDate = todayStr;
-    } else if (selectedPeriod === '30d') {
-      periodStartDate = getISTDateOffset(29);
-      periodEndDate = todayStr;
-    } else if (selectedPeriod === '6m') {
-      periodStartDate = getISTDateOffset(180);
-      periodEndDate = todayStr;
-    }
-
-    const isDateInPeriod = (dStr) => {
-      if (!dStr) return false;
-      if (selectedPeriod === 'all') return true;
-      if (periodStartDate && periodEndDate) {
-        return dStr >= periodStartDate && dStr <= periodEndDate;
-      }
-      return true;
-    };
-
-    const orders = await query(
-      "SELECT id, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
-      [targetId]
-    );
-
-    const summaries = await query(
-      'SELECT summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary FROM daily_sales_summaries WHERE restaurant_id = $1 ORDER BY summary_date ASC',
-      [targetId]
-    );
-
-    const escapeCSV = (val) => {
-      if (val === null || val === undefined) return '""';
-      const str = String(val).replace(/"/g, '""');
-      return `"${str}"`;
-    };
+    const { orders, summaries } = await withTransaction(async (txQuery) => {
+      const ordRows = await txQuery(
+        "SELECT id, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
+        [targetId]
+      );
+      const sumRows = await txQuery(
+        'SELECT summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary FROM daily_sales_summaries WHERE restaurant_id = $1 ORDER BY summary_date ASC',
+        [targetId]
+      );
+      return { orders: ordRows, summaries: sumRows };
+    }, { readOnlyRepeatable: true });
 
     const headers = [
       'Record Type',
@@ -4700,43 +4971,31 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
     orders.forEach(o => {
       const d = parseSafeDate(o.created_at) || new Date();
       const dStr = getFormattedLocalDate(d);
-      if (!isDateInPeriod(dStr)) return;
+      if (!isDateInPeriod(dStr, selectedPeriod, periodStartDate, periodEndDate)) return;
 
       let timeStr = 'N/A';
       try {
         timeStr = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(d);
       } catch (e) {}
 
-      let itemsList = [];
-      try {
-        itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
-      } catch (e) {}
+      const itemsList = parseJsonItems(o.items);
 
-      const totalItemCount = itemsList.reduce((acc, i) => acc + (Number(i.quantity || i.qty) || 1), 0);
-      const itemsDetailStr = itemsList.map(i => `${i.name || i.title || 'Item'} (x${i.quantity || i.qty || 1})`).join(', ');
+      const totalItemCount = itemsList.reduce((acc, i) => acc + (Number(i.quantity ?? i.qty ?? i.count) || 1), 0);
+      const itemsDetailStr = itemsList.map(i => `${extractRawDishName(i) || 'Item'} (x${i.quantity ?? i.qty ?? i.count ?? 1})`).join(', ');
 
       const amt = Number(o.total_amount) || 0;
-      const pMethod = String(o.payment_method || 'cash').toLowerCase();
+      const pCategory = classifyPaymentMethod(o.payment_method);
 
       let cashAmt = 0;
       let upiAmt = 0;
       let cardAmt = 0;
       let otherAmt = 0;
-      let pMethodDisplay = 'CASH';
+      let pMethodDisplay = pCategory.toUpperCase();
 
-      if (pMethod.includes('upi') || pMethod.includes('online') || pMethod.includes('paytm') || pMethod.includes('gpay') || pMethod.includes('phonepe')) {
-        upiAmt = amt;
-        pMethodDisplay = 'UPI';
-      } else if (pMethod.includes('card')) {
-        cardAmt = amt;
-        pMethodDisplay = 'CARD';
-      } else if (pMethod.includes('cash')) {
-        cashAmt = amt;
-        pMethodDisplay = 'CASH';
-      } else {
-        otherAmt = amt;
-        pMethodDisplay = 'OTHER';
-      }
+      if (pCategory === 'upi') upiAmt = amt;
+      else if (pCategory === 'card') cardAmt = amt;
+      else if (pCategory === 'cash') cashAmt = amt;
+      else otherAmt = amt;
 
       grandTotalRepresentedOrders += 1;
       liveOrderRowCount += 1;
@@ -4772,23 +5031,16 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
     summaries.forEach(s => {
       const dDate = parseSafeDate(s.summary_date) || new Date(s.summary_date);
       const sDateStr = getFormattedLocalDate(dDate) || s.summary_date;
-      if (!isDateInPeriod(sDateStr)) return;
+      if (!isDateInPeriod(sDateStr, selectedPeriod, periodStartDate, periodEndDate)) return;
 
       const orderCount = Number(s.total_orders) || 1;
       const amt = Number(s.total_sales) || 0;
 
-      let itemsList = [];
-      try {
-        if (s.items_summary) {
-          itemsList = typeof s.items_summary === 'string' ? JSON.parse(s.items_summary) : s.items_summary;
-        } else if (s.top_dishes_summary) {
-          itemsList = typeof s.top_dishes_summary === 'string' ? JSON.parse(s.top_dishes_summary) : s.top_dishes_summary;
-        }
-      } catch (e) {}
+      const itemsList = parseJsonItems(s.items_summary || s.top_dishes_summary);
 
-      const totalItemCount = Array.isArray(itemsList) ? itemsList.reduce((acc, i) => acc + (Number(i.quantity ?? i.qty) || 1), 0) : 0;
+      const totalItemCount = Array.isArray(itemsList) ? itemsList.reduce((acc, i) => acc + (Number(i.quantity ?? i.qty ?? i.count) || 1), 0) : 0;
       const itemsDetailStr = Array.isArray(itemsList) && itemsList.length > 0
-        ? itemsList.map(i => `${i.name} (x${i.quantity ?? i.qty ?? 1})`).join(', ')
+        ? itemsList.map(i => `${extractRawDishName(i) || 'Item'} (x${i.quantity ?? i.qty ?? i.count ?? 1})`).join(', ')
         : 'Daily Summary';
 
       let pMethodsSummary = null;
@@ -4874,11 +5126,11 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
     }
 
     const csvContent = '\uFEFF' + [
-      headers.map(escapeCSV).join(','),
-      ...csvRows.map(row => row.map(escapeCSV).join(','))
+      headers.map(escapeCSVCell).join(','),
+      ...csvRows.map(row => row.map(escapeCSVCell).join(','))
     ].join('\r\n');
 
-    const filename = `Sales_Report_${selectedPeriod}_${todayStr}.csv`;
+    const filename = sanitizeAttachmentFilename(`Sales_Report_${filePeriodSlug}_${todayStr}.csv`);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.status(200).send(csvContent);
@@ -4897,19 +5149,14 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     }
 
     // 1. Check SaaS plan entitlement for analytics_export_enabled
-    const restoRows = await query('SELECT plan_tier, name, currency_symbol, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
+    const restoRows = await query('SELECT plan_tier, plan_price, plan_expires_at, name, currency_symbol, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
     const currentResto = restoRows[0] || {};
-    const planTier = currentResto.plan_tier || 'pro';
     const restoName = currentResto.name || 'Restaurant';
-    const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
     const currencySym = (currentResto.currency_symbol !== null && currentResto.currency_symbol !== undefined) ? currentResto.currency_symbol : '₹';
     const safeCurrency = String(currencySym).replace(/"/g, '""');
     const excelCurrencyFmt = `"${safeCurrency}"#,##0.00`;
 
-    const planRows = await query('SELECT analytics_export_enabled FROM saas_plans WHERE key = $1', [planTier]);
-    const exportEnabled = isComplimentary || (planRows.length > 0
-      ? (planRows[0].analytics_export_enabled === 1 || planRows[0].analytics_export_enabled === true || planRows[0].analytics_export_enabled === '1')
-      : true);
+    const exportEnabled = await resolveAdminExportEntitlement(targetId, currentResto);
 
     if (!exportEnabled) {
       return res.status(403).json({
@@ -4919,92 +5166,15 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     }
 
     const { period: qPeriod, year: qYear, month: qMonth } = req.query;
-    const selectedPeriod = qPeriod || (qYear && qMonth ? `month:${qYear}-${String(qMonth).padStart(2, '0')}` : 'all');
-
-    const parseSafeDate = (dateVal) => {
-      if (!dateVal) return null;
-      if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
-      let str = String(dateVal).trim();
-      if (str.includes(' ') && !str.includes('T')) {
-        str = str.replace(' ', 'T');
-      }
-      if (!str.endsWith('Z') && !str.includes('+') && !str.slice(10).includes('-')) {
-        str = str + 'Z';
-      }
-      const d = new Date(str);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
-    const getFormattedLocalDate = (dateObj) => {
-      const d = parseSafeDate(dateObj);
-      if (!d) return '';
-      try {
-        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
-      } catch (e) {
-        return d.toISOString().split('T')[0];
-      }
-    };
-
     const now = new Date();
-    const todayStr = getFormattedLocalDate(now);
-    const getISTDateOffset = (daysBack) => {
-      const d = new Date();
-      d.setDate(d.getDate() - daysBack);
-      return getFormattedLocalDate(d);
-    };
-
-    let periodStartDate = null;
-    let periodEndDate = null;
-    let periodLabel = 'All-Time';
-    let filePeriodSlug = 'All_Time';
-
-    if (qYear && qMonth) {
-      const daysInMonth = new Date(parseInt(qYear, 10), parseInt(qMonth, 10), 0).getDate();
-      const monthPrefix = `${qYear}-${String(qMonth).padStart(2, '0')}`;
-      periodStartDate = `${monthPrefix}-01`;
-      periodEndDate = `${monthPrefix}-${String(daysInMonth).padStart(2, '0')}`;
-      periodLabel = `Month ${monthPrefix}`;
-      filePeriodSlug = `Month_${monthPrefix}`;
-    } else if (selectedPeriod === 'today') {
-      periodStartDate = todayStr;
-      periodEndDate = todayStr;
-      periodLabel = `Today (${todayStr})`;
-      filePeriodSlug = 'Today';
-    } else if (selectedPeriod === '7d') {
-      periodStartDate = getISTDateOffset(6);
-      periodEndDate = todayStr;
-      periodLabel = `Last 7 Days (${periodStartDate} to ${periodEndDate})`;
-      filePeriodSlug = 'Last_7_Days';
-    } else if (selectedPeriod === '30d') {
-      periodStartDate = getISTDateOffset(29);
-      periodEndDate = todayStr;
-      periodLabel = `Last 30 Days (${periodStartDate} to ${periodEndDate})`;
-      filePeriodSlug = 'Last_30_Days';
-    } else if (selectedPeriod === '6m') {
-      periodStartDate = getISTDateOffset(180);
-      periodEndDate = todayStr;
-      periodLabel = `Last 6 Months (${periodStartDate} to ${periodEndDate})`;
-      filePeriodSlug = 'Last_6_Months';
-    } else if (selectedPeriod.startsWith('month:')) {
-      const monthPrefix = selectedPeriod.replace('month:', '');
-      const parts = monthPrefix.split('-');
-      const y = parseInt(parts[0], 10);
-      const m = parseInt(parts[1], 10);
-      const daysInMonth = new Date(y, m, 0).getDate();
-      periodStartDate = `${monthPrefix}-01`;
-      periodEndDate = `${monthPrefix}-${String(daysInMonth).padStart(2, '0')}`;
-      periodLabel = `Month ${monthPrefix}`;
-      filePeriodSlug = `Month_${monthPrefix}`;
-    }
-
-    const isDateInPeriod = (dStr) => {
-      if (!dStr) return false;
-      if (selectedPeriod === 'all') return true;
-      if (periodStartDate && periodEndDate) {
-        return dStr >= periodStartDate && dStr <= periodEndDate;
-      }
-      return true;
-    };
+    const {
+      selectedPeriod,
+      todayStr,
+      periodStartDate,
+      periodEndDate,
+      periodLabel,
+      filePeriodSlug
+    } = resolveAnalyticsPeriod(qPeriod, qYear, qMonth, now.getTime());
 
     let generatedAtIST = 'N/A';
     try {
@@ -5017,16 +5187,102 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       generatedAtIST = now.toISOString();
     }
 
-    // Fetch live orders & historical summaries
-    const orders = await query(
-      "SELECT id, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
-      [targetId]
-    );
+    // Fetch live orders, historical summaries, and dish catalog from a single consistent DB snapshot
+    let catalogQueryFailed = false;
+    const { orders, summaries, catalogDishes } = await withTransaction(async (txQuery) => {
+      const ordRows = await txQuery(
+        "SELECT id, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
+        [targetId]
+      );
+      const sumRows = await txQuery(
+        'SELECT summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary FROM daily_sales_summaries WHERE restaurant_id = $1 ORDER BY summary_date ASC',
+        [targetId]
+      );
+      let catRows = [];
+      try {
+        catRows = await txQuery('SELECT id, name FROM dishes WHERE restaurant_id = $1', [targetId]);
+      } catch (err) {
+        catalogQueryFailed = true;
+        console.warn('XLSX catalog dishes query error:', err.message);
+      }
+      return { orders: ordRows, summaries: sumRows, catalogDishes: catRows };
+    }, { readOnlyRepeatable: true });
 
-    const summaries = await query(
-      'SELECT summary_date, total_sales, total_orders, top_dishes_summary, items_summary, payment_methods_summary FROM daily_sales_summaries WHERE restaurant_id = $1 ORDER BY summary_date ASC',
-      [targetId]
-    );
+    // Partition orders & summaries by period first: parse full item lists only once for selected report rows,
+    // while using a compact identity scanner for out-of-period rows to detect cross-history ambiguous names.
+    const dishIdsByNormName = new Map();
+    const dishNameById = new Map();
+    const registerDishRef = (rawId, rawName) => {
+      const cleanId = (rawId !== null && rawId !== undefined && String(rawId).trim() !== '') ? String(rawId).trim() : null;
+      const cleanName = String(rawName || '').trim();
+      if (!cleanId) return;
+      if (cleanName && !dishNameById.has(cleanId)) {
+        dishNameById.set(cleanId, cleanName);
+      }
+      if (cleanName) {
+        const norm = cleanName.toLowerCase();
+        if (!dishIdsByNormName.has(norm)) dishIdsByNormName.set(norm, new Set());
+        dishIdsByNormName.get(norm).add(cleanId);
+      }
+    };
+    (catalogDishes || []).forEach(d => {
+      if (d && typeof d === 'object') registerDishRef(d.id, d.name);
+    });
+
+    const selectedOrderEntries = [];
+    orders.forEach(o => {
+      const d = parseSafeDate(o.created_at) || new Date();
+      const dStr = getFormattedLocalDate(d);
+      if (isDateInPeriod(dStr, selectedPeriod, periodStartDate, periodEndDate)) {
+        const itemsList = parseJsonItems(o.items);
+        itemsList.forEach(it => registerDishRef(extractRawDishId(it), extractRawDishName(it)));
+        selectedOrderEntries.push({ o, d, dStr, itemsList });
+      } else {
+        scanCompactDishRefsFromJson(o.items, registerDishRef);
+      }
+    });
+
+    const selectedSummaryEntries = [];
+    summaries.forEach(s => {
+      const dDate = parseSafeDate(s.summary_date) || new Date(s.summary_date);
+      const sDateStr = getFormattedLocalDate(dDate) || s.summary_date;
+      const rawSummaryItems = s.items_summary || s.top_dishes_summary;
+      if (isDateInPeriod(sDateStr, selectedPeriod, periodStartDate, periodEndDate)) {
+        const itemsList = parseJsonItems(rawSummaryItems);
+        itemsList.forEach(it => registerDishRef(extractRawDishId(it), extractRawDishName(it)));
+        selectedSummaryEntries.push({ s, sDateStr, itemsList });
+      } else {
+        scanCompactDishRefsFromJson(rawSummaryItems, registerDishRef);
+      }
+    });
+
+    let unmatchedDishSeq = 0;
+    const resolveXlsxDishIdentity = (item) => {
+      const rawName = extractRawDishName(item);
+      const rawId = extractRawDishId(item);
+      const dId = (rawId !== null && rawId !== undefined && String(rawId).trim() !== '') ? String(rawId).trim() : null;
+      const isCombo = Boolean(dId && dId.startsWith('combo:'));
+      const dName = rawName || (dId && dishNameById.get(dId)) || (isCombo ? 'Unknown Combo' : 'Unknown Dish');
+      if (dId) {
+        return { dKey: isCombo ? dId : `id:${dId}`, dId, dName };
+      }
+      if (rawName) {
+        const norm = rawName.toLowerCase();
+        if (!catalogQueryFailed) {
+          const candidateIds = dishIdsByNormName.get(norm);
+          if (candidateIds && candidateIds.size === 1) {
+            const singleId = Array.from(candidateIds)[0];
+            return { dKey: `id:${singleId}`, dId: singleId, dName: rawName };
+          }
+          if (candidateIds && candidateIds.size > 1) {
+            return { dKey: `ambig:${norm}`, dId: null, dName: `${rawName} (Unresolved ID)` };
+          }
+        }
+        return { dKey: `name:${norm}`, dId: null, dName: rawName };
+      }
+      unmatchedDishSeq += 1;
+      return { dKey: `unknown:${unmatchedDishSeq}`, dId: null, dName: 'Unknown Dish' };
+    };
 
     // Initialize Workbook
     const workbook = new ExcelJS.Workbook();
@@ -5046,52 +5302,43 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     let grandTotalOther = 0;
     let grandTotalRevenue = 0;
 
-    const dishSalesMap = new Map(); // dish_id -> { dish_id, name, quantity, revenue }
+    const dishSalesMap = new Map();
+    const accumulateXlsxDish = (item, dQty, dRev) => {
+      const { dKey, dId, dName } = resolveXlsxDishIdentity(item);
+      const exist = dishSalesMap.get(dKey) || { dish_id: null, dishIds: new Set(), name: dName, quantity: 0, revenue: 0 };
+      if (dId) exist.dishIds.add(String(dId));
+      exist.dish_id = exist.dishIds.size === 1 ? Array.from(exist.dishIds)[0] : null;
+      exist.quantity += dQty;
+      exist.revenue += dRev;
+      dishSalesMap.set(dKey, exist);
+    };
     const dailyTrendMap = new Map(); // date -> { date, orders, revenue }
 
     const reportRows = [];
 
-    // 1. Process Live Orders
-    orders.forEach(o => {
-      const d = parseSafeDate(o.created_at) || new Date();
-      const dStr = getFormattedLocalDate(d);
-      if (!isDateInPeriod(dStr)) return;
-
+    // 1. Process Selected Live Orders
+    selectedOrderEntries.forEach(({ o, d, dStr, itemsList }) => {
       let timeStr = 'N/A';
       try {
         timeStr = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(d);
-      } catch (e) {}
-
-      let itemsList = [];
-      try {
-        itemsList = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
       } catch (e) {}
 
       const totalItemCount = itemsList.reduce((acc, i) => acc + (Number(i.quantity || i.qty) || 1), 0);
       const itemsDetailStr = itemsList.map(i => `${i.name || i.title || 'Item'} (x${i.quantity || i.qty || 1})`).join(', ');
 
       const amt = Number(o.total_amount) || 0;
-      const pMethod = String(o.payment_method || 'cash').toLowerCase();
+      const pCategory = classifyPaymentMethod(o.payment_method);
 
       let cashAmt = 0;
       let upiAmt = 0;
       let cardAmt = 0;
       let otherAmt = 0;
-      let pMethodDisplay = 'CASH';
+      let pMethodDisplay = pCategory.toUpperCase();
 
-      if (pMethod.includes('upi') || pMethod.includes('online') || pMethod.includes('paytm') || pMethod.includes('gpay') || pMethod.includes('phonepe')) {
-        upiAmt = amt;
-        pMethodDisplay = 'UPI';
-      } else if (pMethod.includes('card')) {
-        cardAmt = amt;
-        pMethodDisplay = 'CARD';
-      } else if (pMethod.includes('cash')) {
-        cashAmt = amt;
-        pMethodDisplay = 'CASH';
-      } else {
-        otherAmt = amt;
-        pMethodDisplay = 'OTHER';
-      }
+      if (pCategory === 'upi') upiAmt = amt;
+      else if (pCategory === 'card') cardAmt = amt;
+      else if (pCategory === 'cash') cashAmt = amt;
+      else otherAmt = amt;
 
       grandTotalRepresentedOrders += 1;
       liveOrderRowCount += 1;
@@ -5108,17 +5355,11 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       trend.revenue += amt;
       dailyTrendMap.set(dStr, trend);
 
-      // Track Dish Sales
+      // Track Dish Sales (keyed stably by Dish ID or unambiguous normalized name)
       itemsList.forEach(item => {
-        const dId = String(item.dish_id || item.id || item.name || 'dish_unknown');
-        const dName = item.name || item.title || 'Unknown Dish';
         const dQty = Number(item.quantity || item.qty || 1);
         const dRev = (Number(item.price) || 0) * dQty || (totalItemCount > 0 ? (amt / totalItemCount) * dQty : amt);
-
-        const exist = dishSalesMap.get(dId) || { dish_id: dId, name: dName, quantity: 0, revenue: 0 };
-        exist.quantity += dQty;
-        exist.revenue += dRev;
-        dishSalesMap.set(dId, exist);
+        accumulateXlsxDish(item, dQty, dRev);
       });
 
       reportRows.push({
@@ -5142,27 +5383,20 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       });
     });
 
-    // 2. Process Historical Summaries (DAILY_ROLLUP)
-    summaries.forEach(s => {
-      const dDate = parseSafeDate(s.summary_date) || new Date(s.summary_date);
-      const sDateStr = getFormattedLocalDate(dDate) || s.summary_date;
-      if (!isDateInPeriod(sDateStr)) return;
-
+    // 2. Process Selected Historical Summaries (DAILY_ROLLUP)
+    selectedSummaryEntries.forEach(({ s, sDateStr, itemsList }) => {
       const orderCount = Number(s.total_orders) || 1;
       const amt = Number(s.total_sales) || 0;
 
-      let itemsList = [];
-      try {
-        if (s.items_summary) {
-          itemsList = typeof s.items_summary === 'string' ? JSON.parse(s.items_summary) : s.items_summary;
-        } else if (s.top_dishes_summary) {
-          itemsList = typeof s.top_dishes_summary === 'string' ? JSON.parse(s.top_dishes_summary) : s.top_dishes_summary;
-        }
-      } catch (e) {}
-
-      const totalItemCount = Array.isArray(itemsList) ? itemsList.reduce((acc, i) => acc + (Number(i.quantity ?? i.qty) || 1), 0) : 0;
+      const totalItemCount = Array.isArray(itemsList) ? itemsList.reduce((acc, i) => acc + (Number(i.quantity ?? i.qty ?? i.count) || 1), 0) : 0;
       const itemsDetailStr = Array.isArray(itemsList) && itemsList.length > 0
-        ? itemsList.map(i => `${i.name} (x${i.quantity ?? i.qty ?? 1})`).join(', ')
+        ? itemsList.map(i => {
+            const storedName = extractRawDishName(i);
+            const rawId = extractRawDishId(i);
+            const cleanId = (rawId !== null && rawId !== undefined && String(rawId).trim() !== '') ? String(rawId).trim() : null;
+            const resolvedName = storedName || (cleanId && dishNameById.get(cleanId)) || 'Item';
+            return `${resolvedName} (x${i.quantity ?? i.qty ?? i.count ?? 1})`;
+          }).join(', ')
         : 'Daily Summary';
 
       let pMethodsSummary = null;
@@ -5209,15 +5443,9 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       // Track Dish Sales
       if (Array.isArray(itemsList)) {
         itemsList.forEach(item => {
-          const dId = String(item.dish_id || item.id || item.name || 'dish_unknown');
-          const dName = item.name || 'Unknown Dish';
           const dQty = Number(item.quantity ?? item.qty ?? item.count ?? 1);
           const dRev = Number(item.revenue || 0) || (Number(item.price) || 0) * dQty;
-
-          const exist = dishSalesMap.get(dId) || { dish_id: dId, name: dName, quantity: 0, revenue: 0 };
-          exist.quantity += dQty;
-          exist.revenue += dRev;
-          dishSalesMap.set(dId, exist);
+          accumulateXlsxDish(item, dQty, dRev);
         });
       }
 
@@ -5549,7 +5777,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       row.getCell(5).numFmt = excelCurrencyFmt;
     });
 
-    const filename = `Sales_Report_${filePeriodSlug}_${todayStr}.xlsx`;
+    const filename = sanitizeAttachmentFilename(`Sales_Report_${filePeriodSlug}_${todayStr}.xlsx`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
@@ -7026,10 +7254,32 @@ router.post('/support/tickets/:id/reply', authenticateToken, supportTicketReplyR
     const senderName = req.user?.username || 'Tenant Admin';
     const senderId = req.user?.id || null;
 
-    // Status transition: if waiting_on_tenant, move to in_progress; if resolved, reopen to open
-    const updatedStatus = ticket.status === 'waiting_on_tenant' ? 'in_progress' : (ticket.status === 'resolved' ? 'open' : ticket.status);
+    const replyResult = await withTransaction(async (txQuery) => {
+      // Lock ticket row first to preserve parent->child lock order and inspect committed status on every retry attempt
+      const txTicketRes = await txQuery(
+        'SELECT id, status FROM support_tickets WHERE id = $1 AND restaurant_id = $2 FOR UPDATE',
+        [ticket.id, tenantId]
+      );
+      const txTicketRows = txTicketRes.rows || txTicketRes;
+      const txTicket = txTicketRows && txTicketRows[0];
+      if (!txTicket) {
+        const notFoundErr = new Error('Support ticket not found.');
+        notFoundErr.httpStatus = 404;
+        notFoundErr.code = 'NOT_FOUND';
+        throw notFoundErr;
+      }
+      if (txTicket.status === 'closed') {
+        const closedErr = new Error('This ticket is closed and cannot receive replies. Please open a new support ticket.');
+        closedErr.httpStatus = 400;
+        closedErr.code = 'TICKET_CLOSED';
+        throw closedErr;
+      }
 
-    const newMsg = await withTransaction(async (txQuery) => {
+      // Derive status transition from committed transactional state: if waiting_on_tenant -> in_progress; if resolved -> open
+      const txUpdatedStatus = txTicket.status === 'waiting_on_tenant'
+        ? 'in_progress'
+        : (txTicket.status === 'resolved' ? 'open' : txTicket.status);
+
       // Insert message
       const msgRes = await txQuery(`
         INSERT INTO support_ticket_messages (
@@ -7037,7 +7287,7 @@ router.post('/support/tickets/:id/reply', authenticateToken, supportTicketReplyR
         ) VALUES (
           $1, 'tenant', $2, $3, $4, CURRENT_TIMESTAMP
         ) RETURNING id, ticket_id, sender_type, sender_id, sender_name, message, created_at
-      `, [ticket.id, senderId, senderName, replyText]);
+      `, [txTicket.id, senderId, senderName, replyText]);
       const msgRows = msgRes.rows || msgRes;
 
       // Update ticket updated_at and status
@@ -7045,19 +7295,23 @@ router.post('/support/tickets/:id/reply', authenticateToken, supportTicketReplyR
         UPDATE support_tickets 
         SET status = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
-      `, [updatedStatus, ticket.id]);
+      `, [txUpdatedStatus, txTicket.id]);
 
-      return msgRows[0] || (await txQuery('SELECT * FROM support_ticket_messages WHERE ticket_id = $1 ORDER BY id DESC LIMIT 1', [ticket.id]))[0];
+      const message = msgRows[0] || (await txQuery('SELECT * FROM support_ticket_messages WHERE ticket_id = $1 ORDER BY id DESC LIMIT 1', [txTicket.id]))[0];
+      return { message, updatedStatus: txUpdatedStatus };
     });
 
     await logAudit(tenantId, 'tenant_admin', 'SUPPORT_TICKET_REPLY', `Posted reply on ticket ${ticket.ticket_ref}`);
 
     res.status(201).json({
       success: true,
-      message: newMsg,
-      ticket_status: updatedStatus
+      message: replyResult.message,
+      ticket_status: replyResult.updatedStatus
     });
   } catch (err) {
+    if (err && err.httpStatus) {
+      return res.status(err.httpStatus).json({ error: err.code || 'REQUEST_FAILED', code: err.code || 'REQUEST_FAILED', message: err.message });
+    }
     console.error('Post tenant reply error:', err.message);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to post reply message.' });
   }

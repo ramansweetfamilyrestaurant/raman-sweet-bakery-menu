@@ -45,7 +45,35 @@ import {
 import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 
 export default function StandaloneKdsPage({ slug = '' }) {
-  const [orders, setOrders] = useState([]);
+  const [polledOrders, setPolledOrders] = useState([]);
+  const [optimisticRecalledOrders, setOptimisticRecalledOrders] = useState([]);
+  const [completingOrderIds, setCompletingOrderIds] = useState([]);
+  const pendingCompletingSnapshotsRef = useRef(new Map());
+  const orders = useMemo(() => {
+    let baseList = polledOrders;
+    if (completingOrderIds.length > 0 && pendingCompletingSnapshotsRef.current.size > 0) {
+      const polledIds = new Set(polledOrders.map(o => String(o.id)));
+      const pendingSnapshots = [];
+      for (const cid of completingOrderIds) {
+        const ck = String(cid);
+        if (!polledIds.has(ck)) {
+          const entry = pendingCompletingSnapshotsRef.current.get(ck);
+          if (entry && entry.order) {
+            pendingSnapshots.push(entry.order);
+          }
+        }
+      }
+      if (pendingSnapshots.length > 0) {
+        baseList = filterActiveKitchenOrders([...polledOrders, ...pendingSnapshots]);
+      }
+    }
+    if (optimisticRecalledOrders.length === 0) return baseList;
+    const baseIds = new Set(baseList.map(o => String(o.id)));
+    const extraRecalled = optimisticRecalledOrders.filter(o => o && !baseIds.has(String(o.id)));
+    return extraRecalled.length > 0
+      ? filterActiveKitchenOrders([...extraRecalled, ...baseList])
+      : baseList;
+  }, [polledOrders, optimisticRecalledOrders, completingOrderIds]);
   const [restaurantName, setRestaurantName] = useState('Kitchen Display System');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -97,11 +125,22 @@ export default function StandaloneKdsPage({ slug = '' }) {
   const isMountedRef = useRef(true);
   const isPollingInProgressRef = useRef(false);
   const pollingAbortControllerRef = useRef(null);
+  const fetchOrdersRef = useRef(null);
+  const actionGenRef = useRef(0);
+  const pollGenRef = useRef(0);
   const currentPollSlugRef = useRef('');
   const consecutiveFailuresRef = useRef(0);
   const sirenIntervalRef = useRef(null);
   const sirenTimeoutRef = useRef(null);
   const knownOrderIdsRef = useRef(null);
+  const optimisticRecallsRef = useRef(new Map());
+  const unconfirmedCompletionsRef = useRef(new Map());
+  const orderActionSeqRef = useRef(new Map());
+  const kdsMutationSeqRef = useRef(0);
+  const orderLastMutationRef = useRef(new Map());
+  const pendingForceRefreshRef = useRef(false);
+  const pinAttemptGenRef = useRef(0);
+  const pinTimeoutRef = useRef(null);
 
   /**
    * Resolve current slug strictly from URL path or explicit ?slug= query param.
@@ -153,8 +192,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
   // Browser online/offline event listeners as supplemental signals
   useEffect(() => {
     const handleOnline = () => {
-      if (isMountedRef.current) {
-        fetchOrders();
+      if (isMountedRef.current && typeof fetchOrdersRef.current === 'function') {
+        fetchOrdersRef.current();
       }
     };
     const handleOffline = () => {
@@ -391,7 +430,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
    * Fetch kitchen orders with in-flight request guard and AbortController.
    * Prevents overlapping polls, invalidates stale tenant responses, and catches AbortError safely.
    */
-  const fetchOrders = async () => {
+  const fetchOrders = async ({ force = false } = {}) => {
     const targetSlug = resolveCurrentSlug();
     currentPollSlugRef.current = targetSlug;
 
@@ -404,8 +443,11 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
     setNeedsTenantPrompt(false);
 
-    // In-flight guard: do not start duplicate poll if previous request is still running
+    // In-flight guard: coalesce forced refreshes rather than aborting an active GET
     if (isPollingInProgressRef.current) {
+      if (force) {
+        pendingForceRefreshRef.current = true;
+      }
       return;
     }
 
@@ -418,28 +460,61 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
     isPollingInProgressRef.current = true;
 
-    // Abort prior in-flight request if any
-    if (pollingAbortControllerRef.current) {
-      try { pollingAbortControllerRef.current.abort(); } catch (e) {}
-    }
     const abortController = new AbortController();
     pollingAbortControllerRef.current = abortController;
+    const sessionGen = actionGenRef.current;
+    const pollGen = pollGenRef.current;
+    const pollStartMutationSeq = kdsMutationSeqRef.current;
+    const isStalePoll = () => (
+      !isMountedRef.current ||
+      currentPollSlugRef.current !== targetSlug ||
+      sessionGen !== actionGenRef.current ||
+      pollGen !== pollGenRef.current
+    );
+
+    const pollTimeoutMs = 10000;
+    let pollTimedOut = false;
+    const pollTimeoutId = setTimeout(() => {
+      pollTimedOut = true;
+      if (pollingAbortControllerRef.current === abortController) {
+        pollingAbortControllerRef.current = null;
+        isPollingInProgressRef.current = false;
+      }
+      try { abortController.abort(); } catch (e) {}
+    }, pollTimeoutMs);
 
     try {
-      const res = await fetch(`/api/kitchen/orders?slug=${encodeURIComponent(targetSlug)}`, {
+      const unconfirmedSnapshot = new Map();
+      for (const [cid, entry] of unconfirmedCompletionsRef.current.entries()) {
+        if (entry) unconfirmedSnapshot.set(cid, entry);
+      }
+      const recallSnapshot = new Map();
+      for (const [rid, entry] of optimisticRecallsRef.current.entries()) {
+        if (entry && entry.outcome === 'unknown') recallSnapshot.set(rid, entry);
+      }
+      const reconcileIdList = [
+        ...Array.from(unconfirmedSnapshot.keys()).map(String),
+        ...Array.from(recallSnapshot.keys()).map(String)
+      ];
+      const uniqueReconcileIds = Array.from(new Set(reconcileIdList));
+      const pollUrl = uniqueReconcileIds.length > 0
+        ? `/api/kitchen/orders?slug=${encodeURIComponent(targetSlug)}&reconcile_ids=${encodeURIComponent(uniqueReconcileIds.join(','))}`
+        : `/api/kitchen/orders?slug=${encodeURIComponent(targetSlug)}`;
+      const res = await fetch(pollUrl, {
         signal: abortController.signal,
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      // Ignore response if unmounted or if tenant changed while request was in flight
-      if (!isMountedRef.current || currentPollSlugRef.current !== targetSlug) {
+      // Ignore response if unmounted, locked/unlocked, or tenant changed while request was in flight
+      if (isStalePoll()) {
         return;
       }
 
       if (res.status === 401 || res.status === 403) {
         const errData = await res.json().catch(() => ({}));
+        if (isStalePoll()) return;
         if (errData.error === 'KDS_DISABLED') {
           setKdsDisabled(true);
           setLoading(false);
@@ -450,11 +525,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
           setLoading(false);
           return;
         }
-        clearStoredKdsToken(targetSlug);
-        setNeedsPinUnlock(true);
-        if (errData.message) {
-          setPinError(errData.message);
-        }
+        invalidateKdsSession(targetSlug, { pinErrorMsg: errData.message || '' });
         setLoading(false);
         return;
       }
@@ -470,7 +541,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
       }
 
       const data = await res.json();
-      if (!isMountedRef.current || currentPollSlugRef.current !== targetSlug) {
+      if (isStalePoll()) {
         return;
       }
 
@@ -501,11 +572,123 @@ export default function StandaloneKdsPage({ slug = '' }) {
           }
         }
         knownOrderIdsRef.current = currentIds;
-        setOrders(activeOrders);
+
+        // Keep polledOrders strictly equal to server poll, protecting orders committed locally after pollStartMutationSeq
+        let protectedOrders = activeOrders;
+        if (orderLastMutationRef.current.size > 0 && kdsMutationSeqRef.current > pollStartMutationSeq) {
+          pendingForceRefreshRef.current = true;
+          const activeById = new Map(activeOrders.map(o => [String(o.id), o]));
+          for (const [mutId, mutInfo] of orderLastMutationRef.current.entries()) {
+            if (!mutInfo || mutInfo.gen !== actionGenRef.current) continue;
+            if (mutInfo.seq > pollStartMutationSeq) {
+              if (mutInfo.type === 'ready_committed') {
+                activeById.delete(mutId);
+              } else if (mutInfo.type === 'recall_committed' && mutInfo.order && !activeById.has(mutId)) {
+                activeById.set(mutId, mutInfo.order);
+              }
+            }
+          }
+          protectedOrders = filterActiveKitchenOrders(Array.from(activeById.values()));
+        }
+        setPolledOrders(protectedOrders);
+
+        // Reconcile unknown-outcome completions using request-start snapshot; preserve newer entries untouched for deferred refresh
+        const serverReconcileMap = data.reconcile_statuses && typeof data.reconcile_statuses === 'object'
+          ? data.reconcile_statuses
+          : null;
+        if (unconfirmedSnapshot.size > 0) {
+          const reconciledHistoryAdditions = [];
+          for (const [cid, snapEntry] of unconfirmedSnapshot.entries()) {
+            const liveEntry = unconfirmedCompletionsRef.current.get(cid);
+            if (!liveEntry || liveEntry.gen !== snapEntry.gen || liveEntry.actionSeq !== snapEntry.actionSeq) {
+              if (liveEntry) pendingForceRefreshRef.current = true;
+              continue;
+            }
+            if (liveEntry.gen !== actionGenRef.current) {
+              unconfirmedCompletionsRef.current.delete(cid);
+              continue;
+            }
+            const cKey = String(cid);
+            const stInfo = serverReconcileMap ? serverReconcileMap[cKey] : null;
+            const isConfirmedCancelled = Boolean(stInfo && (stInfo.status === 'cancelled' || stInfo.status === 'rejected'));
+            const isConfirmedServerReady = Boolean(stInfo && Number(stInfo.kitchen_prepared) === 1 && !isConfirmedCancelled);
+
+            if (isConfirmedCancelled) {
+              unconfirmedCompletionsRef.current.delete(cid);
+            } else if (isConfirmedServerReady || (!currentIds.has(cKey) && !serverReconcileMap)) {
+              unconfirmedCompletionsRef.current.delete(cid);
+              if (liveEntry.order && liveEntry.order.status !== 'cancelled' && liveEntry.order.status !== 'rejected') {
+                reconciledHistoryAdditions.push({ ...liveEntry.order, completedAt: new Date() });
+              }
+            } else if (!currentIds.has(cKey) && stInfo && Number(stInfo.kitchen_prepared) === 0) {
+              // Omitted from active queue while server still reports kitchen_prepared=0 (e.g. closed/settled elsewhere) -> stop tracking without adding Ready history
+              unconfirmedCompletionsRef.current.delete(cid);
+            } else {
+              // Still active in queue: keep tracking across the 15s grace window via spaced 3s polling instead of dropping after rapid GETs
+              const ageMs = Date.now() - (liveEntry.timedOutAt || Date.now());
+              if (ageMs >= 15000) {
+                unconfirmedCompletionsRef.current.delete(cid);
+              }
+            }
+          }
+          if (reconciledHistoryAdditions.length > 0) {
+            setRecentlyCompleted(prev => {
+              const addIds = new Set(reconciledHistoryAdditions.map(o => String(o.id)));
+              return [...reconciledHistoryAdditions, ...prev.filter(o => !addIds.has(String(o.id)))].slice(0, 10);
+            });
+          }
+        }
+
+        // Reconcile unknown-outcome recalls using request-start snapshot; preserve newer entries untouched for deferred refresh
+        if (recallSnapshot.size > 0) {
+          const toRestoreCompleted = [];
+          for (const [rid, snapEntry] of recallSnapshot.entries()) {
+            const liveEntry = optimisticRecallsRef.current.get(rid);
+            if (!liveEntry || liveEntry.gen !== snapEntry.gen || liveEntry.actionSeq !== snapEntry.actionSeq || liveEntry.outcome !== 'unknown') {
+              if (liveEntry) pendingForceRefreshRef.current = true;
+              continue;
+            }
+            if (liveEntry.gen !== actionGenRef.current) {
+              optimisticRecallsRef.current.delete(rid);
+              continue;
+            }
+            const rKey = String(rid);
+            const stInfo = serverReconcileMap ? serverReconcileMap[rKey] : null;
+            if (currentIds.has(rKey)) {
+              optimisticRecallsRef.current.delete(rid);
+            } else if (stInfo && (stInfo.status === 'cancelled' || stInfo.status === 'rejected')) {
+              optimisticRecallsRef.current.delete(rid);
+            } else if (stInfo && stInfo.kitchen_prepared !== undefined && stInfo.kitchen_prepared !== null && Number(stInfo.kitchen_prepared) === 0) {
+              // Server explicitly reports kitchen_prepared=0 even when absent from active orders: recall succeeded / order is not prepared
+              optimisticRecallsRef.current.delete(rid);
+            } else {
+              const ageMs = Date.now() - (liveEntry.timedOutAt || Date.now());
+              if (stInfo && Number(stInfo.kitchen_prepared) === 1 && ageMs < 15000) {
+                // Late recall commit may still land within 15s grace period; keep entry across spaced 3s polls
+              } else {
+                optimisticRecallsRef.current.delete(rid);
+                if (liveEntry.order) {
+                  toRestoreCompleted.push(liveEntry.order);
+                }
+              }
+            }
+          }
+          if (toRestoreCompleted.length > 0) {
+            setRecentlyCompleted(prev => {
+              const next = [...prev];
+              for (const ord of toRestoreCompleted) {
+                if (!next.some(o => o.id === ord.id)) {
+                  next.unshift(ord);
+                }
+              }
+              return next.slice(0, 10);
+            });
+          }
+        }
       }
     } catch (err) {
-      if (err.name === 'AbortError') {
-        // Controlled abort on unmount or slug transition; do not count as connection error
+      if ((err.name === 'AbortError' && !pollTimedOut) || isStalePoll()) {
+        // Controlled abort or invalidated session generation; do not mutate UI or error count
         return;
       }
       consecutiveFailuresRef.current += 1;
@@ -516,28 +699,71 @@ export default function StandaloneKdsPage({ slug = '' }) {
       setConnectionStatus(nextStatus);
       console.warn('Failed to poll kitchen orders:', err.message || err);
     } finally {
-      // Crucial: Release in-flight guard so future polling intervals can recover
-      isPollingInProgressRef.current = false;
-      if (isMountedRef.current) {
+      clearTimeout(pollTimeoutId);
+      if (pollingAbortControllerRef.current === abortController) {
+        pollingAbortControllerRef.current = null;
+        isPollingInProgressRef.current = false;
+      }
+      if (!isStalePoll()) {
         setLoading(false);
+        if (pendingForceRefreshRef.current && !isPollingInProgressRef.current) {
+          pendingForceRefreshRef.current = false;
+          void fetchOrders();
+        }
       }
     }
   };
+  fetchOrdersRef.current = fetchOrders;
 
   // Polling interval with cleanup on unmount or slug change
   useEffect(() => {
+    actionGenRef.current += 1;
+    pollGenRef.current += 1;
+    pinAttemptGenRef.current += 1;
+    if (pinTimeoutRef.current) {
+      clearTimeout(pinTimeoutRef.current);
+      pinTimeoutRef.current = null;
+    }
     const targetSlug = resolveCurrentSlug();
     currentPollSlugRef.current = targetSlug;
     knownOrderIdsRef.current = null;
     consecutiveFailuresRef.current = 0;
 
+    // Reset tenant-scoped UI state when switching slug on shared devices
+    optimisticRecallsRef.current.clear();
+    unconfirmedCompletionsRef.current.clear();
+    pendingCompletingSnapshotsRef.current.clear();
+    orderActionSeqRef.current.clear();
+    orderLastMutationRef.current.clear();
+    pendingForceRefreshRef.current = false;
+    setPolledOrders([]);
+    setOptimisticRecalledOrders([]);
+    setRecentlyCompleted([]);
+    setShowCompletedDrawer(false);
+    setRecallNotice(null);
+    setCheckedItemsMap({});
+    setCompletingOrderIds([]);
+    setRecallingOrderIds([]);
+    setPinError('');
+    setPinSubmitting(false);
+    setNotFound(false);
+    setKdsDisabled(false);
+    setPinUnconfigured(false);
+
     fetchOrders();
     const interval = setInterval(() => {
-      fetchOrders();
+      if (typeof fetchOrdersRef.current === 'function') {
+        fetchOrdersRef.current();
+      }
     }, 3000);
 
     return () => {
       clearInterval(interval);
+      pinAttemptGenRef.current += 1;
+      if (pinTimeoutRef.current) {
+        clearTimeout(pinTimeoutRef.current);
+        pinTimeoutRef.current = null;
+      }
       if (pollingAbortControllerRef.current) {
         try { pollingAbortControllerRef.current.abort(); } catch (e) {}
       }
@@ -560,6 +786,75 @@ export default function StandaloneKdsPage({ slug = '' }) {
     }
   }, [resolvedSlug]);
 
+  const invalidateKdsSession = (slugToClear, { pinErrorMsg = null } = {}) => {
+    actionGenRef.current += 1;
+    pollGenRef.current += 1;
+    pinAttemptGenRef.current += 1;
+    if (pinTimeoutRef.current) {
+      clearTimeout(pinTimeoutRef.current);
+      pinTimeoutRef.current = null;
+    }
+    if (pollingAbortControllerRef.current) {
+      try { pollingAbortControllerRef.current.abort(); } catch (e) {}
+      pollingAbortControllerRef.current = null;
+    }
+    isPollingInProgressRef.current = false;
+    optimisticRecallsRef.current.clear();
+    unconfirmedCompletionsRef.current.clear();
+    pendingCompletingSnapshotsRef.current.clear();
+    orderActionSeqRef.current.clear();
+    orderLastMutationRef.current.clear();
+    pendingForceRefreshRef.current = false;
+    clearStoredKdsToken(slugToClear);
+    stopSiren();
+    setNeedsPinUnlock(true);
+    setPinSubmitting(false);
+    if (pinErrorMsg !== null) {
+      setPinError(pinErrorMsg);
+    }
+    setPolledOrders([]);
+    setOptimisticRecalledOrders([]);
+    setRecentlyCompleted([]);
+    setShowCompletedDrawer(false);
+    setRecallNotice(null);
+    setCheckedItemsMap({});
+    setCompletingOrderIds([]);
+    setRecallingOrderIds([]);
+  };
+
+  const startAuthenticatedKdsSession = (targetSlug, data) => {
+    actionGenRef.current += 1;
+    pollGenRef.current += 1;
+    pinAttemptGenRef.current += 1;
+    if (pinTimeoutRef.current) {
+      clearTimeout(pinTimeoutRef.current);
+      pinTimeoutRef.current = null;
+    }
+    if (pollingAbortControllerRef.current) {
+      try { pollingAbortControllerRef.current.abort(); } catch (e) {}
+      pollingAbortControllerRef.current = null;
+    }
+    isPollingInProgressRef.current = false;
+    optimisticRecallsRef.current.clear();
+    unconfirmedCompletionsRef.current.clear();
+    pendingCompletingSnapshotsRef.current.clear();
+    orderActionSeqRef.current.clear();
+    orderLastMutationRef.current.clear();
+    pendingForceRefreshRef.current = false;
+    setOptimisticRecalledOrders([]);
+    setCompletingOrderIds([]);
+    setRecallingOrderIds([]);
+    setStoredKdsToken(targetSlug, data.token);
+    setNeedsPinUnlock(false);
+    setPinInput('');
+    setPinError('');
+    setPinSubmitting(false);
+    if (data.restaurant?.name) {
+      setRestaurantName(data.restaurant.name);
+    }
+    fetchOrders({ force: true });
+  };
+
   const handleVerifyPin = async (e) => {
     if (e) e.preventDefault();
     const cleanPin = pinInput.trim();
@@ -571,6 +866,12 @@ export default function StandaloneKdsPage({ slug = '' }) {
     const targetSlug = resolveCurrentSlug();
     if (!targetSlug) return;
 
+    const attemptId = ++pinAttemptGenRef.current;
+    if (pinTimeoutRef.current) {
+      clearTimeout(pinTimeoutRef.current);
+      pinTimeoutRef.current = null;
+    }
+
     setPinSubmitting(true);
     setPinError('');
     try {
@@ -581,15 +882,11 @@ export default function StandaloneKdsPage({ slug = '' }) {
       });
 
       const data = await res.json();
+      if (!isMountedRef.current || attemptId !== pinAttemptGenRef.current || resolveCurrentSlug() !== targetSlug) {
+        return;
+      }
       if (res.ok && data.success && data.token) {
-        setStoredKdsToken(targetSlug, data.token);
-        setNeedsPinUnlock(false);
-        setPinInput('');
-        setPinError('');
-        if (data.restaurant?.name) {
-          setRestaurantName(data.restaurant.name);
-        }
-        fetchOrders();
+        startAuthenticatedKdsSession(targetSlug, data);
       } else {
         if (data.error === 'KDS_NOT_CONFIGURED') {
           setPinUnconfigured(true);
@@ -600,9 +897,12 @@ export default function StandaloneKdsPage({ slug = '' }) {
         }
       }
     } catch (err) {
+      if (!isMountedRef.current || attemptId !== pinAttemptGenRef.current || resolveCurrentSlug() !== targetSlug) {
+        return;
+      }
       setPinError('Connection error. Please check your network and try again.');
     } finally {
-      if (isMountedRef.current) {
+      if (isMountedRef.current && attemptId === pinAttemptGenRef.current) {
         setPinSubmitting(false);
       }
     }
@@ -614,7 +914,13 @@ export default function StandaloneKdsPage({ slug = '' }) {
       setPinInput(newPin);
       setPinError('');
       if (newPin.length === 4) {
-        setTimeout(() => {
+        const attemptId = ++pinAttemptGenRef.current;
+        if (pinTimeoutRef.current) {
+          clearTimeout(pinTimeoutRef.current);
+        }
+        pinTimeoutRef.current = setTimeout(() => {
+          pinTimeoutRef.current = null;
+          if (!isMountedRef.current || attemptId !== pinAttemptGenRef.current) return;
           const cleanPin = newPin.trim();
           const targetSlug = resolveCurrentSlug();
           if (!targetSlug || !/^\d{4}$/.test(cleanPin)) return;
@@ -626,14 +932,9 @@ export default function StandaloneKdsPage({ slug = '' }) {
           })
             .then(r => r.json().then(data => ({ ok: r.ok, data })))
             .then(({ ok, data }) => {
-              if (!isMountedRef.current) return;
+              if (!isMountedRef.current || attemptId !== pinAttemptGenRef.current || resolveCurrentSlug() !== targetSlug) return;
               if (ok && data.success && data.token) {
-                setStoredKdsToken(targetSlug, data.token);
-                setNeedsPinUnlock(false);
-                setPinInput('');
-                setPinError('');
-                if (data.restaurant?.name) setRestaurantName(data.restaurant.name);
-                fetchOrders();
+                startAuthenticatedKdsSession(targetSlug, data);
               } else {
                 if (data.error === 'KDS_NOT_CONFIGURED') {
                   setPinUnconfigured(true);
@@ -646,12 +947,12 @@ export default function StandaloneKdsPage({ slug = '' }) {
               }
             })
             .catch(() => {
-              if (isMountedRef.current) {
+              if (isMountedRef.current && attemptId === pinAttemptGenRef.current && resolveCurrentSlug() === targetSlug) {
                 setPinError('Connection error. Please try again.');
               }
             })
             .finally(() => {
-              if (isMountedRef.current) {
+              if (isMountedRef.current && attemptId === pinAttemptGenRef.current) {
                 setPinSubmitting(false);
               }
             });
@@ -660,39 +961,136 @@ export default function StandaloneKdsPage({ slug = '' }) {
     }
   };
 
+  const cancelPendingPinSubmit = () => {
+    pinAttemptGenRef.current += 1;
+    if (pinTimeoutRef.current) {
+      clearTimeout(pinTimeoutRef.current);
+      pinTimeoutRef.current = null;
+    }
+  };
+
   const handleKeypadDelete = () => {
+    cancelPendingPinSubmit();
     setPinInput(prev => prev.slice(0, -1));
     setPinError('');
   };
 
   const handleKeypadClear = () => {
+    cancelPendingPinSubmit();
     setPinInput('');
     setPinError('');
   };
 
   const handleLockScreen = () => {
     const targetSlug = resolveCurrentSlug();
-    clearStoredKdsToken(targetSlug);
-    setNeedsPinUnlock(true);
-    setOrders([]);
+    invalidateKdsSession(targetSlug, { pinErrorMsg: '' });
   };
 
-  const handleMarkPrepared = async (orderId) => {
+  const handleMarkPrepared = async (orderOrId) => {
+    const orderObj = typeof orderOrId === 'object' && orderOrId !== null
+      ? orderOrId
+      : orders.find(o => o.id === orderOrId);
+    const orderId = orderObj ? orderObj.id : orderOrId;
+    if (!orderId || completingOrderIds.includes(orderId)) return;
+
+    const reqGen = actionGenRef.current;
+    const orderKey = String(orderId);
+    const readySeq = (orderActionSeqRef.current.get(orderKey) || 0) + 1;
+    orderActionSeqRef.current.set(orderKey, readySeq);
+
     const targetSlug = resolveCurrentSlug();
     const token = getStoredKdsToken(targetSlug);
+    const targetOrderSnapshot = orderObj || null;
+
+    const releaseSnapshotIfCurrent = () => {
+      const curSnap = pendingCompletingSnapshotsRef.current.get(orderKey);
+      if (curSnap && curSnap.gen === reqGen && curSnap.seq === readySeq) {
+        pendingCompletingSnapshotsRef.current.delete(orderKey);
+      }
+    };
+
+    const restoreFailedOrder = () => {
+      // Rejected Ready leaves recentlyCompleted untouched (including empty or restored Recall entries)
+      releaseSnapshotIfCurrent();
+    };
+
+    // Keep ticket visible & disabled ("Marking Ready...") while PATCH is pending; retain snapshot across polls until settled
+    if (targetOrderSnapshot) {
+      pendingCompletingSnapshotsRef.current.set(orderKey, { order: targetOrderSnapshot, gen: reqGen, seq: readySeq });
+    }
+    setCompletingOrderIds(prev => [...prev, orderId]);
+
+    const completeAbortController = new AbortController();
+    let completeTimedOut = false;
+    const completeTimeoutId = setTimeout(() => {
+      completeTimedOut = true;
+      try { completeAbortController.abort(); } catch (e) {}
+    }, 12000);
+
+    let serverResponded = false;
     try {
-      setOrders(prev => prev.filter(o => o.id !== orderId));
       const res = await fetch(`/api/kitchen/orders/${orderId}/complete?slug=${encodeURIComponent(targetSlug)}`, {
         method: 'PATCH',
+        signal: completeAbortController.signal,
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
-      if (res.status === 401 || res.status === 403) {
-        clearStoredKdsToken(targetSlug);
-        setNeedsPinUnlock(true);
+      serverResponded = true;
+      if (!isMountedRef.current || reqGen !== actionGenRef.current) {
+        return;
       }
-      fetchOrders();
+      if (res.status === 401 || res.status === 403) {
+        restoreFailedOrder();
+        invalidateKdsSession(targetSlug);
+        return;
+      }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Failed to mark order #${orderId} prepared`);
+      }
+
+      // Apply grid removal & 10-entry history cap only after PATCH succeeds
+      releaseSnapshotIfCurrent();
+      unconfirmedCompletionsRef.current.delete(orderId);
+      optimisticRecallsRef.current.delete(orderId);
+      const commitSeq = ++kdsMutationSeqRef.current;
+      orderLastMutationRef.current.set(orderKey, { seq: commitSeq, gen: reqGen, type: 'ready_committed' });
+      setOptimisticRecalledOrders(prev => prev.filter(o => o.id !== orderId));
+      setPolledOrders(prev => prev.filter(o => o.id !== orderId));
+      if (orderObj) {
+        setRecentlyCompleted(prev => [
+          { ...orderObj, completedAt: new Date() },
+          ...prev.filter(o => o.id !== orderId)
+        ].slice(0, 10));
+      }
+      fetchOrders({ force: true });
     } catch (e) {
-      alert('Failed to mark order prepared');
+      if (!isMountedRef.current || reqGen !== actionGenRef.current) {
+        return;
+      }
+      releaseSnapshotIfCurrent();
+      // If response outcome is unknown (timeout/lost network after possible commit), queue poll reconciliation without adding to recentlyCompleted
+      if ((!serverResponded || completeTimedOut) && targetOrderSnapshot) {
+        unconfirmedCompletionsRef.current.set(orderId, {
+          order: targetOrderSnapshot,
+          gen: reqGen,
+          actionSeq: readySeq,
+          timedOutAt: Date.now()
+        });
+      }
+      restoreFailedOrder();
+      setRecallNotice({
+        type: 'error',
+        message: completeTimedOut
+          ? `Ready request for Order #${orderId} timed out. Reconciling queue state...`
+          : (e?.message || 'Failed to mark order prepared. Order remains in queue.')
+      });
+      fetchOrders({ force: true });
+    } finally {
+      clearTimeout(completeTimeoutId);
+      releaseSnapshotIfCurrent();
+      if (isMountedRef.current && reqGen === actionGenRef.current) {
+        setCompletingOrderIds(prev => prev.filter(id => id !== orderId));
+      }
     }
   };
 
@@ -708,6 +1106,10 @@ export default function StandaloneKdsPage({ slug = '' }) {
       return;
     }
 
+    const reqGen = actionGenRef.current;
+    const orderKey = String(order.id);
+    const undoSeq = (orderActionSeqRef.current.get(orderKey) || 0) + 1;
+    orderActionSeqRef.current.set(orderKey, undoSeq);
     const targetSlug = resolveCurrentSlug();
     if (!targetSlug) {
       setRecallNotice({
@@ -719,35 +1121,60 @@ export default function StandaloneKdsPage({ slug = '' }) {
 
     setRecallingOrderIds(prev => [...prev, order.id]);
 
-    // Preserve previous queues for rollback on error
-    const previousOrders = [...orders];
-    const previousRecentlyCompleted = [...recentlyCompleted];
+    const restoreRecalledOrder = () => {
+      optimisticRecallsRef.current.delete(order.id);
+      setOptimisticRecalledOrders(prev => prev.filter(o => o.id !== order.id));
+      setRecentlyCompleted(prev => (
+        prev.some(o => o.id === order.id) ? prev : [order, ...prev].slice(0, 10)
+      ));
+    };
 
-    // Optimistic UI update
+    // Optimistic recall kept separate from polledOrders
+    optimisticRecallsRef.current.set(order.id, { order, gen: reqGen, actionSeq: undoSeq, outcome: 'pending' });
     setRecentlyCompleted(prev => prev.filter(o => o.id !== order.id));
-    setOrders(prev => [order, ...prev.filter(o => o.id !== order.id)]);
+    setOptimisticRecalledOrders(prev => [order, ...prev.filter(o => o.id !== order.id)]);
 
     const token = getStoredKdsToken(targetSlug);
+    const recallAbortController = new AbortController();
+    let recallTimedOut = false;
+    const recallTimeoutId = setTimeout(() => {
+      recallTimedOut = true;
+      try { recallAbortController.abort(); } catch (e) {}
+    }, 12000);
 
     try {
       const res = await fetch(`/api/kitchen/orders/${order.id}/recall?slug=${encodeURIComponent(targetSlug)}`, {
         method: 'PATCH',
+        signal: recallAbortController.signal,
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
 
       const data = await res.json().catch(() => ({}));
+      if (recallTimedOut) {
+        throw new Error('RECALL_TIMEOUT');
+      }
+      if (!isMountedRef.current || reqGen !== actionGenRef.current) {
+        return;
+      }
       const parsed = parseRecallErrorResponse(res.status, data, order.id);
 
       if (parsed.success) {
+        optimisticRecallsRef.current.delete(order.id);
+        setOptimisticRecalledOrders(prev => prev.filter(o => o.id !== order.id));
+        // Ignore delayed Undo restoration of polledOrders if a newer action (e.g., Ready) started for this order ID
+        if (orderActionSeqRef.current.get(orderKey) === undoSeq) {
+          const commitSeq = ++kdsMutationSeqRef.current;
+          orderLastMutationRef.current.set(orderKey, { seq: commitSeq, gen: reqGen, type: 'recall_committed', order });
+          setPolledOrders(prev => filterActiveKitchenOrders([order, ...prev.filter(o => o.id !== order.id)]));
+        }
         setRecallNotice({
           type: 'success',
           message: parsed.message
         });
-        fetchOrders();
+        fetchOrders({ force: true });
       } else {
-        // Request rejected by server -> rollback optimistic update
-        setOrders(previousOrders);
-        setRecentlyCompleted(previousRecentlyCompleted);
+        // Confirmed rejection from server -> restore prior entry immediately
+        restoreRecalledOrder();
 
         setRecallNotice({
           type: 'error',
@@ -759,21 +1186,32 @@ export default function StandaloneKdsPage({ slug = '' }) {
         }
 
         // Resynchronize authoritative queue
-        fetchOrders();
+        fetchOrders({ force: true });
       }
     } catch (err) {
-      // Network failure -> rollback optimistic update & resynchronize
-      setOrders(previousOrders);
-      setRecentlyCompleted(previousRecentlyCompleted);
+      if (!isMountedRef.current || reqGen !== actionGenRef.current) {
+        return;
+      }
+      // Unknown outcome (network failure or deadline timeout) -> reconcile with authoritative poll before restoring recentlyCompleted
+      optimisticRecallsRef.current.set(order.id, {
+        order,
+        gen: reqGen,
+        actionSeq: undoSeq,
+        outcome: 'unknown',
+        timedOutAt: Date.now()
+      });
+      setOptimisticRecalledOrders(prev => prev.filter(o => o.id !== order.id));
 
-      const parsed = parseRecallErrorResponse(0, {}, order.id);
       setRecallNotice({
         type: 'error',
-        message: parsed.message
+        message: recallTimedOut
+          ? `Recall request for Order #${order.id} timed out. Reconciling queue state...`
+          : parseRecallErrorResponse(0, {}, order.id).message
       });
-      fetchOrders();
+      fetchOrders({ force: true });
     } finally {
-      if (isMountedRef.current) {
+      clearTimeout(recallTimeoutId);
+      if (isMountedRef.current && reqGen === actionGenRef.current) {
         setRecallingOrderIds(prev => prev.filter(id => id !== order.id));
       }
     }
@@ -828,7 +1266,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
     const cleanSpaceType = spaceType ? String(spaceType).trim().toLowerCase() : null;
 
     if (cleanSpaceType === 'cinema_seat' || cleanSpaceType === 'cinema') {
-      return `Seat ${str.replace(/^seat\s*#?/i, '').toUpperCase()}`;
+      return `Seat ${str.replace(/^seat(?:[\s#.\-:]+|(?=\d|$))/i, '').trim().toUpperCase()}`;
     }
     if (cleanSpaceType === 'room' || /^room\s*#?\d+/i.test(str)) {
       return `Room ${str.replace(/^room\s*#?/i, '').trim()}`;
@@ -857,7 +1295,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
       if (cleanFallback === 'room') return `Room ${str}`;
       if (cleanFallback === 'cabin') return `Cabin ${str}`;
       if (cleanFallback === 'vip') return `VIP ${str}`;
-      if (cleanFallback === 'cinema_seat' || cleanFallback === 'cinema') return `Seat ${str.toUpperCase()}`;
+      if (cleanFallback === 'cinema_seat' || cleanFallback === 'cinema') return `Seat ${str.replace(/^seat(?:[\s#.\-:]+|(?=\d|$))/i, '').trim().toUpperCase()}`;
     }
 
     return `Table ${str}`;
@@ -1918,10 +2356,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
                 {/* TICKET FOOTER: READY BUTTON */}
                 <div style={{ padding: '10px 14px', background: '#0F172A', borderTop: '1px solid rgba(255, 255, 255, 0.06)', boxSizing: 'border-box' }}>
                   <button
-                    onClick={() => {
-                      setRecentlyCompleted(prev => [{ ...order, completedAt: new Date() }, ...prev.slice(0, 9)]);
-                      handleMarkPrepared(order.id);
-                    }}
+                    disabled={completingOrderIds.includes(order.id)}
+                    onClick={() => handleMarkPrepared(order)}
                     className="kds-action-btn"
                     style={{
                       width: '100%',
@@ -1932,7 +2368,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
                       color: '#FFFFFF',
                       fontSize: '0.8125rem',
                       fontWeight: 500,
-                      cursor: 'pointer',
+                      cursor: completingOrderIds.includes(order.id) ? 'not-allowed' : 'pointer',
+                      opacity: completingOrderIds.includes(order.id) ? 0.7 : 1,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1941,7 +2378,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                     }}
                   >
                     <CheckCircle size={16} />
-                    <span>Mark Ready</span>
+                    <span>{completingOrderIds.includes(order.id) ? 'Marking Ready...' : 'Mark Ready'}</span>
                   </button>
                 </div>
               </div>

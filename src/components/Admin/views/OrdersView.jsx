@@ -381,6 +381,7 @@ export default function OrdersView({
 
     if (isCounterEnabled) {
       spaces.push({
+        id: 'counter_COUNTER',
         space_type: 'counter',
         space_number: 'COUNTER',
         category: 'counter',

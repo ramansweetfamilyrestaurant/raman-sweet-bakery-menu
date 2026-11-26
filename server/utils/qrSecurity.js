@@ -109,20 +109,39 @@ export function normalizeSpaceNumber(num) {
   // Standardize cinema seat pattern: Screen 1 - Row A - Seat 12, S1-A-12, Screen 1, Row A, Seat 12
   const cinemaMatch = s.match(/^(?:screen\s*(\d+)[\s\-_•|,]+row\s*([a-zA-Z]+)[\s\-_•|,]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
   if (cinemaMatch) {
-    const screen = cinemaMatch[1] || cinemaMatch[4];
+    const screen = String(parseInt(cinemaMatch[1] || cinemaMatch[4], 10));
     const row = (cinemaMatch[2] || cinemaMatch[5]).toUpperCase();
-    const seat = cinemaMatch[3] || cinemaMatch[6];
+    const seat = String(parseInt(cinemaMatch[3] || cinemaMatch[6], 10));
     return `S${screen}-${row}-${seat}`;
   }
 
   // Strip common label prefixes
-  const cleaned = s.replace(/^(table|cabin|room|vip|counter|tbl|🍽️|🛋️|🏨|👑|🎬|🧾|\s)+/i, '').trim();
+  const cleaned = s.replace(/^(?:table|cabin|room|vip|counter|tbl|seat(?:[\s#.\-:]+|(?=\d|$))|#(?=\d)|🍽️|🛋️|🏨|👑|🎬|🧾|\s)+/i, '').trim();
 
   // If numeric, strip leading zeroes (e.g. "05" -> "5")
   if (/^\d+$/.test(cleaned)) {
     return String(parseInt(cleaned, 10));
   }
 
+  return cleaned || s;
+}
+
+function normalizeSpaceNumberLegacy(num) {
+  if (num === undefined || num === null) return '';
+  const s = String(num).trim();
+  if (!s) return '';
+  if (s.toLowerCase() === 'counter') return 'COUNTER';
+  const cinemaMatch = s.match(/^(?:screen\s*(\d+)[\s\-_•|,]+row\s*([a-zA-Z]+)[\s\-_•|,]+seat\s*(\d+)|s?(\d+)[\-_:]([a-zA-Z]+)[\-_:](\d+))/i);
+  if (cinemaMatch) {
+    const screen = String(parseInt(cinemaMatch[1] || cinemaMatch[4], 10));
+    const row = (cinemaMatch[2] || cinemaMatch[5]).toUpperCase();
+    const seat = String(parseInt(cinemaMatch[3] || cinemaMatch[6], 10));
+    return `S${screen}-${row}-${seat}`;
+  }
+  const cleaned = s.replace(/^(?:table|cabin|room|vip|counter|tbl|seat\s*|🍽️|🛋️|🏨|👑|🎬|🧾|\s)+/i, '').trim();
+  if (/^\d+$/.test(cleaned)) {
+    return String(parseInt(cleaned, 10));
+  }
   return cleaned || s;
 }
 
@@ -167,18 +186,28 @@ export function verifyQrToken(slug, type, num, secret, token, options = {}) {
       return { valid: false, reason: 'malformed_token' };
     }
 
+    const rawInputNum = options && options.rawSpaceNumber ? String(options.rawSpaceNumber).trim() : String(num).trim();
+    const verificationCandidates = [cleanNum];
+    const addEquivalentCandidate = (cand) => {
+      const c = String(cand || '').trim();
+      if (c && !verificationCandidates.includes(c) && normalizeSpaceNumber(c) === cleanNum) {
+        verificationCandidates.push(c);
+      }
+    };
+    addEquivalentCandidate(rawInputNum);
+    addEquivalentCandidate(normalizeSpaceNumberLegacy(rawInputNum));
+    addEquivalentCandidate(normalizeSpaceNumberLegacy(num));
+
     // 4. Primary: HMAC-SHA256 Verification (64 hex characters)
     if (tokenStr.length === 64) {
-      const expectedToken = generateHmacQrToken(cleanSlug, cleanType, cleanNum, cleanSecret);
-      if (!expectedToken) {
-        return { valid: false, reason: 'invalid_input' };
-      }
-
       const bufToken = Buffer.from(tokenStr.toLowerCase(), 'hex');
-      const bufExpected = Buffer.from(expectedToken.toLowerCase(), 'hex');
-
-      if (bufToken.length === bufExpected.length && crypto.timingSafeEqual(bufToken, bufExpected)) {
-        return { valid: true, reason: null, legacy: false };
+      for (const candidateNum of verificationCandidates) {
+        const payload = `${cleanSlug}:${cleanType}:${candidateNum}`;
+        const expectedToken = crypto.createHmac('sha256', cleanSecret).update(payload, 'utf8').digest('hex');
+        const bufExpected = Buffer.from(expectedToken.toLowerCase(), 'hex');
+        if (bufToken.length === bufExpected.length && crypto.timingSafeEqual(bufToken, bufExpected)) {
+          return { valid: true, reason: null, legacy: false };
+        }
       }
 
       return { valid: false, reason: 'invalid_token' };
@@ -203,18 +232,30 @@ export function verifyQrToken(slug, type, num, secret, token, options = {}) {
       return { valid: false, reason: 'legacy_token_deprecated', legacy: true };
     }
 
-    const legacyExpected = generateLegacyQrToken(cleanSlug, cleanType, cleanNum, cleanSecret);
     const tokenNormalized = tokenStr.toLowerCase().padStart(8, '0');
 
     let isLegacyMatch = false;
-    if (legacyExpected && tokenNormalized.length === legacyExpected.length) {
-      try {
-        isLegacyMatch = crypto.timingSafeEqual(
-          Buffer.from(tokenNormalized, 'utf8'),
-          Buffer.from(legacyExpected.toLowerCase(), 'utf8')
-        );
-      } catch {
-        isLegacyMatch = tokenNormalized === legacyExpected.toLowerCase();
+    for (const candidateNum of verificationCandidates) {
+      const legacyStr = `${cleanSlug}:${cleanType}:${candidateNum}:${cleanSecret}`;
+      let legacyHash = 0;
+      for (let idx = 0; idx < legacyStr.length; idx++) {
+        const ch = legacyStr.charCodeAt(idx);
+        legacyHash = ((legacyHash << 5) - legacyHash) + ch;
+        legacyHash = legacyHash & legacyHash;
+      }
+      const legacyExpected = Math.abs(legacyHash).toString(16).padStart(8, '0');
+      if (legacyExpected && tokenNormalized.length === legacyExpected.length) {
+        try {
+          if (crypto.timingSafeEqual(Buffer.from(tokenNormalized, 'utf8'), Buffer.from(legacyExpected.toLowerCase(), 'utf8'))) {
+            isLegacyMatch = true;
+            break;
+          }
+        } catch {
+          if (tokenNormalized === legacyExpected.toLowerCase()) {
+            isLegacyMatch = true;
+            break;
+          }
+        }
       }
     }
 

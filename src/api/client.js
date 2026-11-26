@@ -622,11 +622,34 @@ export async function createAdminPosOrder(token, orderData) {
   return handleResponse(res, 'Failed to create POS counter order');
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000, errorMsg = 'Request failed') {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return await handleResponse(res, errorMsg);
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      const timeoutErr = new Error(`${errorMsg} (request timed out)`);
+      timeoutErr.isTimeout = true;
+      throw timeoutErr;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function fetchAdminOrders(token, scope = 'live') {
-  const res = await fetch(`${API_BASE}/admin/orders?scope=${scope}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return handleResponse(res, 'Failed to fetch orders');
+  return fetchWithTimeout(
+    `${API_BASE}/admin/orders?scope=${scope}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+    10000,
+    'Failed to fetch orders'
+  );
 }
 
 export async function updateOrderStatus(id, status, token, extraBody = {}) {
@@ -676,10 +699,12 @@ export async function createServiceRequest(data) {
 }
 
 export async function fetchServiceRequests(token) {
-  const res = await fetch(`${API_BASE}/admin/service-requests`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return handleResponse(res, 'Failed to fetch service requests');
+  return fetchWithTimeout(
+    `${API_BASE}/admin/service-requests`,
+    { headers: { Authorization: `Bearer ${token}` } },
+    10000,
+    'Failed to fetch service requests'
+  );
 }
 
 export async function resolveServiceRequest(id, token) {
@@ -725,10 +750,12 @@ export async function fetchAdminAnalytics(token, period = 'all', year = null, mo
   const qs = params.toString();
   if (qs) url += `?${qs}`;
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return handleResponse(res, 'Failed to fetch analytics');
+  return fetchWithTimeout(
+    url,
+    { headers: { Authorization: `Bearer ${token}` } },
+    20000,
+    'Failed to fetch analytics'
+  );
 }
 
 export async function exportAdminAnalyticsCSV(token, period = 'all', year = null, month = null) {
