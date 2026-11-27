@@ -1068,7 +1068,7 @@ img {
 
 @keyframes tqDrawCheck {
   0% {
-    stroke-dashoffset: 36;
+    stroke-dashoffset: 1;
   }
 
   100% {
@@ -1094,9 +1094,9 @@ img {
 }
 
 .tq-svg-check path {
-  stroke-dasharray: 36;
-  stroke-dashoffset: 36;
-  animation: tqDrawCheck 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.14s both;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tqDrawCheck 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.14s both;
 }
 
 .tq-sparkle-dot {

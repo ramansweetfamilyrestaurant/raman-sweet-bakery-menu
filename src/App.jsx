@@ -5648,6 +5648,7 @@ export default function App() {
                 >
                   <svg className="tq-svg-check" viewBox="0 0 28 28" width="28" height="28" fill="none" aria-hidden="true">
                     <path
+                      pathLength="1"
                       d="M6.5 14.5 L11.5 19.5 L21.5 9"
                       stroke="#FFFFFF"
                       strokeWidth="3.4"
