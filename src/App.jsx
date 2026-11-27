@@ -193,6 +193,12 @@ export default function App() {
     });
   };
 
+  const isViewOnlyUrl = Boolean(
+    new URLSearchParams(window.location.search).get('view') === '1' ||
+    new URLSearchParams(window.location.search).get('view_only') === 'true' ||
+    new URLSearchParams(window.location.search).get('mode') === 'view'
+  );
+
   const isTableValid = isSpaceNumberValid();
   // Effective Table Number (Empty if session expired or scanned QR identity is unverified/invalid/out-of-range)
   const effectiveTableNum = (sessionExpired || isPostBillViewOnly || isViewOnlyUrl || !isTableValid) ? '' : currentTableNum;
@@ -239,12 +245,6 @@ export default function App() {
     (currentTableToken ? isValidQrTokenFormat(currentTableToken) : initialSpaceInfo.isValidTokenShape) &&
     isTableValid &&
     effectiveTableNum
-  );
-
-  const isViewOnlyUrl = Boolean(
-    new URLSearchParams(window.location.search).get('view') === '1' ||
-    new URLSearchParams(window.location.search).get('view_only') === 'true' ||
-    new URLSearchParams(window.location.search).get('mode') === 'view'
   );
 
   // Check if Scanned Space is Paused / Inactive by Admin

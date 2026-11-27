@@ -340,6 +340,9 @@ function runTests() {
     assert.ok(appSrc.includes('isPostBillViewOnly'), 'App.jsx maintains post-bill View-Only state');
     assert.ok(appSrc.includes('setIsPostBillViewOnly(!canReuseForOrderAgain)'), 'Dine-In settlement transitions into View-Only mode');
     assert.ok(appSrc.includes('buildViewOnlyUrl()'), 'Dine-In settlement rewrites URL to ?view=1 View-Only URL');
+    const viewUrlDeclIdx = appSrc.indexOf('const isViewOnlyUrl =');
+    const effTableDeclIdx = appSrc.indexOf('const effectiveTableNum =');
+    assert.ok(viewUrlDeclIdx !== -1 && effTableDeclIdx !== -1 && viewUrlDeclIdx < effTableDeclIdx, 'isViewOnlyUrl must be declared before effectiveTableNum to avoid TDZ ReferenceError');
 
     const ordersViewSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/components/Admin/views/OrdersView.jsx'), 'utf8');
     assert.ok(ordersViewSrc.includes('🔔 KITCHEN READY'), 'OrdersView renders distinct Kitchen Ready badge');
