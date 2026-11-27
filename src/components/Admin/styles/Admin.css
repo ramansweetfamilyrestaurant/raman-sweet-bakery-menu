@@ -1214,3 +1214,14 @@
     padding: 12px 8px;
   }
 }
+
+.orders-mobile-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 180px;
+}
+
+@media (hover: hover) {
+  .orders-table-wrapper tbody tr:hover {
+    background-color: #F8FAFC;
+  }
+}

@@ -35,6 +35,45 @@ import { resolveBusinessProfile, getBusinessTerminology } from '../../../utils/b
 import { fetchCinemaScreens, fetchCinemaSeats } from '../../../api/client';
 import { triggerBillAction, safeParseModifiers, safeParseItems, calculateBillDetails } from '../../../utils/billingHelper';
 
+const timeTickerSubscribers = new Set();
+let timeTickerIntervalId = null;
+
+function subscribeTimeTicker(cb) {
+  timeTickerSubscribers.add(cb);
+  if (!timeTickerIntervalId && typeof setInterval === 'function') {
+    timeTickerIntervalId = setInterval(() => {
+      const now = Date.now();
+      timeTickerSubscribers.forEach((fn) => {
+        try { fn(now); } catch (_) {}
+      });
+    }, 10000);
+  }
+  return () => {
+    timeTickerSubscribers.delete(cb);
+    if (timeTickerSubscribers.size === 0 && timeTickerIntervalId) {
+      clearInterval(timeTickerIntervalId);
+      timeTickerIntervalId = null;
+    }
+  };
+}
+
+function formatTimeAgoText(timestamp, nowMs) {
+  if (!timestamp) return 'Just now';
+  const diffMs = nowMs - new Date(timestamp).getTime();
+  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  return `${diffHr}h ago`;
+}
+
+const OrderTimeAgo = React.memo(function OrderTimeAgo({ timestamp }) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => subscribeTimeTicker(setNowMs), []);
+  return <>{formatTimeAgoText(timestamp, nowMs)}</>;
+});
+
 const OrdersView = React.memo(function OrdersView({
   orders = [],
   activeSubTab = 'orders',
@@ -132,8 +171,14 @@ const OrdersView = React.memo(function OrdersView({
     return () => { isMounted = false; };
   }, [isCinema, token]);
 
-  const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
-  const safeServiceRequests = Array.isArray(serviceRequests) ? serviceRequests : [];
+  const validOrders = useMemo(
+    () => (Array.isArray(orders) ? orders : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled'),
+    [orders]
+  );
+  const safeServiceRequests = useMemo(
+    () => (Array.isArray(serviceRequests) ? serviceRequests : []),
+    [serviceRequests]
+  );
 
   const isOrderCompleted = (order) => {
     if (!order) return false;
@@ -159,21 +204,47 @@ const OrdersView = React.memo(function OrdersView({
     );
   };
 
-  // Authoritative Session Details mapping for all active orders (aggregates multi-round sessions)
+  // Authoritative O(N) Session Details mapping for all active orders (aggregates multi-round sessions)
   const sessionDetailsMap = useMemo(() => {
     const map = new Map();
-    validOrders.forEach(ord => {
-      try {
-        const details = calculateBillDetails(ord, validOrders, restaurantInfo, settingsForm);
-        map.set(ord.id, details);
-      } catch (_) {
-        map.set(ord.id, {
-          sessionOrders: [ord],
-          totalRoundsCount: 1,
-          isMultiRound: Boolean(Number(ord.round_number) > 1),
-          grandTotal: Number(ord.total_amount || 0)
-        });
+    const bySession = new Map();
+    const byRoot = new Map();
+    for (const ord of validOrders) {
+      if (ord.session_id) {
+        const arr = bySession.get(ord.session_id);
+        if (arr) arr.push(ord);
+        else bySession.set(ord.session_id, [ord]);
+      } else {
+        const rootId = ord.parent_order_id || ord.id;
+        const arr = byRoot.get(rootId);
+        if (arr) arr.push(ord);
+        else byRoot.set(rootId, [ord]);
       }
+    }
+    const groupCache = new Map();
+    validOrders.forEach(ord => {
+      const settledFlag = Boolean(ord.is_settled === 1 || ord.is_settled === '1' || ord.is_settled === true) ? 1 : 0;
+      const cacheKey = ord.session_id
+        ? `s:${ord.session_id}:${settledFlag}`
+        : `r:${ord.parent_order_id || ord.id}:${settledFlag}`;
+      let details = groupCache.get(cacheKey);
+      if (!details) {
+        const bucket = ord.session_id
+          ? (bySession.get(ord.session_id) || [ord])
+          : (byRoot.get(ord.parent_order_id || ord.id) || [ord]);
+        try {
+          details = calculateBillDetails(ord, bucket, restaurantInfo, settingsForm);
+        } catch (_) {
+          details = {
+            sessionOrders: [ord],
+            totalRoundsCount: 1,
+            isMultiRound: Boolean(Number(ord.round_number) > 1),
+            grandTotal: Number(ord.total_amount || 0)
+          };
+        }
+        groupCache.set(cacheKey, details);
+      }
+      map.set(ord.id, details);
     });
     return map;
   }, [validOrders, restaurantInfo, settingsForm]);
@@ -249,12 +320,6 @@ const OrdersView = React.memo(function OrdersView({
       : 'Customer not visible at table';
   const [selectedRejectReason, setSelectedRejectReason] = useState(defaultRejectReason);
   const [customRejectReason, setCustomRejectReason] = useState('');
-  const [currentTime, setCurrentTime] = useState(Date.now());
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const parseOrderSpaceLocation = (order) => {
     if (!order) return { space_type: 'table', space_number: '' };
@@ -459,8 +524,9 @@ const OrdersView = React.memo(function OrdersView({
     return spaces;
   }, [isCinema, isHotel, effectiveBiz, restaurantInfo?.total_tables, settingsForm?.total_tables, restaurantInfo?.total_cabins, settingsForm?.total_cabins, restaurantInfo?.total_vip, settingsForm?.total_vip, restaurantInfo?.total_rooms, settingsForm?.total_rooms, restaurantInfo?.counter_ordering_enabled, settingsForm?.counter_ordering_enabled]);
 
-  // Operational State mapping per physical space
+  // Operational State mapping per physical space (only computed when Floor Map is active)
   const spaceGrid = useMemo(() => {
+    if (activeSubTab !== 'floor-map') return [];
     return spaceInventory.map(space => {
       const spaceActiveOrders = validOrders.filter(o => {
         if (isOrderCompleted(o) || o.status === 'rejected' || o.status === 'cancelled') return false;
@@ -507,11 +573,11 @@ const OrdersView = React.memo(function OrdersView({
         activeOrder,
         activeOrders: sessionScopedOrders,
         queuedOrdersCount,
-        sessionTotal: spaceSessionTotal,
+        spaceSessionTotal,
         serviceRequest: serviceReq
       };
     });
-  }, [spaceInventory, validOrders, safeServiceRequests, restaurantInfo, settingsForm]);
+  }, [activeSubTab, spaceInventory, validOrders, safeServiceRequests, restaurantInfo, settingsForm]);
 
   // Summary operational counters
   const summaryCounters = useMemo(() => {
@@ -626,16 +692,7 @@ const OrdersView = React.memo(function OrdersView({
     return spaceLabel;
   };
 
-  const getTimeAgo = (timestamp) => {
-    if (!timestamp) return 'Just now';
-    const diffMs = currentTime - new Date(timestamp).getTime();
-    const diffSec = Math.max(0, Math.floor(diffMs / 1000));
-    if (diffSec < 60) return `${diffSec}s ago`;
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHr = Math.floor(diffMin / 60);
-    return `${diffHr}h ago`;
-  };
+  const getTimeAgo = (timestamp) => formatTimeAgoText(timestamp, Date.now());
 
   const isOrderPrepReady = (o) => Boolean(
     o.status === 'served' ||
@@ -679,11 +736,27 @@ const OrdersView = React.memo(function OrdersView({
   };
 
   // Metrics (Strictly unifies multi-round session settlement)
-  const pendingCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'pending' || o.status === 'ordered')).length;
-  const kitchenCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing') && !isOrderPrepReady(o)).length;
-  const servedCount = validOrders.filter(o => !isOrderCompleted(o) && isOrderPrepReady(o)).length;
-  const completedCount = validOrders.filter(o => isOrderCompleted(o)).length;
-  const completedSales = validOrders.filter(o => isOrderCompleted(o)).reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+  const { pendingCount, kitchenCount, servedCount, completedCount, completedSales } = useMemo(() => {
+    let pending = 0;
+    let kitchen = 0;
+    let served = 0;
+    let completed = 0;
+    let sales = 0;
+    for (const o of validOrders) {
+      const done = isOrderCompleted(o);
+      if (done) {
+        completed++;
+        sales += (Number(o.total_amount) || 0);
+      } else if (o.status === 'pending' || o.status === 'ordered') {
+        pending++;
+      } else if (isOrderPrepReady(o)) {
+        served++;
+      } else if (o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing') {
+        kitchen++;
+      }
+    }
+    return { pendingCount: pending, kitchenCount: kitchen, servedCount: served, completedCount: completed, completedSales: sales };
+  }, [validOrders, isCinema]);
 
   const getOrderSourceDisplay = (order) => {
     const src = String(order?.order_source || order?.order_type || '').toLowerCase();
@@ -693,7 +766,7 @@ const OrdersView = React.memo(function OrdersView({
   };
 
   // Filtered Orders
-  const filteredOrders = validOrders.filter(o => {
+  const filteredOrders = useMemo(() => validOrders.filter(o => {
     const isDone = isOrderCompleted(o);
     // Status Filter
     if (kotFilter === 'pending' && (isDone || !(o.status === 'pending' || o.status === 'ordered'))) return false;
@@ -716,7 +789,7 @@ const OrdersView = React.memo(function OrdersView({
     }
 
     return true;
-  });
+  }), [validOrders, kotFilter, sourceFilter, isCinema]);
 
   const getStatusBadge = (orderOrStatus) => {
     const isObj = orderOrStatus && typeof orderOrStatus === 'object';
@@ -1654,11 +1727,8 @@ const OrdersView = React.memo(function OrdersView({
                         <tr
                           key={order.id}
                           style={{
-                            borderBottom: '1px solid #F1F5F9',
-                            transition: 'background 0.15s ease'
+                            borderBottom: '1px solid #F1F5F9'
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
                           {/* Order # & Source */}
                           <td style={{ padding: '14px 18px', fontWeight: 800, color: '#0F172A' }}>
@@ -1736,7 +1806,7 @@ const OrdersView = React.memo(function OrdersView({
 
                           {/* Time */}
                           <td style={{ padding: '14px 18px', color: '#64748B', fontSize: '0.76rem' }}>
-                            {getTimeAgo(order.created_at)}
+                            <OrderTimeAgo timestamp={order.created_at} />
                           </td>
 
                           {/* Items */}
@@ -1894,7 +1964,8 @@ const OrdersView = React.memo(function OrdersView({
                                     </button>
                                   ) : (
                                     <button
-                                      onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); if (onUpdateStatus) onUpdateStatus(order.id, 'served'); }}
                                       style={{
                                         padding: '6px 12px',
                                         borderRadius: '8px',
@@ -2155,7 +2226,7 @@ const OrdersView = React.memo(function OrdersView({
                             </span>
                           ) : null}
                           <span style={{ fontSize: '0.70rem', color: '#64748B', marginLeft: '4px' }}>
-                            {getTimeAgo(order.created_at)}
+                            <OrderTimeAgo timestamp={order.created_at} />
                           </span>
                         </div>
                         <span style={{
@@ -2359,7 +2430,8 @@ const OrdersView = React.memo(function OrdersView({
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); if (onUpdateStatus) onUpdateStatus(order.id, 'served'); }}
                                   style={{
                                     padding: '8px 14px',
                                     borderRadius: '10px',
@@ -2770,7 +2842,7 @@ const OrdersView = React.memo(function OrdersView({
                             </div>
                           )}
                           <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginTop: '2px', overflowWrap: 'anywhere' }}>
-                            ⏱️ {getTimeAgo(space.activeOrder.created_at)} • {space.activeOrder.customer_name || 'Guest'}
+                            ⏱️ <OrderTimeAgo timestamp={space.activeOrder.created_at} /> • {space.activeOrder.customer_name || 'Guest'}
                           </span>
                         </div>
                       )}
@@ -2948,7 +3020,8 @@ const OrdersView = React.memo(function OrdersView({
                             if (isKitchenPreparedFlag(ord) || ordStatus === 'ready') {
                               return (
                                 <button
-                                  onClick={() => onUpdateStatus ? onUpdateStatus(ord.id, 'served') : null}
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); if (onUpdateStatus) onUpdateStatus(ord.id, 'served'); }}
                                   style={{
                                     flex: 1,
                                     padding: '6px 8px',
@@ -3192,7 +3265,7 @@ const OrdersView = React.memo(function OrdersView({
                       </div>
 
                       <span style={{ fontSize: '0.68rem', color: '#94A3B8', display: 'block', marginTop: '8px' }}>
-                        ⏱️ Requested {getTimeAgo(req.created_at)}
+                        ⏱️ Requested <OrderTimeAgo timestamp={req.created_at} />
                       </span>
                     </div>
 

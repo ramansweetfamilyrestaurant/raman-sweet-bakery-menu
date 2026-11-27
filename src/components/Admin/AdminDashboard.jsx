@@ -778,7 +778,7 @@ export default function AdminDashboard({
 
   const buildOrdersSignature = (list) => {
     if (!Array.isArray(list) || list.length === 0) return '0';
-    return `${list.length}:${list.map(o => `${o.id}|${o.status}|${o.is_settled ?? 0}|${o.kitchen_prepared ?? 0}|${o.sent_to_kds ?? 0}|${o.round_number ?? 1}|${o.total_amount ?? 0}|${o.payment_method || ''}|${o.updated_at || o.terminal_at || ''}`).join(';')}`;
+    return `${list.length}:${list.map(o => `${o.id}|${o.status}|${o.is_settled ?? 0}|${o.kitchen_prepared ?? 0}|${o.sent_to_kds ?? 0}|${o.round_number ?? 1}|${o.total_amount ?? 0}|${o.payment_method || ''}|${o.terminal_at || ''}`).join(';')}`;
   };
 
   useEffect(() => {
@@ -1232,12 +1232,13 @@ export default function AdminDashboard({
     pendingUpdatesRef.current.set(key, { status: newStatus, ...apiExtraParams });
 
     // ⚡ Optimistic UI update (0ms lag, zero flickering)
-    lastOrdersSignatureRef.current = '';
-    if (newStatus === 'rejected' || newStatus === 'cancelled') {
-      setOrders(prev => prev.filter(o => String(o.id) !== key));
-    } else {
-      setOrders(prev => prev.map(o => String(o.id) === key ? { ...o, status: newStatus, ...apiExtraParams } : o));
-    }
+    setOrders(prev => {
+      const next = (newStatus === 'rejected' || newStatus === 'cancelled')
+        ? prev.filter(o => String(o.id) !== key)
+        : prev.map(o => String(o.id) === key ? { ...o, status: newStatus, ...apiExtraParams } : o);
+      lastOrdersSignatureRef.current = buildOrdersSignature(next);
+      return next;
+    });
 
     try {
       const statusRes = await updateOrderStatus(orderId, newStatus, token, apiExtraParams);
@@ -1306,6 +1307,7 @@ export default function AdminDashboard({
     } catch (err) {
       if (statusUpdateSeqRef.current.get(key) === reqSeq) {
         pendingUpdatesRef.current.delete(key);
+        lastOrdersSignatureRef.current = '';
         alert(err.message || 'Failed to update order status');
         loadOrders(); // rollback on failure
       }
