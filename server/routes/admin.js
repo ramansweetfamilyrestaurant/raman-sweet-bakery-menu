@@ -3380,10 +3380,58 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       }
     }
 
-    // 5. Handle Rejected / Cancelled (Preserve existing hard-delete behavior)
-    if (status === 'rejected' || status === 'cancelled') {
-      await query('DELETE FROM orders WHERE id = $1 AND restaurant_id = $2', [orderId, targetId]);
-      return res.json({ success: true, id: orderId, status: 'cancelled', deleted: true });
+    // 5. Handle Rejected / Cancelled (Soft-cancel preserving reason + audit trail)
+    if (normalizedNewStatus === 'rejected' || normalizedNewStatus === 'cancelled') {
+      const cleanReason = String(req.body?.rejection_reason || req.body?.reason || '').trim().slice(0, 240);
+      const cancelTerminalAt = targetOrder.terminal_at || new Date().toISOString();
+      try {
+        await query(`
+          UPDATE orders
+          SET status = $1,
+              terminal_at = $2,
+              rejection_reason = CASE WHEN $3 != '' THEN $3 ELSE rejection_reason END,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = $4 AND restaurant_id = $5
+        `, [normalizedNewStatus, cancelTerminalAt, cleanReason, orderId, targetId]);
+      } catch (_) {
+        try {
+          await query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_reason TEXT');
+          await query(`
+            UPDATE orders
+            SET status = $1, terminal_at = $2, rejection_reason = $3, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $4 AND restaurant_id = $5
+          `, [normalizedNewStatus, cancelTerminalAt, cleanReason || null, orderId, targetId]);
+        } catch (__) {
+          await query(
+            'UPDATE orders SET status = $1, terminal_at = $2 WHERE id = $3 AND restaurant_id = $4',
+            [normalizedNewStatus, cancelTerminalAt, orderId, targetId]
+          );
+        }
+      }
+      try {
+        await query(
+          'INSERT INTO audit_logs (restaurant_id, actor_role, action, details) VALUES ($1, $2, $3, $4)',
+          [
+            targetId,
+            callerRole || 'restaurant_admin',
+            'ORDER_CANCELLED',
+            JSON.stringify({
+              order_id: orderId,
+              status: normalizedNewStatus,
+              table_number: targetOrder.table_number,
+              reason: cleanReason || null,
+              cancelled_by: req.user?.username || req.user?.id || 'admin',
+              timestamp: new Date().toISOString()
+            })
+          ]
+        );
+      } catch (_) {}
+      return res.json({
+        success: true,
+        id: orderId,
+        status: normalizedNewStatus,
+        rejection_reason: cleanReason || null
+      });
     }
 
     // 6. Decoupled Financial Settlement Validation

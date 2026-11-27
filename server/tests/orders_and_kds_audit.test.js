@@ -195,6 +195,35 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
     assert.equal(termRouteBody.error, 'terminal_kitchen_routing_not_allowed');
     const badAckLogs = await query("SELECT id FROM audit_logs WHERE restaurant_id = $1 AND action = 'COUNTER_ORDER_KITCHEN_ACKNOWLEDGED' AND details LIKE $2", [restoId, `%${termCounterIns[0].id}%`]);
     assert.equal(badAckLogs.length, 0);
+
+    // 1f. Reject order stores rejection_reason, writes ORDER_CANCELLED audit log, and hides from live GET /orders
+    const rejOrdIns = await query(`
+      INSERT INTO orders (restaurant_id, table_number, order_type, customer_name, items, total_amount, status, sent_to_kds, kitchen_prepared, created_at)
+      VALUES ($1, '7', 'dine_in', 'Cancel Guest', '[{"name":"Cold Coffee","price":120,"quantity":1}]', 120, 'pending', 0, 0, CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [restoId]);
+    const rejId = rejOrdIns[0].id;
+    const rejRes = await fetch(`${baseUrl}/api/admin/orders/${rejId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: 'rejected', rejection_reason: 'Dish / Item out of stock' })
+    });
+    assert.equal(rejRes.status, 200);
+    const rejBody = await rejRes.json();
+    assert.equal(rejBody.status, 'rejected');
+    assert.equal(rejBody.rejection_reason, 'Dish / Item out of stock');
+
+    const rejDb = await query('SELECT status, rejection_reason FROM orders WHERE id = $1 AND restaurant_id = $2', [rejId, restoId]);
+    assert.equal(rejDb.length, 1);
+    assert.equal(rejDb[0].status, 'rejected');
+    assert.equal(rejDb[0].rejection_reason, 'Dish / Item out of stock');
+
+    const liveAdminOrdersRes = await fetch(`${baseUrl}/api/admin/orders`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const liveAdminOrders = await liveAdminOrdersRes.json();
+    assert.ok(!liveAdminOrders.some(o => Number(o.id) === Number(rejId)), 'Rejected order must remain excluded from live GET /api/admin/orders');
+
     pass('PATCH /orders/:id/status preserves sent_to_kds & kitchen_prepared when omitted and enforces COALESCE/settled flag writes');
 
     // 2. Counter order: requires acknowledgement to enter kitchen, then allows KDS Mark Ready & Undo without re-acknowledgement
@@ -691,6 +720,7 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
             status: 'pending',
             round_number: 1,
             total_amount: 420,
+            notes: 'Extra spicy, no onion',
             created_at: new Date().toISOString(),
             items: [{ name: 'Masala Dosa', price: 210, quantity: 2 }]
           },
@@ -703,12 +733,26 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
             total_amount: 180,
             created_at: new Date().toISOString(),
             items: [{ name: 'Filter Coffee', price: 90, quantity: 2 }]
+          },
+          {
+            id: 903,
+            table_number: 'COUNTER',
+            order_type: 'takeaway',
+            token_display: 'TK-09',
+            customer_name: 'Counter Guest',
+            status: 'kitchen',
+            kitchen_prepared: 1,
+            is_settled: 1,
+            round_number: 1,
+            total_amount: 150,
+            created_at: new Date().toISOString(),
+            items: [{ name: 'Samosa', price: 75, quantity: 2 }]
           }
         ];
         const sampleReqs = [
           { id: 301, table_number: '2', request_type: 'Water & Napkins', created_at: new Date().toISOString() }
         ];
-        const sampleResto = { id: restoId, name: 'Orders KDS Cafe', business_type: 'restaurant', total_tables: 4 };
+        const sampleResto = { id: restoId, name: 'Orders KDS Cafe', slug: 'orders-kds-cafe', business_type: 'restaurant', total_tables: 4, counter_ordering_enabled: 1, kds_enabled: 1 };
 
         let currentSubTab = 'orders';
         let currentKotFilter = 'all';
@@ -742,8 +786,9 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
         assert.ok(findNodes(container, n => hasClass(n, 'orders-status-tabs')).length === 1, 'OrdersView renders .orders-status-tabs');
         assert.ok(findNodes(container, n => hasClass(n, 'orders-source-select')).length === 1, 'OrdersView renders .orders-source-select');
         const mobileCards = findNodes(container, n => hasClass(n, 'orders-mobile-card'));
-        assert.equal(mobileCards.length, 2, 'OrdersView renders mobile order cards for every active order');
-        assert.equal(findNodes(container, n => hasClass(n, 'orders-card-actions')).length, 2, 'OrdersView renders .orders-card-actions wrapping footer bar per mobile card');
+        assert.equal(mobileCards.length, 3, 'OrdersView renders mobile order cards for every active order');
+        assert.equal(findNodes(container, n => hasClass(n, 'orders-card-actions')).length, 3, 'OrdersView renders .orders-card-actions wrapping footer bar per mobile card');
+        assert.ok((container.textContent || '').includes('Extra spicy, no onion'), 'OrdersView displays customer cooking notes');
 
         const ordersStyleText = findNodes(container, n => n.tagName === 'STYLE').map(n => n.textContent).join('\n');
         for (const ruleToken of [
@@ -772,16 +817,160 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
         assert.ok(findNodes(container, n => hasClass(n, 'orders-drawer-footer')).length === 1, 'Drawer includes .orders-drawer-footer');
         assert.ok(findNodes(container, n => hasClass(n, 'orders-drawer-cta-grid')).length === 1, 'Pending drawer footer includes .orders-drawer-cta-grid');
 
-        // Verify Floor Map & Service Calls responsive classes
+        // Verify pending card omits redundant standalone KOT button when +KOT is already shown
+        const pendingKotOnlyBtns = findNodes(mobileCards[0], n => n.tagName === 'BUTTON' && n.textContent.trim() === 'KOT');
+        assert.equal(pendingKotOnlyBtns.length, 0, 'Pending mobile card must not render duplicate standalone KOT button alongside +KOT');
+
+        // Verify Reject Order Reason Modal opens on Reject click
+        const rejectBtn = findNodes(mobileCards[0], n => n.tagName === 'BUTTON' && n.textContent.includes('Reject'))[0];
+        assert.ok(rejectBtn, 'Pending mobile card has Reject button');
+        await React.act(async () => {
+          rejectBtn.dispatchEvent({ type: 'click', bubbles: true, target: rejectBtn });
+          await flushMicrotasks();
+        });
+        assert.ok(findNodes(container, n => hasClass(n, 'orders-reject-modal')).length === 1, 'Reject click opens .orders-reject-modal reason picker');
+
+        // Verify Floor Map & Service Calls responsive classes + Floor Map prepaid Handover + KDS tab ExternalLink render
         currentSubTab = 'floor-map';
         await renderOrdersView();
         assert.ok(findNodes(container, n => hasClass(n, 'orders-floor-counters')).length === 1, 'Floor Map renders .orders-floor-counters');
         assert.ok(findNodes(container, n => hasClass(n, 'orders-space-grid')).length === 1, 'Floor Map renders .orders-space-grid');
+        assert.ok((container.textContent || '').includes('Handover'), 'Floor Map renders direct Handover CTA for settled prepaid counter order');
+
+        currentSubTab = 'kds';
+        await renderOrdersView();
+        assert.ok((container.textContent || '').includes('Tablet view'), 'KDS Display subtab renders Tablet view with ExternalLink without ReferenceError');
 
         currentSubTab = 'service-requests';
         await renderOrdersView();
         assert.ok(findNodes(container, n => hasClass(n, 'orders-calls-header')).length === 1, 'Service Calls renders .orders-calls-header');
         assert.ok(findNodes(container, n => hasClass(n, 'orders-calls-grid')).length === 1, 'Service Calls renders .orders-calls-grid');
+
+        // Verify kitchen_prepared=1 order in kitchen status keeps single drawer CTA (no double-footer collision)
+        const kdsPreparedDiningOrder = {
+          id: 904,
+          table_number: '4',
+          customer_name: 'KDS Guest',
+          status: 'kitchen',
+          kitchen_prepared: 1,
+          is_settled: 0,
+          round_number: 1,
+          total_amount: 260,
+          created_at: new Date().toISOString(),
+          items: [{ name: 'Paneer Tikka', price: 260, quantity: 1 }]
+        };
+        await React.act(async () => {
+          activeRoot.render(
+            React.createElement(OrdersView, {
+              orders: [kdsPreparedDiningOrder],
+              activeSubTab: 'orders',
+              setActiveSubTab: () => {},
+              kotFilter: 'all',
+              setKotFilter: () => {},
+              serviceRequests: [],
+              restaurantInfo: sampleResto,
+              ordersEnabled: true,
+              onOpenDayClosing: () => {},
+              onOpenBillModal: () => {},
+              onUpdateStatus: () => {}
+            })
+          );
+          await flushMicrotasks();
+        });
+        const kdsCard = findNodes(container, n => hasClass(n, 'orders-mobile-card'))[0];
+        assert.ok(kdsCard && kdsCard.textContent.includes('Serve'), 'KDS-prepared kitchen card retains Serve action');
+        const kdsDetailsBtn = findNodes(kdsCard, n => n.tagName === 'BUTTON' && n.textContent.includes('Details'))[0];
+        await React.act(async () => {
+          kdsDetailsBtn.dispatchEvent({ type: 'click', bubbles: true, target: kdsDetailsBtn });
+          await flushMicrotasks();
+        });
+        const drawerFooterText = findNodes(container, n => hasClass(n, 'orders-drawer-footer'))[0]?.textContent || '';
+        assert.ok(drawerFooterText.includes('Mark Order Served'), 'Drawer shows Mark Order Served for KDS-prepared kitchen order');
+        assert.ok(!drawerFooterText.includes('Settle Bill & Complete Order'), 'Drawer must NOT stack Settle Bill & Complete Order footer while still in kitchen stage');
+
+        // Verify prepaid settled Cinema order renders Handover directly instead of reopening payment
+        await React.act(async () => {
+          activeRoot.render(
+            React.createElement(OrdersView, {
+              orders: [{
+                id: 905,
+                table_number: 'Screen 1 Seat A4',
+                space_type: 'cinema_seat',
+                customer_name: 'Cinema Guest',
+                status: 'served',
+                is_settled: 1,
+                round_number: 1,
+                total_amount: 310,
+                created_at: new Date().toISOString(),
+                items: [{ name: 'Caramel Popcorn', price: 310, quantity: 1 }]
+              }],
+              activeSubTab: 'orders',
+              setActiveSubTab: () => {},
+              kotFilter: 'all',
+              setKotFilter: () => {},
+              serviceRequests: [],
+              restaurantInfo: { ...sampleResto, business_type: 'cinema_theatre' },
+              ordersEnabled: true,
+              onOpenDayClosing: () => {},
+              onOpenBillModal: () => {},
+              onUpdateStatus: () => {}
+            })
+          );
+          await flushMicrotasks();
+        });
+        const cinemaCard = findNodes(container, n => hasClass(n, 'orders-mobile-card'))[0];
+        assert.ok(cinemaCard && cinemaCard.textContent.includes('Handover'), 'Prepaid settled Cinema served order renders Handover directly');
+
+        // Verify Counter Skip-KDS ('accepted', sent_to_kds=0) & auto_print_kot unified Accept button
+        const { isOrderActiveInKitchen } = await import('../../src/utils/kdsQueueFilter.js');
+        const counterSkippedOrder = {
+          id: 906,
+          table_number: 'Counter',
+          space_type: 'counter',
+          order_type: 'takeaway',
+          token_display: 'TK-12',
+          customer_name: 'Counter Direct',
+          status: 'accepted',
+          sent_to_kds: 0,
+          kitchen_prepared: 0,
+          is_settled: 1,
+          round_number: 1,
+          total_amount: 120,
+          created_at: new Date().toISOString(),
+          items: [{ name: 'Gulab Jamun Box', price: 120, quantity: 1 }]
+        };
+        assert.equal(isOrderActiveInKitchen(counterSkippedOrder), false, 'Counter order accepted with sent_to_kds=0 must NOT appear on KDS screen');
+
+        await React.act(async () => {
+          activeRoot.render(
+            React.createElement(OrdersView, {
+              orders: [sampleOrders[0], counterSkippedOrder],
+              activeSubTab: 'orders',
+              setActiveSubTab: () => {},
+              kotFilter: 'all',
+              setKotFilter: () => {},
+              serviceRequests: [],
+              restaurantInfo: { ...sampleResto, auto_print_kot: 1 },
+              settingsForm: { auto_print_kot: 1 },
+              ordersEnabled: true,
+              onDirectPrint: () => {},
+              onOpenDayClosing: () => {},
+              onOpenBillModal: () => {},
+              onUpdateStatus: () => {}
+            })
+          );
+          await flushMicrotasks();
+        });
+        const cardsAfterAuto = findNodes(container, n => hasClass(n, 'orders-mobile-card'));
+        assert.ok(cardsAfterAuto[0].textContent.includes('Accept + KOT'), 'Pending card collapses Accept & KOT into Accept + KOT when auto_print_kot is enabled');
+        assert.equal(findNodes(cardsAfterAuto[0], n => n.tagName === 'BUTTON' && n.textContent.trim() === '+KOT').length, 0, 'Duplicate +KOT button hidden when auto_print_kot is enabled');
+        assert.ok(cardsAfterAuto[1].textContent.includes('PACKING AT COUNTER') && cardsAfterAuto[1].textContent.includes('Mark Ready'), 'Counter Skip-KDS order renders PACKING AT COUNTER + Mark Ready');
+
+        const adminDashSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/components/Admin/AdminDashboard.jsx'), 'utf8');
+        assert.ok(adminDashSrc.includes('isAutoPrintKotEnabled()') && adminDashSrc.includes("handlePrintKOT(acceptedOrder)"), 'AdminDashboard handleUpdateStatus triggers handlePrintKOT when auto_print_kot is enabled');
+        assert.ok(adminDashSrc.includes("await handleUpdateStatus(targetId, 'accepted', extra);"), 'Counter Direct Fulfillment modal routes via status=accepted so KDS is genuinely skipped');
+        assert.ok(adminDashSrc.includes('Final Payable') && adminDashSrc.includes('shouldPrintOnSettle') && adminDashSrc.includes('settleModalError'), 'Settle Bill modal renders Final Payable breakdown, print receipt toggle, and inline error state');
+        assert.ok(adminDashSrc.includes('isAutoPrintBillEnabled()') && adminDashSrc.includes('setShouldPrintOnSettle(isAutoPrintBillEnabled())'), 'Settle Bill modal honors auto_print_bill setting for paperless digital paid bill workflow');
 
         // Verify empty-orders state uses compact mobile .orders-empty-state class
         currentSubTab = 'orders';

@@ -22,7 +22,8 @@ import {
   Tv,
   CheckSquare,
   Square,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react';
 import { playKdsChime } from '../../../utils/soundManager';
 import { filterActiveKitchenOrders } from '../../../utils/kdsQueueFilter';

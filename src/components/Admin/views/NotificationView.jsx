@@ -29,7 +29,8 @@ import {
 } from 'lucide-react';
 import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
 import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
-import { formatOrderLocation } from '../../../utils/billingHelper';
+import { formatOrderLocation, safeParseItems } from '../../../utils/billingHelper';
+import { getCurrencySymbol } from '../../../utils/currencyHelper';
 
 export default function NotificationView({
   orders = [],
@@ -77,75 +78,92 @@ export default function NotificationView({
     return (serviceRequests || []).filter(s => s.status === 'pending');
   }, [serviceRequests]);
 
-  // Initial Notifications Feed populated from real application state
-  const [notifications, setNotifications] = useState(() => {
-    const list = [];
-    const now = new Date();
+  const [readIds, setReadIds] = useState(() => new Set());
 
-    // 1. Live Orders (Urgent / Important)
+  const formatRelTime = (ts) => {
+    if (!ts) return 'Just now';
+    const ms = Date.now() - new Date(ts).getTime();
+    if (isNaN(ms) || ms < 60000) return 'Just now';
+    const mins = Math.floor(ms / 60000);
+    if (mins < 60) return `${mins} min ago`;
+    const hrs = Math.floor(mins / 60);
+    return `${hrs}h ago`;
+  };
+
+  // Reactive Notifications Feed computed from live orders, calls, and catalog state
+  const notifications = useMemo(() => {
+    const list = [];
+    const curSym = getCurrencySymbol(restaurantInfo?.currency_symbol || settingsForm?.currency_symbol);
+
+    // 1. Live Pending Orders (Urgent / Reactive)
     if (pendingOrders.length > 0) {
-      pendingOrders.slice(0, 3).forEach((ord, idx) => {
+      pendingOrders.slice(0, 10).forEach((ord, idx) => {
+        const parsedOrdItems = safeParseItems(ord.items);
+        const itemQtySum = parsedOrdItems.reduce((acc, it) => acc + (Number(it.quantity || it.qty) || 1), 0);
+        const nid = `notif-order-${ord.id || idx}`;
         list.push({
-          id: `notif-order-${ord.id || idx}`,
+          id: nid,
           type: 'orders',
           priority: 'urgent',
-          title: `New Order from ${formatOrderLocation(ord, restaurantInfo)}`,
-          description: `${ord.items?.length || 2} items · ₹${ord.total_amount || 450}`,
-          timestamp: '2 min ago',
+          title: `New Order #${ord.id} • ${formatOrderLocation(ord, restaurantInfo)}`,
+          description: `${itemQtySum || parsedOrdItems.length} item${(itemQtySum || parsedOrdItems.length) === 1 ? '' : 's'} · ${curSym}${Math.round(Number(ord.total_amount) || 0)}`,
+          timestamp: formatRelTime(ord.created_at),
           group: 'today',
-          read: false,
-          source: 'Live POS',
-          actionLabel: 'View Order',
+          read: readIds.has(nid),
+          source: 'Live Orders',
+          actionLabel: 'Open Order',
           actionTab: 'orders',
           orderData: ord
         });
       });
     } else {
+      const nid = 'notif-order-recent';
       list.push({
-        id: 'notif-order-recent',
+        id: nid,
         type: 'orders',
         priority: 'normal',
         title: 'Order Feed Operational',
         description: `All live orders processed and synchronized with ${terminology.serviceStation?.toLowerCase() || 'kitchen'}.`,
-        timestamp: '15 min ago',
+        timestamp: 'Live',
         group: 'today',
         read: true,
-        source: 'Live POS',
+        source: 'Live Orders',
         actionLabel: 'Open Orders',
         actionTab: 'orders'
       });
     }
 
     // 2. Service Requests (Urgent / Important)
-    if (pendingCalls.length > 0) {
-      const call = pendingCalls[0];
+    pendingCalls.slice(0, 5).forEach((call) => {
+      const nid = `notif-call-${call.id}`;
       list.push({
-        id: `notif-call-${call.id}`,
+        id: nid,
         type: 'orders',
         priority: 'important',
         title: `${terminology.callStaffLabel || 'Staff Service'} Call · ${formatOrderLocation(call, restaurantInfo)}`,
         description: `Customer requested assistance: ${call.request_type || 'Staff Assistance'}.`,
-        timestamp: '5 min ago',
+        timestamp: formatRelTime(call.created_at),
         group: 'today',
-        read: false,
+        read: readIds.has(nid),
         source: `${terminology.spaceSingular || 'Guest'} Service`,
         actionLabel: 'Resolve Call',
         actionTab: 'orders',
         serviceCallData: call
       });
-    }
+    });
 
     // 3. Billing & Subscription Notifications
     const planName = (restaurantInfo?.plan_tier || 'Pro').toUpperCase();
+    const billId = 'notif-bill-1';
     list.push({
-      id: 'notif-bill-1',
+      id: billId,
       type: 'payments',
       priority: 'normal',
       title: `Subscription Active (${planName} Plan)`,
       description: `Your TouchQR business license is active with automated point-in-time protections.`,
-      timestamp: 'Today, 10:00 AM',
+      timestamp: 'Active Plan',
       group: 'today',
-      read: false,
+      read: readIds.has(billId),
       source: 'TouchQR Billing',
       actionLabel: 'View Billing',
       actionTab: 'settings',
@@ -155,45 +173,31 @@ export default function NotificationView({
     // 4. Menu Availability Notifications
     if (soldOutDishes.length > 0) {
       const dishNames = soldOutDishes.slice(0, 2).map(d => d.name).join(', ');
+      const menuId = `notif-menu-soldout-${soldOutDishes.length}`;
       list.push({
-        id: 'notif-menu-soldout',
+        id: menuId,
         type: 'system',
         priority: 'important',
         title: `${soldOutDishes.length} ${soldOutDishes.length > 1 ? (terminology.itemPlural || 'Items') : (terminology.itemSingular || 'Item')} Marked Sold Out`,
         description: `Items currently unavailable for customers: ${dishNames}${soldOutDishes.length > 2 ? ' and others' : ''}.`,
-        timestamp: 'Today, 11:30 AM',
+        timestamp: 'Live Catalog',
         group: 'today',
-        read: false,
+        read: readIds.has(menuId),
         source: 'Menu Catalog',
         actionLabel: 'Manage Menu',
         actionTab: 'dishes'
       });
     }
 
-    // 5. Google Reviews Link Active Notification
-    list.push({
-      id: 'notif-rev-1',
-      type: 'system',
-      priority: 'normal',
-      title: 'Google Reviews Connection',
-      description: `Google Business reviews link is configured for customer menu ratings.`,
-      timestamp: 'Yesterday, 06:15 PM',
-      group: 'yesterday',
-      read: true,
-      source: 'Google Reviews',
-      actionLabel: 'View Settings',
-      actionTab: 'settings'
-    });
-
-    // 6. Security Notification
+    // 5. Security Notification
     list.push({
       id: 'notif-sec-1',
       type: 'security',
       priority: 'normal',
       title: 'Admin Session Verified',
-      description: `Verified login session on Chrome • Windows. Your credentials and KDS PIN are protected.`,
-      timestamp: 'Yesterday, 02:40 PM',
-      group: 'yesterday',
+      description: `Verified session active. Your credentials and KDS PIN are protected.`,
+      timestamp: 'Security',
+      group: 'earlier',
       read: true,
       source: 'Security Center',
       actionLabel: 'Review Security',
@@ -201,24 +205,8 @@ export default function NotificationView({
       actionDrawer: 'security'
     });
 
-    // 7. System Maintenance Notification
-    list.push({
-      id: 'notif-sys-1',
-      type: 'system',
-      priority: 'normal',
-      title: 'Database Health Check Completed',
-      description: `Routine table compaction and query optimization verified. Workspace performance is healthy.`,
-      timestamp: '2 days ago',
-      group: 'earlier',
-      read: true,
-      source: 'Database Tools',
-      actionLabel: 'View Database',
-      actionTab: 'settings',
-      actionDrawer: 'database'
-    });
-
     return list;
-  });
+  }, [pendingOrders, pendingCalls, soldOutDishes, restaurantInfo, settingsForm, terminology, readIds]);
 
   // Filtered Notifications
   const filteredNotifs = useMemo(() => {
@@ -235,13 +223,18 @@ export default function NotificationView({
   const todayCount = useMemo(() => notifications.filter(n => n.group === 'today').length, [notifications]);
 
   const handleMarkAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setReadIds(new Set(notifications.map(n => n.id)));
     setSuccessToast('✓ All notifications marked as read');
     setTimeout(() => setSuccessToast(''), 3000);
   };
 
   const handleMarkSingleRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setReadIds(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
   };
 
   const handleActionClick = (notif, e) => {

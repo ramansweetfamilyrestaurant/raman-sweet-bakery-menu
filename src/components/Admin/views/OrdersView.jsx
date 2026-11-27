@@ -76,7 +76,8 @@ export default function OrdersView({
 
   const handleCompleteSettledOrder = (targetOrder) => {
     if (!targetOrder) return;
-    if (targetOrder.is_settled && typeof onUpdateStatus === 'function') {
+    const isSettled = targetOrder.is_settled === 1 || targetOrder.is_settled === '1' || targetOrder.is_settled === true;
+    if (isSettled && typeof onUpdateStatus === 'function') {
       onUpdateStatus(targetOrder.id, 'completed');
     }
   };
@@ -124,14 +125,16 @@ export default function OrdersView({
     if (!order) return false;
     if (order.status === 'completed') return true;
 
-    // For Takeaway / POS Token orders: payment is upfront, but order is ONLY completed when handed over (status === 'completed')
-    const isTakeawayOrToken = Boolean(
+    // For Takeaway / POS Token / Cinema orders: payment can be upfront, so order is ONLY completed when handed over / delivered (status === 'completed')
+    const isUpfrontFulfillment = Boolean(
+      isCinema ||
+      order.space_type === 'cinema_seat' ||
       order.order_type === 'takeaway' ||
       order.token_display ||
       order.token_number ||
       String(order.table_number || '').toLowerCase().includes('counter')
     );
-    if (isTakeawayOrToken) {
+    if (isUpfrontFulfillment) {
       return order.status === 'completed';
     }
 
@@ -161,15 +164,52 @@ export default function OrdersView({
     return map;
   }, [validOrders, restaurantInfo, settingsForm]);
 
+  const ORDER_REJECT_PRESETS = [
+    'Dish / Item out of stock',
+    'Kitchen busy / temporarily unavailable',
+    'Customer requested cancellation',
+    'Duplicate or test order',
+    'Other'
+  ];
+
+  const [rejectOrderModal, setRejectOrderModal] = useState(null);
+  const [selectedOrderRejectReason, setSelectedOrderRejectReason] = useState(ORDER_REJECT_PRESETS[0]);
+  const [customOrderRejectReason, setCustomOrderRejectReason] = useState('');
+
+  const getOrderNotes = (o) => String(o?.notes || o?.special_instructions || o?.customer_notes || '').trim();
+
   const handleRejectOrder = (order) => {
     if (!order) return;
-    const loc = formatCleanTableLabel(order.table_number, order.space_type, order.token_display, order) || `Order #${order.id}`;
-    const isKitchen = order.status === 'kitchen' || order.status === 'preparing' || order.status === 'accepted';
-    const actionWord = isKitchen ? 'CANCEL' : 'REJECT';
-    const confirmed = window.confirm(`Are you sure you want to ${actionWord} Order #${order.id} (${loc})?`);
-    if (!confirmed) return;
+    setSelectedOrderRejectReason(ORDER_REJECT_PRESETS[0]);
+    setCustomOrderRejectReason('');
+    setRejectOrderModal(order);
+  };
+
+  const handleConfirmOrderReject = () => {
+    if (!rejectOrderModal) return;
+    const finalReason = selectedOrderRejectReason === 'Other'
+      ? (customOrderRejectReason.trim() || 'Cancelled by restaurant staff')
+      : selectedOrderRejectReason;
     if (onUpdateStatus) {
-      onUpdateStatus(order.id, 'rejected');
+      onUpdateStatus(rejectOrderModal.id, 'rejected', { rejection_reason: finalReason });
+    }
+    setRejectOrderModal(null);
+  };
+
+  const isAutoPrintKotEnabled = Boolean(
+    settingsForm?.auto_print_kot === 1 ||
+    settingsForm?.auto_print_kot === true ||
+    restaurantInfo?.auto_print_kot === 1 ||
+    restaurantInfo?.auto_print_kot === true
+  );
+
+  const handleAcceptAndPrintKot = (order) => {
+    if (!order) return;
+    if (onUpdateStatus) {
+      onUpdateStatus(order.id, 'kitchen', { skipAutoKot: true });
+    }
+    if (onDirectPrint) {
+      onDirectPrint(order, 'kot');
     }
   };
 
@@ -552,6 +592,30 @@ export default function OrdersView({
     o.kitchen_prepared === '1'
   );
 
+  const isKitchenPreparedFlag = (o) => Boolean(
+    o?.kitchen_prepared === 1 ||
+    o?.kitchen_prepared === true ||
+    o?.kitchen_prepared === '1'
+  );
+
+  const isServedStageOrder = (o) => Boolean(
+    o?.status === 'served' || o?.status === 'ready'
+  );
+
+  const isCounterOrderSpace = (o) => {
+    const tbl = String(o?.table_number || '').trim().toLowerCase();
+    const sp = String(o?.space_type || '').trim().toLowerCase();
+    return tbl === 'counter' || sp === 'counter';
+  };
+
+  const getKitchenAdvanceLabel = (o, { compact = false } = {}) => {
+    if (isCounterOrderSpace(o)) return compact ? '⚡ Mark Ready' : '⚡ Mark Ready for Pickup';
+    if (isCinema) return compact ? '🎬 Deliver' : '🎬 Deliver to Seat';
+    if (isHotel) return compact ? '🏨 Deliver' : '🏨 Deliver to Room';
+    if (isKitchenPreparedFlag(o)) return compact ? '🍽️ Serve' : '🍽️ Mark Order Served';
+    return compact ? '✓ Ready' : '✓ Mark Order as Ready / Served';
+  };
+
   // Metrics (Strictly unifies multi-round session settlement)
   const pendingCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'pending' || o.status === 'ordered')).length;
   const kitchenCount = validOrders.filter(o => !isOrderCompleted(o) && (o.status === 'kitchen' || o.status === 'accepted' || o.status === 'preparing') && !isOrderPrepReady(o)).length;
@@ -609,7 +673,7 @@ export default function OrdersView({
     if (status === 'completed') {
       return { label: 'COMPLETED', bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
     }
-    if (isSettled && !isTakeawayOrToken) {
+    if (isSettled && !isTakeawayOrToken && !isCinema) {
       return { label: 'COMPLETED', bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
     }
     if (isPrepared || status === 'served' || status === 'ready') {
@@ -619,8 +683,12 @@ export default function OrdersView({
       case 'pending':
       case 'ordered':
         return { label: 'PENDING', bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' };
-      case 'kitchen':
       case 'accepted':
+        if (isObj && Number(orderOrStatus.sent_to_kds) === 0) {
+          return { label: 'PACKING AT COUNTER', bg: '#F0FDF4', color: '#0F766E', border: '#99F6E4' };
+        }
+        return { label: isTakeawayOrToken ? 'PREPARING (PAID)' : 'PREPARING', bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' };
+      case 'kitchen':
       case 'preparing':
         return { label: isTakeawayOrToken ? 'PREPARING (PAID)' : 'PREPARING', bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' };
       case 'served':
@@ -1440,8 +1508,9 @@ export default function OrdersView({
                   const isDone = isOrderCompleted(order);
                   const statusInfo = getStatusBadge(order);
                   const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
-                  const isReady = !isDone && isOrderPrepReady(order);
-                  const isKitchen = !isDone && !isReady && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
+                  const isServedStage = !isDone && isServedStageOrder(order);
+                  const isKitchenPrepDone = isKitchenPreparedFlag(order);
+                  const isKitchen = !isDone && !isServedStage && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
                   const sessionInfo = sessionDetailsMap.get(order.id) || {
                     sessionOrders: [order],
                     totalRoundsCount: 1,
@@ -1553,6 +1622,24 @@ export default function OrdersView({
                             return `${i.quantity || 1}x ${i.name}${i.portion ? ` (${i.portion})` : ''}${modTxt}`;
                           }).join(', ')}
                         </div>
+                        {getOrderNotes(order) && (
+                          <div style={{
+                            marginTop: '3px',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            color: '#92400E',
+                            background: '#FEF3C7',
+                            border: '1px solid #FDE68A',
+                            borderRadius: '6px',
+                            padding: '2px 6px',
+                            maxWidth: '220px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }} title={getOrderNotes(order)}>
+                            📝 {getOrderNotes(order)}
+                          </div>
+                        )}
                       </td>
 
                       {/* Total Amount */}
@@ -1606,8 +1693,29 @@ export default function OrdersView({
                                   cursor: 'pointer'
                                 }}
                               >
-                                ⚡ Accept
-                              </button>
+                                  {isAutoPrintKotEnabled && !isCounterOrderSpace(order) ? '⚡ Accept + KOT' : '⚡ Accept'}
+                                </button>
+                              {onDirectPrint && !isAutoPrintKotEnabled && !isCounterOrderSpace(order) && (
+                                <button
+                                  onClick={() => handleAcceptAndPrintKot(order)}
+                                  style={{
+                                    padding: '6px 9px',
+                                    borderRadius: '8px',
+                                    background: '#0F172A',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                  title="Accept Order & Print Kitchen KOT in one click"
+                                >
+                                  <Printer size={12} /> +KOT
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleRejectOrder(order)}
                                 style={{
@@ -1634,17 +1742,36 @@ export default function OrdersView({
                                 style={{
                                   padding: '6px 12px',
                                   borderRadius: '8px',
-                                  background: '#0284C7',
+                                  background: isKitchenPrepDone ? '#0D9488' : '#0284C7',
                                   color: '#FFFFFF',
                                   border: 'none',
                                   fontSize: '0.74rem',
                                   fontWeight: 800,
                                   cursor: 'pointer'
                                 }}
-                                title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : 'Mark order ready / served to table'}
+                                title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : isKitchenPrepDone ? 'Kitchen prepared — mark served to guest' : 'Mark order ready / served to guest'}
                               >
-                                {isCinema ? '🎬 Deliver' : isHotel ? '🏨 Deliver' : '✓ Ready'}
+                                {getKitchenAdvanceLabel(order, { compact: true })}
                               </button>
+                              {isKitchenPrepDone && !order.is_settled && !isCinema && (
+                                <button
+                                  onClick={() => handleTriggerBillAction(order)}
+                                  disabled={!onOpenBillModal}
+                                  title={!onOpenBillModal ? 'Billing modal unavailable' : 'Quick settle bill'}
+                                  style={{
+                                    padding: '6px 10px',
+                                    borderRadius: '8px',
+                                    background: onOpenBillModal ? '#F5F3FF' : '#F1F5F9',
+                                    color: onOpenBillModal ? '#7E22CE' : '#94A3B8',
+                                    border: `1px solid ${onOpenBillModal ? '#DDD6FE' : '#E2E8F0'}`,
+                                    fontSize: '0.72rem',
+                                    fontWeight: 800,
+                                    cursor: onOpenBillModal ? 'pointer' : 'not-allowed'
+                                  }}
+                                >
+                                  💳 Settle
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleRejectOrder(order)}
                                 style={{
@@ -1664,9 +1791,26 @@ export default function OrdersView({
                             </>
                           )}
 
-                          {isReady && (
+                          {isServedStage && (
                             <>
-                              {isCinema ? (
+                              {order.is_settled ? (
+                                <button
+                                  onClick={() => handleCompleteSettledOrder(order)}
+                                  style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '8px',
+                                    background: '#16A34A',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer'
+                                  }}
+                                  title={isCinema ? 'Complete prepaid seat delivery' : 'Customer picked up the order - mark complete'}
+                                >
+                                  ✓ Handover
+                                </button>
+                              ) : isCinema ? (
                                 <button
                                   onClick={() => handleTriggerBillAction(order)} disabled={!onOpenBillModal}
                                   style={{
@@ -1682,23 +1826,6 @@ export default function OrdersView({
                                   title="Complete Seat Delivery"
                                 >
                                   ✓ Done
-                                </button>
-                              ) : order.is_settled ? (
-                                <button
-                                  onClick={() => handleCompleteSettledOrder(order)}
-                                  style={{
-                                    padding: '6px 14px',
-                                    borderRadius: '8px',
-                                    background: '#16A34A',
-                                    color: '#FFFFFF',
-                                    border: 'none',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 800,
-                                    cursor: 'pointer'
-                                  }}
-                                  title="Customer picked up the order - mark complete"
-                                >
-                                  ✓ Handover
                                 </button>
                               ) : (
                                 <>
@@ -1747,8 +1874,8 @@ export default function OrdersView({
                             </>
                           )}
 
-                          {/* Print KOT: ONLY during pending or kitchen stage (not on served or completed orders) */}
-                          {(isPending || isKitchen) && (
+                          {/* Print KOT: ONLY during kitchen stage after acceptance (pending already has 1-tap +KOT) */}
+                          {isKitchen && (
                             <button
                               onClick={() => onDirectPrint ? onDirectPrint(order, 'kot') : null}
                               style={{
@@ -1817,8 +1944,9 @@ export default function OrdersView({
               const isDone = isOrderCompleted(order);
               const statusInfo = getStatusBadge(order);
               const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
-              const isReady = !isDone && isOrderPrepReady(order);
-              const isKitchen = !isDone && !isReady && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
+              const isServedStage = !isDone && isServedStageOrder(order);
+              const isKitchenPrepDone = isKitchenPreparedFlag(order);
+              const isKitchen = !isDone && !isServedStage && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
               const sessionInfo = sessionDetailsMap.get(order.id) || {
                 sessionOrders: [order],
                 totalRoundsCount: 1,
@@ -1965,12 +2093,29 @@ export default function OrdersView({
                         </div>
                       );
                     })}
+                    {getOrderNotes(order) && (
+                      <div style={{
+                        marginTop: '6px',
+                        padding: '6px 8px',
+                        borderRadius: '8px',
+                        background: '#FEF3C7',
+                        border: '1px solid #FDE68A',
+                        color: '#92400E',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        overflowWrap: 'anywhere'
+                      }}>
+                        📝 Kitchen Note: {getOrderNotes(order)}
+                      </div>
+                    )}
                   </div>
 
                   {/* Total & Action Buttons */}
                   <div className="orders-card-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', paddingTop: '4px' }}>
                     <div className="orders-card-total">
-                      <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>Total Amount</span>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
+                        {isMultiRoundSession ? `Round ${roundNum} • Session Total ${currencySymbol}${Math.round(sessionInfo.grandTotal).toLocaleString('en-IN')}` : 'Total Amount'}
+                      </span>
                       <strong style={{ fontSize: '1.1rem', color: '#0F172A' }}>
                         {currencySymbol}{Math.round(order.total_amount || order.total || 0).toLocaleString('en-IN')}
                       </strong>
@@ -2003,8 +2148,29 @@ export default function OrdersView({
                               cursor: 'pointer'
                             }}
                           >
-                            ⚡ Accept
+                            {isAutoPrintKotEnabled && !isCounterOrderSpace(order) ? '⚡ Accept + KOT' : '⚡ Accept'}
                           </button>
+                          {onDirectPrint && !isAutoPrintKotEnabled && !isCounterOrderSpace(order) && (
+                            <button
+                              onClick={() => handleAcceptAndPrintKot(order)}
+                              style={{
+                                padding: '8px 11px',
+                                borderRadius: '10px',
+                                background: '#0F172A',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                fontSize: '0.76rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                              title="Accept Order & Print KOT"
+                            >
+                              <Printer size={13} /> +KOT
+                            </button>
+                          )}
                           <button
                             onClick={() => handleRejectOrder(order)}
                             style={{
@@ -2031,17 +2197,36 @@ export default function OrdersView({
                             style={{
                               padding: '8px 14px',
                               borderRadius: '10px',
-                              background: '#0284C7',
+                              background: isKitchenPrepDone ? '#0D9488' : '#0284C7',
                               color: '#FFFFFF',
                               border: 'none',
                               fontSize: '0.78rem',
                               fontWeight: 800,
                               cursor: 'pointer'
                             }}
-                            title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : 'Mark order ready / served to table'}
+                            title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : isKitchenPrepDone ? 'Kitchen prepared — mark served to guest' : 'Mark order ready / served to guest'}
                           >
-                            {isCinema ? '🎬 Deliver' : isHotel ? '🏨 Deliver' : '✓ Ready'}
+                            {getKitchenAdvanceLabel(order, { compact: true })}
                           </button>
+                          {isKitchenPrepDone && !order.is_settled && !isCinema && (
+                            <button
+                              onClick={() => handleTriggerBillAction(order)}
+                              disabled={!onOpenBillModal}
+                              title={!onOpenBillModal ? 'Billing modal unavailable' : 'Quick settle bill'}
+                              style={{
+                                padding: '8px 12px',
+                                borderRadius: '10px',
+                                background: onOpenBillModal ? '#F5F3FF' : '#F1F5F9',
+                                color: onOpenBillModal ? '#7E22CE' : '#94A3B8',
+                                border: `1px solid ${onOpenBillModal ? '#DDD6FE' : '#E2E8F0'}`,
+                                fontSize: '0.76rem',
+                                fontWeight: 800,
+                                cursor: onOpenBillModal ? 'pointer' : 'not-allowed'
+                              }}
+                            >
+                              💳 Settle
+                            </button>
+                          )}
                           <button
                             onClick={() => handleRejectOrder(order)}
                             style={{
@@ -2061,9 +2246,26 @@ export default function OrdersView({
                         </>
                       )}
 
-                      {isReady && (
+                      {isServedStage && (
                         <>
-                          {isCinema ? (
+                          {order.is_settled ? (
+                            <button
+                              onClick={() => handleCompleteSettledOrder(order)}
+                              style={{
+                                padding: '8px 14px',
+                                borderRadius: '10px',
+                                background: '#16A34A',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                fontSize: '0.78rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                              title={isCinema ? 'Complete prepaid seat delivery' : 'Customer picked up the order - mark complete'}
+                            >
+                              ✓ Handover
+                            </button>
+                          ) : isCinema ? (
                             <button
                               onClick={() => handleTriggerBillAction(order)} disabled={!onOpenBillModal}
                               style={{
@@ -2079,23 +2281,6 @@ export default function OrdersView({
                               title="Complete Seat Delivery"
                             >
                               ✓ Done
-                            </button>
-                          ) : order.is_settled ? (
-                            <button
-                              onClick={() => handleCompleteSettledOrder(order)}
-                              style={{
-                                padding: '8px 14px',
-                                borderRadius: '10px',
-                                background: '#16A34A',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                fontSize: '0.78rem',
-                                fontWeight: 800,
-                                cursor: 'pointer'
-                              }}
-                              title="Customer picked up the order - mark complete"
-                            >
-                              ✓ Handover
                             </button>
                           ) : (
                             <>
@@ -2141,8 +2326,8 @@ export default function OrdersView({
                         </>
                       )}
 
-                      {/* Print KOT on mobile ONLY if in pending or kitchen */}
-                      {(isPending || isKitchen) && (
+                      {/* Print KOT on mobile ONLY during kitchen stage after acceptance */}
+                      {isKitchen && (
                         <button
                           onClick={() => onDirectPrint ? onDirectPrint(order, 'kot') : null}
                           style={{
@@ -2475,7 +2660,7 @@ export default function OrdersView({
                         >
                           Details
                         </button>
-                        {!space.activeOrder?.is_settled && space.activeOrder?.status !== 'completed' && (
+                        {!space.activeOrder?.is_settled && space.activeOrder?.status !== 'completed' && !isCinema && (
                           <button
                             onClick={() => onPrintBill ? onPrintBill(space.activeOrder, 'CHECK_SLIP') : null}
                             style={{
@@ -2497,31 +2682,71 @@ export default function OrdersView({
                             <Receipt size={12} /> Slip
                           </button>
                         )}
-                        <button
-                          onClick={() => {
-                            if (space.activeOrder?.is_settled === 1 || space.activeOrder?.status === 'completed') {
-                              if (onPrintBill) onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH');
-                            } else {
-                              handleTriggerBillAction(space.activeOrder);
-                            }
-                          }}
-                          disabled={!space.activeOrder?.is_settled && !onOpenBillModal}
-                          title={space.activeOrder?.is_settled ? 'Print Bill Receipt' : (!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment')}
-                          style={{
-                            flex: 1,
-                            padding: '6px 8px',
-                            borderRadius: '8px',
-                            background: space.activeOrder?.is_settled ? '#0F766E' : (onOpenBillModal ? '#7E22CE' : '#9CA3AF'),
-                            color: '#FFFFFF',
-                            border: 'none',
-                            minHeight: '36px',
-                            fontSize: '0.70rem',
-                            fontWeight: 800,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {space.activeOrder?.is_settled ? 'Print Bill' : (space.activeOrders && space.activeOrders.length > 1 ? `Settle (${space.activeOrders.length} Rds)` : 'Settle')}
-                        </button>
+                        {space.activeOrder?.is_settled === 1 || space.activeOrder?.is_settled === true ? (
+                          <>
+                            <button
+                              onClick={() => handleCompleteSettledOrder(space.activeOrder)}
+                              style={{
+                                flex: 1,
+                                padding: '6px 8px',
+                                borderRadius: '8px',
+                                background: '#16A34A',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                minHeight: '36px',
+                                fontSize: '0.70rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                              title="Customer picked up prepaid order - mark complete"
+                            >
+                              ✓ Handover
+                            </button>
+                            <button
+                              onClick={() => onPrintBill ? onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH') : null}
+                              style={{
+                                padding: '6px 8px',
+                                borderRadius: '8px',
+                                background: '#0F766E',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                minHeight: '36px',
+                                fontSize: '0.70rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                              title="Print Bill Receipt"
+                            >
+                              Bill
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              if (space.activeOrder?.status === 'completed') {
+                                if (onPrintBill) onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH');
+                              } else {
+                                handleTriggerBillAction(space.activeOrder);
+                              }
+                            }}
+                            disabled={!onOpenBillModal && space.activeOrder?.status !== 'completed'}
+                            title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
+                            style={{
+                              flex: 1,
+                              padding: '6px 8px',
+                              borderRadius: '8px',
+                              background: space.activeOrder?.status === 'completed' ? '#0F766E' : (onOpenBillModal ? '#7E22CE' : '#9CA3AF'),
+                              color: '#FFFFFF',
+                              border: 'none',
+                              minHeight: '36px',
+                              fontSize: '0.70rem',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {space.activeOrder?.status === 'completed' ? 'Print Bill' : (space.activeOrders && space.activeOrders.length > 1 ? `Settle (${space.activeOrders.length} Rds)` : 'Settle')}
+                          </button>
+                        )}
                       </>
                     )}
 
@@ -2915,6 +3140,21 @@ export default function OrdersView({
                   </div>
                 )}
 
+                {getOrderNotes(selectedOrder) && (
+                  <div style={{
+                    background: '#FEF3C7',
+                    border: '1px solid #FDE68A',
+                    borderRadius: '10px',
+                    padding: '8px 10px',
+                    fontSize: '0.74rem',
+                    color: '#92400E',
+                    fontWeight: 700,
+                    overflowWrap: 'anywhere'
+                  }}>
+                    📝 <strong>Kitchen / Cooking Note:</strong> {getOrderNotes(selectedOrder)}
+                  </div>
+                )}
+
                 {/* Multi-Round Session Breakdown Card if applicable */}
                 {(() => {
                   const selDetails = selectedOrder ? sessionDetailsMap.get(selectedOrder.id) : null;
@@ -3146,31 +3386,33 @@ export default function OrdersView({
                       <Printer size={15} />
                       <span>Re-print KOT</span>
                     </button>
-                    <button
-                      onClick={() => onPrintBill ? onPrintBill(selectedOrder, 'CHECK_SLIP') : null}
-                      style={{
-                        padding: '10px',
-                        borderRadius: '10px',
-                        border: '1px solid #DDD6FE',
-                        background: '#F5F3FF',
-                        color: '#7E22CE',
-                        fontSize: '0.78rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
-                      }}
-                      title="Print Table Check Slip for customer review"
-                    >
-                      <Receipt size={15} />
-                      <span>Print Bill Slip</span>
-                    </button>
+                    {!selectedOrder.is_settled && !isOrderCompleted(selectedOrder) && !isCinema && (
+                      <button
+                        onClick={() => onPrintBill ? onPrintBill(selectedOrder, 'CHECK_SLIP') : null}
+                        style={{
+                          padding: '10px',
+                          borderRadius: '10px',
+                          border: '1px solid #DDD6FE',
+                          background: '#F5F3FF',
+                          color: '#7E22CE',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                        title="Print Table Check Slip for customer review"
+                      >
+                        <Receipt size={15} />
+                        <span>Print Bill Slip</span>
+                      </button>
+                    )}
                   </>
                 )}
 
-                {isOrderCompleted(selectedOrder) && (
+                {(isOrderCompleted(selectedOrder) || selectedOrder.is_settled === 1 || selectedOrder.is_settled === true) && (
                   <button
                     onClick={() => onPrintBill ? onPrintBill(selectedOrder, selectedOrder.payment_method || 'CASH') : null}
                     style={{
@@ -3199,18 +3441,162 @@ export default function OrdersView({
             {/* Bottom State Transition CTA */}
             <div className="orders-drawer-footer" style={{ padding: '18px 24px', borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
               {(selectedOrder.status === 'pending' || selectedOrder.status === 'ordered') && (
-                <div className="orders-drawer-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="orders-drawer-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        if (isCounterOrderSpace(selectedOrder)) {
+                          if (onOpenAcceptRouting) {
+                            onOpenAcceptRouting(selectedOrder);
+                          }
+                          setSelectedOrder(null);
+                          return;
+                        }
+                        if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'kitchen');
+                        setSelectedOrder(null);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        background: '#16A34A',
+                        color: '#FFFFFF',
+                        fontSize: '0.84rem',
+                        fontWeight: 900,
+                        border: 'none',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
+                      }}
+                    >
+                      {isAutoPrintKotEnabled && !isCounterOrderSpace(selectedOrder)
+                        ? (isCinema ? 'Accept, Send to Concession & Print KOT' : isHotel ? 'Accept, Send to Room Kitchen & Print KOT' : 'Accept, Send to Kitchen & Print KOT')
+                        : (isCinema ? 'Accept & Send to Concession' : isHotel ? 'Accept & Send to Room Service Kitchen' : 'Accept & Send to Kitchen')}
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleRejectOrder(selectedOrder);
+                        setSelectedOrder(null);
+                      }}
+                      style={{
+                        padding: '12px 18px',
+                        borderRadius: '12px',
+                        background: '#FEE2E2',
+                        color: '#DC2626',
+                        border: '1px solid #FCA5A5',
+                        fontSize: '0.84rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                      title="Reject and cancel this order"
+                    >
+                      ✕ Reject
+                    </button>
+                  </div>
+                  {onDirectPrint && !isAutoPrintKotEnabled && !isCounterOrderSpace(selectedOrder) && (
+                    <button
+                      onClick={() => {
+                        handleAcceptAndPrintKot(selectedOrder);
+                        setSelectedOrder(null);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '10px',
+                        background: '#0F172A',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        fontSize: '0.80rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Printer size={14} /> Accept, Send to Kitchen & Print KOT
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {!isOrderCompleted(selectedOrder) && !isServedStageOrder(selectedOrder) && (selectedOrder.status === 'kitchen' || selectedOrder.status === 'accepted' || selectedOrder.status === 'preparing') && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="orders-drawer-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'served');
+                        setSelectedOrder(null);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        background: isKitchenPreparedFlag(selectedOrder) ? '#0D9488' : '#0284C7',
+                        color: '#FFFFFF',
+                        fontSize: '0.84rem',
+                        fontWeight: 900,
+                        border: 'none',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
+                      }}
+                    >
+                      {getKitchenAdvanceLabel(selectedOrder)}
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleRejectOrder(selectedOrder);
+                        setSelectedOrder(null);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                        borderRadius: '12px',
+                        background: '#FEE2E2',
+                        color: '#DC2626',
+                        border: '1px solid #FCA5A5',
+                        fontSize: '0.84rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                      title="Cancel order during kitchen preparation (items unavailable or guest cancelled)"
+                    >
+                      ✕ Cancel Order
+                    </button>
+                  </div>
+                  {isKitchenPreparedFlag(selectedOrder) && !selectedOrder.is_settled && !isCinema && (
+                    <button
+                      onClick={() => {
+                        if (typeof onOpenBillModal === 'function') {
+                          setSelectedOrder(null);
+                          handleTriggerBillAction(selectedOrder);
+                        } else {
+                          handleTriggerBillAction(selectedOrder);
+                        }
+                      }}
+                      disabled={!onOpenBillModal}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '10px',
+                        background: onOpenBillModal ? '#F5F3FF' : '#F1F5F9',
+                        color: onOpenBillModal ? '#7E22CE' : '#94A3B8',
+                        fontSize: '0.80rem',
+                        fontWeight: 800,
+                        border: `1px solid ${onOpenBillModal ? '#DDD6FE' : '#E2E8F0'}`,
+                        cursor: onOpenBillModal ? 'pointer' : 'not-allowed'
+                      }}
+                    >
+                      💳 Quick Settle Bill Now
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {!isOrderCompleted(selectedOrder) && isServedStageOrder(selectedOrder) && (
+                selectedOrder.is_settled ? (
                   <button
                     onClick={() => {
-                      const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
-                    if (isCounter) {
-                      if (onOpenAcceptRouting) {
-                        onOpenAcceptRouting(selectedOrder);
-                      }
-                      setSelectedOrder(null);
-                      return;
-                    }
-                      if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'kitchen');
+                      handleCompleteSettledOrder(selectedOrder);
                       setSelectedOrder(null);
                     }}
                     style={{
@@ -3226,86 +3612,9 @@ export default function OrdersView({
                       boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
                     }}
                   >
-                    {isCinema ? 'Accept & Send to Concession' : isHotel ? 'Accept & Send to Room Service Kitchen' : 'Accept & Send to Kitchen'}
+                    {isCinema ? '✓ Complete Prepaid Seat Delivery' : '🎉 Handover to Customer & Complete'}
                   </button>
-                  <button
-                    onClick={() => {
-                      handleRejectOrder(selectedOrder);
-                      setSelectedOrder(null);
-                    }}
-                    style={{
-                      padding: '12px 18px',
-                      borderRadius: '12px',
-                      background: '#FEE2E2',
-                      color: '#DC2626',
-                      border: '1px solid #FCA5A5',
-                      fontSize: '0.84rem',
-                      fontWeight: 800,
-                      cursor: 'pointer'
-                    }}
-                    title="Reject and cancel this order"
-                  >
-                    ✕ Reject
-                  </button>
-                </div>
-              )}
-
-              {(selectedOrder.status === 'kitchen' || selectedOrder.status === 'accepted' || selectedOrder.status === 'preparing') && (
-                <div className="orders-drawer-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
-                  <button
-                    onClick={() => {
-                      if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'served');
-                      setSelectedOrder(null);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      borderRadius: '12px',
-                      background: '#0284C7',
-                      color: '#FFFFFF',
-                      fontSize: '0.84rem',
-                      fontWeight: 900,
-                      border: 'none',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
-                    }}
-                  >
-                    {(() => {
-                      const isCounter = (String(selectedOrder?.table_number || '').trim().toLowerCase() === 'counter') || (String(selectedOrder?.space_type || '').trim().toLowerCase() === 'counter');
-
-                      if (isCinema) {
-                        return '🎬 Deliver to Seat';
-                      }
-                      if (isHotel) {
-                        return '🏨 Deliver to Room';
-                      }
-                      return '✓ Mark Order as Ready / Served';
-                    })()}
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleRejectOrder(selectedOrder);
-                      setSelectedOrder(null);
-                    }}
-                    style={{
-                      padding: '12px 16px',
-                      borderRadius: '12px',
-                      background: '#FEE2E2',
-                      color: '#DC2626',
-                      border: '1px solid #FCA5A5',
-                      fontSize: '0.84rem',
-                      fontWeight: 800,
-                      cursor: 'pointer'
-                    }}
-                    title="Cancel order during kitchen preparation (items unavailable or guest cancelled)"
-                  >
-                    ✕ Cancel Order
-                  </button>
-                </div>
-              )}
-
-              {!isOrderCompleted(selectedOrder) && (selectedOrder.status === 'served' || selectedOrder.status === 'ready' || isOrderPrepReady(selectedOrder)) && (
-                isCinema ? (
+                ) : isCinema ? (
                   <button
                     onClick={() => {
                       handleTriggerBillAction(selectedOrder);
@@ -3325,27 +3634,6 @@ export default function OrdersView({
                     }}
                   >
                     ✓ Complete Seat Delivery
-                  </button>
-                ) : selectedOrder.is_settled ? (
-                  <button
-                    onClick={() => {
-                      handleCompleteSettledOrder(selectedOrder);
-                      setSelectedOrder(null);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      borderRadius: '12px',
-                      background: '#16A34A',
-                      color: '#FFFFFF',
-                      fontSize: '0.84rem',
-                      fontWeight: 900,
-                      border: 'none',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
-                    }}
-                  >
-                    🎉 Handover to Customer & Complete
                   </button>
                 ) : (
                   <button
@@ -3494,6 +3782,129 @@ export default function OrdersView({
                 }}
               >
                 Confirm Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ❌ Order Reject / Cancel Reason Modal */}
+      {rejectOrderModal && (
+        <div
+          onClick={() => setRejectOrderModal(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10055,
+            padding: '16px',
+            overflowY: 'auto'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="orders-reject-modal"
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '420px',
+              maxHeight: '90dvh',
+              overflowY: 'auto',
+              margin: 'auto',
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.22)',
+              boxSizing: 'border-box'
+            }}
+          >
+            <h3 style={{ margin: '0 0 6px', fontSize: '1.1rem', fontWeight: 900, color: '#DC2626' }}>
+              {(rejectOrderModal.status === 'kitchen' || rejectOrderModal.status === 'preparing' || rejectOrderModal.status === 'accepted')
+                ? `Cancel Order #${rejectOrderModal.id}?`
+                : `Reject Order #${rejectOrderModal.id}?`}
+            </h3>
+            <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#64748B', lineHeight: 1.45 }}>
+              Select a reason for <strong>{formatCleanTableLabel(rejectOrderModal.table_number, rejectOrderModal.space_type, rejectOrderModal.token_display, rejectOrderModal)}</strong>. The customer tracker will show this reason.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+              {ORDER_REJECT_PRESETS.map((reason) => (
+                <label key={reason} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  border: selectedOrderRejectReason === reason ? '2px solid #EF4444' : '1px solid #E2E8F0',
+                  background: selectedOrderRejectReason === reason ? '#FEF2F2' : '#FFFFFF',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  color: '#1E293B'
+                }}>
+                  <input
+                    type="radio"
+                    name="order_reject_reason"
+                    checked={selectedOrderRejectReason === reason}
+                    onChange={() => setSelectedOrderRejectReason(reason)}
+                    style={{ accentColor: '#EF4444' }}
+                  />
+                  <span>{reason}</span>
+                </label>
+              ))}
+              {selectedOrderRejectReason === 'Other' && (
+                <input
+                  type="text"
+                  placeholder="Enter reason for customer..."
+                  value={customOrderRejectReason}
+                  onChange={(e) => setCustomOrderRejectReason(e.target.value)}
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.84rem',
+                    marginTop: '2px',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              )}
+            </div>
+
+            <div className="orders-reject-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setRejectOrderModal(null)}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  background: '#F1F5F9',
+                  border: 'none',
+                  color: '#475569',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Keep Order
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmOrderReject}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  background: '#DC2626',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                Confirm Reject / Cancel
               </button>
             </div>
           </div>

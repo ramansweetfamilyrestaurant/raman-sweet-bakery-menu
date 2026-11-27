@@ -238,6 +238,10 @@ export default function AdminDashboard({
   const [showModalUpiQr, setShowModalUpiQr] = useState(false);
   const [modalUpiQrUrl, setModalUpiQrUrl] = useState(null);
   const [modalUpiQrSnapshotKey, setModalUpiQrSnapshotKey] = useState(null);
+  const [isSettlingOrder, setIsSettlingOrder] = useState(false);
+  const [settlingMethod, setSettlingMethod] = useState(null);
+  const [settleModalError, setSettleModalError] = useState('');
+  const [shouldPrintOnSettle, setShouldPrintOnSettle] = useState(true);
   const modalQrRequestRef = useRef(0);
   const [acceptRoutingModal, setAcceptRoutingModal] = useState(null); // { order, show: true }
   const [isRoutingSubmitting, setIsRoutingSubmitting] = useState(false);
@@ -443,6 +447,21 @@ export default function AdminDashboard({
       cancelled = true;
     };
   }, [billOrderModal, restaurantInfo, settingsForm]);
+
+  useEffect(() => {
+    if (!billOrderModal && !acceptRoutingModal) return undefined;
+    const handleEscKey = (e) => {
+      if (e.key !== 'Escape') return;
+      if (billOrderModal && !isSettlingOrder) {
+        setSettleModalError('');
+        setBillOrderModal(null);
+      } else if (acceptRoutingModal && !isRoutingSubmitting) {
+        setAcceptRoutingModal(null);
+      }
+    };
+    window.addEventListener('keydown', handleEscKey);
+    return () => window.removeEventListener('keydown', handleEscKey);
+  }, [billOrderModal, acceptRoutingModal, isSettlingOrder, isRoutingSubmitting]);
 
   const getDaysRemaining = (expiryStr) => {
     if (!expiryStr) return null;
@@ -788,7 +807,7 @@ export default function AdminDashboard({
       if (newlyPreparedList.length > 0) {
         newlyPreparedList.forEach(o => notifiedPreparedIdsRef.current.add(String(o.id)));
         playWaiterAlert();
-        const labels = newlyPreparedList.map(o => (o.table_number ? `Table ${o.table_number}` : `Order ${o.id}`));
+        const labels = newlyPreparedList.map(o => formatOrderLocation(o, restaurantInfo || settingsForm) || `Order ${o.id}`);
         const combinedLabel = labels.join(', ');
         triggerFoodPreparedNotification(combinedLabel);
         setToastMessage(
@@ -1120,22 +1139,47 @@ export default function AdminDashboard({
     }
   };
 
+  const isAutoPrintKotEnabled = () => Boolean(
+    settingsForm?.auto_print_kot === 1 ||
+    settingsForm?.auto_print_kot === true ||
+    restaurantInfo?.auto_print_kot === 1 ||
+    restaurantInfo?.auto_print_kot === true
+  );
+
+  const isAutoPrintBillEnabled = () => Boolean(
+    settingsForm?.auto_print_bill === 1 ||
+    settingsForm?.auto_print_bill === true ||
+    restaurantInfo?.auto_print_bill === 1 ||
+    restaurantInfo?.auto_print_bill === true
+  );
+
   const handleUpdateStatus = async (orderId, newStatus, extraParams = {}) => {
     const key = String(orderId);
-    pendingUpdatesRef.current.set(key, { status: newStatus, ...extraParams });
+    const { skipAutoKot, silent, ...apiExtraParams } = extraParams || {};
+    pendingUpdatesRef.current.set(key, { status: newStatus, ...apiExtraParams });
 
     // ⚡ Optimistic UI update (0ms lag, zero flickering)
     if (newStatus === 'rejected' || newStatus === 'cancelled') {
       setOrders(prev => prev.filter(o => String(o.id) !== key));
     } else {
-      setOrders(prev => prev.map(o => String(o.id) === key ? { ...o, status: newStatus, ...extraParams } : o));
+      setOrders(prev => prev.map(o => String(o.id) === key ? { ...o, status: newStatus, ...apiExtraParams } : o));
     }
 
     try {
-      await updateOrderStatus(orderId, newStatus, token, extraParams);
+      await updateOrderStatus(orderId, newStatus, token, apiExtraParams);
       setTimeout(() => {
         pendingUpdatesRef.current.delete(key);
       }, 3000);
+
+      const isKotRouting =
+        (newStatus === 'kitchen' || (newStatus === 'accepted' && apiExtraParams.sent_to_kds === 1)) &&
+        apiExtraParams.sent_to_kds !== 0;
+      if (isKotRouting && !skipAutoKot && !silent && isAutoPrintKotEnabled()) {
+        const acceptedOrder = orders.find(o => String(o.id) === key);
+        if (acceptedOrder) {
+          handlePrintKOT(acceptedOrder);
+        }
+      }
 
       if (extraParams.kitchen_prepared === 1 || extraParams.kitchen_prepared === '1' || extraParams.kitchen_prepared === true) {
         if (!extraParams.silent) {
@@ -1186,6 +1230,13 @@ export default function AdminDashboard({
     return deduped.join(', ');
   };
 
+  const escapeThermalHtml = (val) => String(val ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
   // ⚡ RawBT Direct Thermal Printer ESC/POS Generator
   const generateRawBTText = (order, type = 'kot', restoInfo = {}, isReprint = false, paymentMode = 'CASH', upiUri = null) => {
     let text = '';
@@ -1219,6 +1270,11 @@ export default function AdminDashboard({
         }
       });
       text += "--------------------------------" + "\n";
+      const kotRawNote = String(order.notes || order.special_instructions || order.customer_notes || '').trim();
+      if (kotRawNote) {
+        text += `*** KITCHEN NOTE: ${kotRawNote} ***\n`;
+        text += "--------------------------------" + "\n";
+      }
       text += `TOTAL BILL: ${currency}${formatPriceNumber(order.total_amount)}\n`;
       text += "================================" + "\n";
       text += "  *** READY FOR PREPARATION / DISPATCH ***\n\n\n";
@@ -1436,13 +1492,13 @@ export default function AdminDashboard({
     parsedItems.forEach(i => {
       const q = Number(i.quantity) || 1;
       totalQty += q;
-      const portionText = i.portion ? ` [${i.portion}]` : '';
+      const portionText = i.portion ? ` [${escapeThermalHtml(i.portion)}]` : '';
       const mods = safeParseModifiers(i.modifiers);
       const modText = mods.length > 0
-        ? `<div style="font-size:11px;color:#222;font-weight:600;padding-left:14px;margin-top:2px;word-break:break-word;">👉 ${mods.map(m => m.name).join(', ')}</div>`
+        ? `<div style="font-size:11px;color:#222;font-weight:600;padding-left:14px;margin-top:2px;word-break:break-word;">👉 ${mods.map(m => escapeThermalHtml(m.name || m)).join(', ')}</div>`
         : '';
       const comboText = (i.includes || i.comboIncludes)
-        ? `<div style="font-size:11px;color:#444;font-style:italic;padding-left:14px;margin-top:2px;word-break:break-word;">📦 ${i.includes || i.comboIncludes}</div>`
+        ? `<div style="font-size:11px;color:#444;font-style:italic;padding-left:14px;margin-top:2px;word-break:break-word;">📦 ${escapeThermalHtml(i.includes || i.comboIncludes)}</div>`
         : '';
 
       itemsHtml += `
@@ -1451,7 +1507,7 @@ export default function AdminDashboard({
             <div style="display:flex;align-items:flex-start;">
               <span style="font-size:16px;font-weight:900;min-width:28px;flex-shrink:0;">${q}x</span>
               <div style="flex:1;min-width:0;word-break:break-word;overflow-wrap:break-word;">
-                <span style="font-size:14px;font-weight:900;letter-spacing:-0.2px;word-break:break-word;">${i.name}${portionText}</span>
+                <span style="font-size:14px;font-weight:900;letter-spacing:-0.2px;word-break:break-word;">${escapeThermalHtml(i.name)}${portionText}</span>
                 ${comboText}
                 ${modText}
               </div>
@@ -1462,6 +1518,7 @@ export default function AdminDashboard({
     });
 
     const isRoundAddon = Number(order.round_number) > 1;
+    const kotInstructionText = String(order.notes || order.special_instructions || order.customer_notes || '').trim();
 
     return `
       <!DOCTYPE html>
@@ -1534,24 +1591,31 @@ export default function AdminDashboard({
         <body>
           ${isReprint ? `<div class="reprint-banner">*** [ REPRINT ] ***</div>` : ''}
           <div class="header">
-            <h2>${ticketTitle}</h2>
-            <div class="table-badge">${spaceLoc.toUpperCase()}</div>
+            <h2>${escapeThermalHtml(ticketTitle)}</h2>
+            <div class="table-badge">${escapeThermalHtml(spaceLoc.toUpperCase())}</div>
             ${(order.token_display || order.token_number)
-              ? `<div style="font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px dashed #000;padding:5px;margin:5px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;word-break:break-word;">TOKEN ${order.token_display || order.token_number}</div>`
+              ? `<div style="font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px dashed #000;padding:5px;margin:5px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;word-break:break-word;">TOKEN ${escapeThermalHtml(order.token_display || order.token_number)}</div>`
               : ''
             }
-            <div style="font-size:12px;font-weight:900;margin-top:2px;">KOT #${order.id}</div>
+            <div style="font-size:12px;font-weight:900;margin-top:2px;">KOT #${escapeThermalHtml(order.id)}</div>
             ${isRoundAddon
-        ? `<div class="round-badge">🔄 ROUND ${order.round_number} (ADD-ON ORDER)</div>`
+        ? `<div class="round-badge">🔄 ROUND ${escapeThermalHtml(order.round_number)} (ADD-ON ORDER)</div>`
         : `<div style="font-weight:900;font-size:12px;margin-top:2px;">ROUND 1 (NEW ORDER)</div>`
       }
           </div>
 
           <div class="meta">
-            <div><strong>Location:</strong> ${spaceLoc}</div>
-            <div><strong>Date & Time:</strong> ${formatDateTimeString(order.created_at)}</div>
-            <div><strong>Customer:</strong> ${order.customer_name || (isHotel ? 'In-Room Guest' : isCinema ? 'Cinema Guest' : 'Dine-In Guest')}</div>
+            <div><strong>Location:</strong> ${escapeThermalHtml(spaceLoc)}</div>
+            <div><strong>Date & Time:</strong> ${escapeThermalHtml(formatDateTimeString(order.created_at))}</div>
+            <div><strong>Customer:</strong> ${escapeThermalHtml(order.customer_name || (isHotel ? 'In-Room Guest' : isCinema ? 'Cinema Guest' : 'Dine-In Guest'))}</div>
           </div>
+
+          ${kotInstructionText ? `
+            <div style="border:2px dashed #000;padding:6px;margin-bottom:6px;font-size:12px;font-weight:900;background:#F3F4F6;word-break:break-word;">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">🍳 COOKING INSTRUCTIONS:</div>
+              <div>${escapeThermalHtml(kotInstructionText)}</div>
+            </div>
+          ` : ''}
 
           <table>
             <thead>
@@ -1624,19 +1688,19 @@ export default function AdminDashboard({
       parsed.forEach(i => {
         const qtyNum = Number(i.quantity) || 1;
         totalItemCount += qtyNum;
-        const portionText = i.portion ? ` (${i.portion})` : '';
+        const portionText = i.portion ? ` (${escapeThermalHtml(i.portion)})` : '';
         const mods = safeParseModifiers(i.modifiers);
         const modText = mods.length > 0
-          ? `<div style="font-size:10px;color:#333;font-weight:normal;padding-left:4px;margin-top:2px;word-break:break-word;">+ ${mods.map(m => `${m.name} (+${currency}${formatPriceNumber(m.price)})`).join(', ')}</div>`
+          ? `<div style="font-size:10px;color:#333;font-weight:normal;padding-left:4px;margin-top:2px;word-break:break-word;">+ ${mods.map(m => `${escapeThermalHtml(m.name || m)} (+${escapeThermalHtml(currency)}${formatPriceNumber(m.price)})`).join(', ')}</div>`
           : '';
         const lineTotal = Number(i.price) * qtyNum;
         itemsHtml += `
           <tr>
             <td style="padding:4px 0;font-weight:bold;font-size:12px;border-bottom:1px dashed #888;width:72%;vertical-align:top;word-break:break-word;">
-              ${qtyNum}x ${i.name}${portionText}
+              ${qtyNum}x ${escapeThermalHtml(i.name)}${portionText}
               ${modText}
             </td>
-            <td style="text-align:right;font-weight:bold;font-size:12px;border-bottom:1px dashed #888;vertical-align:top;width:28%;white-space:nowrap;">${currency}${formatPriceNumber(lineTotal)}</td>
+            <td style="text-align:right;font-weight:bold;font-size:12px;border-bottom:1px dashed #888;vertical-align:top;width:28%;white-space:nowrap;">${escapeThermalHtml(currency)}${formatPriceNumber(lineTotal)}</td>
           </tr>
         `;
       });
@@ -1696,28 +1760,28 @@ export default function AdminDashboard({
         <body>
           ${isReprint ? `<div class="reprint-banner">*** [ REPRINT ] ***</div>` : ''}
           <div class="header">
-            <h2>${restaurantInfo?.name || 'TouchQR Store'}</h2>
-            ${cleanAddress ? `<p>${cleanAddress}</p>` : ''}
-            ${restaurantInfo?.phone ? `<p>Tel: ${restaurantInfo.phone}</p>` : ''}
-            ${gstin ? `<p style="font-weight:bold;">GSTIN: ${gstin}</p>` : ''}
-            ${fssai ? `<p>FSSAI: ${fssai}</p>` : ''}
+            <h2>${escapeThermalHtml(restaurantInfo?.name || 'TouchQR Store')}</h2>
+            ${cleanAddress ? `<p>${escapeThermalHtml(cleanAddress)}</p>` : ''}
+            ${restaurantInfo?.phone ? `<p>Tel: ${escapeThermalHtml(restaurantInfo.phone)}</p>` : ''}
+            ${gstin ? `<p style="font-weight:bold;">GSTIN: ${escapeThermalHtml(gstin)}</p>` : ''}
+            ${fssai ? `<p>FSSAI: ${escapeThermalHtml(fssai)}</p>` : ''}
           </div>
 
           <div class="meta">
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <strong>${paymentMode === 'CHECK_SLIP' ? 'TABLE CHECK SLIP' : (isGst ? 'TAX INVOICE' : 'RETAIL BILL')}</strong>
               <span class="badge" style="${paymentMode === 'CHECK_SLIP' ? 'background:#7E22CE;' : ''}">
-                ${paymentMode === 'CHECK_SLIP' ? 'UNSETTLED SLIP' : cleanPaymentMode}
+                ${paymentMode === 'CHECK_SLIP' ? 'UNSETTLED SLIP' : escapeThermalHtml(cleanPaymentMode)}
               </span>
             </div>
             ${cleanToken
-              ? `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px solid #000;padding:6px 4px;margin:6px 0;letter-spacing:1px;border-radius:4px;background:#FFF;color:#000;word-break:break-word;">TOKEN ${cleanToken}</div>`
-              : `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '15px' : '18px'};font-weight:900;border:2px solid #000;padding:5px 4px;margin:5px 0;border-radius:4px;letter-spacing:0.5px;word-break:break-word;">${resolvedSpace.toUpperCase()}</div>`
+              ? `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px solid #000;padding:6px 4px;margin:6px 0;letter-spacing:1px;border-radius:4px;background:#FFF;color:#000;word-break:break-word;">TOKEN ${escapeThermalHtml(cleanToken)}</div>`
+              : `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '15px' : '18px'};font-weight:900;border:2px solid #000;padding:5px 4px;margin:5px 0;border-radius:4px;letter-spacing:0.5px;word-break:break-word;">${escapeThermalHtml(resolvedSpace.toUpperCase())}</div>`
             }
-            ${isTakeaway ? `<div><strong>Order Type:</strong> Takeaway / Counter</div>` : `<div><strong>Table / Space:</strong> ${resolvedSpace}</div>`}
-            <div><strong>Date:</strong> ${formatDateTimeString(order.created_at || Date.now())}</div>
-            <div><strong>${isGst ? 'Invoice No:' : 'Bill No:'}</strong> ${isGst ? `INV-${cleanToken ? cleanToken.replace(/^TK-?/i, '') : order.id}` : billNumberDisplay}</div>
-            ${!isAutoName ? `<div><strong>Customer:</strong> ${customerDisplayName}</div>` : ''}
+            ${isTakeaway ? `<div><strong>Order Type:</strong> Takeaway / Counter</div>` : `<div><strong>Table / Space:</strong> ${escapeThermalHtml(resolvedSpace)}</div>`}
+            <div><strong>Date:</strong> ${escapeThermalHtml(formatDateTimeString(order.created_at || Date.now()))}</div>
+            <div><strong>${isGst ? 'Invoice No:' : 'Bill No:'}</strong> ${isGst ? `INV-${escapeThermalHtml(cleanToken ? cleanToken.replace(/^TK-?/i, '') : order.id)}` : escapeThermalHtml(billNumberDisplay)}</div>
+            ${!isAutoName ? `<div><strong>Customer:</strong> ${escapeThermalHtml(customerDisplayName)}</div>` : ''}
             ${totalRoundsCount > 1 ? `<div style="font-weight:bold;color:#0F766E;">Consolidated Bill: ${totalRoundsCount} Rounds</div>` : ''}
           </div>
 
@@ -1851,10 +1915,12 @@ export default function AdminDashboard({
   };
 
   const openBillModalWithSnapshot = (order) => {
+    setSettleModalError('');
     if (!order) {
       setBillOrderModal(null);
       return;
     }
+    setShouldPrintOnSettle(isAutoPrintBillEnabled());
     const capturedSnapshot = order.__billSnapshot || calculateBillDetails(order, orders, restaurantInfo, settingsForm);
     setBillOrderModal({ ...order, __billSnapshot: capturedSnapshot });
   };
@@ -1947,11 +2013,11 @@ export default function AdminDashboard({
     }
   };
 
-  const [isSettlingOrder, setIsSettlingOrder] = useState(false);
-
-  const handleSettleAndCompleteOrder = async (order, paymentMode = 'CASH', explicitSnapshot = null) => {
+  const handleSettleAndCompleteOrder = async (order, paymentMode = 'CASH', explicitSnapshot = null, printReceiptOverride = null) => {
     if (!order || isSettlingOrder) return;
     setIsSettlingOrder(true);
+    setSettlingMethod(paymentMode);
+    setSettleModalError('');
 
     const settleMethod = paymentMode === 'CARD' ? 'card' : (paymentMode.startsWith('UPI') ? 'upi' : 'cash');
     const orderId = order.id;
@@ -1968,7 +2034,7 @@ export default function AdminDashboard({
       const totalChanged = Math.abs(Number(paidSnapshot?.grandTotal || 0) - Number(latestBillSnapshot?.grandTotal || 0)) > 0.01;
       if (idsChanged || totalChanged) {
         setBillOrderModal({ ...order, __billSnapshot: latestBillSnapshot });
-        alert('Bill updated after new order activity. Please review the updated bill and confirm payment again.');
+        setSettleModalError('Order updated with new items or rounds. Please review the refreshed bill total above and confirm payment again.');
         return;
       }
 
@@ -2009,6 +2075,7 @@ export default function AdminDashboard({
       }));
 
       setBillOrderModal(null);
+      setSettleModalError('');
 
       // 3. Audio & Notification feedback
       try {
@@ -2024,20 +2091,24 @@ export default function AdminDashboard({
       // 4. Authoritative reload from server
       await loadOrders();
 
-      // 5. Generate / Print Customer Bill using the retained paid snapshot
-      try {
-        await handlePrintCustomerBill(order, paymentMode, paidSnapshot);
-      } catch (printErr) {
-        console.warn('Post-settlement print notice:', printErr);
+      // 5. Generate / Print Customer Bill only when print toggle / auto_print_bill is active
+      const willPrintReceipt = printReceiptOverride !== null ? Boolean(printReceiptOverride) : Boolean(shouldPrintOnSettle);
+      if (willPrintReceipt) {
+        try {
+          await handlePrintCustomerBill(order, paymentMode, paidSnapshot);
+        } catch (printErr) {
+          console.warn('Post-settlement print notice:', printErr);
+        }
       }
     } catch (err) {
       console.error('Settlement error:', err);
       if (err && (err.status === 409 || err.code === 'bill_snapshot_stale')) {
         await loadOrders().catch(() => {});
       }
-      alert(err.message || 'Payment settlement failed. Order remains unsettled.');
+      setSettleModalError(err.message || 'Payment settlement failed. Order remains unsettled.');
     } finally {
       setIsSettlingOrder(false);
+      setSettlingMethod(null);
     }
   };
 
@@ -4942,10 +5013,63 @@ export default function AdminDashboard({
               >
                 <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>🍳</span>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <strong style={{ display: 'block', color: '#F8FAFC' }}>Send to Kitchen KDS Screen</strong>
-                  <span style={{ fontSize: '0.74rem', color: '#94A3B8', fontWeight: 600 }}>Hot food, freshly cooked dishes for Chef Display</span>
+                  <strong style={{ display: 'block', color: '#F8FAFC' }}>
+                    {isAutoPrintKotEnabled() ? 'Send to Kitchen KDS + Print KOT' : 'Send to Kitchen KDS Screen'}
+                  </strong>
+                  <span style={{ fontSize: '0.74rem', color: '#94A3B8', fontWeight: 600 }}>
+                    {isAutoPrintKotEnabled()
+                      ? 'Hot food, freshly cooked dishes • Auto-prints Kitchen KOT'
+                      : 'Hot food, freshly cooked dishes for Chef Display'}
+                  </span>
                 </div>
               </button>
+
+              {!isAutoPrintKotEnabled() && (
+                <button
+                  disabled={isRoutingSubmitting}
+                  onClick={async () => {
+                    if (isRoutingSubmitting) return;
+                    setIsRoutingSubmitting(true);
+                    try {
+                      const targetOrder = acceptRoutingModal;
+                      const isCounter = (String(targetOrder.table_number || '').trim().toLowerCase() === 'counter') || (String(targetOrder.space_type || '').trim().toLowerCase() === 'counter');
+                      const extra = { sent_to_kds: 1, skipAutoKot: true };
+                      if (isCounter) {
+                        extra.counter_acknowledgement = {
+                          confirmed: true,
+                          acknowledged_at: new Date().toISOString()
+                        };
+                      }
+                      await handleUpdateStatus(targetOrder.id, 'kitchen', extra);
+                      handlePrintKOT(targetOrder);
+                      setAcceptRoutingModal(null);
+                    } finally {
+                      setIsRoutingSubmitting(false);
+                    }
+                  }}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    background: '#F8FAFC',
+                    color: '#0F172A',
+                    border: '1px solid #CBD5E1',
+                    fontWeight: 800,
+                    fontSize: '0.86rem',
+                    cursor: isRoutingSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isRoutingSubmitting ? 0.7 : 1,
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}
+                >
+                  <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>🖨️</span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <strong style={{ display: 'block' }}>Send to Kitchen KDS + Print KOT</strong>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>Sends to Chef screen and prints paper KOT ticket</span>
+                  </div>
+                </button>
+              )}
 
               <button
                 disabled={isRoutingSubmitting}
@@ -4955,14 +5079,14 @@ export default function AdminDashboard({
                   try {
                     const targetId = acceptRoutingModal.id;
                     const isCounter = (String(acceptRoutingModal.table_number || '').trim().toLowerCase() === 'counter') || (String(acceptRoutingModal.space_type || '').trim().toLowerCase() === 'counter');
-                    const extra = { sent_to_kds: 0 };
+                    const extra = { sent_to_kds: 0, skipAutoKot: true };
                     if (isCounter) {
                       extra.counter_acknowledgement = {
                         confirmed: true,
                         acknowledged_at: new Date().toISOString()
                       };
                     }
-                    await handleUpdateStatus(targetId, 'kitchen', extra);
+                    await handleUpdateStatus(targetId, 'accepted', extra);
                     setAcceptRoutingModal(null);
                   } finally {
                     setIsRoutingSubmitting(false);
@@ -5007,55 +5131,174 @@ export default function AdminDashboard({
         const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
         const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
         const currentQrSnapshotKey = getModalQrSnapshotKey(billOrderModal, billData, upiId, payeeName);
+        const settleLocationLabel = billData.spaceLabel || formatOrderLocation(billOrderModal, restaurantInfo || settingsForm) || `Order #${billOrderModal.id}`;
+        const modalTaxTotal = Number(billData.cgst || 0) + Number(billData.sgst || 0);
+        const modalServiceCharge = Number(billData.serviceChargeAmount || 0);
 
         return (
-          <div style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.7)',
-            backdropFilter: 'blur(6px)',
-            zIndex: 10020,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-          }}>
-            <div style={{
-              background: '#FFFFFF',
-              borderRadius: '20px',
-              maxWidth: '380px',
-              width: '100%',
-              maxHeight: '90dvh',
-              overflowY: 'auto',
-              boxSizing: 'border-box',
-              padding: '22px',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0A2315', marginBottom: '4px' }}>
-                🧾 Print Final Customer Bill
-              </h3>
-              {billData.isMultiRound ? (
-                <span id="payment-modal-order-summary" style={{ fontSize: '0.78rem', color: '#0F766E', fontWeight: 800, display: 'block', marginBottom: '16px' }}>
-                  Session Total: {currency}{billData.grandTotal} • {billData.totalRoundsCount} Rounds
-                </span>
-              ) : (
-                <span id="payment-modal-order-summary" style={{ fontSize: '0.78rem', color: '#6B7280', display: 'block', marginBottom: '16px' }}>
-                  Order {billOrderModal.id} • Total: {currency}{billOrderModal.total_amount}
-                </span>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Settle & Print Final Customer Bill"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !isSettlingOrder) {
+                setSettleModalError('');
+                setBillOrderModal(null);
+              }
+            }}
+            style={{
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(15, 23, 42, 0.72)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              zIndex: 10020,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '22px',
+                maxWidth: '410px',
+                width: '100%',
+                maxHeight: '90dvh',
+                overflowY: 'auto',
+                boxSizing: 'border-box',
+                padding: '20px',
+                boxShadow: '0 24px 60px rgba(0, 0, 0, 0.42)',
+                textAlign: 'left',
+                border: '1px solid #E2E8F0'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ fontSize: '1.12rem', fontWeight: 900, color: '#0F172A', margin: 0, lineHeight: 1.25 }}>
+                    💳 Settle & Print Final Bill
+                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      color: '#0F766E',
+                      background: '#F0FDFA',
+                      border: '1px solid #99F6E4',
+                      padding: '2px 8px',
+                      borderRadius: '9999px'
+                    }}>
+                      {settleLocationLabel}
+                    </span>
+                    {billOrderModal.customer_name && (
+                      <span style={{ fontSize: '0.74rem', color: '#475569', fontWeight: 700 }}>
+                        {billOrderModal.customer_name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isSettlingOrder}
+                  onClick={() => {
+                    if (isSettlingOrder) return;
+                    setSettleModalError('');
+                    setBillOrderModal(null);
+                  }}
+                  aria-label="Close payment modal"
+                  style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '9999px',
+                    border: '1px solid #E2E8F0',
+                    background: '#F8FAFC',
+                    color: '#475569',
+                    fontSize: '0.92rem',
+                    fontWeight: 900,
+                    cursor: isSettlingOrder ? 'not-allowed' : 'pointer',
+                    flexShrink: 0
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '14px',
+                padding: '12px 14px',
+                marginBottom: '14px'
+              }}>
+                {billData.isMultiRound ? (
+                  <span id="payment-modal-order-summary" style={{ fontSize: '0.76rem', color: '#0F766E', fontWeight: 800, display: 'block', marginBottom: '6px' }}>
+                    Session Total: {currency}{billData.grandTotal} • {billData.totalRoundsCount} Rounds
+                  </span>
+                ) : (
+                  <span id="payment-modal-order-summary" style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '6px' }}>
+                    Order {billOrderModal.id} • Total: {currency}{billOrderModal.total_amount}
+                  </span>
+                )}
+                {(modalTaxTotal > 0 || modalServiceCharge > 0 || Number(billData.subtotal || 0) !== Number(billData.grandTotal || 0)) && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingBottom: '6px', marginBottom: '6px', borderBottom: '1px dashed #CBD5E1', fontSize: '0.76rem', color: '#475569', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Subtotal</span>
+                      <span>{currency}{formatPriceNumber(billData.subtotal)}</span>
+                    </div>
+                    {modalTaxTotal > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Taxes (GST)</span>
+                        <span>{currency}{formatPriceNumber(modalTaxTotal)}</span>
+                      </div>
+                    )}
+                    {modalServiceCharge > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Service Charge</span>
+                        <span>{currency}{formatPriceNumber(modalServiceCharge)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>Final Payable</span>
+                  <strong style={{ fontSize: '1.22rem', fontWeight: 900, color: '#0F172A' }}>
+                    {currency}{formatPriceNumber(billData.grandTotal)}
+                  </strong>
+                </div>
+              </div>
+
+              {settleModalError && (
+                <div style={{
+                  marginBottom: '12px',
+                  padding: '10px 12px',
+                  background: '#FEF2F2',
+                  border: '1px solid #FCA5A5',
+                  borderRadius: '10px',
+                  color: '#991B1B',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  lineHeight: 1.4
+                }}>
+                  ⚠ {settleModalError}
+                </div>
               )}
 
               {hasBillSnapshotChanged && (
-                <div style={{ marginBottom: '14px', padding: '10px 12px', background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '10px', textAlign: 'left' }}>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#92400E', marginBottom: '4px' }}>
+                <div style={{ marginBottom: '14px', padding: '10px 12px', background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '12px', textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 900, color: '#92400E', marginBottom: '6px' }}>
                     ⚠ Order updated! New total: {currency}{liveBillData.grandTotal} ({liveBillData.totalRoundsCount} rounds)
                   </div>
                   <button
                     type="button"
-                    onClick={() => setBillOrderModal({ ...billOrderModal, __billSnapshot: liveBillData })}
+                    onClick={() => {
+                      setSettleModalError('');
+                      setBillOrderModal({ ...billOrderModal, __billSnapshot: liveBillData });
+                    }}
                     style={{
                       width: '100%',
-                      padding: '6px 10px',
+                      padding: '8px 10px',
                       background: '#D97706',
                       color: '#FFFFFF',
                       border: 'none',
@@ -5078,10 +5321,10 @@ export default function AdminDashboard({
                     onClick={() => setShowModalUpiQr(prev => !prev)}
                     style={{
                       width: '100%',
-                      padding: '8px 12px',
+                      padding: '9px 12px',
                       background: showModalUpiQr ? '#EFF6FF' : '#F8FAFC',
                       border: '1px solid #BFDBFE',
-                      borderRadius: '10px',
+                      borderRadius: '12px',
                       color: '#1D4ED8',
                       fontSize: '0.80rem',
                       fontWeight: 800,
@@ -5095,68 +5338,128 @@ export default function AdminDashboard({
                     <span>{showModalUpiQr ? '▲ Hide On-Screen UPI QR' : '📱 Show UPI QR Code on Screen'}</span>
                   </button>
 
-                  {showModalUpiQr && modalUpiQrUrl && modalUpiQrSnapshotKey === currentQrSnapshotKey && (
-                    <div style={{ marginTop: '10px', padding: '12px', background: '#F8FAFC', borderRadius: '14px', border: '1.5px dashed #3B82F6' }}>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 900, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
-                        Scan & Pay via GPay • PhonePe • Paytm
-                      </span>
-                      <img src={modalUpiQrUrl} alt="UPI Payment QR" style={{ width: '150px', height: '150px', margin: '8px auto', display: 'block', borderRadius: '8px', background: '#FFFFFF', padding: '6px', border: '1px solid #E2E8F0' }} />
-                      <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0F172A' }}>
-                        Pay Exact: {currency}{billData.grandTotal}
+                  {showModalUpiQr && (
+                    modalUpiQrUrl && modalUpiQrSnapshotKey === currentQrSnapshotKey ? (
+                      <div style={{ marginTop: '10px', padding: '12px', background: '#F8FAFC', borderRadius: '14px', border: '1.5px dashed #3B82F6', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 900, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                          Scan & Pay via GPay • PhonePe • Paytm
+                        </span>
+                        <img src={modalUpiQrUrl} alt="UPI Payment QR" style={{ width: '150px', height: '150px', margin: '8px auto', display: 'block', borderRadius: '8px', background: '#FFFFFF', padding: '6px', border: '1px solid #E2E8F0' }} />
+                        <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0F172A' }}>
+                          Pay Exact: {currency}{billData.grandTotal}
+                        </div>
+                        <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '2px', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>
+                          UPI ID: <strong>{upiId}</strong>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.70rem', color: '#64748B', marginTop: '2px', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>
-                        UPI ID: <strong>{upiId}</strong>
+                    ) : (
+                      <div style={{ marginTop: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '12px', border: '1px dashed #CBD5E1', textAlign: 'center', fontSize: '0.76rem', color: '#64748B', fontWeight: 700 }}>
+                        Generating UPI QR code...
                       </div>
-                    </div>
+                    )
                   )}
                 </div>
               )}
 
-              <p style={{ fontSize: '0.84rem', fontWeight: 800, color: '#374151', marginBottom: '12px' }}>
-                Select Payment Method for Receipt:
+              <label style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '3px',
+                padding: '9px 12px',
+                background: '#F8FAFC',
+                borderRadius: '10px',
+                border: '1px solid #E2E8F0',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                color: '#334155',
+                marginBottom: '14px',
+                cursor: isSettlingOrder ? 'not-allowed' : 'pointer'
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={shouldPrintOnSettle}
+                    disabled={isSettlingOrder}
+                    onChange={(e) => setShouldPrintOnSettle(e.target.checked)}
+                  />
+                  <span>🖨️ Print paper bill receipt after settling</span>
+                </span>
+                {!shouldPrintOnSettle && (
+                  <span style={{ fontSize: '0.70rem', color: '#0F766E', fontWeight: 700, paddingLeft: '22px' }}>
+                    📱 Digital paid bill goes automatically to customer&apos;s phone
+                  </span>
+                )}
+              </label>
+
+              <p style={{ fontSize: '0.78rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 10px 0' }}>
+                Confirm Payment Received Via:
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '12px' }}>
                 {[
-                  { id: 'CASH', label: '💵 CASH PAYMENT', bg: '#10B981', color: '#FFFFFF' },
-                  { id: 'UPI / QR', label: '📱 UPI / GPAY / PAYTM', bg: '#2563EB', color: '#FFFFFF' },
-                  { id: 'CARD', label: '💳 CREDIT / DEBIT CARD', bg: '#7C3AED', color: '#FFFFFF' }
-                ].map(m => (
-                  <button
-                    key={m.id}
-                    id={`settle-payment-btn-${m.id.toLowerCase().replace(/[^a-z]/g, '')}`}
-                    disabled={isSettlingOrder || hasBillSnapshotChanged}
-                    onClick={() => handleSettleAndCompleteOrder(billOrderModal, m.id, billData)}
-                    style={{
-                      background: (isSettlingOrder || hasBillSnapshotChanged) ? '#9CA3AF' : m.bg,
-                      color: m.color,
-                      border: 'none',
-                      padding: '12px',
-                      borderRadius: 'var(--radius-pill)',
-                      fontWeight: 900,
-                      fontSize: '0.88rem',
-                      cursor: (isSettlingOrder || hasBillSnapshotChanged) ? 'not-allowed' : 'pointer',
-                      boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-                      opacity: (isSettlingOrder || hasBillSnapshotChanged) ? 0.7 : 1
-                    }}
-                  >
-                    {isSettlingOrder ? '⏳ Processing Settlement...' : m.label}
-                  </button>
-                ))}
+                  { id: 'CASH', title: '💵 Cash Received', sub: 'Drawer / counter cash payment', bg: '#059669', color: '#FFFFFF' },
+                  { id: 'UPI / QR', title: '📱 UPI / GPay / Paytm', sub: 'Customer scanned QR or paid via UPI', bg: '#2563EB', color: '#FFFFFF' },
+                  { id: 'CARD', title: '💳 Credit / Debit Card', sub: 'POS swipe or tap machine', bg: '#7C3AED', color: '#FFFFFF' }
+                ].map(m => {
+                  const isThisSettling = isSettlingOrder && settlingMethod === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      id={`settle-payment-btn-${m.id.toLowerCase().replace(/[^a-z]/g, '')}`}
+                      disabled={isSettlingOrder || hasBillSnapshotChanged}
+                      onClick={() => handleSettleAndCompleteOrder(billOrderModal, m.id, billData)}
+                      style={{
+                        background: (isSettlingOrder || hasBillSnapshotChanged) ? '#94A3B8' : m.bg,
+                        color: m.color,
+                        border: 'none',
+                        padding: '11px 14px',
+                        borderRadius: '12px',
+                        fontWeight: 800,
+                        cursor: (isSettlingOrder || hasBillSnapshotChanged) ? 'not-allowed' : 'pointer',
+                        boxShadow: (isSettlingOrder || hasBillSnapshotChanged) ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.14)',
+                        opacity: (isSettlingOrder || hasBillSnapshotChanged) ? 0.72 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 900 }}>
+                          {isThisSettling ? `⏳ Settling ${m.id}...` : m.title}
+                        </div>
+                        <div style={{ fontSize: '0.70rem', opacity: 0.9, fontWeight: 600 }}>
+                          {m.sub}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 900, whiteSpace: 'nowrap' }}>
+                        {currency}{formatPriceNumber(billData.grandTotal)} →
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               <button
+                type="button"
                 disabled={isSettlingOrder}
-                onClick={() => !isSettlingOrder && setBillOrderModal(null)}
+                onClick={() => {
+                  if (isSettlingOrder) return;
+                  setSettleModalError('');
+                  setBillOrderModal(null);
+                }}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: isSettlingOrder ? '#D1D5DB' : '#9CA3AF',
-                  fontSize: '0.8rem',
+                  width: '100%',
+                  background: '#F1F5F9',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '10px',
+                  color: isSettlingOrder ? '#94A3B8' : '#475569',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
                   cursor: isSettlingOrder ? 'not-allowed' : 'pointer',
                   minHeight: '40px',
-                  padding: '8px 18px',
-                  textDecoration: 'underline'
+                  padding: '8px 18px'
                 }}
               >
                 Cancel

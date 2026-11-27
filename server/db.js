@@ -924,6 +924,7 @@ async function createTables(options = {}) {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS grand_total_amount NUMERIC(10, 2) DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS gst_rate NUMERIC(5, 2) DEFAULT 0;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_token_hash VARCHAR(64);`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS terminal_at TIMESTAMP DEFAULT NULL;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
@@ -1738,6 +1739,7 @@ async function createTables(options = {}) {
       if (!orderCols.some(c => c.name === 'grand_total_amount')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN grand_total_amount REAL DEFAULT 0");
       if (!orderCols.some(c => c.name === 'gst_rate')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN gst_rate REAL DEFAULT 0");
       if (!orderCols.some(c => c.name === 'notes')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN notes TEXT");
+      if (!orderCols.some(c => c.name === 'rejection_reason')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN rejection_reason TEXT");
       if (!orderCols.some(c => c.name === 'tracking_token_hash')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN tracking_token_hash TEXT DEFAULT NULL");
       if (!orderCols.some(c => c.name === 'terminal_at')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN terminal_at TEXT DEFAULT NULL");
       if (!orderCols.some(c => c.name === 'order_type')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN order_type TEXT DEFAULT 'dine_in'");

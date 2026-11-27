@@ -296,12 +296,42 @@ function runTests() {
     assert.notEqual(billIdx, -1, 'App.jsx must handle isBillSettled branch separately from cancelled/rejected');
     const billSlice = appSrc.slice(billIdx, billIdx + 3200);
     assert.ok(billSlice.includes('setBillCompletedModal(billPayload)'), 'Settled bill must open BillCompletedModal');
+    assert.ok(billSlice.includes('setShowRunningOrderModal(false)'), 'Settled bill must reset showRunningOrderModal state');
     assert.ok(billSlice.includes('setSessionExpired(false)'), 'Settled bill must clear session without triggering Session Expired banner');
     assert.ok(appSrc.includes('bill_summary'), 'api/frontend post-bill integration checks bill_summary');
 
     const modalSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/components/BillCompletedModal.jsx'), 'utf8');
     assert.ok(modalSrc.includes('bill.bill_summary || bill'), 'BillCompletedModal must support consolidated bill_summary');
     assert.ok(modalSrc.includes('escapeHtml'), 'BillCompletedModal printable HTML receipt must escape dynamic strings');
+  });
+
+  test('App.jsx forwards trimmed cooking notes to direct order, retry payload, and WhatsApp order', () => {
+    const appSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/App.jsx'), 'utf8');
+    assert.ok(appSrc.includes("const [orderNotesInput, setOrderNotesInput] = useState('')"), 'App.jsx must maintain orderNotesInput state');
+    assert.ok(appSrc.includes('...(trimmedNotes ? { notes: trimmedNotes } : {})'), 'Direct order and retry payloads must forward trimmed notes');
+    assert.ok(appSrc.includes('Cooking Note:'), 'WhatsApp order formatter must append cooking notes');
+  });
+
+  test('App.jsx keeps orderSuccessModal free of premature review prompts and shows View Order tracker action', () => {
+    const appSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/App.jsx'), 'utf8');
+    const successIdx = appSrc.indexOf('{orderSuccessModal && (() => {');
+    const successEnd = appSrc.indexOf('{/* Floating Bottom Navigation Dock */}', successIdx);
+    assert.notEqual(successIdx, -1, 'App.jsx must render orderSuccessModal');
+    assert.notEqual(successEnd, -1, 'App.jsx must close orderSuccessModal before BottomDock');
+    const successSlice = appSrc.slice(successIdx, successEnd);
+    assert.ok(!successSlice.includes('Rate & Review Us on Google'), 'orderSuccessModal must not show premature review CTA immediately after placing order');
+    assert.ok(successSlice.includes('Track Live Order'), 'orderSuccessModal keeps Track Live Order CTA');
+
+    assert.ok(appSrc.includes("const [showRunningOrderModal, setShowRunningOrderModal] = useState(false)"), 'App.jsx maintains showRunningOrderModal state');
+    assert.ok(appSrc.includes('setShowRunningOrderModal(true)'), 'Live order tracker banner exposes View Order action');
+    assert.ok(appSrc.includes('Running Order Summary'), 'App.jsx renders Running Order Summary modal for live items and total');
+    assert.ok(appSrc.includes('activeOrderTrack.session_summary') && appSrc.includes('trackRounds.length > 1'), 'Running Order Summary consolidates multi-round active sessions');
+  });
+
+  test('GET /orders/track/:id exposes notes and active multi-round session_summary', () => {
+    const apiSrc = fs.readFileSync(path.join(ROOT_DIR, 'server/routes/api.js'), 'utf8');
+    assert.ok(apiSrc.includes('items, notes, created_at'), 'Track order endpoint selects customer cooking notes');
+    assert.ok(apiSrc.includes('...(sessionSummary ? { session_summary: sessionSummary } : {})'), 'Track order endpoint includes consolidated session_summary across active rounds');
   });
 
   console.log(`\nAll ${passed} Customer Page helper/regression tests passed.`);

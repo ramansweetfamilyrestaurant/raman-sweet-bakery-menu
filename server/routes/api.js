@@ -2936,7 +2936,7 @@ router.get('/orders/track/:id', async (req, res) => {
     const targetId = resto.id;
 
     const orders = await query(
-      'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display, is_settled, payment_method FROM orders WHERE id = $1 AND restaurant_id = $2',
+      'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display, is_settled, payment_method, rejection_reason FROM orders WHERE id = $1 AND restaurant_id = $2',
       [orderId, targetId]
     );
 
@@ -3024,9 +3024,10 @@ router.get('/orders/track/:id', async (req, res) => {
     };
 
     const parsedItems = parseOrderItems(order.items);
+    let sessionSummary = null;
     let billSummary = null;
 
-    if (!isCancelledOrRejected && (isSettled || order.status === 'completed')) {
+    if (!isCancelledOrRejected) {
       const isCounterOrder =
         String(order.order_type || '').toLowerCase() === 'takeaway' ||
         String(order.table_number || '').trim().toLowerCase() === 'counter';
@@ -3035,7 +3036,7 @@ router.get('/orders/track/:id', async (req, res) => {
       if (!isCounterOrder && order.session_id) {
         try {
           const siblingRows = await query(
-            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
              FROM orders
              WHERE restaurant_id = $1 AND session_id = $2 AND status NOT IN ('rejected', 'cancelled')
              ORDER BY id ASC`,
@@ -3049,7 +3050,7 @@ router.get('/orders/track/:id', async (req, res) => {
         const rootId = order.parent_order_id || order.id;
         try {
           const siblingRows = await query(
-            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
              FROM orders
              WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) AND status NOT IN ('rejected', 'cancelled')
              ORDER BY id ASC`,
@@ -3095,7 +3096,9 @@ router.get('/orders/track/:id', async (req, res) => {
         return {
           id: row.id,
           round_number: Number(row.round_number) || (idx + 1),
+          status: row.status,
           items: rowItems,
+          notes: row.notes || null,
           subtotal_amount: Math.round(rSub * 100) / 100,
           tax_amount: Math.round(rTax * 100) / 100,
           grand_total_amount: Math.round(rGrand * 100) / 100,
@@ -3103,7 +3106,7 @@ router.get('/orders/track/:id', async (req, res) => {
         };
       });
 
-      billSummary = {
+      const sharedSummary = {
         order_id: order.id,
         session_id: order.session_id || null,
         round_count: rounds.length,
@@ -3113,13 +3116,23 @@ router.get('/orders/track/:id', async (req, res) => {
         cgst_amount: Math.round(runningCgst * 100) / 100,
         sgst_amount: Math.round(runningSgst * 100) / 100,
         tax_amount: Math.round(runningTax * 100) / 100,
-        grand_total_amount: Math.round(runningGrandTotal * 100) / 100,
-        gst_enabled: Boolean(resto.gst_enabled === true || resto.gst_enabled === 1 || resto.gst_enabled === '1'),
-        gstin_number: resto.gstin_number || '',
-        currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
-        payment_method: String(resolvedPaymentMethod || 'cash').toLowerCase(),
-        settled_at: resolvedSettledAt
+        grand_total_amount: Math.round(runningGrandTotal * 100) / 100
       };
+
+      if (rounds.length > 1) {
+        sessionSummary = sharedSummary;
+      }
+
+      if (isSettled || order.status === 'completed') {
+        billSummary = {
+          ...sharedSummary,
+          gst_enabled: Boolean(resto.gst_enabled === true || resto.gst_enabled === 1 || resto.gst_enabled === '1'),
+          gstin_number: resto.gstin_number || '',
+          currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
+          payment_method: String(resolvedPaymentMethod || 'cash').toLowerCase(),
+          settled_at: resolvedSettledAt
+        };
+      }
     }
 
     // 🛡️ Step 5: Strictly scrub tracking_token_hash from response
@@ -3129,6 +3142,7 @@ router.get('/orders/track/:id', async (req, res) => {
       is_settled: isSettled ? 1 : 0,
       payment_method: order.payment_method || billSummary?.payment_method || null,
       items: parsedItems,
+      ...(sessionSummary ? { session_summary: sessionSummary } : {}),
       ...(billSummary ? { bill_summary: billSummary } : {})
     });
   } catch (err) {

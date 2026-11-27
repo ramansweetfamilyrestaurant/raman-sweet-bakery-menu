@@ -72,7 +72,7 @@ export const getSlugFromUrl = () => {
   if (!path || path === '/' || path === '/admin' || path === '/super-admin' || path === '/superadmin' || path === '/register' || path === '/billing') {
     return '';
   }
-  
+
   if (path.startsWith('/r/')) {
     const parts = path.split('/r/')[1].split('/');
     return parts[0] || '';
@@ -81,11 +81,11 @@ export const getSlugFromUrl = () => {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   const parts = cleanPath.split('/');
   const candidate = parts[0];
-  
+
   if (['menu', 'admin', 'superadmin', 'super-admin', 'api', 'uploads', 'assets', 'register', 'billing', 'kitchen', 'privacy', 'terms', 'privacy-policy', 'terms-of-service', 'refund-policy', 'security', 'contact'].includes(candidate.toLowerCase())) {
     return '';
   }
-  
+
   return candidate || '';
 };
 
@@ -167,6 +167,7 @@ export default function App() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
   const [billCompletedModal, setBillCompletedModal] = useState(null);
+  const [showRunningOrderModal, setShowRunningOrderModal] = useState(false);
   const [lastCompletedBill, setLastCompletedBill] = useState(null);
   const [completedSpaceSnapshot, setCompletedSpaceSnapshot] = useState(null);
   const handledSettledOrderIdsRef = useRef(new Set());
@@ -199,7 +200,7 @@ export default function App() {
     }
 
     const cMatch = target.match(/^S?(\d+)[- •]+(?:Row[- ]*)?([A-Za-z]+)[- •]+(?:Seat[- ]*)?(\d+)$/i) ||
-                   target.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
+      target.match(/Screen\s*(\d+)\s*[-•]\s*Row\s*([A-Za-z]+)\s*[-•]\s*Seat\s*(\d+)/i);
     if (cMatch) {
       return `🎬 Screen ${cMatch[1]} • Row ${cMatch[2].toUpperCase()} • Seat ${cMatch[3]}`;
     }
@@ -265,28 +266,28 @@ export default function App() {
   );
 
   const isCinemaVenue = Boolean(
-    info?.business_type === 'cinema_theatre' || 
-    info?.service_model === 'cinema' || 
-    info?.service_model === 'seat_service' || 
-    currentSpaceType === 'cinema_seat' || 
-    currentSpaceType === 'cinema' || 
+    info?.business_type === 'cinema_theatre' ||
+    info?.service_model === 'cinema' ||
+    info?.service_model === 'seat_service' ||
+    currentSpaceType === 'cinema_seat' ||
+    currentSpaceType === 'cinema' ||
     initialSpaceInfo?.type === 'cinema_seat' ||
-    String(currentTableNum || '').toLowerCase().includes('screen') || 
+    String(currentTableNum || '').toLowerCase().includes('screen') ||
     String(currentTableNum || '').toLowerCase().includes('seat')
   );
 
   const isHotelVenue = Boolean(
-    info?.business_type === 'hotel_resort' || 
-    info?.service_model === 'hotel' || 
-    info?.service_model === 'in_room_dining' || 
-    currentSpaceType === 'room' || 
+    info?.business_type === 'hotel_resort' ||
+    info?.service_model === 'hotel' ||
+    info?.service_model === 'in_room_dining' ||
+    currentSpaceType === 'room' ||
     initialSpaceInfo?.type === 'room' ||
     String(currentTableNum || '').toLowerCase().includes('room')
   );
 
   const isCounterSpace = Boolean(
-    currentSpaceType === 'counter' || 
-    initialSpaceInfo?.type === 'counter' || 
+    currentSpaceType === 'counter' ||
+    initialSpaceInfo?.type === 'counter' ||
     String(currentTableNum || '').trim().toUpperCase() === 'COUNTER'
   );
 
@@ -409,7 +410,7 @@ export default function App() {
       fetch(`/api/superadmin/restaurants/${restoId}/exit-impersonation`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${currentSuperToken}` }
-      }).catch(() => {});
+      }).catch(() => { });
     }
     localStorage.removeItem('touchqr_superadmin_impersonating');
     localStorage.removeItem('touchqr_impersonated_resto_name');
@@ -493,7 +494,7 @@ export default function App() {
   // Menu Data State
   const [categories, setCategories] = useState([]);
   const [dishes, setDishes] = useState([]);
-  
+
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [activeQuickFilter, setActiveQuickFilter] = useState('');
@@ -541,7 +542,7 @@ export default function App() {
             setPublicPlans(data);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, []);
 
@@ -563,7 +564,7 @@ export default function App() {
     const addQty = Math.min(99, Math.max(1, parseInt(quantity, 10) || 1));
     const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
     const isHalf = portionType === 'half' && hasHalfPrice;
-    
+
     // Explicit portion label for clear Kitchen KOT receipt printing
     let portionName = '';
     if (hasHalfPrice) {
@@ -674,11 +675,13 @@ export default function App() {
   const handleClearCart = () => {
     triggerHaptic('light');
     setCartItems([]);
+    setOrderNotesInput('');
   };
 
   const [orderTableInput, setOrderTableInput] = useState(initialTableNum || '1');
   const [customerNameInput, setCustomerNameInput] = useState('');
   const [customerPhoneInput, setCustomerPhoneInput] = useState('');
+  const [orderNotesInput, setOrderNotesInput] = useState('');
   const [orderTypeChoice, setOrderTypeChoice] = useState(() => (currentSpaceType === 'counter' ? 'takeaway' : 'dine_in'));
 
   useEffect(() => {
@@ -694,7 +697,7 @@ export default function App() {
 
   // Lock background scroll & close bottom drawers / confirmation modal on Escape
   useEffect(() => {
-    if (!showCategoryDrawer && !showCartDrawer && !orderSuccessModal) return undefined;
+    if (!showCategoryDrawer && !showCartDrawer && !orderSuccessModal && !showRunningOrderModal) return undefined;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const handleEsc = (e) => {
@@ -702,6 +705,7 @@ export default function App() {
         setShowCategoryDrawer(false);
         setShowCartDrawer(false);
         setOrderSuccessModal(null);
+        setShowRunningOrderModal(false);
       }
     };
     window.addEventListener('keydown', handleEsc);
@@ -709,7 +713,7 @@ export default function App() {
       document.body.style.overflow = prevOverflow;
       window.removeEventListener('keydown', handleEsc);
     };
-  }, [showCategoryDrawer, showCartDrawer, orderSuccessModal]);
+  }, [showCategoryDrawer, showCartDrawer, orderSuccessModal, showRunningOrderModal]);
 
   const handleSendWhatsAppOrder = () => {
     if (!info || cartItems.length === 0) return;
@@ -753,6 +757,10 @@ export default function App() {
     }
     if (customerPhoneInput) {
       msg += `\n📞 *Customer Phone:* ${customerPhoneInput}`;
+    }
+    const cleanWaNotes = String(orderNotesInput || '').trim().slice(0, 240);
+    if (cleanWaNotes) {
+      msg += `\n📝 *Cooking Note:* ${cleanWaNotes}`;
     }
     msg += `\n\nThank you!`;
     const targetPhone = phone.length === 10 ? `91${phone}` : phone;
@@ -871,7 +879,7 @@ export default function App() {
         try {
           sessionStorage.removeItem(`tq_track_${orderIdKey}`);
           sessionStorage.removeItem('tq_active_tracking_token');
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const resolvedType = activeOrderTrack.space_type || currentSpaceType || initialSpaceInfo.type || 'table';
@@ -903,6 +911,7 @@ export default function App() {
       setLastCompletedBill(billPayload);
       setBillCompletedModal(billPayload);
       setOrderSuccessModal(null);
+      setShowRunningOrderModal(false);
 
       // Silently clean active table lock & cart so next guest stays isolated, without triggering Session Expired error
       const key = getOrderStorageKey(activeOrderTrack.table_number, resolvedType);
@@ -959,6 +968,7 @@ export default function App() {
         setAutoKillSeconds(null);
         setCartItems([]);
         setShowCartDrawer(false);
+        setShowRunningOrderModal(false);
         const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
         const cleanPath = currentSlug ? `/${currentSlug}` : '/';
         window.history.replaceState({}, '', cleanPath);
@@ -1012,6 +1022,7 @@ export default function App() {
         setSessionExpired(true);
         setCartItems([]);
         setShowCartDrawer(false);
+        setShowRunningOrderModal(false);
         const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
         const cleanPath = currentSlug ? `/${currentSlug}` : '/';
         window.history.replaceState({}, '', cleanPath);
@@ -1056,7 +1067,7 @@ export default function App() {
                 if (sessionStorage.getItem('tq_active_tracking_token') === trackingToken) {
                   sessionStorage.removeItem('tq_active_tracking_token');
                 }
-              } catch (e) {}
+              } catch (e) { }
               trackingExpiredRef.current = true;
               setActiveOrderTrack(prev => {
                 if (prev) {
@@ -1123,8 +1134,8 @@ export default function App() {
 
     if (targetSpaceType === 'counter') {
       const isCounterEnabled = !info || (
-        info.counter_ordering_enabled === true || 
-        info.counter_ordering_enabled === 1 || 
+        info.counter_ordering_enabled === true ||
+        info.counter_ordering_enabled === 1 ||
         info.counter_ordering_enabled === '1' ||
         Boolean(initialSpaceInfo.isValidTokenShape && info.resto_type !== 'cinema' && info.business_type !== 'cinema_theatre')
       );
@@ -1149,6 +1160,7 @@ export default function App() {
     const grandTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const attemptIdempKey = `attempt_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
     const effectiveOrderType = (isCinemaVenue || isHotelVenue) ? 'dine_in' : (isCounterSpace ? 'takeaway' : orderTypeChoice);
+    const trimmedNotes = String(orderNotesInput || '').trim().slice(0, 240);
 
     const orderPayload = {
       slug,
@@ -1161,6 +1173,7 @@ export default function App() {
       items: itemsPayload,
       total_amount: grandTotal,
       idempotency_key: attemptIdempKey,
+      ...(trimmedNotes ? { notes: trimmedNotes } : {}),
       ...(presenceTokenRef.current ? { presence_token: presenceTokenRef.current } : {})
     };
 
@@ -1172,7 +1185,7 @@ export default function App() {
           try {
             sessionStorage.setItem(`tq_track_${res.order_id}`, res.tracking_token);
             sessionStorage.setItem('tq_active_tracking_token', res.tracking_token);
-          } catch (e) {}
+          } catch (e) { }
         }
         const storageSlug = slug || getActiveStorageTenantSlug();
         if (storageSlug) {
@@ -1197,6 +1210,7 @@ export default function App() {
       setCompletedSpaceSnapshot(null);
       setOrderSuccessModal(res);
       setCartItems([]);
+      setOrderNotesInput('');
       setShowCartDrawer(false);
       pendingOrderPayloadRef.current = null;
     } catch (err) {
@@ -1216,7 +1230,8 @@ export default function App() {
           customer_phone: customerPhoneInput || '',
           items: itemsPayload,
           total_amount: grandTotal,
-          idempotency_key: attemptIdempKey
+          idempotency_key: attemptIdempKey,
+          ...(trimmedNotes ? { notes: trimmedNotes } : {})
         };
         setPresenceToken(null);
         presenceTokenRef.current = null;
@@ -1238,7 +1253,8 @@ export default function App() {
           customer_phone: customerPhoneInput || '',
           items: itemsPayload,
           total_amount: grandTotal,
-          idempotency_key: attemptIdempKey
+          idempotency_key: attemptIdempKey,
+          ...(trimmedNotes ? { notes: trimmedNotes } : {})
         };
         setPresenceModalOpen(true);
         return;
@@ -1281,7 +1297,7 @@ export default function App() {
           try {
             sessionStorage.setItem(`tq_track_${res.order_id}`, res.tracking_token);
             sessionStorage.setItem('tq_active_tracking_token', res.tracking_token);
-          } catch (e) {}
+          } catch (e) { }
         }
         const retrySlug = payload.slug || getActiveStorageTenantSlug();
         const retrySpaceType = payload.space_type || currentSpaceType || 'table';
@@ -1307,6 +1323,7 @@ export default function App() {
       setCompletedSpaceSnapshot(null);
       setOrderSuccessModal(res);
       setCartItems([]);
+      setOrderNotesInput('');
       setShowCartDrawer(false);
     } catch (err) {
       console.error('[PRESENCE RETRY ORDER ERROR]', err);
@@ -1438,9 +1455,9 @@ export default function App() {
       if (!infoData) {
         const publicToken = isAdminMode ? adminToken : undefined;
         const [resInfo, resCat, resDish, resCombo] = await Promise.all([
-          fetchRestaurantInfo({ 
-            token: publicToken, 
-            slug, 
+          fetchRestaurantInfo({
+            token: publicToken,
+            slug,
             scan: isNewScanSession ? '1' : '0',
             space_type: spaceTypeParam,
             table_num: tableNumParam
@@ -1702,7 +1719,7 @@ export default function App() {
                 }
               }
             }
-          }).catch(() => {});
+          }).catch(() => { });
 
           // Silent Mandate Verification in Background
           checkMandateGating(liveAdminToken, effectiveSlug).then(mandateActive => {
@@ -1710,7 +1727,7 @@ export default function App() {
               window.history.replaceState({}, '', '/billing');
               setView('billing');
             }
-          }).catch(() => {});
+          }).catch(() => { });
         } else {
           const currentUrlParams = new URLSearchParams(window.location.search);
           if (currentUrlParams.get('code') || currentUrlParams.get('token') || view === 'auth-exchanging') {
@@ -1801,7 +1818,7 @@ export default function App() {
         setView('billing');
         window.history.replaceState({}, '', '/billing');
       }
-    }).catch(() => {});
+    }).catch(() => { });
   };
 
   const handleAdminLogout = (expectedToken = null) => {
@@ -1968,7 +1985,7 @@ export default function App() {
         try {
           const parsed = typeof c.items === 'string' ? JSON.parse(c.items) : (c.items || []);
           itemsStr = parsed.map(i => i.dish_name || '').join(' ');
-        } catch {}
+        } catch { }
         const haystack = `${c.name || ''} ${c.description || ''} ${c.badge || ''} ${itemsStr} thali combo thalis combos कॉम्बो थाली स्पेशल`.toLowerCase();
         return tokens.every(token => haystack.includes(token));
       });
@@ -2139,7 +2156,7 @@ export default function App() {
         : (info?.google_maps_url && typeof info.google_maps_url === 'string' && info.google_maps_url.trim())
           ? info.google_maps_url.trim()
           : `https://www.google.com/search?q=${encodeURIComponent((info?.name || 'TouchQR Store') + ' ' + (info?.address || ''))}`;
-      
+
       window.open(targetUrl, '_blank');
     }
   };
@@ -2941,20 +2958,25 @@ export default function App() {
           ? ` (${lang === 'hi' ? 'बंद होगा' : 'Closes in'} ${autoKillSeconds >= 60 ? `${Math.floor(autoKillSeconds / 60)}m ${autoKillSeconds % 60}s` : `${autoKillSeconds}s`})`
           : '';
 
+        const rejectReasonText = (isCancelled && activeOrderTrack.rejection_reason)
+          ? String(activeOrderTrack.rejection_reason).trim()
+          : '';
         const statusLabel = isCompleted
           ? (lang === 'hi' ? `ऑर्डर पूर्ण और भुगतान सफल 🏁${timerText}` : `Order Completed & Paid 🏁${timerText}`)
           : isCancelled
-            ? (lang === 'hi' ? `ऑर्डर रद्द किया गया 🔴${timerText}` : `Order Cancelled 🔴${timerText}`)
+            ? (lang === 'hi'
+              ? `ऑर्डर रद्द किया गया 🔴${rejectReasonText ? ` — ${rejectReasonText}` : ''}${timerText}`
+              : `Order Cancelled 🔴${rejectReasonText ? ` — ${rejectReasonText}` : ''}${timerText}`)
             : isServed
               ? (isCinema ? (lang === 'hi' ? 'सीट पर ऑर्डर सर्व किया गया 🎬' : 'Delivered to Seat 🎬 Enjoy!')
                 : isRoom ? (lang === 'hi' ? 'रूम में ऑर्डर डिलीवर हो गया 🏨' : 'Delivered to Room 🏨 Enjoy!')
-                : isCounter ? (lang === 'hi' ? 'काउंटर पर ऑर्डर दिया गया 🧾' : 'Handed Over at Counter 🧾')
-                : (lang === 'hi' ? 'टेबल पर ऑर्डर सर्व हो गया 🍽️' : 'Served to Table 🍽️ Enjoy!'))
+                  : isCounter ? (lang === 'hi' ? 'काउंटर पर ऑर्डर दिया गया 🧾' : 'Handed Over at Counter 🧾')
+                    : (lang === 'hi' ? 'टेबल पर ऑर्डर सर्व हो गया 🍽️' : 'Served to Table 🍽️ Enjoy!'))
               : isPrepared
                 ? (isCinema ? (lang === 'hi' ? 'ऑर्डर तैयार है! सीट पर आ रहा है 🎬' : 'Order Ready! Staff bringing to seat 🎬')
                   : isRoom ? (lang === 'hi' ? 'ऑर्डर तैयार है! रूम में आ रहा है 🏨' : 'Order Ready! Delivering to room 🏨')
-                  : isCounter ? (lang === 'hi' ? 'ऑर्डर तैयार है! काउंटर से लें ⚡' : 'Order Ready! Pickup at counter ⚡')
-                  : (lang === 'hi' ? 'ऑर्डर तैयार है! टेबल पर आ रहा है 🛎️' : 'Order Ready! Staff bringing to table 🛎️'))
+                    : isCounter ? (lang === 'hi' ? 'ऑर्डर तैयार है! काउंटर से लें ⚡' : 'Order Ready! Pickup at counter ⚡')
+                      : (lang === 'hi' ? 'ऑर्डर तैयार है! टेबल पर आ रहा है 🛎️' : 'Order Ready! Staff bringing to table 🛎️'))
                 : isPreparing
                   ? (lang === 'hi' ? 'ऑर्डर स्वीकार — तैयार हो रहा है 👨‍🍳' : 'Accepted — Preparing Now 👨‍🍳')
                   : statusRaw === 'pending'
@@ -2981,12 +3003,62 @@ export default function App() {
           setAutoKillSeconds(null);
           setCartItems([]);
           setShowCartDrawer(false);
+          setShowRunningOrderModal(false);
           const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
           const cleanPath = currentSlug ? `/${currentSlug}` : '/';
           window.history.replaceState({}, '', cleanPath);
         };
 
+        const consolidatedSummary = activeOrderTrack.session_summary || activeOrderTrack.bill_summary || (Array.isArray(activeOrderTrack.rounds) ? activeOrderTrack : null);
+        const trackRounds = Array.isArray(consolidatedSummary?.rounds) && consolidatedSummary.rounds.length > 1
+          ? consolidatedSummary.rounds
+          : [];
+        let trackParsedItems = [];
+        try {
+          const rawSummaryItems = consolidatedSummary?.items || activeOrderTrack.items;
+          trackParsedItems = typeof rawSummaryItems === 'string'
+            ? JSON.parse(rawSummaryItems)
+            : (Array.isArray(rawSummaryItems) ? rawSummaryItems : []);
+        } catch {
+          trackParsedItems = [];
+        }
+        const trackCurrency = info?.currency_symbol || '₹';
+        const trackSubtotal = Number(consolidatedSummary?.subtotal_amount ?? activeOrderTrack.subtotal_amount ?? 0);
+        const trackTax = Number(consolidatedSummary?.tax_amount ?? activeOrderTrack.tax_amount ?? 0);
+        const trackGrandTotal = Number(consolidatedSummary?.grand_total_amount ?? activeOrderTrack.grand_total_amount ?? activeOrderTrack.total_amount ?? 0);
+        const trackNotes = activeOrderTrack.notes ? String(activeOrderTrack.notes).trim() : '';
+
+        const renderTrackItemRow = (it, idx, showDivider, compact = false) => {
+          const qty = Number(it.quantity) || 1;
+          const name = it.name || it.dish_name || 'Item';
+          const portion = it.portion && it.portion !== 'Regular' ? ` (${it.portion})` : '';
+          const mods = Array.isArray(it.modifiers) && it.modifiers.length > 0
+            ? ` + ${it.modifiers.map(m => m.name || m).join(', ')}`
+            : '';
+          const linePrice = Number(it.price || 0) * qty;
+          return (
+            <div key={idx} style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '10px',
+              ...(compact
+                ? { paddingTop: '4px', borderTop: showDivider ? '1px dashed #E2E8F0' : 'none' }
+                : { paddingBottom: '8px', borderBottom: showDivider ? '1px dashed #E2E8F0' : 'none' })
+            }}>
+              <div style={{ fontSize: compact ? '0.82rem' : '0.84rem', fontWeight: 700, color: '#0F172A', lineHeight: 1.35 }}>
+                <span style={{ color: '#047857', fontWeight: 900 }}>{qty}×</span> {name}{portion}
+                {mods && <div style={{ fontSize: compact ? '0.72rem' : '0.74rem', color: '#64748B', fontWeight: 600 }}>{mods}</div>}
+              </div>
+              <div style={{ fontSize: compact ? '0.82rem' : '0.84rem', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>
+                {trackCurrency}{Math.round(linePrice).toLocaleString('en-IN')}
+              </div>
+            </div>
+          );
+        };
+
         return (
+          <>
           <div style={{
             background: 'var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
             color: '#FFFFFF',
@@ -3032,27 +3104,51 @@ export default function App() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="tq-tap"
-                onClick={handleEndTrackingSession}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.14)',
-                  color: '#FFFFFF',
-                  border: '1px solid rgba(255, 255, 255, 0.28)',
-                  padding: '5px 11px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {isActiveCooking
-                  ? (lang === 'hi' ? 'सेशन बंद करें' : 'End Session')
-                  : (lang === 'hi' ? 'हटाएं' : 'Dismiss')}
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className="tq-tap"
+                  onClick={() => { triggerHaptic('light'); setShowRunningOrderModal(true); }}
+                  style={{
+                    background: '#FFFFFF',
+                    color: '#0F172A',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: '0.74rem',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.16)'
+                  }}
+                >
+                  🧾 {lang === 'hi' ? 'मेरा ऑर्डर' : 'View Order'}
+                </button>
+                <button
+                  type="button"
+                  className="tq-tap"
+                  onClick={handleEndTrackingSession}
+                  aria-label={isActiveCooking ? (lang === 'hi' ? 'सेशन बंद करें' : 'End Session') : (lang === 'hi' ? 'हटाएं' : 'Dismiss')}
+                  title={isActiveCooking ? (lang === 'hi' ? 'लाइव ट्रैकिंग बंद करें' : 'End Live Tracking') : (lang === 'hi' ? 'हटाएं' : 'Dismiss')}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.14)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255, 255, 255, 0.28)',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '9999px',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             {stepIdx >= 0 && (
@@ -3072,6 +3168,212 @@ export default function App() {
               </div>
             )}
           </div>
+
+          {showRunningOrderModal && (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={lang === 'hi' ? 'आपका ऑर्डर विवरण' : 'Running Order Summary'}
+                onClick={(e) => { if (e.target === e.currentTarget) setShowRunningOrderModal(false); }}
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(15, 23, 42, 0.72)',
+                  backdropFilter: 'blur(6px)',
+                  WebkitBackdropFilter: 'blur(6px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '16px',
+                  zIndex: 10040
+                }}
+              >
+                <div
+                  style={{
+                    background: '#FFFFFF',
+                    color: '#0F172A',
+                    borderRadius: '22px',
+                    width: '100%',
+                    maxWidth: '430px',
+                    maxHeight: '85vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    boxShadow: '0 24px 60px rgba(0, 0, 0, 0.35)'
+                  }}
+                >
+                  <div style={{
+                    padding: '16px 18px',
+                    borderBottom: '1px solid #E2E8F0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '10px'
+                  }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0F172A' }}>
+                        🧾 {lang === 'hi' ? 'आपका ऑर्डर विवरण' : 'Running Order Summary'}
+                      </h3>
+                      <div style={{ fontSize: '0.76rem', color: '#475569', fontWeight: 700, marginTop: '3px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span>
+                          {(activeOrderTrack.token_display || activeOrderTrack.token_number)
+                            ? `${lang === 'hi' ? 'टोकन' : 'Token'} ${activeOrderTrack.token_display || `TK-${String(activeOrderTrack.token_number).padStart(2, '0')}`}`
+                            : formatCustomerLocation(activeOrderTrack.table_number)}
+                        </span>
+                        {activeOrderTrack.round_number && Number(activeOrderTrack.round_number) > 1 && (
+                          <span style={{ background: '#EFF6FF', color: '#1D4ED8', padding: '1px 7px', borderRadius: '9999px', fontSize: '0.70rem', fontWeight: 800 }}>
+                            {lang === 'hi' ? `राउंड ${activeOrderTrack.round_number}` : `Round ${activeOrderTrack.round_number}`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowRunningOrderModal(false)}
+                      aria-label={lang === 'hi' ? 'बंद करें' : 'Close'}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '9999px',
+                        border: '1px solid #E2E8F0',
+                        background: '#F8FAFC',
+                        color: '#334155',
+                        fontWeight: 900,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div style={{ padding: '16px 18px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{
+                      padding: '10px 12px',
+                      borderRadius: '12px',
+                      background: isCancelled ? '#FEF2F2' : '#F0FDF4',
+                      border: `1px solid ${isCancelled ? '#FECACA' : '#BBF7D0'}`,
+                      fontSize: '0.80rem',
+                      fontWeight: 800,
+                      color: isCancelled ? '#991B1B' : '#14532D'
+                    }}>
+                      {statusLabel}
+                    </div>
+
+                    {trackNotes && (
+                      <div style={{
+                        padding: '10px 12px',
+                        borderRadius: '12px',
+                        background: '#FFFBEB',
+                        border: '1px solid #FDE68A',
+                        fontSize: '0.78rem',
+                        color: '#92400E',
+                        fontWeight: 700
+                      }}>
+                        📝 {lang === 'hi' ? 'किचन नोट:' : 'Kitchen Note:'} {trackNotes}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {trackRounds.length > 1 ? (
+                        trackRounds.map((rnd, rIdx) => {
+                          const rItems = Array.isArray(rnd.items) ? rnd.items : [];
+                          return (
+                            <div key={rnd.id || rIdx} style={{
+                              background: '#F8FAFC',
+                              border: '1px solid #E2E8F0',
+                              borderRadius: '12px',
+                              padding: '10px 12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', fontWeight: 900, color: '#1D4ED8' }}>
+                                <span>{lang === 'hi' ? `राउंड ${rnd.round_number || (rIdx + 1)}` : `Round ${rnd.round_number || (rIdx + 1)}`}</span>
+                                <span style={{ color: '#475569', fontWeight: 700 }}>{trackCurrency}{Math.round(Number(rnd.grand_total_amount || 0)).toLocaleString('en-IN')}</span>
+                              </div>
+                              {rnd.notes && String(rnd.notes).trim() && (
+                                <div style={{ fontSize: '0.72rem', color: '#92400E', fontWeight: 700 }}>
+                                  📝 {String(rnd.notes).trim()}
+                                </div>
+                              )}
+                              {rItems.map((it, idx) => renderTrackItemRow(it, idx, idx > 0, true))}
+                            </div>
+                          );
+                        })
+                      ) : trackParsedItems.map((it, idx) => renderTrackItemRow(it, idx, idx < trackParsedItems.length - 1, false))}
+                    </div>
+
+                    <div style={{
+                      background: '#F8FAFC',
+                      borderRadius: '14px',
+                      border: '1px solid #E2E8F0',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '5px'
+                    }}>
+                      {trackTax > 0 && trackSubtotal > 0 && (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>
+                            <span>{lang === 'hi' ? 'सबटोटल' : 'Subtotal'}</span>
+                            <span>{trackCurrency}{trackSubtotal.toFixed(2)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>
+                            <span>{lang === 'hi' ? 'टैक्स / GST' : 'Taxes & GST'}</span>
+                            <span>{trackCurrency}{trackTax.toFixed(2)}</span>
+                          </div>
+                        </>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.96rem', fontWeight: 900, color: '#0F172A', paddingTop: trackTax > 0 ? '4px' : 0 }}>
+                        <span>{lang === 'hi' ? 'कुल राशि' : 'Running Total'}</span>
+                        <span>{trackCurrency}{Math.round(trackGrandTotal).toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '14px 18px', borderTop: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="tq-tap"
+                      onClick={() => setShowRunningOrderModal(false)}
+                      style={{
+                        width: '100%',
+                        padding: '11px',
+                        borderRadius: 'var(--radius-pill)',
+                        border: 'none',
+                        background: '#0F172A',
+                        color: '#FFFFFF',
+                        fontSize: '0.88rem',
+                        fontWeight: 900,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {lang === 'hi' ? 'ठीक है' : 'Done'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleEndTrackingSession}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        borderRadius: 'var(--radius-pill)',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#DC2626',
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {isActiveCooking
+                        ? (lang === 'hi' ? 'लाइव ट्रैकिंग सेशन बंद करें' : 'End Live Tracking Session')
+                        : (lang === 'hi' ? 'ट्रैकिंग हटाएं' : 'Dismiss Order Tracker')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+          )}
+          </>
         );
       })()}
 
@@ -3502,15 +3804,15 @@ export default function App() {
           }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🍽️</div>
             <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark)', margin: '0 0 6px 0' }}>
-              {(searchQuery || activeQuickFilter) 
-                ? (lang === 'hi' ? 'कोई व्यंजन नहीं मिला' : 'No dishes found') 
+              {(searchQuery || activeQuickFilter)
+                ? (lang === 'hi' ? 'कोई व्यंजन नहीं मिला' : 'No dishes found')
                 : selectedCategory !== 'all'
                   ? (lang === 'hi' ? 'इस श्रेणी में अभी कोई व्यंजन नहीं है' : 'No items in this category yet')
                   : (lang === 'hi' ? '✨ मेनू जल्द ही आ रहा है' : '✨ Digital Menu Coming Soon')}
             </p>
             <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: '0 0 16px 0', lineHeight: 1.5 }}>
-              {(searchQuery || activeQuickFilter) 
-                ? (lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें या फ़िल्टर हटाएं' : 'Try searching for something else or clear filters') 
+              {(searchQuery || activeQuickFilter)
+                ? (lang === 'hi' ? 'कृपया अपनी खोज शब्द बदलें या फ़िल्टर हटाएं' : 'Try searching for something else or clear filters')
                 : selectedCategory !== 'all'
                   ? (lang === 'hi' ? 'अन्य श्रेणियां या सभी व्यंजन देखने के लिए नीचे क्लिक करें।' : 'Check out our other delicious categories or all items.')
                   : (lang === 'hi' ? 'आउटलेट अपने मेनू आइटम्स जोड़ रहा है।' : 'The outlet is preparing exciting items for you!')}
@@ -3540,139 +3842,139 @@ export default function App() {
           </div>
         ) : (
           <>
-          {/* 🔥 SPECIAL OFFERS BANNER */}
-          {!searchQuery && !activeQuickFilter && selectedCategory === 'all' && (() => {
-            const offerDishes = dishes.filter(d => {
-              if (!isFlagEnabled(d.available, true)) return false;
-              const basePrice = Number(d.regular_price ?? d.price ?? d.portion_full_price ?? 0);
-              return d.offer_price !== undefined && d.offer_price !== null && d.offer_price !== '' && Number(d.offer_price) < basePrice;
-            });
-            const offerCombos = (combos || []).filter(c => {
-              if (!isFlagEnabled(c.available, true)) return false;
-              const basePrice = Number(c.regular_price ?? c.price ?? 0);
-              return c.offer_price !== undefined && c.offer_price !== null && c.offer_price !== '' && Number(c.offer_price) < basePrice;
-            });
-            const allOfferItems = [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
-            if (allOfferItems.length === 0) return null;
-            const sym = getCurrencySymbol(info?.currency_symbol);
-            return (
-              <section style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '1rem' }}>🔥</span>
-                      <h2 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-                        {lang === 'hi' ? 'स्पेशल ऑफर्स' : 'Special Offers'}
-                      </h2>
-                      <span style={{
-                        background: '#FEF3C7', color: '#92400E', fontSize: '0.65rem', fontWeight: 700,
-                        padding: '1.5px 7px', borderRadius: '20px'
-                      }}>
-                        {allOfferItems.length} {lang === 'hi' ? 'ऑफर' : allOfferItems.length === 1 ? 'deal' : 'deals'}
+            {/* 🔥 SPECIAL OFFERS BANNER */}
+            {!searchQuery && !activeQuickFilter && selectedCategory === 'all' && (() => {
+              const offerDishes = dishes.filter(d => {
+                if (!isFlagEnabled(d.available, true)) return false;
+                const basePrice = Number(d.regular_price ?? d.price ?? d.portion_full_price ?? 0);
+                return d.offer_price !== undefined && d.offer_price !== null && d.offer_price !== '' && Number(d.offer_price) < basePrice;
+              });
+              const offerCombos = (combos || []).filter(c => {
+                if (!isFlagEnabled(c.available, true)) return false;
+                const basePrice = Number(c.regular_price ?? c.price ?? 0);
+                return c.offer_price !== undefined && c.offer_price !== null && c.offer_price !== '' && Number(c.offer_price) < basePrice;
+              });
+              const allOfferItems = [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
+              if (allOfferItems.length === 0) return null;
+              const sym = getCurrencySymbol(info?.currency_symbol);
+              return (
+                <section style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '1rem' }}>🔥</span>
+                        <h2 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                          {lang === 'hi' ? 'स्पेशल ऑफर्स' : 'Special Offers'}
+                        </h2>
+                        <span style={{
+                          background: '#FEF3C7', color: '#92400E', fontSize: '0.65rem', fontWeight: 700,
+                          padding: '1.5px 7px', borderRadius: '20px'
+                        }}>
+                          {allOfferItems.length} {lang === 'hi' ? 'ऑफर' : allOfferItems.length === 1 ? 'deal' : 'deals'}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748B', marginLeft: '22px' }}>
+                        {lang === 'hi' ? 'चयनित व्यंजनों पर विशेष छूट' : 'Save on selected dishes & combos'}
                       </span>
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: '#64748B', marginLeft: '22px' }}>
-                      {lang === 'hi' ? 'चयनित व्यंजनों पर विशेष छूट' : 'Save on selected dishes & combos'}
-                    </span>
                   </div>
-                </div>
-                <div style={{
-                  display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px',
-                  WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none'
-                }}>
-                  {allOfferItems.slice(0, 10).map((item, idx) => {
-                    const regularPrice = item._type === 'combo' ? (item.regular_price || item.price) : (item.regular_price || item.price || item.portion_full_price);
-                    const offerPrice = item.offer_price;
-                    return (
-                      <div
-                        key={`offer-${item._type}-${item.id}-${idx}`}
-                        onClick={() => {
-                          if (item._type === 'dish') {
-                            openDishCustomizationModal(item);
-                          } else {
-                            setSelectedComboModal(item);
-                          }
-                        }}
-                        style={{
-                          minWidth: '148px', maxWidth: '170px', flex: '0 0 auto', overflow: 'hidden',
-                          background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', borderRadius: '12px',
-                          border: '1.5px solid var(--theme-card-border, var(--border-light))', padding: '10px',
-                          cursor: 'pointer', position: 'relative',
-                          boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
-                          display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
-                        }}
-                      >
-                        <div>
-                          {item.offer_badge && (
-                            <span style={{
-                              position: 'absolute', top: '6px', right: '6px',
-                              background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-                              color: '#FFFFFF', fontSize: '0.58rem', fontWeight: 800,
-                              padding: '2px 6px', borderRadius: '6px', letterSpacing: '0.02em',
-                              maxWidth: 'calc(100% - 12px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                              zIndex: 2
-                            }}>
-                              {item.offer_badge}
-                            </span>
-                          )}
-                          {item.image ? (
-                            <img
-                              src={item._type === 'combo' ? getComboImageUrl(item.image) : getDishImageUrl(item.image)}
-                              alt={item.name}
-                              style={{
-                                width: '100%', height: '74px', objectFit: 'cover',
-                                borderRadius: '8px', marginBottom: '6px'
-                              }}
-                            />
-                          ) : (
-                            <div style={{
-                              width: '100%', height: '74px', borderRadius: '8px',
-                              marginBottom: '6px', background: 'var(--bg-secondary)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: '1.5rem'
-                            }}>
-                              {item._type === 'combo' ? '🍱' : '🍽️'}
-                            </div>
-                          )}
-                          <p style={{
-                            margin: '0 0 4px 0', fontSize: '0.74rem', fontWeight: 700,
-                            color: 'var(--text-dark)', lineHeight: 1.2,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-                          }}>
-                            {item.name}
-                          </p>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginTop: '6px', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
-                            <span style={{
-                              fontSize: '0.92rem',
-                              fontWeight: 900,
-                              color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
-                              whiteSpace: 'nowrap',
-                              lineHeight: 1.15
-                            }}>
-                              {sym}{formatPriceNumber(offerPrice)}
-                            </span>
-                            {Number(regularPrice) > Number(offerPrice) && (
+                  <div style={{
+                    display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px',
+                    WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none'
+                  }}>
+                    {allOfferItems.slice(0, 10).map((item, idx) => {
+                      const regularPrice = item._type === 'combo' ? (item.regular_price || item.price) : (item.regular_price || item.price || item.portion_full_price);
+                      const offerPrice = item.offer_price;
+                      return (
+                        <div
+                          key={`offer-${item._type}-${item.id}-${idx}`}
+                          onClick={() => {
+                            if (item._type === 'dish') {
+                              openDishCustomizationModal(item);
+                            } else {
+                              setSelectedComboModal(item);
+                            }
+                          }}
+                          style={{
+                            minWidth: '148px', maxWidth: '170px', flex: '0 0 auto', overflow: 'hidden',
+                            background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))', borderRadius: '12px',
+                            border: '1.5px solid var(--theme-card-border, var(--border-light))', padding: '10px',
+                            cursor: 'pointer', position: 'relative',
+                            boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
+                            display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+                          }}
+                        >
+                          <div>
+                            {item.offer_badge && (
                               <span style={{
-                                fontSize: '0.70rem',
-                                color: '#94A3B8',
-                                textDecoration: 'line-through',
-                                fontWeight: 600,
-                                lineHeight: 1
+                                position: 'absolute', top: '6px', right: '6px',
+                                background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                                color: '#FFFFFF', fontSize: '0.58rem', fontWeight: 800,
+                                padding: '2px 6px', borderRadius: '6px', letterSpacing: '0.02em',
+                                maxWidth: 'calc(100% - 12px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                zIndex: 2
                               }}>
-                                {sym}{formatPriceNumber(regularPrice)}
+                                {item.offer_badge}
                               </span>
                             )}
+                            {item.image ? (
+                              <img
+                                src={item._type === 'combo' ? getComboImageUrl(item.image) : getDishImageUrl(item.image)}
+                                alt={item.name}
+                                style={{
+                                  width: '100%', height: '74px', objectFit: 'cover',
+                                  borderRadius: '8px', marginBottom: '6px'
+                                }}
+                              />
+                            ) : (
+                              <div style={{
+                                width: '100%', height: '74px', borderRadius: '8px',
+                                marginBottom: '6px', background: 'var(--bg-secondary)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '1.5rem'
+                              }}>
+                                {item._type === 'combo' ? '🍱' : '🍽️'}
+                              </div>
+                            )}
+                            <p style={{
+                              margin: '0 0 4px 0', fontSize: '0.74rem', fontWeight: 700,
+                              color: 'var(--text-dark)', lineHeight: 1.2,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                            }}>
+                              {item.name}
+                            </p>
                           </div>
 
-                          {isDirectOrderingActive && (() => {
-                            if (item._type === 'combo') {
-                              const inCartCombo = cartItems.find(i => (i.key || i.dish?.id) === `combo_${item.id}`);
-                              const comboQty = inCartCombo ? inCartCombo.quantity : 0;
-                              if (comboQty > 0) {
-                                return (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginTop: '6px', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+                              <span style={{
+                                fontSize: '0.92rem',
+                                fontWeight: 900,
+                                color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
+                                whiteSpace: 'nowrap',
+                                lineHeight: 1.15
+                              }}>
+                                {sym}{formatPriceNumber(offerPrice)}
+                              </span>
+                              {Number(regularPrice) > Number(offerPrice) && (
+                                <span style={{
+                                  fontSize: '0.70rem',
+                                  color: '#94A3B8',
+                                  textDecoration: 'line-through',
+                                  fontWeight: 600,
+                                  lineHeight: 1
+                                }}>
+                                  {sym}{formatPriceNumber(regularPrice)}
+                                </span>
+                              )}
+                            </div>
+
+                            {isDirectOrderingActive && (() => {
+                              if (item._type === 'combo') {
+                                const inCartCombo = cartItems.find(i => (i.key || i.dish?.id) === `combo_${item.id}`);
+                                const comboQty = inCartCombo ? inCartCombo.quantity : 0;
+                                if (comboQty > 0) {
+                                  return (
                                     <div
                                       onClick={(e) => e.stopPropagation()}
                                       style={{
@@ -3744,509 +4046,509 @@ export default function App() {
                                         +
                                       </button>
                                     </div>
-                                );
-                              }
-                            } else {
-                              const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
-                              const hasModifiers = isFlagEnabled(info?.modifiers_enabled, true) && getValidDishModifiers(item.modifiers).length > 0;
-                              if (!hasHalf && !hasModifiers) {
-                                const inCartDish = cartItems.find(i => !i.isCombo && String(i.dish?.id) === String(item.id) && (!i.modifiers || i.modifiers.length === 0) && String(i.portion_type || 'full') === 'full');
-                                const dishQty = inCartDish ? inCartDish.quantity : 0;
-                                if (dishQty > 0) {
-                                  return (
-                                    <div
-                                      onClick={(e) => e.stopPropagation()}
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '3px',
-                                        background: 'var(--theme-card-bg, #FFFFFF)',
-                                        border: '1.5px solid var(--primary-emerald, #10B981)',
-                                        borderRadius: 'var(--radius-pill)',
-                                        padding: '2px 4px',
-                                        flexShrink: 0
-                                      }}
-                                    >
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateCartQuantity(inCartDish.key || inCartDish.dish?.id, -1)}
-                                        aria-label="Decrease quantity"
-                                        style={{
-                                          background: 'var(--bg-secondary, #F1F5F9)',
-                                          color: 'var(--text-dark, #0F172A)',
-                                          border: 'none',
-                                          width: '24px',
-                                          height: '24px',
-                                          padding: 0,
-                                          flexShrink: 0,
-                                          borderRadius: '50%',
-                                          fontWeight: 900,
-                                          cursor: 'pointer',
-                                          fontSize: '0.82rem',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          lineHeight: 1
-                                        }}
-                                      >
-                                        −
-                                      </button>
-                                      <span style={{
-                                        minWidth: '16px',
-                                        textAlign: 'center',
-                                        fontSize: '0.72rem',
-                                        fontWeight: 900,
-                                        color: 'var(--theme-price-color, var(--primary-emerald, #10B981))'
-                                      }}>
-                                        {dishQty}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateCartQuantity(inCartDish.key || inCartDish.dish?.id, 1)}
-                                        aria-label="Increase quantity"
-                                        style={{
-                                          background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                                          color: 'var(--theme-btn-text, #FFFFFF)',
-                                          border: 'none',
-                                          width: '24px',
-                                          height: '24px',
-                                          padding: 0,
-                                          flexShrink: 0,
-                                          borderRadius: '50%',
-                                          fontWeight: 900,
-                                          cursor: 'pointer',
-                                          fontSize: '0.82rem',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          lineHeight: 1
-                                        }}
-                                      >
-                                        +
-                                      </button>
-                                    </div>
                                   );
                                 }
-                              }
-                            }
-
-                            return (
-                              <button
-                                type="button"
-                                className="tq-tap"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (item._type === 'combo') {
-                                    handleAddComboToCart(item, e.currentTarget);
-                                  } else {
-                                    const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
-                                    const hasModifiers = isFlagEnabled(info?.modifiers_enabled, true) && getValidDishModifiers(item.modifiers).length > 0;
-                                    if (hasHalf || hasModifiers) {
-                                      openDishCustomizationModal(item, null, 'addon');
-                                    } else {
-                                      handleAddToCart(item, 'full', [], 1, e.currentTarget);
-                                    }
+                              } else {
+                                const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
+                                const hasModifiers = isFlagEnabled(info?.modifiers_enabled, true) && getValidDishModifiers(item.modifiers).length > 0;
+                                if (!hasHalf && !hasModifiers) {
+                                  const inCartDish = cartItems.find(i => !i.isCombo && String(i.dish?.id) === String(item.id) && (!i.modifiers || i.modifiers.length === 0) && String(i.portion_type || 'full') === 'full');
+                                  const dishQty = inCartDish ? inCartDish.quantity : 0;
+                                  if (dishQty > 0) {
+                                    return (
+                                      <div
+                                        onClick={(e) => e.stopPropagation()}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px',
+                                          background: 'var(--theme-card-bg, #FFFFFF)',
+                                          border: '1.5px solid var(--primary-emerald, #10B981)',
+                                          borderRadius: 'var(--radius-pill)',
+                                          padding: '2px 4px',
+                                          flexShrink: 0
+                                        }}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateCartQuantity(inCartDish.key || inCartDish.dish?.id, -1)}
+                                          aria-label="Decrease quantity"
+                                          style={{
+                                            background: 'var(--bg-secondary, #F1F5F9)',
+                                            color: 'var(--text-dark, #0F172A)',
+                                            border: 'none',
+                                            width: '24px',
+                                            height: '24px',
+                                            padding: 0,
+                                            flexShrink: 0,
+                                            borderRadius: '50%',
+                                            fontWeight: 900,
+                                            cursor: 'pointer',
+                                            fontSize: '0.82rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            lineHeight: 1
+                                          }}
+                                        >
+                                          −
+                                        </button>
+                                        <span style={{
+                                          minWidth: '16px',
+                                          textAlign: 'center',
+                                          fontSize: '0.72rem',
+                                          fontWeight: 900,
+                                          color: 'var(--theme-price-color, var(--primary-emerald, #10B981))'
+                                        }}>
+                                          {dishQty}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateCartQuantity(inCartDish.key || inCartDish.dish?.id, 1)}
+                                          aria-label="Increase quantity"
+                                          style={{
+                                            background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                                            color: 'var(--theme-btn-text, #FFFFFF)',
+                                            border: 'none',
+                                            width: '24px',
+                                            height: '24px',
+                                            padding: 0,
+                                            flexShrink: 0,
+                                            borderRadius: '50%',
+                                            fontWeight: 900,
+                                            cursor: 'pointer',
+                                            fontSize: '0.82rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            lineHeight: 1
+                                          }}
+                                        >
+                                          +
+                                        </button>
+                                      </div>
+                                    );
                                   }
-                                }}
+                                }
+                              }
+
+                              return (
+                                <button
+                                  type="button"
+                                  className="tq-tap"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (item._type === 'combo') {
+                                      handleAddComboToCart(item, e.currentTarget);
+                                    } else {
+                                      const hasHalf = item.price_half !== null && item.price_half !== undefined && Number(item.price_half) > 0;
+                                      const hasModifiers = isFlagEnabled(info?.modifiers_enabled, true) && getValidDishModifiers(item.modifiers).length > 0;
+                                      if (hasHalf || hasModifiers) {
+                                        openDishCustomizationModal(item, null, 'addon');
+                                      } else {
+                                        handleAddToCart(item, 'full', [], 1, e.currentTarget);
+                                      }
+                                    }
+                                  }}
+                                  style={{
+                                    background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                                    color: 'var(--theme-btn-text, #FFFFFF)',
+                                    border: 'none',
+                                    padding: '4px 9px',
+                                    borderRadius: 'var(--radius-pill)',
+                                    fontSize: '0.70rem',
+                                    fontWeight: 900,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '2px',
+                                    boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  <span>+</span>
+                                  <span>{lang === 'hi' ? 'जोड़ें' : 'ADD'}</span>
+                                </button>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })()}
+            {/* 🛒 COMBO DEALS SECTION - ULTRA SLIM & MOBILE-NATIVE */}
+            {filteredCombos.length > 0 && info?.filters_visibility?.combo !== false && (selectedCategory === 'all' || selectedCategory === 'combos-section' || searchQuery || activeQuickFilter === 'combo') && (
+              <section id="combos-section" style={{ marginBottom: '12px', scrollMarginTop: '110px' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  marginBottom: '6px', paddingBottom: '2px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '1rem' }}>🍱</span>
+                    <h2 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-dark)' }}>
+                      {lang === 'hi' ? 'कॉम्बो डील्स & थाली' : 'Combo Deals & Thalis'}
+                    </h2>
+                    <span style={{
+                      fontSize: '0.62rem', fontWeight: 800, color: '#B45309',
+                      background: '#FEF3C7', padding: '1px 6px', borderRadius: '10px',
+                      border: '1px solid #FCD34D'
+                    }}>{filteredCombos.length}</span>
+                  </div>
+                  {selectedCategory !== 'combos-section' && (
+                    <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#059669' }}>
+                      Swipe 👉
+                    </span>
+                  )}
+                </div>
+
+                {/* Slim Horizontal Scroll List (or Multi-column Wrap when dedicated combos view) */}
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  overflowX: selectedCategory === 'combos-section' ? 'visible' : 'auto',
+                  flexWrap: selectedCategory === 'combos-section' ? 'wrap' : 'nowrap',
+                  paddingBottom: '4px',
+                  scrollSnapType: selectedCategory === 'combos-section' ? 'none' : 'x mandatory',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none'
+                }}>
+                  {filteredCombos.map(combo => {
+                    let comboItems = [];
+                    try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
+                    const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
+                    const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
+
+                    const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null && combo.regular_price !== '') ? Number(combo.regular_price) : Number(combo.price || 0);
+                    const hasValidOffer = combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) < regularPrice;
+                    const effectivePrice = hasValidOffer ? Number(combo.offer_price) : regularPrice;
+                    const hasDiscount = (originalTotal > effectivePrice) || (regularPrice > effectivePrice);
+                    const comparePrice = originalTotal > effectivePrice ? originalTotal : regularPrice;
+
+                    const comboText = `${combo.name || ''} ${combo.description || ''} ${itemsSummaryText}`.toLowerCase();
+                    const isNonVeg = comboText.includes('chicken') || comboText.includes('mutton') || comboText.includes('fish') || comboText.includes('egg');
+                    const isVeg = isPureVegResto || !isNonVeg;
+
+                    {/* Combo Card Container */ }
+                    return (
+                      <div
+                        key={combo.id}
+                        onClick={() => setSelectedComboModal(combo)}
+                        style={{
+                          minWidth: selectedCategory === 'combos-section' ? 'min(280px, 100%)' : 'min(230px, 76vw)',
+                          maxWidth: selectedCategory === 'combos-section' ? '100%' : '250px',
+                          flex: selectedCategory === 'combos-section' ? '1 1 260px' : '0 0 auto',
+                          scrollSnapAlign: 'start',
+                          background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
+                          borderRadius: '12px',
+                          padding: '8px 10px',
+                          border: '1.5px solid var(--theme-card-border, var(--border-light))',
+                          boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          justifyContent: 'space-between'
+                        }}
+                      >
+                        {/* Left: Compact Image + Info */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                          <div style={{
+                            width: '50px', height: '50px', borderRadius: '8px', overflow: 'hidden',
+                            background: 'var(--bg-secondary)', border: '1px solid var(--theme-card-border, var(--border-light))', flexShrink: 0,
+                            position: 'relative'
+                          }}>
+                            <img
+                              src={getComboImageUrl(combo.image)}
+                              alt={combo.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '/images/default-combo.webp?v=3';
+                              }}
+                            />
+                          </div>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span
+                                title={isVeg ? 'Veg' : 'Non-Veg'}
                                 style={{
-                                  background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                                  color: 'var(--theme-btn-text, #FFFFFF)',
-                                  border: 'none',
-                                  padding: '4px 9px',
-                                  borderRadius: 'var(--radius-pill)',
-                                  fontSize: '0.70rem',
-                                  fontWeight: 900,
-                                  cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '2px',
-                                  boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
+                                  justifyContent: 'center',
+                                  width: '11px',
+                                  height: '11px',
+                                  border: isVeg ? '1.5px solid #16A34A' : '1.5px solid #DC2626',
+                                  borderRadius: '2.5px',
+                                  padding: '1px',
                                   flexShrink: 0
                                 }}
                               >
-                                <span>+</span>
-                                <span>{lang === 'hi' ? 'जोड़ें' : 'ADD'}</span>
-                              </button>
-                            );
-                          })()}
+                                <span style={{
+                                  width: '4px',
+                                  height: '4px',
+                                  borderRadius: '50%',
+                                  background: isVeg ? '#16A34A' : '#DC2626'
+                                }} />
+                              </span>
+                              <h4 style={{
+                                margin: 0, fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dark)',
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                              }}>
+                                {combo.name}
+                              </h4>
+                            </div>
+
+                            <p style={{
+                              margin: '2px 0 4px', fontSize: '0.66rem', color: 'var(--text-muted)',
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                            }}>
+                              {itemsSummaryText || combo.description || (lang === 'hi' ? 'विशेष कॉम्बो थाली' : 'Special combo deal')}
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginTop: '3px' }}>
+                              <span style={{
+                                fontSize: '0.92rem',
+                                fontWeight: 900,
+                                color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
+                                whiteSpace: 'nowrap',
+                                lineHeight: 1.15
+                              }}>
+                                {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(effectivePrice)}
+                              </span>
+                              {hasDiscount && (
+                                <span style={{
+                                  fontSize: '0.70rem',
+                                  color: '#94A3B8',
+                                  textDecoration: 'line-through',
+                                  fontWeight: 600,
+                                  lineHeight: 1
+                                }}>
+                                  {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(comparePrice)}
+                                </span>
+                              )}
+                              {hasDiscount && comparePrice > effectivePrice && (
+                                <span style={{
+                                  fontSize: '0.62rem',
+                                  fontWeight: 800,
+                                  color: '#15803D',
+                                  background: '#DCFCE7',
+                                  border: '1px solid #BBF7D0',
+                                  padding: '1px 5px',
+                                  borderRadius: '4px',
+                                  lineHeight: 1.1,
+                                  letterSpacing: '0.02em'
+                                }}>
+                                  {Math.round(((comparePrice - effectivePrice) / comparePrice) * 100)}% OFF
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
+
+                        {/* Right: + ADD button or Stepper when ordering active */}
+                        {isDirectOrderingActive && (() => {
+                          const inCartItem = cartItems.find(i => (i.key || i.dish?.id) === `combo_${combo.id}`);
+                          const inCartQty = inCartItem ? inCartItem.quantity : 0;
+
+                          if (inCartQty > 0) {
+                            return (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: 'var(--theme-card-bg, #FFFFFF)',
+                                  border: '1.5px solid var(--primary-emerald, #10B981)',
+                                  borderRadius: 'var(--radius-pill)',
+                                  padding: '2px 4px',
+                                  flexShrink: 0,
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateCartQuantity(inCartItem.key || inCartItem.dish?.id, -1)}
+                                  aria-label="Decrease combo quantity"
+                                  style={{
+                                    background: 'var(--bg-secondary, #F1F5F9)',
+                                    color: 'var(--text-dark, #0F172A)',
+                                    border: 'none',
+                                    width: '24px',
+                                    height: '24px',
+                                    padding: 0,
+                                    flexShrink: 0,
+                                    borderRadius: '50%',
+                                    fontWeight: 900,
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    lineHeight: 1
+                                  }}
+                                >
+                                  −
+                                </button>
+                                <span style={{
+                                  minWidth: '16px',
+                                  textAlign: 'center',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 900,
+                                  color: 'var(--theme-price-color, var(--primary-emerald, #10B981))'
+                                }}>
+                                  {inCartQty}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateCartQuantity(inCartItem.key || inCartItem.dish?.id, 1)}
+                                  aria-label="Increase combo quantity"
+                                  style={{
+                                    background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                                    color: 'var(--theme-btn-text, #FFFFFF)',
+                                    border: 'none',
+                                    width: '24px',
+                                    height: '24px',
+                                    padding: 0,
+                                    flexShrink: 0,
+                                    borderRadius: '50%',
+                                    fontWeight: 900,
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    lineHeight: 1
+                                  }}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <button
+                              type="button"
+                              className="tq-tap"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddComboToCart(combo, e.currentTarget);
+                              }}
+                              style={{
+                                background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
+                                color: 'var(--theme-btn-text, #FFFFFF)',
+                                border: 'none',
+                                padding: '5px 9px',
+                                borderRadius: 'var(--radius-pill)',
+                                fontSize: '0.68rem',
+                                fontWeight: 900,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
+                                flexShrink: 0
+                              }}
+                            >
+                              <span>+</span>
+                              <span>{lang === 'hi' ? 'जोड़ें' : 'ADD'}</span>
+                            </button>
+                          );
+                        })()}
                       </div>
                     );
                   })}
                 </div>
               </section>
-            );
-          })()}
-          {/* 🛒 COMBO DEALS SECTION - ULTRA SLIM & MOBILE-NATIVE */}
-          {filteredCombos.length > 0 && info?.filters_visibility?.combo !== false && (selectedCategory === 'all' || selectedCategory === 'combos-section' || searchQuery || activeQuickFilter === 'combo') && (
-            <section id="combos-section" style={{ marginBottom: '12px', scrollMarginTop: '110px' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginBottom: '6px', paddingBottom: '2px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '1rem' }}>🍱</span>
-                  <h2 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-                    {lang === 'hi' ? 'कॉम्बो डील्स & थाली' : 'Combo Deals & Thalis'}
-                  </h2>
-                  <span style={{
-                    fontSize: '0.62rem', fontWeight: 800, color: '#B45309',
-                    background: '#FEF3C7', padding: '1px 6px', borderRadius: '10px',
-                    border: '1px solid #FCD34D'
-                  }}>{filteredCombos.length}</span>
-                </div>
-                {selectedCategory !== 'combos-section' && (
-                  <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#059669' }}>
-                    Swipe 👉
-                  </span>
-                )}
-              </div>
+            )}
 
-              {/* Slim Horizontal Scroll List (or Multi-column Wrap when dedicated combos view) */}
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                overflowX: selectedCategory === 'combos-section' ? 'visible' : 'auto',
-                flexWrap: selectedCategory === 'combos-section' ? 'wrap' : 'nowrap',
-                paddingBottom: '4px',
-                scrollSnapType: selectedCategory === 'combos-section' ? 'none' : 'x mandatory',
-                WebkitOverflowScrolling: 'touch',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
-              }}>
-                {filteredCombos.map(combo => {
-                  let comboItems = [];
-                  try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
-                  const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
-                  const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
-
-                  const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null && combo.regular_price !== '') ? Number(combo.regular_price) : Number(combo.price || 0);
-                  const hasValidOffer = combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) < regularPrice;
-                  const effectivePrice = hasValidOffer ? Number(combo.offer_price) : regularPrice;
-                  const hasDiscount = (originalTotal > effectivePrice) || (regularPrice > effectivePrice);
-                  const comparePrice = originalTotal > effectivePrice ? originalTotal : regularPrice;
-
-                  const comboText = `${combo.name || ''} ${combo.description || ''} ${itemsSummaryText}`.toLowerCase();
-                  const isNonVeg = comboText.includes('chicken') || comboText.includes('mutton') || comboText.includes('fish') || comboText.includes('egg');
-                  const isVeg = isPureVegResto || !isNonVeg;
-
-                  {/* Combo Card Container */}
-                  return (
-                    <div 
-                      key={combo.id}
-                      onClick={() => setSelectedComboModal(combo)}
-                      style={{
-                        minWidth: selectedCategory === 'combos-section' ? 'min(280px, 100%)' : 'min(230px, 76vw)',
-                        maxWidth: selectedCategory === 'combos-section' ? '100%' : '250px',
-                        flex: selectedCategory === 'combos-section' ? '1 1 260px' : '0 0 auto',
-                        scrollSnapAlign: 'start',
-                        background: 'var(--theme-card-bg, var(--bg-card, #FFFFFF))',
-                        borderRadius: '12px',
-                        padding: '8px 10px',
-                        border: '1.5px solid var(--theme-card-border, var(--border-light))',
-                        boxShadow: 'var(--theme-shadow, var(--shadow-sm))',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer',
-                        justifyContent: 'space-between'
-                      }}
-                    >
-                      {/* Left: Compact Image + Info */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-                        <div style={{
-                          width: '50px', height: '50px', borderRadius: '8px', overflow: 'hidden',
-                          background: 'var(--bg-secondary)', border: '1px solid var(--theme-card-border, var(--border-light))', flexShrink: 0,
-                          position: 'relative'
-                        }}>
-                          <img 
-                            src={getComboImageUrl(combo.image)} 
-                            alt={combo.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => {
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.src = '/images/default-combo.webp?v=3';
-                            }}
-                          />
-                        </div>
-
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span 
-                              title={isVeg ? 'Veg' : 'Non-Veg'}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: '11px',
-                                height: '11px',
-                                border: isVeg ? '1.5px solid #16A34A' : '1.5px solid #DC2626',
-                                borderRadius: '2.5px',
-                                padding: '1px',
-                                flexShrink: 0
-                              }}
-                            >
-                              <span style={{
-                                width: '4px',
-                                height: '4px',
-                                borderRadius: '50%',
-                                background: isVeg ? '#16A34A' : '#DC2626'
-                              }} />
-                            </span>
-                            <h4 style={{ 
-                              margin: 0, fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dark)',
-                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' 
-                            }}>
-                              {combo.name}
-                            </h4>
-                          </div>
-
-                          <p style={{
-                            margin: '2px 0 4px', fontSize: '0.66rem', color: 'var(--text-muted)',
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                          }}>
-                            {itemsSummaryText || combo.description || (lang === 'hi' ? 'विशेष कॉम्बो थाली' : 'Special combo deal')}
-                          </p>
-                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginTop: '3px' }}>
-                            <span style={{
-                              fontSize: '0.92rem',
-                              fontWeight: 900,
-                              color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
-                              whiteSpace: 'nowrap',
-                              lineHeight: 1.15
-                            }}>
-                              {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(effectivePrice)}
-                            </span>
-                            {hasDiscount && (
-                              <span style={{
-                                fontSize: '0.70rem',
-                                color: '#94A3B8',
-                                textDecoration: 'line-through',
-                                fontWeight: 600,
-                                lineHeight: 1
-                              }}>
-                                {getCurrencySymbol(info?.currency_symbol)}{formatPriceNumber(comparePrice)}
-                              </span>
-                            )}
-                            {hasDiscount && comparePrice > effectivePrice && (
-                              <span style={{
-                                fontSize: '0.62rem',
-                                fontWeight: 800,
-                                color: '#15803D',
-                                background: '#DCFCE7',
-                                border: '1px solid #BBF7D0',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                lineHeight: 1.1,
-                                letterSpacing: '0.02em'
-                              }}>
-                                {Math.round(((comparePrice - effectivePrice) / comparePrice) * 100)}% OFF
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right: + ADD button or Stepper when ordering active */}
-                      {isDirectOrderingActive && (() => {
-                        const inCartItem = cartItems.find(i => (i.key || i.dish?.id) === `combo_${combo.id}`);
-                        const inCartQty = inCartItem ? inCartItem.quantity : 0;
-
-                        if (inCartQty > 0) {
-                          return (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                background: 'var(--theme-card-bg, #FFFFFF)',
-                                border: '1.5px solid var(--primary-emerald, #10B981)',
-                                borderRadius: 'var(--radius-pill)',
-                                padding: '2px 4px',
-                                flexShrink: 0,
-                                boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
-                              }}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateCartQuantity(inCartItem.key || inCartItem.dish?.id, -1)}
-                                aria-label="Decrease combo quantity"
-                                style={{
-                                  background: 'var(--bg-secondary, #F1F5F9)',
-                                  color: 'var(--text-dark, #0F172A)',
-                                  border: 'none',
-                                  width: '24px',
-                                  height: '24px',
-                                  padding: 0,
-                                  flexShrink: 0,
-                                  borderRadius: '50%',
-                                  fontWeight: 900,
-                                  cursor: 'pointer',
-                                  fontSize: '0.85rem',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  lineHeight: 1
-                                }}
-                              >
-                                −
-                              </button>
-                              <span style={{
-                                minWidth: '16px',
-                                textAlign: 'center',
-                                fontSize: '0.74rem',
-                                fontWeight: 900,
-                                color: 'var(--theme-price-color, var(--primary-emerald, #10B981))'
-                              }}>
-                                {inCartQty}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateCartQuantity(inCartItem.key || inCartItem.dish?.id, 1)}
-                                aria-label="Increase combo quantity"
-                                style={{
-                                  background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                                  color: 'var(--theme-btn-text, #FFFFFF)',
-                                  border: 'none',
-                                  width: '24px',
-                                  height: '24px',
-                                  padding: 0,
-                                  flexShrink: 0,
-                                  borderRadius: '50%',
-                                  fontWeight: 900,
-                                  cursor: 'pointer',
-                                  fontSize: '0.85rem',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  lineHeight: 1
-                                }}
-                              >
-                                +
-                              </button>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <button
-                            type="button"
-                            className="tq-tap"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddComboToCart(combo, e.currentTarget);
-                            }}
-                            style={{
-                              background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
-                              color: 'var(--theme-btn-text, #FFFFFF)',
-                              border: 'none',
-                              padding: '5px 9px',
-                              borderRadius: 'var(--radius-pill)',
-                              fontSize: '0.68rem',
-                              fontWeight: 900,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '2px',
-                              boxShadow: 'var(--theme-shadow, 0 2px 6px rgba(0, 0, 0, 0.2))',
-                              flexShrink: 0
-                            }}
-                          >
-                            <span>+</span>
-                            <span>{lang === 'hi' ? 'जोड़ें' : 'ADD'}</span>
-                          </button>
-                        );
-                      })()}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {groupedDishes.map((group) => (
-            <section
-              key={group.category.id}
-              id={`cat-sec-${group.category.id}`}
-              style={{
-                marginBottom: '28px',
-                scrollMarginTop: '110px'
-              }}
-            >
-              {/* Category Header */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '12px',
-                borderBottom: '2px solid var(--border-light)',
-                paddingBottom: '6px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <h3 style={{
-                    fontSize: '1.1rem',
-                    fontWeight: 800,
-                    color: 'var(--primary-emerald)',
-                    margin: 0
-                  }}>
-                    {(lang === 'hi' && group.category.name_hi) ? group.category.name_hi : group.category.name}
-                  </h3>
-                  <span style={{
-                    fontSize: '0.72rem',
-                    background: 'var(--bg-secondary)',
-                    color: 'var(--text-muted)',
-                    padding: '2px 8px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontWeight: 700
-                  }}>
-                    {group.items.length}
-                  </span>
-                </div>
-              </div>
-
-              {/* Dishes Grid/List based on layout switcher */}
-              {layoutMode === 'list' ? (
-                <div className="dish-list-grid">
-                  {group.items.map((dish) => (
-                    <MenuCardItem
-                      key={dish.id}
-                      dish={dish}
-                      lang={lang}
-                      currencySymbol={getCurrencySymbol(info?.currency_symbol)}
-                      filtersVisibility={info?.filters_visibility}
-                      modifiersEnabled={isFlagEnabled(info?.modifiers_enabled, true)}
-                      onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
-                      onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
-                      onUpdateCartQuantity={isDirectOrderingActive ? handleUpdateCartQuantity : undefined}
-                      cartItems={cartItems}
-                    />
-                  ))}
-                </div>
-              ) : (
+            {groupedDishes.map((group) => (
+              <section
+                key={group.category.id}
+                id={`cat-sec-${group.category.id}`}
+                style={{
+                  marginBottom: '28px',
+                  scrollMarginTop: '110px'
+                }}
+              >
+                {/* Category Header */}
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px, 100%), 1fr))',
-                  gap: '12px'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '12px',
+                  borderBottom: '2px solid var(--border-light)',
+                  paddingBottom: '6px'
                 }}>
-                  {group.items.map((dish) => (
-                    <DishCard
-                      key={dish.id}
-                      dish={dish}
-                      lang={lang}
-                      currencySymbol={getCurrencySymbol(info?.currency_symbol)}
-                      filtersVisibility={info?.filters_visibility}
-                      modifiersEnabled={isFlagEnabled(info?.modifiers_enabled, true)}
-                      onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
-                      onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
-                      onUpdateCartQuantity={isDirectOrderingActive ? handleUpdateCartQuantity : undefined}
-                      cartItems={cartItems}
-                    />
-                  ))}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{
+                      fontSize: '1.1rem',
+                      fontWeight: 800,
+                      color: 'var(--primary-emerald)',
+                      margin: 0
+                    }}>
+                      {(lang === 'hi' && group.category.name_hi) ? group.category.name_hi : group.category.name}
+                    </h3>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-muted)',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontWeight: 700
+                    }}>
+                      {group.items.length}
+                    </span>
+                  </div>
                 </div>
-              )}
-            </section>
-          ))}
+
+                {/* Dishes Grid/List based on layout switcher */}
+                {layoutMode === 'list' ? (
+                  <div className="dish-list-grid">
+                    {group.items.map((dish) => (
+                      <MenuCardItem
+                        key={dish.id}
+                        dish={dish}
+                        lang={lang}
+                        currencySymbol={getCurrencySymbol(info?.currency_symbol)}
+                        filtersVisibility={info?.filters_visibility}
+                        modifiersEnabled={isFlagEnabled(info?.modifiers_enabled, true)}
+                        onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
+                        onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
+                        onUpdateCartQuantity={isDirectOrderingActive ? handleUpdateCartQuantity : undefined}
+                        cartItems={cartItems}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px, 100%), 1fr))',
+                    gap: '12px'
+                  }}>
+                    {group.items.map((dish) => (
+                      <DishCard
+                        key={dish.id}
+                        dish={dish}
+                        lang={lang}
+                        currencySymbol={getCurrencySymbol(info?.currency_symbol)}
+                        filtersVisibility={info?.filters_visibility}
+                        modifiersEnabled={isFlagEnabled(info?.modifiers_enabled, true)}
+                        onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
+                        onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
+                        onUpdateCartQuantity={isDirectOrderingActive ? handleUpdateCartQuantity : undefined}
+                        cartItems={cartItems}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            ))}
           </>
         )}
       </main>
@@ -4741,132 +5043,132 @@ export default function App() {
                         {/* 🛎️ Service Mode / Dining Choice (Available in both Initial & Add-on Rounds) */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {isCinemaVenue ? (
-                              <div style={{
-                                background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(14, 165, 233, 0.18) 100%)',
-                                border: '1.5px solid #0284C7',
-                                borderRadius: '12px',
-                                padding: '8px 12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px'
-                              }}>
-                                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🎬</span>
-                                <div style={{ flex: 1 }}>
-                                  <strong style={{ fontSize: '0.82rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>In-Seat Food Delivery</strong>
-                                  <span style={{ fontSize: '0.72rem', color: '#0284C7', fontWeight: 600 }}>Food will be delivered directly to your cinema seat</span>
-                                </div>
+                            <div style={{
+                              background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(14, 165, 233, 0.18) 100%)',
+                              border: '1.5px solid #0284C7',
+                              borderRadius: '12px',
+                              padding: '8px 12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px'
+                            }}>
+                              <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🎬</span>
+                              <div style={{ flex: 1 }}>
+                                <strong style={{ fontSize: '0.82rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>In-Seat Food Delivery</strong>
+                                <span style={{ fontSize: '0.72rem', color: '#0284C7', fontWeight: 600 }}>Food will be delivered directly to your cinema seat</span>
                               </div>
-                            ) : isHotelVenue ? (
-                              <div style={{
-                                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.18) 100%)',
-                                border: '1.5px solid #D97706',
-                                borderRadius: '12px',
-                                padding: '8px 12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px'
-                              }}>
-                                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🏨</span>
-                                <div style={{ flex: 1 }}>
-                                  <strong style={{ fontSize: '0.82rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>In-Room Dining Service</strong>
-                                  <span style={{ fontSize: '0.72rem', color: '#B45309', fontWeight: 600 }}>Food will be delivered directly to your guest room</span>
-                                </div>
+                            </div>
+                          ) : isHotelVenue ? (
+                            <div style={{
+                              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.18) 100%)',
+                              border: '1.5px solid #D97706',
+                              borderRadius: '12px',
+                              padding: '8px 12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px'
+                            }}>
+                              <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🏨</span>
+                              <div style={{ flex: 1 }}>
+                                <strong style={{ fontSize: '0.82rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>In-Room Dining Service</strong>
+                                <span style={{ fontSize: '0.72rem', color: '#B45309', fontWeight: 600 }}>Food will be delivered directly to your guest room</span>
                               </div>
-                            ) : isCounterSpace ? (
-                              <div style={{
-                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.18) 100%)',
-                                border: '1.5px solid #059669',
-                                borderRadius: '12px',
-                                padding: '8px 12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px'
-                              }}>
-                                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>⚡</span>
-                                <div style={{ flex: 1 }}>
-                                  <strong style={{ fontSize: '0.82rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>Takeaway Counter Pickup</strong>
-                                  <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>Food will be packed. A Pickup Token will be assigned.</span>
-                                </div>
+                            </div>
+                          ) : isCounterSpace ? (
+                            <div style={{
+                              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.18) 100%)',
+                              border: '1.5px solid #059669',
+                              borderRadius: '12px',
+                              padding: '8px 12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px'
+                            }}>
+                              <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>⚡</span>
+                              <div style={{ flex: 1 }}>
+                                <strong style={{ fontSize: '0.82rem', color: 'var(--text-dark, #0F172A)', display: 'block' }}>Takeaway Counter Pickup</strong>
+                                <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>Food will be packed. A Pickup Token will be assigned.</span>
                               </div>
-                            ) : (
-                              <>
-                                {/* 🍽️ Dine-In vs 📦 Takeaway Mode Toggle */}
-                                <div style={{
-                                  display: 'flex',
-                                  background: 'var(--bg-secondary, #F1F5F9)',
-                                  padding: '3px',
-                                  borderRadius: '12px',
-                                  marginBottom: '2px',
-                                  gap: '4px'
-                                }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => setOrderTypeChoice('dine_in')}
-                                    style={{
-                                      flex: 1,
-                                      padding: '8px 10px',
-                                      borderRadius: '9px',
-                                      border: 'none',
-                                      fontSize: '0.80rem',
-                                      fontWeight: 800,
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      gap: '6px',
-                                      transition: 'all 0.15s ease',
-                                      background: orderTypeChoice === 'dine_in' ? 'var(--theme-card-bg, #FFFFFF)' : 'transparent',
-                                      color: orderTypeChoice === 'dine_in' ? 'var(--text-dark, #0F172A)' : 'var(--text-muted, #64748B)',
-                                      boxShadow: orderTypeChoice === 'dine_in' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
-                                    }}
-                                  >
-                                    <span>🍽️</span>
-                                    <span>Dine-In</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setOrderTypeChoice('takeaway')}
-                                    style={{
-                                      flex: 1,
-                                      padding: '8px 10px',
-                                      borderRadius: '9px',
-                                      border: 'none',
-                                      fontSize: '0.80rem',
-                                      fontWeight: 800,
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      gap: '6px',
-                                      transition: 'all 0.15s ease',
-                                      background: orderTypeChoice === 'takeaway' ? 'var(--primary-emerald, #10B981)' : 'transparent',
-                                      color: orderTypeChoice === 'takeaway' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted, #64748B)',
-                                      boxShadow: orderTypeChoice === 'takeaway' ? '0 1px 4px rgba(16,185,129,0.3)' : 'none'
-                                    }}
-                                  >
-                                    <span>📦</span>
-                                    <span>Takeaway / Parcel</span>
-                                  </button>
-                                </div>
-
-                                {orderTypeChoice === 'takeaway' && (
-                                  <div style={{
-                                    background: '#FFFBEB',
-                                    border: '1px solid #FDE68A',
-                                    borderRadius: '10px',
-                                    padding: '6px 10px',
-                                    fontSize: '0.74rem',
-                                    color: '#92400E',
+                            </div>
+                          ) : (
+                            <>
+                              {/* 🍽️ Dine-In vs 📦 Takeaway Mode Toggle */}
+                              <div style={{
+                                display: 'flex',
+                                background: 'var(--bg-secondary, #F1F5F9)',
+                                padding: '3px',
+                                borderRadius: '12px',
+                                marginBottom: '2px',
+                                gap: '4px'
+                              }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setOrderTypeChoice('dine_in')}
+                                  style={{
+                                    flex: 1,
+                                    padding: '8px 10px',
+                                    borderRadius: '9px',
+                                    border: 'none',
+                                    fontSize: '0.80rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '6px'
-                                  }}>
-                                    <span>📦</span>
-                                    <span><strong>Takeaway Mode:</strong> Food will be packed. A Pickup Token will be assigned.</span>
-                                  </div>
-                                )}
-                              </>
-                            )}
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.15s ease',
+                                    background: orderTypeChoice === 'dine_in' ? 'var(--theme-card-bg, #FFFFFF)' : 'transparent',
+                                    color: orderTypeChoice === 'dine_in' ? 'var(--text-dark, #0F172A)' : 'var(--text-muted, #64748B)',
+                                    boxShadow: orderTypeChoice === 'dine_in' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
+                                  }}
+                                >
+                                  <span>🍽️</span>
+                                  <span>Dine-In</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setOrderTypeChoice('takeaway')}
+                                  style={{
+                                    flex: 1,
+                                    padding: '8px 10px',
+                                    borderRadius: '9px',
+                                    border: 'none',
+                                    fontSize: '0.80rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.15s ease',
+                                    background: orderTypeChoice === 'takeaway' ? 'var(--primary-emerald, #10B981)' : 'transparent',
+                                    color: orderTypeChoice === 'takeaway' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--text-muted, #64748B)',
+                                    boxShadow: orderTypeChoice === 'takeaway' ? '0 1px 4px rgba(16,185,129,0.3)' : 'none'
+                                  }}
+                                >
+                                  <span>📦</span>
+                                  <span>Takeaway / Parcel</span>
+                                </button>
+                              </div>
+
+                              {orderTypeChoice === 'takeaway' && (
+                                <div style={{
+                                  background: '#FFFBEB',
+                                  border: '1px solid #FDE68A',
+                                  borderRadius: '10px',
+                                  padding: '6px 10px',
+                                  fontSize: '0.74rem',
+                                  color: '#92400E',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}>
+                                  <span>📦</span>
+                                  <span><strong>Takeaway Mode:</strong> Food will be packed. A Pickup Token will be assigned.</span>
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
 
                         {/* Customer Information (Table, Name, Mobile) - Locked for Add-on Rounds */}
@@ -4952,6 +5254,105 @@ export default function App() {
                             </div>
                           </div>
                         )}
+
+                        {/* 📝 Cooking / Kitchen Instructions (Available on all rounds) */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)' }}>
+                              📝 {lang === 'hi' ? 'किचन / पैकिंग निर्देश (वैकल्पिक)' : 'COOKING / KITCHEN NOTES (OPTIONAL)'}
+                            </label>
+                            {orderNotesInput.length > 0 && (
+                              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700 }}>
+                                {orderNotesInput.length}/240
+                              </span>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {(() => {
+                              const biz = String(info?.business_type || info?.resto_type || '').toLowerCase();
+                              const isBakeryOrSweet = ['bakery_confectionery', 'sweet_shop', 'mithai'].includes(biz);
+                              const isBeverageOrCafe = ['cafe_coffee', 'juice_beverage', 'ice_cream', 'tea_stall'].includes(biz);
+                              const presetList = lang === 'hi'
+                                ? (isBakeryOrSweet
+                                  ? ['गिफ्ट पैकिंग', 'कम मीठा', 'नैपकिन/चम्मच दें', 'ताज़ा पैक करें']
+                                  : isBeverageOrCafe
+                                    ? ['कम चीनी', 'कम बर्फ', 'बिना चीनी', 'अलग से पैक करें']
+                                    : ['कम तीखा', 'बिना प्याज-लहसुन', 'अतिरिक्त चटनी', 'चम्मच/कटलरी दें'])
+                                : (isBakeryOrSweet
+                                  ? ['Gift Packing', 'Less Sweet', 'Add Cutlery/Napkins', 'Pack Fresh']
+                                  : isBeverageOrCafe
+                                    ? ['Less Sugar', 'Less Ice', 'No Sugar', 'Pack Separately']
+                                    : ['Less Spicy', 'No Onion/Garlic', 'Extra Chutney', 'Send Cutlery']);
+
+                              return presetList.map((chip) => {
+                                const currentParts = orderNotesInput
+                                  .split(',')
+                                  .map((s) => s.trim())
+                                  .filter(Boolean);
+                                const isSelected = currentParts.some((p) => p.toLowerCase() === chip.toLowerCase());
+                                return (
+                                  <button
+                                    key={chip}
+                                    type="button"
+                                    className="tq-tap"
+                                    onClick={() => {
+                                      triggerHaptic('light');
+                                      if (isSelected) {
+                                        setOrderNotesInput(currentParts.filter((p) => p.toLowerCase() !== chip.toLowerCase()).join(', '));
+                                      } else {
+                                        const next = [...currentParts, chip].join(', ').slice(0, 240);
+                                        setOrderNotesInput(next);
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '4px 9px',
+                                      borderRadius: '9999px',
+                                      border: isSelected
+                                        ? '1.5px solid var(--theme-primary, #10B981)'
+                                        : '1px solid var(--border-light, #CBD5E1)',
+                                      background: isSelected
+                                        ? 'var(--theme-nav-active, #064E3B)'
+                                        : 'var(--bg-secondary, #F8FAFC)',
+                                      color: isSelected
+                                        ? 'var(--theme-nav-active-text, #FFFFFF)'
+                                        : 'var(--text-dark, #334155)',
+                                      fontSize: '0.70rem',
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                      lineHeight: 1.3
+                                    }}
+                                  >
+                                    {isSelected ? '✓ ' : '+ '}{chip}
+                                  </button>
+                                );
+                              });
+                            })()}
+                          </div>
+
+                          <textarea
+                            rows={2}
+                            maxLength={240}
+                            value={orderNotesInput}
+                            onChange={(e) => setOrderNotesInput(e.target.value)}
+                            placeholder={lang === 'hi'
+                              ? 'जैसे: कम नमक/चीनी, बच्चों के लिए हल्का, या पैकिंग निर्देश...'
+                              : 'e.g. Less oil/sugar, mild for kids, or packing request...'}
+                            style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              borderRadius: '10px',
+                              border: '1.5px solid var(--border-light, #CBD5E1)',
+                              fontSize: '1rem',
+                              lineHeight: 1.35,
+                              resize: 'none',
+                              fontFamily: 'inherit',
+                              boxSizing: 'border-box',
+                              background: 'var(--theme-input-bg, #FFFFFF)',
+                              color: 'var(--text-dark, #0F172A)'
+                            }}
+                          />
+                        </div>
 
                         {/* 🏷️ Authoritative Bill & GST Summary */}
                         {isGst && (
@@ -5067,16 +5468,16 @@ export default function App() {
                               ? 'Placing Order...'
                               : isAddon
                                 ? (orderTypeChoice === 'takeaway'
-                                    ? `📦 Place Round ${nextRound} Parcel Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
-                                    : `⚡ Confirm & Place Round ${nextRound} Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`)
+                                  ? `📦 Place Round ${nextRound} Parcel Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
+                                  : `⚡ Confirm & Place Round ${nextRound} Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`)
                                 : (() => {
-                                    const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
-                                    const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
-                                    const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
-                                    if (isCin) return `🍿 Deliver to Seat Now (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
-                                    if (isRoom) return `🛎️ Place In-Room Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
-                                    return `⚡ Confirm & Place Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
-                                  })()}
+                                  const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                                  const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
+                                  const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
+                                  if (isCin) return `🍿 Deliver to Seat Now (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                  if (isRoom) return `🛎️ Place In-Room Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                  return `⚡ Confirm & Place Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                })()}
                           </span>
                         </button>
                       )}
@@ -5130,23 +5531,23 @@ export default function App() {
 
         const destinationMsg = isTakeaway
           ? (lang === 'hi'
-              ? 'आपका टेकअवे ऑर्डर किचन में भेज दिया गया है! पैक होते ही स्टाफ आपका टोकन नंबर पुकारेगा।'
-              : 'Your takeaway order has been sent to the kitchen! Staff will call your token when ready for counter pickup.')
+            ? 'आपका टेकअवे ऑर्डर किचन में भेज दिया गया है! पैक होते ही स्टाफ आपका टोकन नंबर पुकारेगा।'
+            : 'Your takeaway order has been sent to the kitchen! Staff will call your token when ready for counter pickup.')
           : isCin
             ? (lang === 'hi'
-                ? 'आपका ऑर्डर भेज दिया गया है! तैयार होते ही स्टाफ आपकी सीट तक लाएगा।'
-                : 'Your order has been sent! Our staff will prepare and bring it to your seat shortly.')
+              ? 'आपका ऑर्डर भेज दिया गया है! तैयार होते ही स्टाफ आपकी सीट तक लाएगा।'
+              : 'Your order has been sent! Our staff will prepare and bring it to your seat shortly.')
             : isRoom
               ? (lang === 'hi'
-                  ? 'आपका ऑर्डर भेज दिया गया है! तैयार होते ही सीधे आपके रूम में डिलीवर किया जाएगा।'
-                  : 'Your order has been sent! It will be prepared fresh and delivered to your room shortly.')
+                ? 'आपका ऑर्डर भेज दिया गया है! तैयार होते ही सीधे आपके रूम में डिलीवर किया जाएगा।'
+                : 'Your order has been sent! It will be prepared fresh and delivered to your room shortly.')
               : isCabin
                 ? (lang === 'hi'
-                    ? 'आपका ऑर्डर भेज दिया गया है! तैयार होते ही आपके केबिन तक सर्व किया जाएगा।'
-                    : 'Your order has been sent! It will be prepared and delivered to your cabin shortly.')
+                  ? 'आपका ऑर्डर भेज दिया गया है! तैयार होते ही आपके केबिन तक सर्व किया जाएगा।'
+                  : 'Your order has been sent! It will be prepared and delivered to your cabin shortly.')
                 : (lang === 'hi'
-                    ? 'आपका ऑर्डर किचन में भेज दिया गया है! तैयार होते ही आपकी टेबल पर सर्व किया जाएगा।'
-                    : 'Your order has been sent directly to the kitchen! It will be prepared and served to your table shortly.');
+                  ? 'आपका ऑर्डर किचन में भेज दिया गया है! तैयार होते ही आपकी टेबल पर सर्व किया जाएगा।'
+                  : 'Your order has been sent directly to the kitchen! It will be prepared and served to your table shortly.');
 
         return (
           <div
@@ -5259,38 +5660,6 @@ export default function App() {
               <p style={{ fontSize: '0.84rem', color: 'rgba(255, 255, 255, 0.86)', lineHeight: 1.5, margin: '0 0 18px 0' }}>
                 {destinationMsg}
               </p>
-
-              {Boolean(info?.google_reviews_enabled) && (
-                <button
-                  type="button"
-                  className="tq-tap"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setOrderSuccessModal(null);
-                    handleRateUsClick();
-                  }}
-                  style={{
-                    width: '100%',
-                    marginBottom: '10px',
-                    background: 'var(--gold-gradient, linear-gradient(135deg, #FFD700 0%, #DFBA67 100%))',
-                    color: 'var(--dock-btn-text, #0A2315)',
-                    padding: '10px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontWeight: 800,
-                    fontSize: '0.84rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.22)'
-                  }}
-                >
-                  <span>⭐</span>
-                  <span>{lang === 'hi' ? 'हमें गूगल पर रेट करें' : 'Rate & Review Us on Google'}</span>
-                </button>
-              )}
 
               <button
                 type="button"

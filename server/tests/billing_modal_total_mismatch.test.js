@@ -729,7 +729,7 @@ async function runTests() {
         if (u.includes('/api/info')) {
           return jsonRes({
             id: 99, name: 'Bill Audit Cafe', slug: 'bill-audit-cafe',
-            plan_tier: 'pro', gst_enabled: 0, upi_id: 'audit@upi', upi_payee_name: 'Bill Audit'
+            plan_tier: 'pro', gst_enabled: 0, auto_print_bill: 1, upi_id: 'audit@upi', upi_payee_name: 'Bill Audit'
           });
         }
         if (u.includes('/api/admin/orders/') && u.includes('/status') && init.method === 'PATCH') {
