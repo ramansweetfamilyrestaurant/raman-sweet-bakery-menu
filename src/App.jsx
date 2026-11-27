@@ -832,6 +832,30 @@ export default function App() {
   const restoredTenantOrderRef = useRef(getSlugFromUrl() || '');
   const [restoredOrderSlug, setRestoredOrderSlug] = useState(() => getSlugFromUrl() || '');
 
+  const getCompletedBillStorageKey = (tenantSlugVal) => {
+    const cleanSlug = String(tenantSlugVal || getActiveStorageTenantSlug() || '').trim().toLowerCase();
+    return cleanSlug ? `touchqr_last_completed_bill_${cleanSlug}` : null;
+  };
+
+  const persistLastCompletedBill = (tenantSlugVal, billPayload, reuseSnapshot = null) => {
+    const key = getCompletedBillStorageKey(tenantSlugVal);
+    if (!key) return;
+    try {
+      if (!billPayload) {
+        localStorage.removeItem(key);
+        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(key);
+        return;
+      }
+      const record = JSON.stringify({
+        bill: billPayload,
+        reuseSnapshot: reuseSnapshot || null,
+        savedAt: Date.now()
+      });
+      localStorage.setItem(key, record);
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(key, record);
+    } catch (e) {}
+  };
+
   // Restore saved order once tenant slug resolves (e.g. custom domain root load)
   useEffect(() => {
     const tenantSlug = getActiveStorageTenantSlug();
@@ -843,6 +867,7 @@ export default function App() {
       return;
     }
     restoredTenantOrderRef.current = tenantSlug;
+    let restoredActiveOrder = activeOrderId;
     if (initialTableNum && !activeOrderId) {
       const key = buildScopedStorageKey('touchqr_active_order_id', {
         slug: tenantSlug,
@@ -851,8 +876,30 @@ export default function App() {
       });
       const savedOrderId = key ? localStorage.getItem(key) : null;
       if (savedOrderId) {
+        restoredActiveOrder = savedOrderId;
         setActiveOrderId(savedOrderId);
       }
+    }
+    if (!restoredActiveOrder && !lastCompletedBill) {
+      try {
+        const compKey = getCompletedBillStorageKey(tenantSlug);
+        const rawCompleted = compKey && ((typeof sessionStorage !== 'undefined' && sessionStorage.getItem(compKey)) || localStorage.getItem(compKey));
+        if (rawCompleted) {
+          const parsedCompleted = JSON.parse(rawCompleted);
+          const ageMs = Date.now() - Number(parsedCompleted?.savedAt || 0);
+          if (parsedCompleted?.bill && Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 2 * 60 * 60 * 1000) {
+            setLastCompletedBill(parsedCompleted.bill);
+            if (parsedCompleted.reuseSnapshot) {
+              setCompletedSpaceSnapshot(parsedCompleted.reuseSnapshot);
+            } else if (isViewOnlyUrl) {
+              setIsPostBillViewOnly(true);
+            }
+          } else if (compKey) {
+            localStorage.removeItem(compKey);
+            if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(compKey);
+          }
+        }
+      } catch (e) {}
     }
     setRestoredOrderSlug(tenantSlug);
   }, [info?.slug, sessionExpired]);
@@ -908,15 +955,14 @@ export default function App() {
       );
       const tokenForReuse = currentTableToken || initialSpaceInfo.token || '';
       const numForReuse = currentTableNum || activeOrderTrack.table_number || '';
-      if (canReuseForOrderAgain && numForReuse && tokenForReuse) {
-        setCompletedSpaceSnapshot({
-          num: numForReuse,
-          type: resolvedType,
-          token: tokenForReuse
-        });
-      } else {
-        setCompletedSpaceSnapshot(null);
-      }
+      const reuseSnapshot = (canReuseForOrderAgain && numForReuse && tokenForReuse)
+        ? {
+            num: numForReuse,
+            type: resolvedType,
+            token: tokenForReuse
+          }
+        : null;
+      setCompletedSpaceSnapshot(reuseSnapshot);
 
       const billPayload = {
         ...activeOrderTrack,
@@ -926,6 +972,7 @@ export default function App() {
       setBillCompletedModal(billPayload);
       setOrderSuccessModal(null);
       setShowRunningOrderModal(false);
+      persistLastCompletedBill(getActiveStorageTenantSlug(), billPayload, reuseSnapshot);
 
       // Silently clean active table lock & cart so next guest stays isolated, and lock Dine-In page into View-Only mode
       const key = getOrderStorageKey(activeOrderTrack.table_number, resolvedType);
@@ -1166,11 +1213,13 @@ export default function App() {
         let trackRequestFailed = false;
         if (activeOrderId) {
           let trackingToken = '';
+          let trackObserverToken = '';
           try {
             trackingToken = typeof sessionStorage !== 'undefined'
               ? (sessionStorage.getItem(`tq_track_${activeOrderId}`) || localStorage.getItem(`tq_track_${activeOrderId}`) || sessionStorage.getItem('tq_active_tracking_token') || '')
               : '';
-            const data = await trackOrderStatus(activeOrderId, currentSlug, trackingToken);
+            trackObserverToken = readStoredObserverToken(activeOrderId, currentSpaceType || initialSpaceInfo.type || 'table');
+            const data = await trackOrderStatus(activeOrderId, currentSlug, trackingToken, trackObserverToken);
             if (!isCurrentEffect) return;
             if (data) {
               const dStatus = String(data.status || '').toLowerCase();
@@ -1643,6 +1692,7 @@ export default function App() {
       setBillCompletedModal(null);
       setCompletedSpaceSnapshot(null);
       setIsPostBillViewOnly(false);
+      persistLastCompletedBill(slug || getActiveStorageTenantSlug(), null);
       setOrderSuccessModal(res);
       setCartItems([]);
       setOrderNotesInput('');
@@ -1801,6 +1851,7 @@ export default function App() {
       setBillCompletedModal(null);
       setCompletedSpaceSnapshot(null);
       setIsPostBillViewOnly(false);
+      persistLastCompletedBill(payload?.slug || getActiveStorageTenantSlug(), null);
       setOrderSuccessModal(res);
       setCartItems([]);
       setOrderNotesInput('');
@@ -3969,7 +4020,7 @@ export default function App() {
                   type="button"
                   className="tq-tap"
                   aria-label="Dismiss completed banner"
-                  onClick={() => { triggerHaptic('light'); setLastCompletedBill(null); setCompletedSpaceSnapshot(null); }}
+                  onClick={() => { triggerHaptic('light'); setLastCompletedBill(null); setCompletedSpaceSnapshot(null); persistLastCompletedBill(getActiveStorageTenantSlug(), null); }}
                   style={{
                     background: 'rgba(255, 255, 255, 0.16)',
                     color: '#FFFFFF',
@@ -5211,6 +5262,7 @@ export default function App() {
             setBillCompletedModal(null);
             setLastCompletedBill(null);
             setCompletedSpaceSnapshot(null);
+            persistLastCompletedBill(getActiveStorageTenantSlug(), null);
             const params = new URLSearchParams();
             params.set('space_type', type);
             params.set('table_num', num);

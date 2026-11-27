@@ -665,24 +665,33 @@ export async function updateOrderStatus(id, status, token, extraBody = {}) {
   return handleResponse(res, 'Failed to update order status');
 }
 
-export async function trackOrderStatus(id, slug = '', trackingToken = '') {
+export async function trackOrderStatus(id, slug = '', trackingToken = '', observerToken = '') {
   const cleanSlug = slug ? String(slug).trim() : '';
   const url = cleanSlug
     ? `${API_BASE}/orders/track/${id}?slug=${encodeURIComponent(cleanSlug)}`
     : `${API_BASE}/orders/track/${id}`;
   const headers = {};
   let storedToken = '';
+  let storedObserverToken = '';
   if (typeof window !== 'undefined') {
     try {
       storedToken = window.sessionStorage?.getItem(`tq_track_${id}`) ||
         window.localStorage?.getItem(`tq_track_${id}`) ||
         window.sessionStorage?.getItem('tq_active_tracking_token') ||
         '';
+      storedObserverToken = window.sessionStorage?.getItem(`tq_obs_${id}`) ||
+        window.localStorage?.getItem(`tq_obs_${id}`) ||
+        window.sessionStorage?.getItem('tq_active_observer_token') ||
+        '';
     } catch (e) {}
   }
   const cleanTrackingToken = trackingToken || storedToken;
+  const cleanObserverToken = observerToken || storedObserverToken;
   if (cleanTrackingToken) {
     headers['X-Order-Tracking-Token'] = cleanTrackingToken;
+  }
+  if (cleanObserverToken) {
+    headers['X-Session-Observer-Token'] = cleanObserverToken;
   }
   return fetchWithTimeout(url, { headers, cache: 'no-store' }, 8000, 'Failed to track order');
 }

@@ -564,6 +564,7 @@ export default function AdminDashboard({
   const pendingLoopRef = useRef(null);
   const orderAlarmEnabledRef = useRef(true);
   const pendingUpdatesRef = useRef(new Map());
+  const statusUpdateSeqRef = useRef(new Map());
   const activeSettlementIdRef = useRef(0);
   const activeTenantKeyRef = useRef('');
   const activeRequestIdRef = useRef(0);
@@ -1166,6 +1167,8 @@ export default function AdminDashboard({
 
   const handleUpdateStatus = async (orderId, newStatus, extraParams = {}) => {
     const key = String(orderId);
+    const reqSeq = (statusUpdateSeqRef.current.get(key) || 0) + 1;
+    statusUpdateSeqRef.current.set(key, reqSeq);
     const { skipAutoKot, silent, ...apiExtraParams } = extraParams || {};
     pendingUpdatesRef.current.set(key, { status: newStatus, ...apiExtraParams });
 
@@ -1178,13 +1181,20 @@ export default function AdminDashboard({
 
     try {
       const statusRes = await updateOrderStatus(orderId, newStatus, token, apiExtraParams);
-      broadcastOrderLiveSignal(orderId, {
-        status: statusRes?.status || newStatus,
-        kitchen_prepared: statusRes?.kitchen_prepared ?? apiExtraParams.kitchen_prepared
-      });
-      setTimeout(() => {
-        pendingUpdatesRef.current.delete(key);
-      }, 3000);
+      const isLatestForOrder = statusUpdateSeqRef.current.get(key) === reqSeq;
+      if (isLatestForOrder) {
+        broadcastOrderLiveSignal(orderId, {
+          status: statusRes?.status || newStatus,
+          kitchen_prepared: statusRes?.kitchen_prepared ?? apiExtraParams.kitchen_prepared
+        });
+        setTimeout(() => {
+          if (statusUpdateSeqRef.current.get(key) === reqSeq) {
+            pendingUpdatesRef.current.delete(key);
+          }
+        }, 3000);
+      } else {
+        return true;
+      }
 
       const prevOrder = orders.find(o => String(o.id) === key);
       const prevStatus = String(prevOrder?.status || '').toLowerCase();
@@ -1234,9 +1244,11 @@ export default function AdminDashboard({
       }
       return true;
     } catch (err) {
-      pendingUpdatesRef.current.delete(key);
-      alert(err.message || 'Failed to update order status');
-      loadOrders(); // rollback on failure
+      if (statusUpdateSeqRef.current.get(key) === reqSeq) {
+        pendingUpdatesRef.current.delete(key);
+        alert(err.message || 'Failed to update order status');
+        loadOrders(); // rollback on failure
+      }
       return false;
     }
   };
@@ -2093,12 +2105,16 @@ export default function AdminDashboard({
       // 2. Settlement confirmed by backend: preserve sibling lifecycle statuses while applying financial reconciliation
       expectedOrderIds.forEach((settledId) => {
         const sKey = String(settledId);
+        const settleSeq = (statusUpdateSeqRef.current.get(sKey) || 0) + 1;
+        statusUpdateSeqRef.current.set(sKey, settleSeq);
         const override = sKey === key
           ? { status: confirmedStatus, is_settled: confirmedSettled, payment_method: confirmedPaymentMethod }
           : { is_settled: confirmedSettled, payment_method: confirmedPaymentMethod };
         pendingUpdatesRef.current.set(sKey, override);
         setTimeout(() => {
-          pendingUpdatesRef.current.delete(sKey);
+          if (statusUpdateSeqRef.current.get(sKey) === settleSeq) {
+            pendingUpdatesRef.current.delete(sKey);
+          }
         }, 3000);
       });
 

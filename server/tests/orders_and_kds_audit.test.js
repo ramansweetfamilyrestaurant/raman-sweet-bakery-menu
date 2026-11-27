@@ -1384,14 +1384,110 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
     assert.equal(readyPushRes.status, 200);
 
     let receivedEventText = '';
-    const deadline = Date.now() + 2500;
-    while (Date.now() < deadline && !receivedEventText.includes('event: order_update')) {
-      const { value, done } = await sseReader.read();
-      if (done) break;
-      receivedEventText += sseDecoder.decode(value, { stream: true });
+    let matchedReadyEvent = null;
+    const sseTimeout = setTimeout(() => sseAbort.abort(), 2500);
+    try {
+      while (!matchedReadyEvent) {
+        const { value, done } = await sseReader.read();
+        if (done) break;
+        receivedEventText += sseDecoder.decode(value, { stream: true });
+        const frameParts = receivedEventText.split(/\r?\n\r?\n/);
+        receivedEventText = frameParts.pop() || '';
+        for (const frame of frameParts) {
+          let eventName = 'message';
+          let dataRaw = '';
+          for (const ln of frame.split(/\r?\n/)) {
+            if (ln.startsWith('event:')) eventName = ln.slice(6).trim();
+            else if (ln.startsWith('data:')) dataRaw += ln.slice(5).trim();
+          }
+          if (eventName === 'order_update' && dataRaw) {
+            try {
+              const parsed = JSON.parse(dataRaw);
+              if (Number(parsed?.order_id) === Number(sseOrderId) && Number(parsed?.kitchen_prepared) === 1) {
+                matchedReadyEvent = parsed;
+                break;
+              }
+            } catch {}
+          }
+        }
+      }
+      assert.ok(matchedReadyEvent && Number(matchedReadyEvent.kitchen_prepared) === 1, 'SSE stream immediately pushes complete kitchen_prepared=1 order_update frame to customer');
+    } finally {
+      clearTimeout(sseTimeout);
+      sseAbort.abort();
     }
-    sseAbort.abort();
-    assert.ok(receivedEventText.includes('event: order_update') && receivedEventText.includes('"kitchen_prepared":1'), 'SSE stream immediately pushes kitchen_prepared=1 event to customer');
+
+    // Verify order-scoped SSE stream does not leak unrelated same-table order events and binds cleanup to res (not req)
+    const ordTrackSecret = 'sse_order_scope_secret';
+    const ordTrackHash = (await import('crypto')).createHash('sha256').update(ordTrackSecret).digest('hex');
+    const scopedOrdIns = await query(`
+      INSERT INTO orders (restaurant_id, table_number, customer_name, items, total_amount, status, kitchen_prepared, sent_to_kds, session_id, round_number, tracking_token_hash, created_at)
+      VALUES ($1, '2', 'Scoped Guest', '[{"name":"Lassi","price":60,"quantity":1}]', 60, 'kitchen', 0, 1, $2, 1, $3, CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [restoId, `sess_${restoId}_2_scoped_a`, ordTrackHash]);
+    const scopedOrdId = scopedOrdIns[0].id;
+    const unrelatedOrdIns = await query(`
+      INSERT INTO orders (restaurant_id, table_number, customer_name, items, total_amount, status, kitchen_prepared, sent_to_kds, session_id, round_number, created_at)
+      VALUES ($1, '2', 'Unrelated Guest', '[{"name":"Samosa","price":30,"quantity":1}]', 30, 'kitchen', 0, 1, $2, 1, CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [restoId, `sess_${restoId}_2_unrelated_b`]);
+    const unrelatedOrdId = unrelatedOrdIns[0].id;
+
+    const scopedSseAbort = new AbortController();
+    const scopedSseRes = await fetch(
+      `${baseUrl}/api/orders/live-stream?slug=${encodeURIComponent(prevSlug)}&order_id=${scopedOrdId}`,
+      { signal: scopedSseAbort.signal, headers: { 'X-Order-Tracking-Token': ordTrackSecret } }
+    );
+    assert.equal(scopedSseRes.status, 200);
+    const scopedReader = scopedSseRes.body.getReader();
+    const scopedEvents = [];
+    const scopedTimeout = setTimeout(() => scopedSseAbort.abort(), 2500);
+    try {
+      await fetch(`${baseUrl}/api/admin/orders/${unrelatedOrdId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: 'kitchen', kitchen_prepared: 1 })
+      });
+      await fetch(`${baseUrl}/api/admin/orders/${scopedOrdId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: 'kitchen', kitchen_prepared: 1 })
+      });
+      let scopedBuf = '';
+      let foundOwnEvent = false;
+      while (!foundOwnEvent) {
+        const { value, done } = await scopedReader.read();
+        if (done) break;
+        scopedBuf += sseDecoder.decode(value, { stream: true });
+        const parts = scopedBuf.split(/\r?\n\r?\n/);
+        scopedBuf = parts.pop() || '';
+        for (const frame of parts) {
+          let eventName = 'message';
+          let dataRaw = '';
+          for (const ln of frame.split(/\r?\n/)) {
+            if (ln.startsWith('event:')) eventName = ln.slice(6).trim();
+            else if (ln.startsWith('data:')) dataRaw += ln.slice(5).trim();
+          }
+          if (eventName === 'order_update' && dataRaw) {
+            const parsed = JSON.parse(dataRaw);
+            scopedEvents.push(parsed);
+            if (Number(parsed.order_id) === Number(scopedOrdId)) {
+              foundOwnEvent = true;
+              break;
+            }
+          }
+        }
+      }
+      assert.ok(scopedEvents.some(e => Number(e.order_id) === Number(scopedOrdId)), 'Order-scoped stream receives its own order_update event');
+      assert.ok(!scopedEvents.some(e => Number(e.order_id) === Number(unrelatedOrdId)), 'Order-scoped stream must NOT admit unrelated orders on the same table');
+    } finally {
+      clearTimeout(scopedTimeout);
+      scopedSseAbort.abort();
+    }
+
+    const apiRouteSrc = fs.readFileSync(path.join(ROOT_DIR, 'server/routes/api.js'), 'utf8');
+    assert.ok(!apiRouteSrc.includes("req.on('close', cleanup)"), 'SSE cleanup must not attach to req.on("close")');
+    assert.ok(apiRouteSrc.includes("res.once('close', cleanup)") || apiRouteSrc.includes("res.on('close', cleanup)"), 'SSE cleanup must bind to response close lifecycle');
     pass('Real-time SSE order stream authentication and instant kitchen_prepared push verified');
 
     // 8. Admin settlement stamps terminal_at on all session rounds (including TK-01 takeaway add-on) & returns full consolidated bill to customer track and BillCompletedModal
@@ -1502,7 +1598,65 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
       customerAppSource.includes('localStorage.getItem(`tq_track_${activeOrderId}`)'),
       'Customer polling loop must fall back to persisted tracking tokens before treating tracking token as missing'
     );
+    assert.ok(
+      customerAppSource.includes('persistLastCompletedBill(') &&
+      customerAppSource.includes('trackOrderStatus(activeOrderId, currentSlug, trackingToken, trackObserverToken)'),
+      'Customer App.jsx must persist lastCompletedBill across reload and pass observer token to trackOrderStatus'
+    );
     pass('Customer App.jsx transient track error and tracking-token fallback guards verified');
+
+    // 10. UTC timestamp parsing, observer fallback on /track/:id, and 3s debounce token safety
+    const { parseDbTimestampUtcMs } = await import('../routes/api.js');
+    assert.equal(
+      parseDbTimestampUtcMs('2026-11-27 13:15:00'),
+      new Date('2026-11-27T13:15:00.000Z').getTime(),
+      'Timezone-less SQLite UTC timestamp string must parse as UTC rather than local timezone'
+    );
+
+    const utcNowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const utcTermSessionId = `sess_${restoId}_5_utcfix`;
+    const utcTermIns = await query(`
+      INSERT INTO orders (restaurant_id, table_number, order_type, customer_name, items, total_amount, subtotal_amount, grand_total_amount, status, sent_to_kds, kitchen_prepared, session_id, round_number, is_settled, payment_method, terminal_at, created_at)
+      VALUES ($1, '5', 'dine_in', 'UTC Guest', '[{"name":"Dosa","price":90,"quantity":1}]', 90, 90, 90, 'accepted', 1, 0, $2, 1, 0, 'cash', NULL, $3)
+      RETURNING id
+    `, [restoId, utcTermSessionId, utcNowStr]);
+    const utcOrderId = utcTermIns[0].id;
+
+    // Fetch active table before settlement to grab genuine session_observer_token
+    const utcBeforeRes = await fetch(`${baseUrl}/api/orders/active-table?slug=${encodeURIComponent(prevSlug)}&table_number=5&space_type=table&tkn=${encodeURIComponent(t5Token)}`);
+    const utcBeforeBody = await utcBeforeRes.json();
+    assert.ok(utcBeforeBody?.session_observer_token, 'Observer token issued before settlement');
+
+    // Settle and stamp SQLite-style timezone-less UTC terminal_at
+    await fetch(`${baseUrl}/api/admin/orders/${utcOrderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: 'completed', settle: { method: 'upi' } })
+    });
+    await query('UPDATE orders SET terminal_at = $1 WHERE id = $2', [utcNowStr, utcOrderId]);
+
+    // /orders/track/:id must authorize via X-Session-Observer-Token header even without X-Order-Tracking-Token and must not false-410
+    const utcTrackRes = await fetch(`${baseUrl}/api/orders/track/${utcOrderId}?slug=${encodeURIComponent(prevSlug)}`, {
+      headers: { 'X-Session-Observer-Token': utcBeforeBody.session_observer_token }
+    });
+    assert.equal(utcTrackRes.status, 200, 'Observer token header authorizes /orders/track/:id without premature 410 UTC expiry');
+    const utcTrackBody = await utcTrackRes.json();
+    assert.equal(utcTrackBody.is_settled, 1);
+    assert.equal(utcTrackBody.bill_summary?.grand_total_amount, 90);
+
+    // /orders/active-table with prev_order_id must also avoid false expiry and deliver bill_summary
+    const utcActiveRes = await fetch(`${baseUrl}/api/orders/active-table?slug=${encodeURIComponent(prevSlug)}&table_number=5&space_type=table&tkn=${encodeURIComponent(t5Token)}&prev_order_id=${utcOrderId}`, {
+      headers: { 'X-Session-Observer-Token': utcBeforeBody.session_observer_token }
+    });
+    assert.equal(utcActiveRes.status, 200);
+    const utcActiveBody = await utcActiveRes.json();
+    assert.equal(utcActiveBody?.is_settled, 1);
+    assert.equal(utcActiveBody?.bill_summary?.grand_total_amount, 90);
+
+    // Unauthenticated /track/:id request still fails closed with 401
+    const unauthTrackRes = await fetch(`${baseUrl}/api/orders/track/${utcOrderId}?slug=${encodeURIComponent(prevSlug)}`);
+    assert.equal(unauthTrackRes.status, 401);
+    pass('UTC timestamp parsing, /orders/track/:id observer header fallback, and settled bill continuity verified');
 
     console.log(`\nAll ${passed} Orders & KDS audit tests passed.`);
   } catch (err) {

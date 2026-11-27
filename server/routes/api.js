@@ -64,6 +64,31 @@ function buildSessionObserverHmacKey(resto) {
   return `${JWT_SECRET}::${String(resto?.qr_secret || resto?.id || '')}::session_observer_v1`;
 }
 
+function parseDbTimestampUtcMs(val) {
+  if (val === undefined || val === null || val === '') return NaN;
+  if (val instanceof Date) {
+    if (getDbType() === 'postgres') {
+      return Date.UTC(
+        val.getFullYear(),
+        val.getMonth(),
+        val.getDate(),
+        val.getHours(),
+        val.getMinutes(),
+        val.getSeconds(),
+        val.getMilliseconds()
+      );
+    }
+    return val.getTime();
+  }
+  const raw = String(val).trim();
+  if (!raw) return NaN;
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(raw)) {
+    return new Date(raw.replace(' ', 'T') + 'Z').getTime();
+  }
+  return new Date(raw).getTime();
+}
+export { parseDbTimestampUtcMs };
+
 function normalizeObserverTableKey(tableNumber) {
   const raw = String(tableNumber || '').trim();
   return normalizeSpaceNumber(raw) || raw.toLowerCase();
@@ -2570,10 +2595,10 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
 
     // Step 11: Multi-Round Table Session Detection
     // 🛡️ Rapid Multi-Tap / Duplicate Submission Guard (3-Second Window, table orders only)
-    if (resolvedSpaceType !== 'counter') {
+    if (resolvedSpaceType !== 'counter' && !customIdempKey) {
       try {
         const recentOrder = await query(`
-          SELECT id, total_amount, created_at, session_id, round_number
+          SELECT id, total_amount, created_at, session_id, round_number, parent_order_id, status
           FROM orders
           WHERE restaurant_id = $1 AND table_number = $2 AND created_at >= $3
           ORDER BY id DESC LIMIT 1
@@ -2582,15 +2607,22 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         if (recentOrder && recentOrder.length > 0) {
           const prev = recentOrder[0];
           if (Number(prev.total_amount) === serverVerifiedTotal) {
+            const obsTok = signSessionObserverToken(
+              resto,
+              prev.session_id || `sess_${targetId}_${cleanTable}_${prev.parent_order_id || prev.id}`,
+              cleanTable
+            );
             const debounceResp = {
               success: true,
               order_id: prev.id,
+              primary_order_id: prev.parent_order_id || prev.id,
               total_amount: prev.total_amount,
               session_id: prev.session_id,
+              ...(obsTok ? { session_observer_token: obsTok } : {}),
               round_number: prev.round_number,
-              status: 'pending'
+              status: prev.status || 'pending'
             };
-            orderIdempotencyCache.set(idempKey, { timestamp: Date.now(), response: debounceResp });
+            orderIdempotencyCache.set(idempKey, { timestamp: Date.now(), customerBinding, itemsSig, response: debounceResp });
             return res.json(debounceResp);
           }
         }
@@ -3131,33 +3163,63 @@ router.get('/orders/track/:id', async (req, res) => {
       } catch (e) {}
     }
 
-    // 🛡️ Step 2: Customer Tracking Token Authentication (Headers ONLY - no URL query fallback)
+    // 🛡️ Step 2: Customer Tracking or Observer Credential Authentication (Headers ONLY - no URL query fallback)
     if (!isStaffExempt) {
       const providedTrackingToken = req.headers['x-order-tracking-token'];
-      if (!providedTrackingToken || typeof providedTrackingToken !== 'string' || !providedTrackingToken.trim()) {
+      const providedObserverToken = req.headers['x-session-observer-token'];
+      const hasTrackHeader = Boolean(providedTrackingToken && typeof providedTrackingToken === 'string' && providedTrackingToken.trim());
+      const hasObsHeader = Boolean(providedObserverToken && typeof providedObserverToken === 'string' && providedObserverToken.trim());
+
+      if (!hasTrackHeader && !hasObsHeader) {
         return res.status(401).json({
           error: 'missing_tracking_token',
           message: 'Order tracking token required in X-Order-Tracking-Token header.'
         });
       }
 
-      const cleanToken = providedTrackingToken.trim();
-      if (!order.tracking_token_hash) {
-        return res.status(403).json({
-          error: 'invalid_tracking_token',
-          message: 'Invalid tracking token.'
-        });
-      }
+      if (hasTrackHeader) {
+        const cleanToken = providedTrackingToken.trim();
+        if (!order.tracking_token_hash) {
+          return res.status(403).json({
+            error: 'invalid_tracking_token',
+            message: 'Invalid tracking token.'
+          });
+        }
 
-      const computedHash = crypto.createHash('sha256').update(cleanToken).digest('hex');
-      const expectedBuf = Buffer.from(order.tracking_token_hash, 'hex');
-      const providedBuf = Buffer.from(computedHash, 'hex');
+        const computedHash = crypto.createHash('sha256').update(cleanToken).digest('hex');
+        const expectedBuf = Buffer.from(order.tracking_token_hash, 'hex');
+        const providedBuf = Buffer.from(computedHash, 'hex');
 
-      if (expectedBuf.length !== providedBuf.length || !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
-        return res.status(403).json({
-          error: 'invalid_tracking_token',
-          message: 'Invalid tracking token.'
-        });
+        if (expectedBuf.length !== providedBuf.length || !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
+          return res.status(403).json({
+            error: 'invalid_tracking_token',
+            message: 'Invalid tracking token.'
+          });
+        }
+      } else {
+        let obsAuthorized = verifyHistoricalSessionCredential(
+          { headers: { 'x-session-observer-token': providedObserverToken.trim() } },
+          resto,
+          order
+        );
+        if (!obsAuthorized && (order.parent_order_id || order.session_id)) {
+          const anchorId = order.parent_order_id || order.id;
+          const relatedRows = await query(
+            `SELECT id, session_id, parent_order_id, table_number, tracking_token_hash
+             FROM orders
+             WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2 OR ($3 <> '' AND session_id = $3))`,
+            [targetId, anchorId, String(order.session_id || '')]
+          );
+          obsAuthorized = (relatedRows || []).some(r =>
+            verifyHistoricalSessionCredential({ headers: { 'x-session-observer-token': providedObserverToken.trim() } }, resto, r)
+          );
+        }
+        if (!obsAuthorized) {
+          return res.status(403).json({
+            error: 'invalid_tracking_token',
+            message: 'Invalid session observer token.'
+          });
+        }
       }
     }
 
@@ -3167,7 +3229,7 @@ router.get('/orders/track/:id', async (req, res) => {
     const isCancelledOrRejected = ['cancelled', 'rejected'].includes(order.status);
     const isTerminal = ['completed', 'cancelled', 'rejected'].includes(order.status) || isSettled;
     if (isTerminal) {
-      const terminalTime = order.terminal_at ? new Date(order.terminal_at).getTime() : new Date(order.created_at).getTime();
+      const terminalTime = order.terminal_at ? parseDbTimestampUtcMs(order.terminal_at) : parseDbTimestampUtcMs(order.created_at);
       const TERMINAL_EXPIRY_MS = 2 * 60 * 60 * 1000; // 2 hours
       if (isNaN(terminalTime) || (nowMs - terminalTime > TERMINAL_EXPIRY_MS)) {
         return res.status(410).json({
@@ -3176,7 +3238,7 @@ router.get('/orders/track/:id', async (req, res) => {
         });
       }
     } else {
-      const createdTime = new Date(order.created_at).getTime();
+      const createdTime = parseDbTimestampUtcMs(order.created_at);
       const ACTIVE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
       if (isNaN(createdTime) || (nowMs - createdTime > ACTIVE_EXPIRY_MS)) {
         return res.status(410).json({
@@ -3199,28 +3261,18 @@ router.get('/orders/track/:id', async (req, res) => {
         (!order.parent_order_id && !order.session_id && String(order.order_type || '').toLowerCase() === 'takeaway');
 
       let billRows = [order];
-      if (!isCounterOrder && order.session_id) {
-        try {
-          const siblingRows = await query(
-            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
-             FROM orders
-             WHERE restaurant_id = $1 AND session_id = $2 AND status NOT IN ('rejected', 'cancelled')
-             ORDER BY id ASC`,
-            [targetId, order.session_id]
-          );
-          if (Array.isArray(siblingRows) && siblingRows.length > 0) {
-            billRows = siblingRows;
-          }
-        } catch (e) {}
-      } else if (!isCounterOrder) {
+      if (!isCounterOrder) {
         const rootId = order.parent_order_id || order.id;
+        const orderSessionKey = String(order.session_id || '');
         try {
           const siblingRows = await query(
             `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
              FROM orders
-             WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) AND status NOT IN ('rejected', 'cancelled')
+             WHERE restaurant_id = $1
+               AND status NOT IN ('rejected', 'cancelled')
+               AND (id = $2 OR parent_order_id = $2 OR ($3 <> '' AND session_id = $3))
              ORDER BY id ASC`,
-            [targetId, rootId]
+            [targetId, rootId, orderSessionKey]
           );
           if (Array.isArray(siblingRows) && siblingRows.length > 0) {
             billRows = siblingRows;
@@ -3408,7 +3460,7 @@ router.get('/orders/active-table', async (req, res) => {
             const prevStatus = String(prevOrder.status || '').toLowerCase();
             const isPrevSettled = Boolean(prevOrder.is_settled === 1 || prevOrder.is_settled === '1' || prevOrder.is_settled === true);
             const isPrevCancelled = prevStatus === 'cancelled' || prevStatus === 'rejected';
-            const terminalTime = prevOrder.terminal_at ? new Date(prevOrder.terminal_at).getTime() : new Date(prevOrder.created_at).getTime();
+            const terminalTime = prevOrder.terminal_at ? parseDbTimestampUtcMs(prevOrder.terminal_at) : parseDbTimestampUtcMs(prevOrder.created_at);
             const withinTerminalWindow = !isNaN(terminalTime) && (Date.now() - terminalTime <= 2 * 60 * 60 * 1000);
 
             if (withinTerminalWindow && isPrevCancelled) {
@@ -3601,7 +3653,6 @@ router.get('/orders/live-stream', async (req, res) => {
       if (!isStaffJwt && !verifyHistoricalSessionCredential(req, resto, scopedOrder)) {
         return res.status(403).json({ error: 'unauthorized_order_stream' });
       }
-      scopedTableKey = normalizeObserverTableKey(scopedOrder.table_number);
     }
 
     const rawTable = String(table_number || '').trim();
@@ -3653,6 +3704,7 @@ router.get('/orders/live-stream', async (req, res) => {
         if (scopedOrder.session_id && evt.session_id && evt.session_id === scopedOrder.session_id) return true;
         const rootId = Number(scopedOrder.parent_order_id || scopedOrder.id);
         if (Number(evt.primary_order_id) === rootId) return true;
+        return false;
       }
       if (scopedTableKey && evt.table_number) {
         return normalizeObserverTableKey(evt.table_number) === scopedTableKey;
@@ -3684,8 +3736,7 @@ router.get('/orders/live-stream', async (req, res) => {
       clearInterval(keepAliveTimer);
     };
 
-    req.on('close', cleanup);
-    res.on('close', cleanup);
+    res.once('close', cleanup);
   } catch (err) {
     console.error('Order live-stream error:', err);
     if (!res.headersSent) {
