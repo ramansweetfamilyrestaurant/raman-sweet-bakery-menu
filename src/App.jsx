@@ -1071,7 +1071,7 @@ export default function App() {
       restoredTenantOrderRef.current === tenantSlug &&
       restoredOrderSlug === tenantSlug
     );
-    if (!isOrderRestorationComplete || !effectiveTableNum || sessionExpired || activeOrderId || (activeOrderTrack && ['pending', 'accepted', 'kitchen', 'preparing', 'ready', 'served'].includes(activeOrderTrack.status))) {
+    if (!isOrderRestorationComplete || !effectiveTableNum || sessionExpired || isPostBillViewOnly || isViewOnlyUrl || activeOrderId || lastActiveTableOrderIdRef.current || (activeOrderTrack && ['pending', 'ordered', 'accepted', 'kitchen', 'preparing', 'ready', 'served'].includes(String(activeOrderTrack.status || '').toLowerCase()))) {
       return;
     }
 
@@ -1352,7 +1352,7 @@ export default function App() {
                 setActiveOrderTrack(null);
                 setCurrentTableNum('');
                 setCurrentTableToken('');
-                setSessionExpired(true);
+                setSessionExpired(false);
                 setIsPostBillViewOnly(true);
                 setCartItems([]);
                 setShowCartDrawer(false);
