@@ -237,7 +237,7 @@ export default function App() {
     return `🍽️ Table ${target.replace(/^table\s*#?/i, '')}`;
   };
 
-  const getDynamicSpaceLabel = (raw) => formatCustomerLocation(raw);
+  const getDynamicSpaceLabel = (raw, overrideSpaceType = null) => formatCustomerLocation(raw, overrideSpaceType);
 
   const hasScannedSpace = Boolean(
     currentTableNum &&
@@ -830,6 +830,7 @@ export default function App() {
   const [activeOrderTrack, setActiveOrderTrack] = useState(null);
   const trackingExpiredRef = useRef(false);
   const restoredTenantOrderRef = useRef(getSlugFromUrl() || '');
+  const restoredCompletedBillSlugRef = useRef('');
   const [restoredOrderSlug, setRestoredOrderSlug] = useState(() => getSlugFromUrl() || '');
 
   const getCompletedBillStorageKey = (tenantSlugVal) => {
@@ -856,52 +857,53 @@ export default function App() {
     } catch (e) {}
   };
 
-  // Restore saved order once tenant slug resolves (e.g. custom domain root load)
+  // Restore saved order & recent completed receipt once tenant slug resolves (path-slug & custom-domain URLs)
   useEffect(() => {
     const tenantSlug = getActiveStorageTenantSlug();
     if (!tenantSlug || sessionExpired) return;
-    if (restoredTenantOrderRef.current === tenantSlug) {
-      if (restoredOrderSlug !== tenantSlug) {
-        setRestoredOrderSlug(tenantSlug);
-      }
-      return;
-    }
-    restoredTenantOrderRef.current = tenantSlug;
     let restoredActiveOrder = activeOrderId;
-    if (initialTableNum && !activeOrderId) {
-      const key = buildScopedStorageKey('touchqr_active_order_id', {
-        slug: tenantSlug,
-        spaceType: initialSpaceInfo.type || 'table',
-        tableNumber: initialTableNum
-      });
-      const savedOrderId = key ? localStorage.getItem(key) : null;
-      if (savedOrderId) {
-        restoredActiveOrder = savedOrderId;
-        setActiveOrderId(savedOrderId);
+    if (restoredTenantOrderRef.current !== tenantSlug) {
+      restoredTenantOrderRef.current = tenantSlug;
+      if (initialTableNum && !activeOrderId) {
+        const key = buildScopedStorageKey('touchqr_active_order_id', {
+          slug: tenantSlug,
+          spaceType: initialSpaceInfo.type || 'table',
+          tableNumber: initialTableNum
+        });
+        const savedOrderId = key ? localStorage.getItem(key) : null;
+        if (savedOrderId) {
+          restoredActiveOrder = savedOrderId;
+          setActiveOrderId(savedOrderId);
+        }
       }
     }
-    if (!restoredActiveOrder && !lastCompletedBill) {
-      try {
-        const compKey = getCompletedBillStorageKey(tenantSlug);
-        const rawCompleted = compKey && ((typeof sessionStorage !== 'undefined' && sessionStorage.getItem(compKey)) || localStorage.getItem(compKey));
-        if (rawCompleted) {
-          const parsedCompleted = JSON.parse(rawCompleted);
-          const ageMs = Date.now() - Number(parsedCompleted?.savedAt || 0);
-          if (parsedCompleted?.bill && Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 2 * 60 * 60 * 1000) {
-            setLastCompletedBill(parsedCompleted.bill);
-            if (parsedCompleted.reuseSnapshot) {
-              setCompletedSpaceSnapshot(parsedCompleted.reuseSnapshot);
-            } else if (isViewOnlyUrl) {
-              setIsPostBillViewOnly(true);
+    if (restoredCompletedBillSlugRef.current !== tenantSlug) {
+      restoredCompletedBillSlugRef.current = tenantSlug;
+      if (!restoredActiveOrder && !lastCompletedBill) {
+        try {
+          const compKey = getCompletedBillStorageKey(tenantSlug);
+          const rawCompleted = compKey && ((typeof sessionStorage !== 'undefined' && sessionStorage.getItem(compKey)) || localStorage.getItem(compKey));
+          if (rawCompleted) {
+            const parsedCompleted = JSON.parse(rawCompleted);
+            const ageMs = Date.now() - Number(parsedCompleted?.savedAt || 0);
+            if (parsedCompleted?.bill && Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 2 * 60 * 60 * 1000) {
+              setLastCompletedBill(parsedCompleted.bill);
+              if (parsedCompleted.reuseSnapshot) {
+                setCompletedSpaceSnapshot(parsedCompleted.reuseSnapshot);
+              } else if (isViewOnlyUrl) {
+                setIsPostBillViewOnly(true);
+              }
+            } else if (compKey) {
+              localStorage.removeItem(compKey);
+              if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(compKey);
             }
-          } else if (compKey) {
-            localStorage.removeItem(compKey);
-            if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(compKey);
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
     }
-    setRestoredOrderSlug(tenantSlug);
+    if (restoredOrderSlug !== tenantSlug) {
+      setRestoredOrderSlug(tenantSlug);
+    }
   }, [info?.slug, sessionExpired]);
 
   useEffect(() => {
