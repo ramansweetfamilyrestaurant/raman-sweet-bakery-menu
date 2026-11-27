@@ -1324,6 +1324,16 @@ export default function App() {
               }
               // Only force View-Only lock when THIS session actually had a live tracked order that ended; otherwise just clear ancient stale localStorage ID
               if (lastActiveTableOrderIdRef.current && !isCounterSpace && !isHotelVenue && !isCinemaVenue && targetSpaceType !== 'counter' && targetSpaceType !== 'room' && targetSpaceType !== 'cinema_seat' && targetSpaceType !== 'cinema') {
+                if (prevTrackedId && (trackingToken || observerToken)) {
+                  try {
+                    const recoveredOrder = await trackOrderStatus(prevTrackedId, currentSlug, trackingToken, observerToken);
+                    if (!isCurrentEffect) return;
+                    if (recoveredOrder) {
+                      setActiveOrderTrack(recoveredOrder);
+                      return;
+                    }
+                  } catch (e) {}
+                }
                 lastActiveTableOrderIdRef.current = null;
                 const staleKey = getOrderStorageKey(effectiveTableNum, targetSpaceType);
                 if (staleKey) localStorage.removeItem(staleKey);
