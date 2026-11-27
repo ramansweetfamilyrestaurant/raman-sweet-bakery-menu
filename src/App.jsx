@@ -717,6 +717,7 @@ export default function App() {
   }, [isCinemaVenue, isHotelVenue, isCounterSpace]);
   const [orderSuccessModal, setOrderSuccessModal] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderConfirmed, setOrderConfirmed] = useState(false);
   const isPlacingOrderRef = useRef(false);
 
   // Lock background scroll & close bottom drawers / confirmation modal on Escape
@@ -1526,6 +1527,29 @@ export default function App() {
     };
   }, [activeOrderId, effectiveTableNum, info, sessionExpired, isPostBillViewOnly]);
 
+  const subtractSubmittedItems = (prevCart, submittedItems) => {
+    if (!Array.isArray(prevCart) || prevCart.length === 0) return [];
+    const remainingToSubtract = new Map();
+    (submittedItems || []).forEach(si => {
+      const key = `${si.dish_id}::${si.portion || ''}::${JSON.stringify(si.modifiers || [])}`;
+      remainingToSubtract.set(key, (remainingToSubtract.get(key) || 0) + (Number(si.quantity) || 0));
+    });
+    return prevCart.reduce((acc, item) => {
+      const key = `${item.dish?.id}::${item.portion || ''}::${JSON.stringify(item.modifiers || [])}`;
+      const subQty = remainingToSubtract.get(key) || 0;
+      if (subQty <= 0) {
+        acc.push(item);
+      } else {
+        const itemQty = Number(item.quantity) || 0;
+        const used = Math.min(itemQty, subQty);
+        remainingToSubtract.set(key, subQty - used);
+        const left = itemQty - used;
+        if (left > 0) acc.push({ ...item, quantity: left });
+      }
+      return acc;
+    }, []);
+  };
+
   const buildOptimisticOrderTrack = (prev, res, orderItems, fallbackMeta) => {
     const nextRoundItems = Array.isArray(orderItems) ? orderItems : [];
     const primaryId = res.primary_order_id || res.order_id;
@@ -1543,6 +1567,9 @@ export default function App() {
           tax_amount: prev.tax_amount || 0,
           grand_total_amount: prev.grand_total_amount || prev.total_amount || 0
         }]);
+      if (prevRounds.some(r => String(r?.id) === String(res.order_id))) {
+        return prev;
+      }
       const newRoundEntry = {
         id: res.order_id,
         round_number: res.round_number || (prevRounds.length + 1),
@@ -1610,6 +1637,7 @@ export default function App() {
     if (cartItems.length === 0) return;
     if (isPlacingOrderRef.current || placingOrder) return;
     isPlacingOrderRef.current = true;
+    setOrderConfirmed(false);
     setPlacingOrder(true);
 
     const targetSpaceType = currentSpaceType || initialSpaceInfo.type || 'table';
@@ -1673,7 +1701,7 @@ export default function App() {
 
     try {
       const minAnimDelay = new Promise(resolve => setTimeout(resolve, 2150));
-      const [res] = await Promise.all([createDirectOrder(orderPayload), minAnimDelay]);
+      const res = await createDirectOrder(orderPayload);
 
       if (res && res.order_id) {
         if (res.tracking_token) {
@@ -1719,6 +1747,7 @@ export default function App() {
         }));
       }
 
+      setOrderConfirmed(true);
       setLastCompletedBill(null);
       setBillCompletedModal(null);
       setCompletedSpaceSnapshot(null);
@@ -1731,11 +1760,15 @@ export default function App() {
           bc.close();
         }
       } catch { }
+      pendingOrderPayloadRef.current = null;
+      await minAnimDelay;
+      if (res?.order_id && lastActiveTableOrderIdRef.current !== String(res.order_id)) {
+        return;
+      }
       setOrderSuccessModal(res);
-      setCartItems([]);
+      setCartItems(prev => subtractSubmittedItems(prev, itemsPayload));
       setOrderNotesInput('');
       setShowCartDrawer(false);
-      pendingOrderPayloadRef.current = null;
     } catch (err) {
       const errMsg = String(err.message || '');
       const errCode = err.error || err.code || '';
@@ -1790,6 +1823,7 @@ export default function App() {
         alert(errMsg || 'Failed to place order. Please try again.');
       }
     } finally {
+      setOrderConfirmed(false);
       setPlacingOrder(false);
       setTimeout(() => {
         isPlacingOrderRef.current = false;
@@ -1830,6 +1864,7 @@ export default function App() {
 
     if (isPlacingOrderRef.current || placingOrder) return;
     isPlacingOrderRef.current = true;
+    setOrderConfirmed(false);
     setPlacingOrder(true);
 
     try {
@@ -1838,6 +1873,7 @@ export default function App() {
         presence_token: verifiedToken
       };
 
+      const minAnimDelay = new Promise(resolve => setTimeout(resolve, 2150));
       const res = await createDirectOrder(orderPayloadWithToken);
 
       if (res && res.order_id) {
@@ -1885,6 +1921,7 @@ export default function App() {
         }));
       }
 
+      setOrderConfirmed(true);
       setLastCompletedBill(null);
       setBillCompletedModal(null);
       setCompletedSpaceSnapshot(null);
@@ -1897,8 +1934,12 @@ export default function App() {
           bc.close();
         }
       } catch { }
+      await minAnimDelay;
+      if (res?.order_id && lastActiveTableOrderIdRef.current !== String(res.order_id)) {
+        return;
+      }
       setOrderSuccessModal(res);
-      setCartItems([]);
+      setCartItems(prev => subtractSubmittedItems(prev, payload.items));
       setOrderNotesInput('');
       setShowCartDrawer(false);
     } catch (err) {
@@ -1914,6 +1955,7 @@ export default function App() {
         alert(errMsg || 'Failed to place order after verification. Please try again.');
       }
     } finally {
+      setOrderConfirmed(false);
       setPlacingOrder(false);
       setTimeout(() => {
         isPlacingOrderRef.current = false;
@@ -6203,25 +6245,44 @@ export default function App() {
                                 </svg>
                               </span>
                               <span className="tq-order-done">
-                                <svg
-                                  className="tq-order-done-check"
-                                  width="20"
-                                  height="20"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  aria-hidden="true"
-                                >
-                                  <circle cx="12" cy="12" r="10.5" fill="rgba(255,255,255,0.22)" stroke="#FFFFFF" strokeWidth="1.8" />
-                                  <path
-                                    d="M7.5 12.5L10.5 15.5L16.8 9"
-                                    stroke="#FFFFFF"
-                                    strokeWidth="2.4"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    pathLength="1"
-                                  />
-                                </svg>
-                                <span>{lang === 'hi' ? 'ऑर्डर हो गया!' : 'Order Placed!'}</span>
+                                {orderConfirmed ? (
+                                  <>
+                                    <svg
+                                      className="tq-order-done-check"
+                                      width="20"
+                                      height="20"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      aria-hidden="true"
+                                    >
+                                      <circle cx="12" cy="12" r="10.5" fill="rgba(255,255,255,0.22)" stroke="#FFFFFF" strokeWidth="1.8" />
+                                      <path
+                                        d="M7.5 12.5L10.5 15.5L16.8 9"
+                                        stroke="#FFFFFF"
+                                        strokeWidth="2.4"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        pathLength="1"
+                                      />
+                                    </svg>
+                                    <span>{lang === 'hi' ? 'ऑर्डर हो गया!' : 'Order Placed!'}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span
+                                      style={{
+                                        width: '15px',
+                                        height: '15px',
+                                        borderRadius: '50%',
+                                        border: '2px solid rgba(255, 255, 255, 0.35)',
+                                        borderTopColor: '#FFFFFF',
+                                        animation: 'spin 0.75s linear infinite',
+                                        flexShrink: 0
+                                      }}
+                                    />
+                                    <span>{lang === 'hi' ? 'किचन में भेजा जा रहा है...' : 'Confirming Order...'}</span>
+                                  </>
+                                )}
                               </span>
                             </span>
                           ) : (
