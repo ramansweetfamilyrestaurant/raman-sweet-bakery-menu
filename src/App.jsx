@@ -3633,6 +3633,40 @@ export default function App() {
         const trackRoundsArr = Array.isArray(activeOrderTrack.session_summary?.rounds)
           ? activeOrderTrack.session_summary.rounds
           : (Array.isArray(activeOrderTrack.rounds) ? activeOrderTrack.rounds : []);
+        const getRoundStatusMeta = (rObj, idx = 0) => {
+          const roundNum = rObj?.round_number || (idx + 1);
+          const raw = String(rObj?.status || 'pending').toLowerCase();
+          const rDone = raw === 'completed';
+          const rCancelled = raw === 'cancelled' || raw === 'rejected';
+          const rServed = raw === 'served';
+          const rPrepared = !rDone && !rCancelled && !rServed && (
+            raw === 'ready' ||
+            rObj?.kitchen_prepared === 1 ||
+            rObj?.kitchen_prepared === '1' ||
+            rObj?.kitchen_prepared === true
+          );
+          const rPreparing = !rDone && !rCancelled && !rServed && !rPrepared && (
+            raw === 'accepted' || raw === 'kitchen' || raw === 'preparing'
+          );
+          const shortLabel = rDone
+            ? (lang === 'hi' ? 'पूर्ण' : 'Completed')
+            : rCancelled
+              ? (lang === 'hi' ? 'रद्द' : 'Cancelled')
+              : rServed
+                ? (lang === 'hi' ? 'सर्व ✓' : 'Served ✓')
+                : rPrepared
+                  ? (lang === 'hi' ? 'तैयार 🛎️' : 'Ready 🛎️')
+                  : rPreparing
+                    ? (lang === 'hi' ? 'बन रहा है 👨‍🍳' : 'Preparing 👨‍🍳')
+                    : (lang === 'hi' ? 'प्रतीक्षा 🟡' : 'Pending 🟡');
+          const modalBg = rCancelled ? '#FEF2F2' : (rDone || rServed) ? '#ECFDF5' : rPrepared ? '#DCFCE7' : rPreparing ? '#EFF6FF' : '#FFFBEB';
+          const modalColor = rCancelled ? '#B91C1C' : (rDone || rServed) ? '#047857' : rPrepared ? '#15803D' : rPreparing ? '#1D4ED8' : '#B45309';
+          const modalBorder = rCancelled ? '#FECACA' : (rDone || rServed) ? '#A7F3D0' : rPrepared ? '#86EFAC' : rPreparing ? '#BFDBFE' : '#FDE68A';
+          const pillBg = rCancelled ? 'rgba(248, 113, 113, 0.22)' : (rDone || rServed || rPrepared) ? 'rgba(74, 222, 128, 0.22)' : rPreparing ? 'rgba(56, 189, 248, 0.22)' : 'rgba(251, 191, 36, 0.22)';
+          const pillBorder = rCancelled ? 'rgba(248, 113, 113, 0.45)' : (rDone || rServed || rPrepared) ? 'rgba(74, 222, 128, 0.45)' : rPreparing ? 'rgba(56, 189, 248, 0.45)' : 'rgba(251, 191, 36, 0.45)';
+          return { roundNum, raw, rDone, rCancelled, rServed, rPrepared, rPreparing, shortLabel, modalBg, modalColor, modalBorder, pillBg, pillBorder };
+        };
+        const roundMetas = trackRoundsArr.map((r, i) => getRoundStatusMeta(r, i));
         const latestRoundObj = trackRoundsArr.length > 0 ? trackRoundsArr[trackRoundsArr.length - 1] : null;
         const effectiveStatusRaw = String((latestRoundObj?.status || statusRaw || '')).toLowerCase();
         const hasRoundPrepared = trackRoundsArr.some(r =>
@@ -3641,7 +3675,9 @@ export default function App() {
         );
         const isCompleted = statusRaw === 'completed' || (effectiveStatusRaw === 'completed' && trackRoundsArr.length > 0 && trackRoundsArr.every(r => String(r.status || '').toLowerCase() === 'completed'));
         const isCancelled = statusRaw === 'cancelled' || statusRaw === 'rejected';
-        const isServed = effectiveStatusRaw === 'served';
+        const isServed = trackRoundsArr.length > 0
+          ? (roundMetas.some(m => m.rServed) && roundMetas.every(m => m.rServed || m.rDone || m.rCancelled))
+          : (effectiveStatusRaw === 'served');
         const isPrepared = trackRoundsArr.length > 0
           ? Boolean(
             effectiveStatusRaw === 'ready' ||
@@ -3656,8 +3692,12 @@ export default function App() {
             activeOrderTrack.kitchen_prepared === true ||
             statusRaw === 'ready'
           );
-        const isPreparing = effectiveStatusRaw === 'accepted' || effectiveStatusRaw === 'kitchen' || effectiveStatusRaw === 'preparing';
-        const isActiveCooking = !isCompleted && !isCancelled && !isServed;
+        const isPreparing = trackRoundsArr.length > 0
+          ? (!isServed && !isPrepared && (effectiveStatusRaw === 'accepted' || effectiveStatusRaw === 'kitchen' || effectiveStatusRaw === 'preparing' || roundMetas.some(m => m.rPreparing)))
+          : (effectiveStatusRaw === 'accepted' || effectiveStatusRaw === 'kitchen' || effectiveStatusRaw === 'preparing');
+        const isActiveCooking = trackRoundsArr.length > 0
+          ? (!isCompleted && !isCancelled && roundMetas.some(m => !m.rDone && !m.rCancelled && !m.rServed))
+          : (!isCompleted && !isCancelled && !isServed);
 
         const bizType = String(info?.business_type || '').toLowerCase();
         const spaceStr = String(activeOrderTrack.table_number || '').toLowerCase();
@@ -3674,27 +3714,34 @@ export default function App() {
         const rejectReasonText = (isCancelled && activeOrderTrack.rejection_reason)
           ? String(activeOrderTrack.rejection_reason).trim()
           : '';
+        const readyRoundNums = roundMetas.filter(m => m.rPrepared).map(m => m.roundNum);
+        const pendingOrPrepRounds = roundMetas.filter(m => !m.rPrepared && !m.rServed && !m.rDone && !m.rCancelled);
+        const hasMixedReadyAndCooking = roundMetas.length > 1 && readyRoundNums.length > 0 && pendingOrPrepRounds.length > 0;
         const statusLabel = isCompleted
           ? (lang === 'hi' ? `ऑर्डर पूर्ण और भुगतान सफल 🏁${timerText}` : `Order Completed & Paid 🏁${timerText}`)
           : isCancelled
             ? (lang === 'hi'
               ? `ऑर्डर रद्द किया गया 🔴${rejectReasonText ? ` — ${rejectReasonText}` : ''}${timerText}`
               : `Order Cancelled 🔴${rejectReasonText ? ` — ${rejectReasonText}` : ''}${timerText}`)
-            : isServed
-              ? (isCinema ? (lang === 'hi' ? 'सीट पर ऑर्डर सर्व किया गया 🎬' : 'Delivered to Seat 🎬 Enjoy!')
-                : isRoom ? (lang === 'hi' ? 'रूम में ऑर्डर डिलीवर हो गया 🏨' : 'Delivered to Room 🏨 Enjoy!')
-                  : isCounter ? (lang === 'hi' ? 'काउंटर पर ऑर्डर दिया गया 🧾' : 'Handed Over at Counter 🧾')
-                    : (lang === 'hi' ? 'टेबल पर ऑर्डर सर्व हो गया 🍽️' : 'Served to Table 🍽️ Enjoy!'))
-              : isPrepared
-                ? (isCinema ? (lang === 'hi' ? 'ऑर्डर तैयार है! सीट पर आ रहा है 🎬' : 'Order Ready! Staff bringing to seat 🎬')
-                  : isRoom ? (lang === 'hi' ? 'ऑर्डर तैयार है! रूम में आ रहा है 🏨' : 'Order Ready! Delivering to room 🏨')
-                    : isCounter ? (lang === 'hi' ? 'ऑर्डर तैयार है! काउंटर से लें ⚡' : 'Order Ready! Pickup at counter ⚡')
-                      : (lang === 'hi' ? 'ऑर्डर तैयार है! टेबल पर आ रहा है 🛎️' : 'Order Ready! Staff bringing to table 🛎️'))
-                : isPreparing
-                  ? (lang === 'hi' ? 'ऑर्डर स्वीकार — तैयार हो रहा है 👨‍🍳' : 'Accepted — Preparing Now 👨‍🍳')
-                  : statusRaw === 'pending'
-                    ? (lang === 'hi' ? 'स्वीकृति की प्रतीक्षा में 🟡' : 'Pending Acceptance 🟡')
-                    : (lang === 'hi' ? 'ऑर्डर प्राप्त हुआ 🟢' : 'Order Received 🟢');
+            : hasMixedReadyAndCooking
+              ? (lang === 'hi'
+                ? `राउंड ${readyRoundNums.join(', ')} तैयार 🛎️ • राउंड ${pendingOrPrepRounds.map(m => m.roundNum).join(', ')} ${pendingOrPrepRounds.some(m => m.rPreparing) ? 'बन रहा है 👨‍🍳' : 'प्रतीक्षा में 🟡'}`
+                : `Round ${readyRoundNums.join(', ')} Ready 🛎️ • Round ${pendingOrPrepRounds.map(m => m.roundNum).join(', ')} ${pendingOrPrepRounds.some(m => m.rPreparing) ? 'Preparing 👨‍🍳' : 'Pending 🟡'}`)
+              : isServed
+                ? (isCinema ? (lang === 'hi' ? 'सीट पर ऑर्डर सर्व किया गया 🎬' : 'Delivered to Seat 🎬 Enjoy!')
+                  : isRoom ? (lang === 'hi' ? 'रूम में ऑर्डर डिलीवर हो गया 🏨' : 'Delivered to Room 🏨 Enjoy!')
+                    : isCounter ? (lang === 'hi' ? 'काउंटर पर ऑर्डर दिया गया 🧾' : 'Handed Over at Counter 🧾')
+                      : (lang === 'hi' ? 'टेबल पर ऑर्डर सर्व हो गया 🍽️' : 'Served to Table 🍽️ Enjoy!'))
+                : isPrepared
+                  ? (isCinema ? (lang === 'hi' ? 'ऑर्डर तैयार है! सीट पर आ रहा है 🎬' : 'Order Ready! Staff bringing to seat 🎬')
+                    : isRoom ? (lang === 'hi' ? 'ऑर्डर तैयार है! रूम में आ रहा है 🏨' : 'Order Ready! Delivering to room 🏨')
+                      : isCounter ? (lang === 'hi' ? 'ऑर्डर तैयार है! काउंटर से लें ⚡' : 'Order Ready! Pickup at counter ⚡')
+                        : (lang === 'hi' ? 'ऑर्डर तैयार है! टेबल पर आ रहा है 🛎️' : 'Order Ready! Staff bringing to table 🛎️'))
+                  : isPreparing
+                    ? (lang === 'hi' ? 'ऑर्डर स्वीकार — तैयार हो रहा है 👨‍🍳' : 'Accepted — Preparing Now 👨‍🍳')
+                    : effectiveStatusRaw === 'pending'
+                      ? (lang === 'hi' ? 'स्वीकृति की प्रतीक्षा में 🟡' : 'Pending Acceptance 🟡')
+                      : (lang === 'hi' ? 'ऑर्डर प्राप्त हुआ 🟢' : 'Order Received 🟢');
 
         const handleEndTrackingSession = () => {
           if (isActiveCooking) {
@@ -3819,6 +3866,27 @@ export default function App() {
                     <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.88)', fontWeight: 700, display: 'block', overflowWrap: 'break-word', marginTop: '1px' }}>
                       {statusLabel}
                     </span>
+                    {roundMetas.length > 1 && !isCompleted && !isCancelled && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', marginTop: '5px' }}>
+                        {roundMetas.map((rm, rmIdx) => (
+                          <span
+                            key={`banner-round-${rm.roundNum}-${rmIdx}`}
+                            style={{
+                              fontSize: '0.66rem',
+                              fontWeight: 800,
+                              color: '#FFFFFF',
+                              background: rm.pillBg,
+                              border: `1px solid ${rm.pillBorder}`,
+                              padding: '1px 7px',
+                              borderRadius: '9999px',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {`R${rm.roundNum}: ${rm.shortLabel}`}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -3998,6 +4066,7 @@ export default function App() {
                       {trackRounds.length > 1 ? (
                         trackRounds.map((rnd, rIdx) => {
                           const rItems = Array.isArray(rnd.items) ? rnd.items : [];
+                          const rMeta = getRoundStatusMeta(rnd, rIdx);
                           return (
                             <div key={rnd.id || rIdx} style={{
                               background: '#F8FAFC',
@@ -4008,8 +4077,22 @@ export default function App() {
                               flexDirection: 'column',
                               gap: '6px'
                             }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', fontWeight: 900, color: '#1D4ED8' }}>
-                                <span>{lang === 'hi' ? `राउंड ${rnd.round_number || (rIdx + 1)}` : `Round ${rnd.round_number || (rIdx + 1)}`}</span>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.72rem', fontWeight: 900, color: '#1D4ED8' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span>{lang === 'hi' ? `राउंड ${rMeta.roundNum}` : `Round ${rMeta.roundNum}`}</span>
+                                  <span style={{
+                                    background: rMeta.modalBg,
+                                    color: rMeta.modalColor,
+                                    border: `1px solid ${rMeta.modalBorder}`,
+                                    padding: '1px 7px',
+                                    borderRadius: '9999px',
+                                    fontSize: '0.66rem',
+                                    fontWeight: 800,
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {rMeta.shortLabel}
+                                  </span>
+                                </div>
                                 <span style={{ color: '#475569', fontWeight: 700 }}>{trackCurrency}{Math.round(Number(rnd.grand_total_amount || 0)).toLocaleString('en-IN')}</span>
                               </div>
                               {rnd.notes && String(rnd.notes).trim() && (
