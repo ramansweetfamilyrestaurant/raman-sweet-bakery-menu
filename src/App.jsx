@@ -1672,7 +1672,8 @@ export default function App() {
     };
 
     try {
-      const res = await createDirectOrder(orderPayload);
+      const minAnimDelay = new Promise(resolve => setTimeout(resolve, 2150));
+      const [res] = await Promise.all([createDirectOrder(orderPayload), minAnimDelay]);
 
       if (res && res.order_id) {
         if (res.tracking_token) {
@@ -6137,9 +6138,10 @@ export default function App() {
                           disabled={placingOrder}
                           style={{
                             width: '100%',
+                            minHeight: '50px',
                             background: 'var(--theme-btn-gradient, linear-gradient(135deg, #10B981 0%, #059669 100%))',
                             color: 'var(--theme-btn-text, #FFFFFF)',
-                            padding: '14px 18px',
+                            padding: placingOrder ? '7px 18px' : '14px 18px',
                             borderRadius: 'var(--radius-pill)',
                             fontWeight: 900,
                             fontSize: '0.96rem',
@@ -6150,40 +6152,97 @@ export default function App() {
                             justifyContent: 'center',
                             gap: '8px',
                             boxShadow: 'var(--theme-shadow, 0 6px 20px rgba(0, 0, 0, 0.3))',
-                            opacity: placingOrder ? 0.85 : 1
+                            position: 'relative',
+                            overflow: 'hidden',
+                            opacity: 1
                           }}
                         >
                           {placingOrder ? (
-                            <span
-                              style={{
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '50%',
-                                border: '2.5px solid rgba(255, 255, 255, 0.35)',
-                                borderTopColor: '#FFFFFF',
-                                animation: 'spin 0.75s linear infinite',
-                                flexShrink: 0
-                              }}
-                            />
+                            <span className="tq-truck-stage" aria-live="polite">
+                              <span className="tq-truck-road" />
+                              <span className="tq-truck-mover">
+                                <svg
+                                  className="tq-parcel-box"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  aria-hidden="true"
+                                >
+                                  <rect x="2" y="4" width="20" height="17" rx="3" fill="#D97706" stroke="#78350F" strokeWidth="1.4" />
+                                  <path d="M2 9.5H22" stroke="#92400E" strokeWidth="1.4" />
+                                  <rect x="9.5" y="4" width="5" height="6.5" rx="0.8" fill="#FDE68A" />
+                                  <path d="M7 15H13" stroke="#FEF3C7" strokeWidth="1.5" strokeLinecap="round" />
+                                </svg>
+                                <svg
+                                  className="tq-truck-svg"
+                                  viewBox="0 0 68 34"
+                                  fill="none"
+                                  aria-hidden="true"
+                                >
+                                  {/* Cargo body */}
+                                  <rect x="4" y="4" width="38" height="21" rx="4" fill="#FFFFFF" />
+                                  <rect x="4" y="18" width="38" height="7" rx="2" fill="#F1F5F9" />
+                                  {/* Brand accent stripe */}
+                                  <rect x="7" y="9" width="30" height="4.5" rx="2.2" fill="#F59E0B" />
+                                  <rect x="7" y="15.5" width="16" height="2" rx="1" fill="#CBD5E1" />
+                                  {/* Reverse tail-light */}
+                                  <rect className="tq-truck-taillight" x="2.5" y="18.5" width="3" height="4.5" rx="1.2" fill="#EF4444" />
+                                  {/* Cab */}
+                                  <path d="M42 9H54.5C57.5 9 59.8 11 61 13.8L63.4 19.2C63.8 20.1 64 21 64 22V23.5C64 24.6 63.1 25.5 62 25.5H42V9Z" fill="#F8FAFC" />
+                                  {/* Windshield */}
+                                  <path d="M46 11.5H54.2C56.1 11.5 57.7 12.7 58.4 14.5L59.8 17.8H46V11.5Z" fill="#0F172A" fillOpacity="0.85" />
+                                  {/* Headlight */}
+                                  <rect x="61.5" y="20" width="3" height="3" rx="1.2" fill="#FDE047" />
+                                  {/* Chassis bar */}
+                                  <rect x="5" y="24" width="57" height="2.5" rx="1.2" fill="#334155" />
+                                  {/* Rear wheel */}
+                                  <circle cx="17" cy="27" r="5" fill="#0F172A" />
+                                  <circle cx="17" cy="27" r="2.2" fill="#E2E8F0" />
+                                  {/* Front wheel */}
+                                  <circle cx="52" cy="27" r="5" fill="#0F172A" />
+                                  <circle cx="52" cy="27" r="2.2" fill="#E2E8F0" />
+                                </svg>
+                              </span>
+                              <span className="tq-order-done">
+                                <svg
+                                  className="tq-order-done-check"
+                                  width="20"
+                                  height="20"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  aria-hidden="true"
+                                >
+                                  <circle cx="12" cy="12" r="10.5" fill="rgba(255,255,255,0.22)" stroke="#FFFFFF" strokeWidth="1.8" />
+                                  <path
+                                    d="M7.5 12.5L10.5 15.5L16.8 9"
+                                    stroke="#FFFFFF"
+                                    strokeWidth="2.4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    pathLength="1"
+                                  />
+                                </svg>
+                                <span>{lang === 'hi' ? 'ऑर्डर हो गया!' : 'Order Placed!'}</span>
+                              </span>
+                            </span>
                           ) : (
-                            <Sparkles size={18} color="#FDE047" />
+                            <>
+                              <Sparkles size={18} color="#FDE047" />
+                              <span>
+                                {isAddon
+                                  ? (orderTypeChoice === 'takeaway'
+                                    ? `📦 Place Round ${nextRound} Parcel Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
+                                    : `⚡ Confirm & Place Round ${nextRound} Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`)
+                                  : (() => {
+                                    const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
+                                    const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
+                                    const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
+                                    if (isCin) return `🍿 Deliver to Seat Now (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                    if (isRoom) return `🛎️ Place In-Room Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                    return `⚡ Confirm & Place Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
+                                  })()}
+                              </span>
+                            </>
                           )}
-                          <span>
-                            {placingOrder
-                              ? (lang === 'hi' ? 'किचन में भेजा जा रहा है...' : 'Sending to Kitchen...')
-                              : isAddon
-                                ? (orderTypeChoice === 'takeaway'
-                                  ? `📦 Place Round ${nextRound} Parcel Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
-                                  : `⚡ Confirm & Place Round ${nextRound} Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`)
-                                : (() => {
-                                  const activeType = (currentSpaceType || String(info?.table_prefix || 'table')).toLowerCase();
-                                  const isCin = activeType === 'cinema_seat' || activeType === 'cinema' || String(effectiveTableNum || '').toLowerCase().includes('screen') || String(effectiveTableNum || '').toLowerCase().includes('seat');
-                                  const isRoom = activeType === 'room' || String(effectiveTableNum || '').toLowerCase().includes('room');
-                                  if (isCin) return `🍿 Deliver to Seat Now (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
-                                  if (isRoom) return `🛎️ Place In-Room Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
-                                  return `⚡ Confirm & Place Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`;
-                                })()}
-                          </span>
                         </button>
                       )}
 

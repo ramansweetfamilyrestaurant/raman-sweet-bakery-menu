@@ -1177,6 +1177,221 @@ img {
   pointer-events: none;
 }
 
+/* ============================================================
+   FOOD TRUCK PLACE ORDER BUTTON ANIMATION (GPU-composited)
+   ============================================================ */
+@keyframes tqTruckMover {
+  0% {
+    opacity: 0;
+    transform: translateX(120px);
+  }
+  7% {
+    opacity: 1;
+    transform: translateX(92px);
+  }
+  26% {
+    opacity: 1;
+    transform: translateX(-2px);
+  }
+  30% {
+    opacity: 1;
+    transform: translateX(0px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(0px);
+  }
+  56% {
+    opacity: 1;
+    transform: translateX(-7px);
+  }
+  75% {
+    opacity: 1;
+    transform: translateX(155px);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: translateX(185px);
+  }
+}
+
+@keyframes tqTruckBody {
+  0%,
+  22% {
+    transform: translateY(0) rotate(0deg);
+  }
+  26% {
+    transform: translateY(1.5px) rotate(-1.5deg);
+  }
+  30% {
+    transform: translateY(0) rotate(0deg);
+  }
+  42% {
+    transform: translateY(0) rotate(0deg);
+  }
+  45% {
+    transform: translateY(2.2px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(0) rotate(0deg);
+  }
+  56% {
+    transform: translateY(0.5px) rotate(1.5deg);
+  }
+  65%,
+  78% {
+    transform: translateY(-0.5px) rotate(-2deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes tqParcelDrop {
+  0%,
+  26% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.75) rotate(-6deg);
+  }
+  32% {
+    opacity: 1;
+    transform: translateY(-13px) scale(1.06) rotate(3deg);
+  }
+  43% {
+    opacity: 1;
+    transform: translateY(1px) scale(0.95) rotate(0deg);
+  }
+  48%,
+  100% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.75) rotate(0deg);
+  }
+}
+
+@keyframes tqReverseGlow {
+  0%,
+  4% {
+    opacity: 0.25;
+  }
+  10%,
+  18%,
+  26% {
+    opacity: 1;
+  }
+  14%,
+  22%,
+  30%,
+  100% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes tqTruckRoadFade {
+  0%,
+  68% {
+    opacity: 0.45;
+  }
+  78%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes tqOrderDonePop {
+  0%,
+  72% {
+    opacity: 0;
+    transform: scale(0.86) translateY(4px);
+  }
+  83% {
+    opacity: 1;
+    transform: scale(1.03) translateY(0);
+  }
+  90%,
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.tq-truck-stage {
+  position: relative;
+  width: 100%;
+  height: 36px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.tq-truck-road {
+  position: absolute;
+  bottom: 0;
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.75) 0 10px,
+    transparent 10px 18px
+  );
+  animation: tqTruckRoadFade 2.15s ease-out both;
+}
+
+.tq-truck-mover {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: tqTruckMover 2.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+.tq-truck-svg {
+  width: 50px;
+  height: 26px;
+  display: block;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.22));
+  animation: tqTruckBody 2.15s ease-in-out both;
+  will-change: transform;
+}
+
+.tq-truck-taillight {
+  animation: tqReverseGlow 2.15s ease-in-out both;
+}
+
+.tq-parcel-box {
+  position: absolute;
+  top: -5px;
+  left: 9px;
+  width: 15px;
+  height: 15px;
+  animation: tqParcelDrop 2.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  will-change: transform, opacity;
+}
+
+.tq-order-done {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  opacity: 0;
+  animation: tqOrderDonePop 2.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+.tq-order-done-check path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tqDrawCheck 0.4s cubic-bezier(0.22, 1, 0.36, 1) 1.62s both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tq-skeleton::after,
   .tq-skeleton-dark::after,
@@ -1188,13 +1403,32 @@ img {
   .tq-sparkle-dot,
   .tq-qty-pop,
   .tq-tap,
-  .tq-pill-smooth {
+  .tq-pill-smooth,
+  .tq-truck-road,
+  .tq-truck-mover,
+  .tq-truck-svg,
+  .tq-truck-taillight,
+  .tq-parcel-box,
+  .tq-order-done,
+  .tq-order-done-check path {
     animation: none !important;
     transition: none !important;
   }
 
-  .tq-svg-check path {
+  .tq-svg-check path,
+  .tq-order-done-check path {
     stroke-dashoffset: 0 !important;
+  }
+
+  .tq-truck-mover,
+  .tq-truck-road,
+  .tq-parcel-box {
+    display: none !important;
+  }
+
+  .tq-order-done {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
