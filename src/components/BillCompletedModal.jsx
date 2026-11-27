@@ -313,19 +313,23 @@ export default function BillCompletedModal({
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingRight: '36px' }}>
-            <div style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '50%',
-              background: '#10B981',
-              border: '2px solid rgba(255,255,255,0.45)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              boxShadow: '0 6px 18px rgba(16, 185, 129, 0.45)',
-              animation: 'tqPopIn 0.34s cubic-bezier(0.34, 1.56, 0.64, 1)'
-            }}>
+            <div
+              className="tq-check-ripple"
+              style={{
+                position: 'relative',
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                background: '#10B981',
+                border: '2px solid rgba(255,255,255,0.45)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 6px 18px rgba(16, 185, 129, 0.45)',
+                animation: 'tqPopIn 0.34s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              }}
+            >
               <Check size={24} strokeWidth={3} color="#FFFFFF" />
             </div>
 

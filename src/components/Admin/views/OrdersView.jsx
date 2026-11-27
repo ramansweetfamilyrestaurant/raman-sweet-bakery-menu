@@ -982,6 +982,60 @@ export default function OrdersView({
             grid-template-columns: minmax(0, 1fr) !important;
           }
         }
+        @keyframes ordersDrawerSlideIn {
+          0% {
+            opacity: 0;
+            transform: translateX(36px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes ordersBackdropFade {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        @keyframes ordersModalPop {
+          0% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        @keyframes ordersPendingGlow {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.07);
+            opacity: 0.82;
+          }
+        }
+        .orders-drawer-backdrop {
+          animation: ordersBackdropFade 0.18s ease-out;
+        }
+        .orders-drawer-panel {
+          animation: ordersDrawerSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .orders-reject-modal {
+          animation: ordersModalPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .orders-pending-pulse {
+          animation: ordersPendingGlow 2.2s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .orders-drawer-backdrop,
+          .orders-drawer-panel,
+          .orders-reject-modal,
+          .orders-pending-pulse {
+            animation: none !important;
+          }
+        }
       `}</style>
 
       {/* ========================================================
@@ -1202,7 +1256,7 @@ export default function OrdersView({
             transition: 'all 0.15s ease'
           }}
         >
-          <div className="orders-metric-icon" style={{
+          <div className={`orders-metric-icon${pendingCount > 0 ? ' orders-pending-pulse' : ''}`} style={{
             width: '42px',
             height: '42px',
             borderRadius: '12px',
@@ -3051,15 +3105,18 @@ export default function OrdersView({
           5. LUXURY ORDER DETAILS SLIDE-OVER DRAWER
          ======================================================== */}
       {selectedOrder && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(10, 35, 21, 0.5)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 9999,
-          display: 'flex',
-          justifyContent: 'flex-end'
-        }}>
+        <div
+          className="orders-drawer-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(10, 35, 21, 0.5)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            justifyContent: 'flex-end'
+          }}
+        >
           <div
             className="orders-drawer-panel"
             style={{

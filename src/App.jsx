@@ -3077,14 +3077,19 @@ export default function App() {
               gap: '8px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0, flex: '1 1 200px' }}>
-                <span style={{
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  background: dotColor,
-                  boxShadow: `0 0 0 3px rgba(255,255,255,0.14)`,
-                  flexShrink: 0
-                }} />
+                <span
+                  className={(!isCompleted && !isCancelled) ? 'tq-live-beacon' : undefined}
+                  style={{
+                    '--beacon-color': dotColor,
+                    position: 'relative',
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    background: dotColor,
+                    boxShadow: `0 0 0 3px rgba(255,255,255,0.14)`,
+                    flexShrink: 0
+                  }}
+                />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <strong style={{ fontSize: '0.84rem', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span>
@@ -3161,6 +3166,7 @@ export default function App() {
                       height: '4px',
                       borderRadius: '9999px',
                       background: step <= stepIdx ? dotColor : 'rgba(255, 255, 255, 0.2)',
+                      animation: (step === stepIdx && !isCompleted && !isCancelled) ? 'tqProgressPulse 1.6s ease-in-out infinite' : undefined,
                       transition: 'background 0.25s ease'
                     }}
                   />
@@ -3185,7 +3191,8 @@ export default function App() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   padding: '16px',
-                  zIndex: 10040
+                  zIndex: 10040,
+                  animation: 'sheetBackdropFade 0.18s ease-out'
                 }}
               >
                 <div
@@ -3199,7 +3206,8 @@ export default function App() {
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',
-                    boxShadow: '0 24px 60px rgba(0, 0, 0, 0.35)'
+                    boxShadow: '0 24px 60px rgba(0, 0, 0, 0.35)',
+                    animation: 'tqPopIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)'
                   }}
                 >
                   <div style={{
@@ -5442,6 +5450,7 @@ export default function App() {
                       {isDirectOrderingActive && (
                         <button
                           type="button"
+                          className="tq-tap"
                           onClick={handleSendDirectOrder}
                           disabled={placingOrder}
                           style={{
@@ -5459,13 +5468,27 @@ export default function App() {
                             justifyContent: 'center',
                             gap: '8px',
                             boxShadow: 'var(--theme-shadow, 0 6px 20px rgba(0, 0, 0, 0.3))',
-                            opacity: placingOrder ? 0.7 : 1
+                            opacity: placingOrder ? 0.85 : 1
                           }}
                         >
-                          <Sparkles size={18} color="#FDE047" />
+                          {placingOrder ? (
+                            <span
+                              style={{
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                border: '2.5px solid rgba(255, 255, 255, 0.35)',
+                                borderTopColor: '#FFFFFF',
+                                animation: 'spin 0.75s linear infinite',
+                                flexShrink: 0
+                              }}
+                            />
+                          ) : (
+                            <Sparkles size={18} color="#FDE047" />
+                          )}
                           <span>
                             {placingOrder
-                              ? 'Placing Order...'
+                              ? (lang === 'hi' ? 'किचन में भेजा जा रहा है...' : 'Sending to Kitchen...')
                               : isAddon
                                 ? (orderTypeChoice === 'takeaway'
                                   ? `📦 Place Round ${nextRound} Parcel Order (${sym}${formatPriceNumber(isGst ? grandTotal : subtotal)})`
@@ -5584,25 +5607,65 @@ export default function App() {
                 animation: 'tqPopIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)'
               }}
             >
-              <div style={{
-                width: '58px',
-                height: '58px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #25D366 0%, #10B981 100%)',
-                color: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 14px',
-                fontSize: '1.85rem',
-                fontWeight: 900,
-                boxShadow: '0 8px 22px rgba(16, 185, 129, 0.45)',
-                animation: 'tqPopIn 0.34s cubic-bezier(0.34, 1.56, 0.64, 1)'
-              }}>
-                ✓
+              <div style={{ position: 'relative', width: '58px', height: '58px', margin: '0 auto 14px' }}>
+                {[
+                  { sx: '-38px', sy: '-24px', size: 6, bg: '#4ADE80' },
+                  { sx: '38px', sy: '-22px', size: 6, bg: '#FBBF24' },
+                  { sx: '-44px', sy: '12px', size: 5, bg: '#38BDF8' },
+                  { sx: '44px', sy: '14px', size: 5, bg: '#4ADE80' },
+                  { sx: '0px', sy: '-42px', size: 5, bg: '#FDE047' },
+                  { sx: '-18px', sy: '-38px', size: 4, bg: '#A7F3D0' }
+                ].map((sp, sIdx) => (
+                  <span
+                    key={sIdx}
+                    className="tq-sparkle-dot"
+                    style={{
+                      width: `${sp.size}px`,
+                      height: `${sp.size}px`,
+                      marginLeft: `-${sp.size / 2}px`,
+                      marginTop: `-${sp.size / 2}px`,
+                      background: sp.bg,
+                      '--sx': sp.sx,
+                      '--sy': sp.sy
+                    }}
+                  />
+                ))}
+                <div
+                  className="tq-check-ripple"
+                  style={{
+                    position: 'relative',
+                    width: '58px',
+                    height: '58px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #25D366 0%, #10B981 100%)',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 8px 22px rgba(16, 185, 129, 0.45)',
+                    animation: 'tqPopIn 0.34s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                  }}
+                >
+                  <svg className="tq-svg-check" viewBox="0 0 28 28" width="28" height="28" fill="none" aria-hidden="true">
+                    <path
+                      d="M6.5 14.5 L11.5 19.5 L21.5 9"
+                      stroke="#FFFFFF"
+                      strokeWidth="3.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
               </div>
 
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFFFFF', margin: '0 0 6px 0', lineHeight: 1.25 }}>
+              <h2 style={{
+                fontSize: '1.3rem',
+                fontWeight: 900,
+                color: '#FFFFFF',
+                margin: '0 0 6px 0',
+                lineHeight: 1.25,
+                animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.07s both'
+              }}>
                 {isAddonRound
                   ? (lang === 'hi' ? `राउंड ${roundNum} आइटम जुड़ गए!` : `Round ${roundNum} Items Sent!`)
                   : (lang === 'hi' ? 'ऑर्डर सफलतापूर्वक दर्ज हो गया!' : 'Order Placed Successfully!')}
@@ -5613,17 +5676,21 @@ export default function App() {
                 borderRadius: '16px',
                 padding: '14px',
                 margin: '14px 0',
-                border: '1px solid rgba(255, 255, 255, 0.14)'
+                border: '1px solid rgba(255, 255, 255, 0.14)',
+                animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.13s both'
               }}>
                 {hasToken ? (
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.32) 100%)',
-                    border: '1.5px dashed #FBBF24',
-                    borderRadius: '12px',
-                    padding: '10px',
-                    marginBottom: '10px',
-                    textAlign: 'center'
-                  }}>
+                  <div
+                    className="tq-token-sheen"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.32) 100%)',
+                      border: '1.5px dashed #FBBF24',
+                      borderRadius: '12px',
+                      padding: '10px',
+                      marginBottom: '10px',
+                      textAlign: 'center'
+                    }}
+                  >
                     <div style={{ fontSize: '0.70rem', textTransform: 'uppercase', letterSpacing: '1.4px', color: '#FDE68A', fontWeight: 800 }}>
                       ⚡ {lang === 'hi' ? 'टेकअवे पिकअप टोकन' : 'Takeaway Pickup Token'}
                     </div>
@@ -5657,7 +5724,13 @@ export default function App() {
                 </div>
               </div>
 
-              <p style={{ fontSize: '0.84rem', color: 'rgba(255, 255, 255, 0.86)', lineHeight: 1.5, margin: '0 0 18px 0' }}>
+              <p style={{
+                fontSize: '0.84rem',
+                color: 'rgba(255, 255, 255, 0.86)',
+                lineHeight: 1.5,
+                margin: '0 0 18px 0',
+                animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both'
+              }}>
                 {destinationMsg}
               </p>
 
@@ -5675,7 +5748,8 @@ export default function App() {
                   fontSize: '0.94rem',
                   border: 'none',
                   cursor: 'pointer',
-                  boxShadow: '0 6px 18px rgba(0, 0, 0, 0.25)'
+                  boxShadow: '0 6px 18px rgba(0, 0, 0, 0.25)',
+                  animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.23s both'
                 }}
               >
                 {lang === 'hi' ? 'ठीक है, लाइव स्टेटस देखें' : 'Track Live Order →'}

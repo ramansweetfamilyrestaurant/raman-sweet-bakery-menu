@@ -4906,7 +4906,8 @@ export default function AdminDashboard({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '16px'
+          padding: '16px',
+          animation: 'sheetBackdropFade 0.18s ease-out'
         }}>
           <div style={{
             background: '#FFFFFF',
@@ -4920,7 +4921,8 @@ export default function AdminDashboard({
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px'
+            gap: '16px',
+            animation: 'tqPopIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <strong style={{ fontSize: '1.1rem', color: 'var(--adm-primary)', minWidth: 0, flex: 1 }}>
@@ -5156,7 +5158,8 @@ export default function AdminDashboard({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '16px'
+              padding: '16px',
+              animation: 'sheetBackdropFade 0.18s ease-out'
             }}
           >
             <div
@@ -5172,7 +5175,8 @@ export default function AdminDashboard({
                 padding: '20px',
                 boxShadow: '0 24px 60px rgba(0, 0, 0, 0.42)',
                 textAlign: 'left',
-                border: '1px solid #E2E8F0'
+                border: '1px solid #E2E8F0',
+                animation: 'tqPopIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
@@ -5340,7 +5344,7 @@ export default function AdminDashboard({
 
                   {showModalUpiQr && (
                     modalUpiQrUrl && modalUpiQrSnapshotKey === currentQrSnapshotKey ? (
-                      <div style={{ marginTop: '10px', padding: '12px', background: '#F8FAFC', borderRadius: '14px', border: '1.5px dashed #3B82F6', textAlign: 'center' }}>
+                      <div style={{ marginTop: '10px', padding: '12px', background: '#F8FAFC', borderRadius: '14px', border: '1.5px dashed #3B82F6', textAlign: 'center', animation: 'tqCardIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                         <span style={{ fontSize: '0.72rem', fontWeight: 900, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
                           Scan & Pay via GPay • PhonePe • Paytm
                         </span>
