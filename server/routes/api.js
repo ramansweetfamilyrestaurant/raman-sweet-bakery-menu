@@ -2626,11 +2626,15 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           if (existingByKey && existingByKey.length > 0) {
             const ex = existingByKey[0];
             const isAddon = (Number(ex.round_number) || 1) > 1;
+            const obsTok = resolvedSpaceType !== 'counter'
+              ? signSessionObserverToken(resto, ex.session_id || `sess_${targetId}_${cleanTable}_${ex.parent_order_id || ex.id}`, cleanTable)
+              : '';
             return {
               success: true,
               order_id: ex.id,
               primary_order_id: ex.parent_order_id || ex.id,
               session_id: ex.session_id,
+              ...(obsTok ? { session_observer_token: obsTok } : {}),
               round_number: Number(ex.round_number) || 1,
               is_addon: isAddon,
               status: ex.status,
@@ -2660,11 +2664,15 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             const prev = recentOrder[0];
             if (Number(prev.total_amount) === serverVerifiedTotal) {
               const isAddon = (Number(prev.round_number) || 1) > 1;
+              const obsTok = resolvedSpaceType !== 'counter'
+                ? signSessionObserverToken(resto, prev.session_id || `sess_${targetId}_${cleanTable}_${prev.parent_order_id || prev.id}`, cleanTable)
+                : '';
               return {
                 success: true,
                 order_id: prev.id,
                 primary_order_id: prev.parent_order_id || prev.id,
                 session_id: prev.session_id,
+                ...(obsTok ? { session_observer_token: obsTok } : {}),
                 round_number: Number(prev.round_number) || 1,
                 is_addon: isAddon,
                 status: prev.status || 'pending',
@@ -3379,10 +3387,23 @@ router.get('/orders/active-table', async (req, res) => {
             [prevOrderIdNum, targetId, rawTable, queryTable, queryAlt]
           );
           const prevOrder = prevRows && prevRows[0];
-          const hasHistoricalCredential = Boolean(
+          let hasHistoricalCredential = Boolean(
             prevOrder &&
             (isStaffAuthorized || verifyHistoricalSessionCredential(req, resto, prevOrder))
           );
+          if (prevOrder && !hasHistoricalCredential) {
+            const groupAnchorId = prevOrder.parent_order_id || prevOrder.id;
+            const candidateObs = String(req.headers['x-session-observer-token'] || req.query?.observer_token || '').trim();
+            if (candidateObs) {
+              const relatedRows = await query(
+                `SELECT id, session_id, parent_order_id, table_number, tracking_token_hash
+                 FROM orders
+                 WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2 OR ($3 <> '' AND session_id = $3))`,
+                [targetId, groupAnchorId, String(prevOrder.session_id || '')]
+              );
+              hasHistoricalCredential = (relatedRows || []).some(r => verifyHistoricalSessionCredential(req, resto, r));
+            }
+          }
           if (prevOrder && hasHistoricalCredential) {
             const prevStatus = String(prevOrder.status || '').toLowerCase();
             const isPrevSettled = Boolean(prevOrder.is_settled === 1 || prevOrder.is_settled === '1' || prevOrder.is_settled === true);
@@ -3402,26 +3423,18 @@ router.get('/orders/active-table', async (req, res) => {
 
             if (withinTerminalWindow && (isPrevSettled || prevStatus === 'completed')) {
               let billRows = [prevOrder];
-              if (prevOrder.session_id) {
-                const siblingRows = await query(
-                  `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
-                   FROM orders
-                   WHERE restaurant_id = $1 AND session_id = $2 AND status NOT IN ('rejected', 'cancelled')
-                   ORDER BY id ASC`,
-                  [targetId, prevOrder.session_id]
-                );
-                if (Array.isArray(siblingRows) && siblingRows.length > 0) billRows = siblingRows;
-              } else {
-                const rootId = prevOrder.parent_order_id || prevOrder.id;
-                const siblingRows = await query(
-                  `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
-                   FROM orders
-                   WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) AND status NOT IN ('rejected', 'cancelled')
-                   ORDER BY id ASC`,
-                  [targetId, rootId]
-                );
-                if (Array.isArray(siblingRows) && siblingRows.length > 0) billRows = siblingRows;
-              }
+              const rootId = prevOrder.parent_order_id || prevOrder.id;
+              const prevSessionId = String(prevOrder.session_id || '');
+              const siblingRows = await query(
+                `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+                 FROM orders
+                 WHERE restaurant_id = $1
+                   AND status NOT IN ('rejected', 'cancelled')
+                   AND (id = $2 OR parent_order_id = $2 OR ($3 <> '' AND session_id = $3))
+                 ORDER BY id ASC`,
+                [targetId, rootId, prevSessionId]
+              );
+              if (Array.isArray(siblingRows) && siblingRows.length > 0) billRows = siblingRows;
               const { billSummary } = buildConsolidatedOrderSummary(resto, prevOrder, billRows);
               return res.json({
                 id: prevOrder.id,

@@ -1490,6 +1490,20 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
     }
     pass('Settlement stamps terminal_at across rounds, prevents premature 410 expiry, and delivers consolidated BillCompletedModal receipt');
 
+    // Verify customer App.jsx guards transient trackOrderStatus failures from triggering Session Expired red banner
+    const customerAppSource = fs.readFileSync(new URL('../../src/App.jsx', import.meta.url), 'utf8');
+    assert.ok(
+      customerAppSource.includes('if (activeOrderId && trackRequestFailed) {\n                return;\n              }') ||
+      customerAppSource.includes('if (activeOrderId && trackRequestFailed)'),
+      'Customer polling loop must not trigger Session Expired red banner when trackOrderStatus suffered a transient failure'
+    );
+    assert.ok(
+      customerAppSource.includes("sessionStorage.getItem('tq_active_tracking_token')") &&
+      customerAppSource.includes('localStorage.getItem(`tq_track_${activeOrderId}`)'),
+      'Customer polling loop must fall back to persisted tracking tokens before treating tracking token as missing'
+    );
+    pass('Customer App.jsx transient track error and tracking-token fallback guards verified');
+
     console.log(`\nAll ${passed} Orders & KDS audit tests passed.`);
   } catch (err) {
     console.error('Orders & KDS audit test failed:', err);

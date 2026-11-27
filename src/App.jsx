@@ -1022,7 +1022,7 @@ export default function App() {
       restoredTenantOrderRef.current === tenantSlug &&
       restoredOrderSlug === tenantSlug
     );
-    if (!isOrderRestorationComplete || !effectiveTableNum || sessionExpired || activeOrderId || (activeOrderTrack && ['pending', 'accepted', 'kitchen', 'preparing', 'served'].includes(activeOrderTrack.status))) {
+    if (!isOrderRestorationComplete || !effectiveTableNum || sessionExpired || activeOrderId || (activeOrderTrack && ['pending', 'accepted', 'kitchen', 'preparing', 'ready', 'served'].includes(activeOrderTrack.status))) {
       return;
     }
 
@@ -1163,6 +1163,7 @@ export default function App() {
         if (trackingExpiredRef.current) {
           return;
         }
+        let trackRequestFailed = false;
         if (activeOrderId) {
           let trackingToken = '';
           try {
@@ -1214,6 +1215,7 @@ export default function App() {
               });
               return;
             }
+            trackRequestFailed = true;
           }
         }
         if (!isCurrentEffect) return;
@@ -1229,6 +1231,7 @@ export default function App() {
               trackingToken =
                 (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`tq_track_${prevTrackedId}`) : '') ||
                 (typeof localStorage !== 'undefined' ? localStorage.getItem(`tq_track_${prevTrackedId}`) : '') ||
+                (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tq_active_tracking_token') : '') ||
                 '';
             }
           } catch (e) {}
@@ -1264,6 +1267,10 @@ export default function App() {
               }
               setActiveOrderTrack(tableData);
             } else {
+              // If activeOrderId tracking suffered a transient network/5xx/auth error, do not immediately expire the live session into a red alert banner
+              if (activeOrderId && trackRequestFailed) {
+                return;
+              }
               // Only force View-Only lock when THIS session actually had a live tracked order that ended; otherwise just clear ancient stale localStorage ID
               if (lastActiveTableOrderIdRef.current && !isCounterSpace && !isHotelVenue && !isCinemaVenue && targetSpaceType !== 'counter' && targetSpaceType !== 'room' && targetSpaceType !== 'cinema_seat' && targetSpaceType !== 'cinema') {
                 lastActiveTableOrderIdRef.current = null;

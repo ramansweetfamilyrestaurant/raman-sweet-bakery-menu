@@ -629,6 +629,100 @@ async function runTestSuite() {
       assert.ok(orderColNames.has('updated_at'), 'orders.updated_at must exist');
     });
 
+    // ----------------------------------------------------------------------
+    // SECTION 11: Observer Token Continuity & Settled Cross-Session Sibling Rounds
+    // ----------------------------------------------------------------------
+    console.log('\n--- SECTION 11: Observer Token Continuity & Settled Sibling Round Bill ---');
+
+    await testAsync('Table observer receives session_observer_token (incl. idempotent replay) and sees bill_summary after settlement even when prev_order_id has a differing sibling session_id', async () => {
+      const table2Qr = generateHmacQrToken(testSlug, 'table', '2', tenantSecret);
+      const table2Hash = generateQrContextHash(testSlug, 'table', '2', table2Qr);
+      const table2Presence = generatePresenceToken({
+        verificationToken: 'vtok_table2_obs_test',
+        restaurantId: testRestoId,
+        slug: testSlug,
+        spaceType: 'table',
+        spaceNumber: '2',
+        qrContextHash: table2Hash,
+        expiryMinutes: 20
+      });
+
+      const idemKey = `idem_obs_t2_${Date.now()}`;
+      const orderPayload = {
+        slug: testSlug,
+        table_number: '2',
+        space_type: 'table',
+        table_token: table2Qr,
+        presence_token: table2Presence,
+        client_request_id: idemKey,
+        items: [{ dish_id: dishId, quantity: 1 }]
+      };
+
+      const createRes = await fetch(`${baseUrl}/api/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload)
+      });
+      assert.strictEqual(createRes.status, 200);
+      const createData = await createRes.json();
+      assert.ok(createData.session_observer_token, 'Initial table order must return session_observer_token');
+
+      // Idempotent replay must also return session_observer_token
+      const replayRes = await fetch(`${baseUrl}/api/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload)
+      });
+      assert.strictEqual(replayRes.status, 200);
+      const replayData = await replayRes.json();
+      assert.strictEqual(replayData.order_id, createData.order_id);
+      assert.ok(replayData.session_observer_token, 'Idempotent replay must preserve session_observer_token');
+
+      // Simulate a POS/kitchen sibling round linked via parent_order_id with a different session_id
+      const posSiblingIns = await query(`
+        INSERT INTO orders (restaurant_id, session_id, parent_order_id, table_number, order_type, customer_name, items, total_amount, status, is_settled, sent_to_kds, kitchen_prepared, created_at)
+        VALUES ($1, $2, $3, '2', 'dine_in', 'POS Guest', '[{"name":"Masala Chai","price":50,"quantity":1}]', 50, 'served', 0, 1, 1, CURRENT_TIMESTAMP)
+        RETURNING id
+      `, [testRestoId, `pos_diff_session_${Date.now()}`, createData.order_id]);
+      const posSiblingId = posSiblingIns[0].id;
+
+      // Settle both rounds (different session_ids linked by parent_order_id)
+      const settleRes = await fetch(`${baseUrl}/api/admin/orders/${createData.order_id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ settle: { method: 'upi' } })
+      });
+      assert.strictEqual(settleRes.status, 200);
+      const settleSiblingRes = await fetch(`${baseUrl}/api/admin/orders/${posSiblingId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ settle: { method: 'upi' } })
+      });
+      assert.strictEqual(settleSiblingRes.status, 200);
+
+      // Same-table observer polling prev_order_id=posSiblingId with Round 1 observer token must receive settled bill_summary (not null)
+      const obsRes = await fetch(`${baseUrl}/api/orders/active-table?slug=${testSlug}&table_number=2&space_type=table&tkn=${encodeURIComponent(table2Qr)}&prev_order_id=${posSiblingId}`, {
+        headers: { 'X-Session-Observer-Token': createData.session_observer_token }
+      });
+      assert.strictEqual(obsRes.status, 200);
+      const obsData = await obsRes.json();
+      assert.ok(obsData && typeof obsData === 'object', 'Observer with valid parent/sibling token must receive settled order payload instead of null');
+      assert.strictEqual(obsData.is_settled, 1);
+      assert.ok(obsData.bill_summary && obsData.bill_summary.grand_total_amount >= 200 && obsData.bill_summary.rounds?.length === 2, 'Consolidated bill_summary must include primary + sibling round');
+
+      // QR-only caller WITHOUT observer token must still receive null after settlement
+      const qrOnlyRes = await fetch(`${baseUrl}/api/orders/active-table?slug=${testSlug}&table_number=2&space_type=table&tkn=${encodeURIComponent(table2Qr)}&prev_order_id=${posSiblingId}`);
+      assert.strictEqual(qrOnlyRes.status, 200);
+      const qrOnlyData = await qrOnlyRes.json();
+      assert.strictEqual(qrOnlyData, null, 'Unauthenticated QR-only caller must not access settled bill');
+    });
+
   } finally {
     server.close();
   }

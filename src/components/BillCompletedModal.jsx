@@ -15,9 +15,22 @@ function escapeHtml(str) {
 
 function formatPaymentMethodLabel(method, isHi) {
   const clean = String(method || 'cash').toLowerCase();
-  if (clean === 'upi') return isHi ? 'UPI भुगतान' : 'Paid via UPI';
-  if (clean === 'card') return isHi ? 'कार्ड भुगतान' : 'Paid via Card';
+  if (clean.includes('upi')) return isHi ? 'UPI भुगतान' : 'Paid via UPI';
+  if (clean.includes('card')) return isHi ? 'कार्ड भुगतान' : 'Paid via Card';
   return isHi ? 'कैश भुगतान' : 'Paid via Cash';
+}
+
+function parseReceiptItems(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 export default function BillCompletedModal({
@@ -58,7 +71,7 @@ export default function BillCompletedModal({
     : [{
         id: bill.id,
         round_number: Number(bill.round_number) || 1,
-        items: Array.isArray(summary.items) ? summary.items : (Array.isArray(bill.items) ? bill.items : []),
+        items: parseReceiptItems(summary.items).length > 0 ? parseReceiptItems(summary.items) : parseReceiptItems(bill.items),
         subtotal_amount: Number(bill.subtotal_amount) || Number(bill.total_amount) || 0,
         tax_amount: Number(bill.tax_amount) || ((Number(bill.cgst_amount) || 0) + (Number(bill.sgst_amount) || 0)),
         grand_total_amount: Number(bill.grand_total_amount) || Number(bill.total_amount) || 0
@@ -91,8 +104,11 @@ export default function BillCompletedModal({
     : '';
 
   const tokenCode = bill.token_display || (bill.token_number ? `TK-${String(bill.token_number).padStart(2, '0')}` : '');
+  const cleanSpaceLabel = spaceLabel || (bill.table_number && String(bill.table_number).toLowerCase() !== 'counter' ? bill.table_number : '');
   const displaySpace = tokenCode
-    ? `${isHi ? 'टोकन' : 'Token'} ${tokenCode}`
+    ? (cleanSpaceLabel && !cleanSpaceLabel.toLowerCase().includes('counter') && !cleanSpaceLabel.includes(tokenCode)
+        ? `${cleanSpaceLabel} • ${tokenCode}`
+        : `${isHi ? 'टोकन' : 'Token'} ${tokenCode}`)
     : (spaceLabel || bill.table_number || '');
 
   const restoName = info?.name || 'TouchQR';
@@ -116,7 +132,7 @@ export default function BillCompletedModal({
         const qty = Number(item.quantity) || 1;
         const unitPrice = Number(item.price) || 0;
         const portion = item.portion ? ` (${item.portion})` : '';
-        lines.push(`${qty}x ${item.name || 'Item'}${portion} - ${sym}${formatPriceNumber(unitPrice * qty)}`);
+        lines.push(`${qty}x ${item.name || item.dish_name || 'Item'}${portion} - ${sym}${formatPriceNumber(unitPrice * qty)}`);
       });
     });
 
@@ -187,7 +203,7 @@ export default function BillCompletedModal({
           : '';
         return `
           <div class="row">
-            <div><strong>${qty}x</strong> ${escapeHtml(item.name || 'Item')}${portion}${mods}</div>
+            <div><strong>${qty}x</strong> ${escapeHtml(item.name || item.dish_name || 'Item')}${portion}${mods}</div>
             <div class="amt">${escapeHtml(sym)}${escapeHtml(formatPriceNumber(unitPrice * qty))}</div>
           </div>
         `;
@@ -417,7 +433,7 @@ export default function BillCompletedModal({
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-dark, #0F172A)', lineHeight: 1.35 }}>
                             <span>{qty}× </span>
-                            <span>{item.name || 'Item'}</span>
+                            <span>{item.name || item.dish_name || 'Item'}</span>
                             {item.portion && (
                               <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted, #64748B)', marginLeft: '5px' }}>
                                 ({item.portion})
