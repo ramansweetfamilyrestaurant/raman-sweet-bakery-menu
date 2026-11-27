@@ -2127,12 +2127,17 @@ async function ensureOrderColumns() {
       await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128)");
       await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_token_hash VARCHAR(64)");
       await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_reason TEXT");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'cash'");
+      await query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS terminal_at TIMESTAMP DEFAULT NULL");
     } else {
       const cols = await query("PRAGMA table_info(orders)");
       const colNames = (cols || []).map(c => c.name);
       if (!colNames.includes('order_type')) await query("ALTER TABLE orders ADD COLUMN order_type TEXT DEFAULT 'dine_in'");
       if (!colNames.includes('token_number')) await query("ALTER TABLE orders ADD COLUMN token_number INTEGER DEFAULT NULL");
       if (!colNames.includes('token_display')) await query("ALTER TABLE orders ADD COLUMN token_display TEXT DEFAULT NULL");
+      if (!colNames.includes('rejection_reason')) await query("ALTER TABLE orders ADD COLUMN rejection_reason TEXT");
+      if (!colNames.includes('payment_method')) await query("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'cash'");
     }
     orderSchemaHealed = true;
   } catch (err) {
@@ -3138,10 +3143,18 @@ router.get('/orders/track/:id', async (req, res) => {
     }
     const targetId = resto.id;
 
-    const orders = await query(
-      'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display, is_settled, payment_method, rejection_reason FROM orders WHERE id = $1 AND restaurant_id = $2',
-      [orderId, targetId]
-    );
+    let orders;
+    try {
+      orders = await query(
+        'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display, is_settled, payment_method, rejection_reason FROM orders WHERE id = $1 AND restaurant_id = $2',
+        [orderId, targetId]
+      );
+    } catch (trackColErr) {
+      orders = await query(
+        'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display, is_settled, payment_method, NULL AS rejection_reason FROM orders WHERE id = $1 AND restaurant_id = $2',
+        [orderId, targetId]
+      );
+    }
 
     if (!orders || orders.length === 0) {
       return res.status(404).json({ error: 'Order not found' });
@@ -3432,12 +3445,22 @@ router.get('/orders/active-table', async (req, res) => {
       const prevOrderIdNum = prev_order_id ? parseInt(prev_order_id, 10) : NaN;
       if (!isNaN(prevOrderIdNum) && prevOrderIdNum > 0) {
         try {
-          const prevRows = await query(
-            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method, rejection_reason, tracking_token_hash
-             FROM orders
-             WHERE id = $1 AND restaurant_id = $2 AND (table_number = $3 OR table_number = $4 OR table_number = $5)`,
-            [prevOrderIdNum, targetId, rawTable, queryTable, queryAlt]
-          );
+          let prevRows;
+          try {
+            prevRows = await query(
+              `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method, rejection_reason, tracking_token_hash
+               FROM orders
+               WHERE id = $1 AND restaurant_id = $2 AND (table_number = $3 OR table_number = $4 OR table_number = $5)`,
+              [prevOrderIdNum, targetId, rawTable, queryTable, queryAlt]
+            );
+          } catch (prevColErr) {
+            prevRows = await query(
+              `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method, NULL AS rejection_reason, tracking_token_hash
+               FROM orders
+               WHERE id = $1 AND restaurant_id = $2 AND (table_number = $3 OR table_number = $4 OR table_number = $5)`,
+              [prevOrderIdNum, targetId, rawTable, queryTable, queryAlt]
+            );
+          }
           const prevOrder = prevRows && prevRows[0];
           let hasHistoricalCredential = Boolean(
             prevOrder &&

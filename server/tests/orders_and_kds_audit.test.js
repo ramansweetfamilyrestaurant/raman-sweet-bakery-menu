@@ -1598,10 +1598,12 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
       customerAppSource.includes('localStorage.getItem(`tq_track_${activeOrderId}`)'),
       'Customer polling loop must fall back to persisted tracking tokens before treating tracking token as missing'
     );
+    const normalizedCustomerAppSource = customerAppSource.replace(/\r\n/g, '\n');
     assert.ok(
-      customerAppSource.includes('persistLastCompletedBill(') &&
-      customerAppSource.includes('trackOrderStatus(activeOrderId, currentSlug, trackingToken, trackObserverToken)'),
-      'Customer App.jsx must persist lastCompletedBill across reload and pass observer token to trackOrderStatus'
+      normalizedCustomerAppSource.includes('persistLastCompletedBill(') &&
+      normalizedCustomerAppSource.includes('trackOrderStatus(activeOrderId, currentSlug, trackingToken, trackObserverToken)') &&
+      normalizedCustomerAppSource.includes('lastActiveTableOrderIdRef.current = null;\n              setActiveOrderTrack(null);'),
+      'Customer App.jsx must persist lastCompletedBill across reload, pass observer token to trackOrderStatus, and clear lastActiveTableOrderIdRef on confirmed empty poll'
     );
     pass('Customer App.jsx transient track error and tracking-token fallback guards verified');
 

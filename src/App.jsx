@@ -1266,7 +1266,9 @@ export default function App() {
               });
               return;
             }
-            trackRequestFailed = true;
+            if (!trackErr?.status || trackErr.status >= 500 || trackErr.isTimeout) {
+              trackRequestFailed = true;
+            }
           }
         }
         if (!isCurrentEffect) return;
@@ -1378,6 +1380,7 @@ export default function App() {
               if (staleObsOrderKey) {
                 try { localStorage.removeItem(staleObsOrderKey); sessionStorage.removeItem(staleObsOrderKey); } catch (e) {}
               }
+              lastActiveTableOrderIdRef.current = null;
               setActiveOrderTrack(null);
             }
           }
