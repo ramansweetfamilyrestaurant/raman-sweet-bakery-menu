@@ -165,12 +165,20 @@ export default function App() {
   const [currentSpaceType, setCurrentSpaceType] = useState(initialSpaceInfo.type);
   const [currentTableToken, setCurrentTableToken] = useState(initialSpaceInfo.token);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [isPostBillViewOnly, setIsPostBillViewOnly] = useState(false);
   const [autoKillSeconds, setAutoKillSeconds] = useState(null);
   const [billCompletedModal, setBillCompletedModal] = useState(null);
   const [showRunningOrderModal, setShowRunningOrderModal] = useState(false);
   const [lastCompletedBill, setLastCompletedBill] = useState(null);
   const [completedSpaceSnapshot, setCompletedSpaceSnapshot] = useState(null);
   const handledSettledOrderIdsRef = useRef(new Set());
+  const lastActiveTableOrderIdRef = useRef(null);
+
+  const buildViewOnlyUrl = () => {
+    const pathSlug = getSlugFromUrl();
+    if (pathSlug) return `/${pathSlug}?view=1`;
+    return isCustomDomainHost(typeof window !== 'undefined' ? window.location.hostname : '') ? '/?view=1' : ((window.location.pathname || '/') + '?view=1');
+  };
 
   // Validate if the table/space number exists within the restaurant's configured capacity & has valid token shape
   const isSpaceNumberValid = () => {
@@ -187,7 +195,7 @@ export default function App() {
 
   const isTableValid = isSpaceNumberValid();
   // Effective Table Number (Empty if session expired or scanned QR identity is unverified/invalid/out-of-range)
-  const effectiveTableNum = (sessionExpired || !isTableValid) ? '' : currentTableNum;
+  const effectiveTableNum = (sessionExpired || isPostBillViewOnly || isViewOnlyUrl || !isTableValid) ? '' : currentTableNum;
 
   const formatCustomerLocation = (raw, overrideSpaceType = null) => {
     const target = raw !== undefined && raw !== null ? String(raw).trim() : String(effectiveTableNum || '').trim();
@@ -258,6 +266,7 @@ export default function App() {
   // 5. Scanned space is NOT paused by admin (!isCurrentSpacePaused)
   const isDirectOrderingActive = Boolean(
     !isViewOnlyUrl &&
+    !isPostBillViewOnly &&
     !isCurrentSpacePaused &&
     hasScannedSpace &&
     info &&
@@ -878,9 +887,11 @@ export default function App() {
         localStorage.removeItem(`touchqr_order_completed_time_${orderIdKey}`);
         try {
           sessionStorage.removeItem(`tq_track_${orderIdKey}`);
+          localStorage.removeItem(`tq_track_${orderIdKey}`);
           sessionStorage.removeItem('tq_active_tracking_token');
         } catch (e) { }
       }
+      lastActiveTableOrderIdRef.current = null;
 
       const resolvedType = activeOrderTrack.space_type || currentSpaceType || initialSpaceInfo.type || 'table';
       const canReuseForOrderAgain = Boolean(
@@ -913,7 +924,7 @@ export default function App() {
       setOrderSuccessModal(null);
       setShowRunningOrderModal(false);
 
-      // Silently clean active table lock & cart so next guest stays isolated, without triggering Session Expired error
+      // Silently clean active table lock & cart so next guest stays isolated, and lock Dine-In page into View-Only mode
       const key = getOrderStorageKey(activeOrderTrack.table_number, resolvedType);
       if (key) localStorage.removeItem(key);
       const tenantSlug = getActiveStorageTenantSlug();
@@ -930,12 +941,15 @@ export default function App() {
       setCurrentTableNum('');
       setCurrentTableToken('');
       setSessionExpired(false);
+      setIsPostBillViewOnly(!canReuseForOrderAgain);
       setAutoKillSeconds(null);
       setCartItems([]);
       setShowCartDrawer(false);
       const pathSlug = getSlugFromUrl();
-      const cleanPath = pathSlug ? `/${pathSlug}` : (window.location.pathname || '/');
-      window.history.replaceState({}, '', cleanPath);
+      const targetUrl = !canReuseForOrderAgain
+        ? buildViewOnlyUrl()
+        : (pathSlug ? `/${pathSlug}` : (window.location.pathname || '/'));
+      window.history.replaceState({}, '', targetUrl);
       return;
     }
 
@@ -1052,10 +1066,20 @@ export default function App() {
           let trackingToken = '';
           try {
             trackingToken = typeof sessionStorage !== 'undefined'
-              ? (sessionStorage.getItem(`tq_track_${activeOrderId}`) || sessionStorage.getItem('tq_active_tracking_token') || '')
+              ? (sessionStorage.getItem(`tq_track_${activeOrderId}`) || localStorage.getItem(`tq_track_${activeOrderId}`) || sessionStorage.getItem('tq_active_tracking_token') || '')
               : '';
             const data = await trackOrderStatus(activeOrderId, currentSlug, trackingToken);
             if (data) {
+              const dStatus = String(data.status || '').toLowerCase();
+              const isDTerminal = Boolean(
+                data.is_settled === 1 ||
+                data.is_settled === '1' ||
+                data.is_settled === true ||
+                ['completed', 'cancelled', 'rejected', 'expired'].includes(dStatus)
+              );
+              if (!isDTerminal) {
+                lastActiveTableOrderIdRef.current = String(data.id || activeOrderId);
+              }
               setActiveOrderTrack(data);
               return;
             }
@@ -1064,6 +1088,7 @@ export default function App() {
             if (trackErr?.status === 410 || trackErr?.message?.includes('expired') || trackErr?.error === 'tracking_expired') {
               try {
                 sessionStorage.removeItem(`tq_track_${activeOrderId}`);
+                localStorage.removeItem(`tq_track_${activeOrderId}`);
                 if (sessionStorage.getItem('tq_active_tracking_token') === trackingToken) {
                   sessionStorage.removeItem('tq_active_tracking_token');
                 }
@@ -1089,14 +1114,50 @@ export default function App() {
           }
         }
         // Multi-device table sync ONLY if table QR code was scanned
-        if (effectiveTableNum && !sessionExpired) {
+        if (effectiveTableNum && !sessionExpired && !isPostBillViewOnly && !isViewOnlyUrl) {
           const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
           const targetSpaceType = currentSpaceType || initialSpaceInfo.type || 'table';
+          const prevTrackedId = lastActiveTableOrderIdRef.current || activeOrderId || '';
           if (effectiveQrToken) {
-            const tableData = await fetchActiveTableOrder(currentSlug, effectiveTableNum, effectiveQrToken, targetSpaceType);
+            const tableData = await fetchActiveTableOrder(currentSlug, effectiveTableNum, effectiveQrToken, targetSpaceType, prevTrackedId);
             if (tableData) {
+              const tdStatus = String(tableData.status || '').toLowerCase();
+              const isTdTerminal = Boolean(
+                tableData.is_settled === 1 ||
+                tableData.is_settled === '1' ||
+                tableData.is_settled === true ||
+                ['completed', 'cancelled', 'rejected'].includes(tdStatus)
+              );
+              if (!isTdTerminal) {
+                lastActiveTableOrderIdRef.current = String(tableData.latest_order_id || tableData.id);
+              }
               setActiveOrderTrack(tableData);
             } else {
+              // Only force View-Only lock when THIS session actually had a live tracked order that ended; otherwise just clear ancient stale localStorage ID
+              if (lastActiveTableOrderIdRef.current && !isCounterSpace && !isHotelVenue && !isCinemaVenue && targetSpaceType !== 'counter' && targetSpaceType !== 'room' && targetSpaceType !== 'cinema_seat' && targetSpaceType !== 'cinema') {
+                lastActiveTableOrderIdRef.current = null;
+                const staleKey = getOrderStorageKey(effectiveTableNum, targetSpaceType);
+                if (staleKey) localStorage.removeItem(staleKey);
+                try {
+                  localStorage.removeItem(`tq_track_${prevTrackedId}`);
+                  sessionStorage.removeItem(`tq_track_${prevTrackedId}`);
+                } catch (e) {}
+                setActiveOrderId(null);
+                setActiveOrderTrack(null);
+                setCurrentTableNum('');
+                setCurrentTableToken('');
+                setSessionExpired(true);
+                setIsPostBillViewOnly(true);
+                setCartItems([]);
+                setShowCartDrawer(false);
+                window.history.replaceState({}, '', buildViewOnlyUrl());
+                return;
+              }
+              if (activeOrderId && prevTrackedId) {
+                const staleKey = getOrderStorageKey(effectiveTableNum, targetSpaceType);
+                if (staleKey) localStorage.removeItem(staleKey);
+                setActiveOrderId(null);
+              }
               setActiveOrderTrack(null);
             }
           }
@@ -1109,7 +1170,7 @@ export default function App() {
     checkTableStatus();
     const interval = setInterval(checkTableStatus, 4000);
     return () => clearInterval(interval);
-  }, [activeOrderId, effectiveTableNum, info, sessionExpired]);
+  }, [activeOrderId, effectiveTableNum, info, sessionExpired, isPostBillViewOnly]);
 
   const handleSendDirectOrder = async () => {
     const slug = getSlugFromUrl() || (info && info.slug) || '';
@@ -1184,6 +1245,7 @@ export default function App() {
         if (res.tracking_token) {
           try {
             sessionStorage.setItem(`tq_track_${res.order_id}`, res.tracking_token);
+            localStorage.setItem(`tq_track_${res.order_id}`, res.tracking_token);
             sessionStorage.setItem('tq_active_tracking_token', res.tracking_token);
           } catch (e) { }
         }
@@ -1202,12 +1264,14 @@ export default function App() {
           });
           if (scanKey) localStorage.removeItem(scanKey);
         }
+        lastActiveTableOrderIdRef.current = String(res.order_id);
         setActiveOrderId(String(res.order_id));
       }
 
       setLastCompletedBill(null);
       setBillCompletedModal(null);
       setCompletedSpaceSnapshot(null);
+      setIsPostBillViewOnly(false);
       setOrderSuccessModal(res);
       setCartItems([]);
       setOrderNotesInput('');
@@ -1296,6 +1360,7 @@ export default function App() {
         if (res.tracking_token) {
           try {
             sessionStorage.setItem(`tq_track_${res.order_id}`, res.tracking_token);
+            localStorage.setItem(`tq_track_${res.order_id}`, res.tracking_token);
             sessionStorage.setItem('tq_active_tracking_token', res.tracking_token);
           } catch (e) { }
         }
@@ -1315,12 +1380,14 @@ export default function App() {
           });
           if (scanKey) localStorage.removeItem(scanKey);
         }
+        lastActiveTableOrderIdRef.current = String(res.order_id);
         setActiveOrderId(String(res.order_id));
       }
 
       setLastCompletedBill(null);
       setBillCompletedModal(null);
       setCompletedSpaceSnapshot(null);
+      setIsPostBillViewOnly(false);
       setOrderSuccessModal(res);
       setCartItems([]);
       setOrderNotesInput('');
@@ -3418,6 +3485,11 @@ export default function App() {
                 </strong>
                 <span style={{ fontSize: '0.73rem', color: '#D1FAE5', fontWeight: 700, display: 'block', marginTop: '1px' }}>
                   {spaceTxt ? `${spaceTxt} • ` : ''}{lang === 'hi' ? 'भुगतान:' : 'Paid'} {sym}{formatPriceNumber(totalPaid)}
+                  {(isPostBillViewOnly || isViewOnlyUrl) && (
+                    <span style={{ marginLeft: '6px', padding: '1px 7px', borderRadius: '999px', background: 'rgba(255,255,255,0.18)', fontSize: '0.66rem', fontWeight: 800 }}>
+                      👀 {lang === 'hi' ? 'केवल देखने के लिए मेनू' : 'View-Only Menu'}
+                    </span>
+                  )}
                 </span>
               </div>
 
@@ -3486,6 +3558,23 @@ export default function App() {
           </div>
         );
       })()}
+
+      {/* Quiet Post-Settle View-Only Indicator (remains active if completed banner is dismissed) */}
+      {!activeOrderTrack && !sessionExpired && !lastCompletedBill && isPostBillViewOnly && (
+        <div style={{
+          background: '#F8FAFC',
+          color: '#475569',
+          padding: '8px 14px',
+          borderBottom: '1px solid #E2E8F0',
+          textAlign: 'center',
+          fontSize: '0.76rem',
+          fontWeight: 700
+        }}>
+          👀 {lang === 'hi'
+            ? 'मेनू केवल देखने के लिए है • नया ऑर्डर करने के लिए टेबल का QR कोड दोबारा स्कैन करें।'
+            : 'View-Only Menu • Scan your table QR code again to place a new order.'}
+        </div>
+      )}
 
       {/* Session Expired & Invalid Space Warning Banners */}
       {(() => {
@@ -4683,6 +4772,7 @@ export default function App() {
             setCurrentSpaceType(type);
             setCurrentTableToken(token);
             setSessionExpired(false);
+            setIsPostBillViewOnly(false);
             setBillCompletedModal(null);
             setLastCompletedBill(null);
             setCompletedSpaceSnapshot(null);

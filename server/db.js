@@ -861,6 +861,8 @@ async function createTables(options = {}) {
       `CREATE INDEX IF NOT EXISTS idx_combos_resto_sort ON combos(restaurant_id, sort_order ASC, id ASC);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_created ON orders(restaurant_id, created_at DESC);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_status ON orders(restaurant_id, status);`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_resto_session ON orders(restaurant_id, session_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_resto_parent ON orders(restaurant_id, parent_order_id);`,
       `CREATE INDEX IF NOT EXISTS idx_service_req_resto ON service_requests(restaurant_id, status, created_at DESC);`,
       `CREATE INDEX IF NOT EXISTS idx_stored_images_resto_filename ON stored_images(restaurant_id, filename);`,
       // Master 24-Point SaaS Plan Permission Matrix Columns
@@ -1375,6 +1377,8 @@ async function createTables(options = {}) {
     try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN items_summary TEXT"); } catch (e) {}
     try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN payment_methods_summary TEXT"); } catch (e) {}
     try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_created_status ON orders(restaurant_id, created_at, status)"); } catch (e) {}
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_session ON orders(restaurant_id, session_id)"); } catch (e) {}
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_parent ON orders(restaurant_id, parent_order_id)"); } catch (e) {}
     try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_daily_sales_summaries_resto_date ON daily_sales_summaries(restaurant_id, summary_date)"); } catch (e) {}
 
     sqliteDb.exec(`

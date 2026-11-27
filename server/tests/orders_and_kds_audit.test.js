@@ -888,6 +888,83 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
         assert.ok(drawerFooterText.includes('Mark Order Served'), 'Drawer shows Mark Order Served for KDS-prepared kitchen order');
         assert.ok(!drawerFooterText.includes('Settle Bill & Complete Order'), 'Drawer must NOT stack Settle Bill & Complete Order footer while still in kitchen stage');
 
+        // Verify unprepared kitchen order shows OrdersView Ready button wired to kitchen_prepared: 1 (synced with KDS)
+        const { isOrderActiveInKitchen } = await import('../../src/utils/kdsQueueFilter.js');
+        let syncedReadyCalls = [];
+        const unpreparedKitchenOrder = {
+          id: 907,
+          table_number: '7',
+          customer_name: 'Sync Guest',
+          status: 'kitchen',
+          sent_to_kds: 1,
+          kitchen_prepared: 0,
+          is_settled: 0,
+          round_number: 1,
+          total_amount: 190,
+          created_at: new Date().toISOString(),
+          items: [{ name: 'Masala Dosa', price: 190, quantity: 1 }]
+        };
+        assert.equal(isOrderActiveInKitchen(unpreparedKitchenOrder), true, 'Unprepared kitchen order is active in KDS before Ready');
+        await React.act(async () => {
+          activeRoot.render(
+            React.createElement(OrdersView, {
+              orders: [unpreparedKitchenOrder],
+              activeSubTab: 'orders',
+              setActiveSubTab: () => {},
+              kotFilter: 'all',
+              setKotFilter: () => {},
+              serviceRequests: [],
+              restaurantInfo: sampleResto,
+              ordersEnabled: true,
+              onOpenDayClosing: () => {},
+              onOpenBillModal: () => {},
+              onUpdateStatus: (...args) => syncedReadyCalls.push(args)
+            })
+          );
+          await flushMicrotasks();
+        });
+        const unpreparedCard = findNodes(container, n => hasClass(n, 'orders-mobile-card'))[0];
+        const readySyncBtn = findNodes(unpreparedCard, n => n.tagName === 'BUTTON' && n.textContent.includes('Ready') && !n.textContent.includes('Served'))[0];
+        assert.ok(readySyncBtn, 'OrdersView renders Ready button on unprepared kitchen order');
+        await React.act(async () => {
+          readySyncBtn.dispatchEvent({ type: 'click', bubbles: true, target: readySyncBtn });
+          await flushMicrotasks();
+        });
+        assert.equal(syncedReadyCalls.length, 1);
+        assert.equal(syncedReadyCalls[0][0], 907);
+        assert.equal(syncedReadyCalls[0][1], 'kitchen');
+        assert.deepEqual(syncedReadyCalls[0][2], { kitchen_prepared: 1 });
+        assert.equal(isOrderActiveInKitchen({ ...unpreparedKitchenOrder, kitchen_prepared: 1 }), false, 'Marking Ready via OrdersView removes order from KDS active queue identically');
+
+        // Verify open Detail Drawer live-updates from orders prop when KDS marks kitchen_prepared=1
+        const openDetailsBtn = findNodes(unpreparedCard, n => n.tagName === 'BUTTON' && n.textContent.includes('Details'))[0];
+        await React.act(async () => {
+          openDetailsBtn.dispatchEvent({ type: 'click', bubbles: true, target: openDetailsBtn });
+          await flushMicrotasks();
+        });
+        const drawerBeforeSync = findNodes(container, n => hasClass(n, 'orders-drawer-panel'))[0]?.textContent || '';
+        assert.ok(drawerBeforeSync.includes('PREPARING') && drawerBeforeSync.includes('Mark Food Ready'), 'Open drawer starts in PREPARING state with Mark Food Ready button');
+        await React.act(async () => {
+          activeRoot.render(
+            React.createElement(OrdersView, {
+              orders: [{ ...unpreparedKitchenOrder, kitchen_prepared: 1 }],
+              activeSubTab: 'orders',
+              setActiveSubTab: () => {},
+              kotFilter: 'all',
+              setKotFilter: () => {},
+              serviceRequests: [],
+              restaurantInfo: sampleResto,
+              ordersEnabled: true,
+              onOpenDayClosing: () => {},
+              onOpenBillModal: () => {},
+              onUpdateStatus: (...args) => syncedReadyCalls.push(args)
+            })
+          );
+          await flushMicrotasks();
+        });
+        const drawerAfterSync = findNodes(container, n => hasClass(n, 'orders-drawer-panel'))[0]?.textContent || '';
+        assert.ok(drawerAfterSync.includes('KITCHEN READY') && !drawerAfterSync.includes('Mark Food Ready') && drawerAfterSync.includes('Mark Order Served') && !drawerAfterSync.includes('Quick Settle'), 'Open drawer syncs cleanly in real time to Mark Order Served without mixing Settle');
+
         // Verify prepaid settled Cinema order renders Handover directly instead of reopening payment
         await React.act(async () => {
           activeRoot.render(
@@ -922,7 +999,6 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
         assert.ok(cinemaCard && cinemaCard.textContent.includes('Handover'), 'Prepaid settled Cinema served order renders Handover directly');
 
         // Verify Counter Skip-KDS ('accepted', sent_to_kds=0) & auto_print_kot unified Accept button
-        const { isOrderActiveInKitchen } = await import('../../src/utils/kdsQueueFilter.js');
         const counterSkippedOrder = {
           id: 906,
           table_number: 'Counter',

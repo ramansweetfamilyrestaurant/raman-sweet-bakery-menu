@@ -332,6 +332,19 @@ function runTests() {
     const apiSrc = fs.readFileSync(path.join(ROOT_DIR, 'server/routes/api.js'), 'utf8');
     assert.ok(apiSrc.includes('items, notes, created_at'), 'Track order endpoint selects customer cooking notes');
     assert.ok(apiSrc.includes('...(sessionSummary ? { session_summary: sessionSummary } : {})'), 'Track order endpoint includes consolidated session_summary across active rounds');
+    assert.ok(apiSrc.includes('prev_order_id') && apiSrc.includes('buildConsolidatedOrderSummary'), 'Active-table endpoint supports prev_order_id settlement detection cleanly');
+  });
+
+  test('App.jsx locks settled Dine-In session into ?view=1 View-Only mode and OrdersView avoids Ready label collision', () => {
+    const appSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/App.jsx'), 'utf8');
+    assert.ok(appSrc.includes('isPostBillViewOnly'), 'App.jsx maintains post-bill View-Only state');
+    assert.ok(appSrc.includes('setIsPostBillViewOnly(!canReuseForOrderAgain)'), 'Dine-In settlement transitions into View-Only mode');
+    assert.ok(appSrc.includes('buildViewOnlyUrl()'), 'Dine-In settlement rewrites URL to ?view=1 View-Only URL');
+
+    const ordersViewSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/components/Admin/views/OrdersView.jsx'), 'utf8');
+    assert.ok(ordersViewSrc.includes('🔔 KITCHEN READY'), 'OrdersView renders distinct Kitchen Ready badge');
+    assert.ok(ordersViewSrc.includes('🍽️ SERVED'), 'OrdersView renders distinct Served badge for served dining orders');
+    assert.ok(!ordersViewSrc.includes("return compact ? '✓ Ready' : '✓ Mark Order as Ready / Served'"), 'OrdersView Dine-In button does not collide with KDS Mark Ready');
   });
 
   console.log(`\nAll ${passed} Customer Page helper/regression tests passed.`);

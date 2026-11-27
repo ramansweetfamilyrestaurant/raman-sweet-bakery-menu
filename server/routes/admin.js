@@ -136,7 +136,7 @@ async function cleanupImage(imageUrl) {
 
 async function processExternalImageUrl(imageUrl, restaurantId, entityType = 'dishes') {
   if (!imageUrl || typeof imageUrl !== 'string' || (!restaurantId && entityType !== 'superadmin' && entityType !== 'branding')) return imageUrl;
-  
+
   if (imageUrl.startsWith('/api/r2-proxy/') || imageUrl === '/uploads/logo.jpg') {
     return imageUrl;
   }
@@ -786,7 +786,7 @@ router.post('/r2/migrate-images', authenticateToken, requireActiveSubscription, 
     const batchSize = req.query.batch ? parseInt(req.query.batch, 10) : 25;
 
     const allRows = await query("SELECT filename, mime_type, storage_provider, image_key, image_url, restaurant_id, data FROM stored_images ORDER BY filename ASC");
-    
+
     const stats = {
       totalRecords: allRows.length,
       alreadyR2: 0,
@@ -1067,7 +1067,7 @@ router.post('/categories', authenticateToken, requireActiveSubscription, async (
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const newId = result[0]?.id || result.lastInsertRowid;
     await logAudit(
@@ -1123,7 +1123,7 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const catDetail = (name && name !== oldCategory.name)
       ? `Updated category '${oldCategory.name}' to '${name}' (ID: ${id})`
@@ -1163,7 +1163,7 @@ router.delete('/categories/:id', authenticateToken, requireActiveSubscription, a
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     await logAudit(
       targetId,
@@ -1197,14 +1197,14 @@ router.patch('/categories/:id/toggle', authenticateToken, requireActiveSubscript
     const catName = catRows[0].name;
 
     await query('UPDATE categories SET active = $1 WHERE id = $2 AND restaurant_id = $3', [activeBool, id, targetId]);
-    
+
     // Invalidate cache
     try {
       const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     await logAudit(
       targetId,
@@ -1244,7 +1244,7 @@ router.post('/categories/reorder', authenticateToken, requireActiveSubscription,
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     await logAudit(
       targetId,
@@ -1281,9 +1281,9 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
     if (!targetId) {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const { 
-      category_id, name, name_hi, description, description_hi, image, price, price_half, 
-      portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available 
+    const {
+      category_id, name, name_hi, description, description_hi, image, price, price_half,
+      portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available
     } = req.body;
     const trimmedName = typeof name === 'string' ? name.trim() : '';
     const numPrice = Number(price);
@@ -1344,7 +1344,7 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const newDishId = result[0]?.id || result.lastInsertRowid;
     await logAudit(
@@ -1368,9 +1368,9 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const { id } = req.params;
-    const { 
-      category_id, name, name_hi, description, description_hi, image, price, price_half, 
-      portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available, modifiers 
+    const {
+      category_id, name, name_hi, description, description_hi, image, price, price_half,
+      portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available, modifiers
     } = req.body;
 
     // Fetch old dish to verify tenant isolation and track old prices/images
@@ -1421,7 +1421,7 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const priceChanged = price !== undefined && Number(price) !== Number(oldDish.price);
     const dishDetail = priceChanged
@@ -1462,14 +1462,14 @@ router.patch('/dishes/:id/toggle', authenticateToken, requireActiveSubscription,
     const dishName = dishRows[0].name;
 
     await query('UPDATE dishes SET available = $1 WHERE id = $2 AND restaurant_id = $3', [availBool, id, targetId]);
-    
+
     // Invalidate cache so changes reflect instantly
     try {
       const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     await logAudit(
       targetId,
@@ -1514,7 +1514,7 @@ router.patch('/dishes/:id/price', authenticateToken, requireActiveSubscription, 
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const halfDetail = numPriceHalf !== null ? `, Half: ₹${oldDish.price_half ?? 'N/A'} -> ₹${numPriceHalf}` : '';
     await logAudit(
@@ -1557,7 +1557,7 @@ router.delete('/dishes/:id', authenticateToken, requireActiveSubscription, async
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     await logAudit(
       targetId,
@@ -1755,8 +1755,8 @@ const handleUpdateSettings = async (req, res) => {
       }
     }
 
-    const locBool = location_initialized !== undefined 
-      ? (location_initialized === true || location_initialized === 1 || location_initialized === 'true' ? true : false) 
+    const locBool = location_initialized !== undefined
+      ? (location_initialized === true || location_initialized === 1 || location_initialized === 'true' ? true : false)
       : (latitude && longitude && Number(latitude) !== 0 && Number(longitude) !== 0 ? true : null);
 
     const cleanVerifMode = table_verification_mode !== undefined ? normalizeVerificationMode(table_verification_mode) : null;
@@ -2226,72 +2226,72 @@ const handleUpdateSettings = async (req, res) => {
                   ai_require_approval = COALESCE($56, ai_require_approval)
               WHERE id = $57
             `, [
-            name !== undefined ? name : null,
-            tagline !== undefined ? tagline : null,
-            processedLogo !== null ? processedLogo : (logo !== undefined ? '' : null),
-            phone !== undefined ? phone : null,
-            address !== undefined ? address : null,
-            openingHours !== undefined ? openingHours : null,
-            google_review_url !== undefined ? google_review_url : null,
-            visJson !== undefined ? visJson : null,
-            currency_symbol !== undefined ? currency_symbol : null,
-            fssai_lic_no !== undefined ? fssai_lic_no : null,
-            resto_type !== undefined ? resto_type : null,
-            whatsapp_number !== undefined ? whatsapp_number : null,
-            whatsapp_enabled !== undefined ? (whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0) : null,
-            cleanTheme !== undefined ? cleanTheme : null,
-            latitude !== undefined && latitude !== null ? Number(latitude) : null,
-            longitude !== undefined && longitude !== null ? Number(longitude) : null,
-            max_distance_meters !== undefined ? Number(max_distance_meters) : null,
-            resolvedGstEnabled !== undefined ? resolvedGstEnabled : null,
-            resolvedGstinNumber !== undefined ? resolvedGstinNumber : null,
-            total_tables !== undefined && total_tables !== null ? Number(total_tables) : null,
-            total_cabins !== undefined && total_cabins !== null ? Number(total_cabins) : null,
-            total_rooms !== undefined && total_rooms !== null ? Number(total_rooms) : null,
-            total_vip !== undefined && total_vip !== null ? Number(total_vip) : null,
-            table_prefix !== undefined ? table_prefix : null,
-            order_retention_days !== undefined ? Number(order_retention_days) : null,
-            google_reviews_enabled !== undefined ? (google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0) : null,
-            cleanDomain !== null ? cleanDomain : (custom_domain !== undefined && isCustomDomainAllowed ? '' : null),
-            locBool,
-            owner_name !== undefined ? owner_name : null,
-            city !== undefined ? city : null,
-            state !== undefined ? state : null,
-            pincode !== undefined ? pincode : null,
-            cleanVerifMode,
-            cleanStaffTimeout,
-            printer_mode !== undefined ? (printer_mode === 'dual' ? 'dual' : 'single') : null,
-            auto_print_kot !== undefined ? (auto_print_kot ? 1 : 0) : null,
-            auto_print_bill !== undefined ? (auto_print_bill ? 1 : 0) : null,
-            printer_paper_width !== undefined ? (printer_paper_width === '58mm' ? '58mm' : '80mm') : null,
-            cleanBusinessType,
-            cleanFoodType,
-            cleanServiceModel,
-            cleanOwnerEmail !== undefined,
-            cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
-            cleanBusinessCategory,
-            finalCounterOrdering,
-            cleanUpiId !== undefined,
-            cleanUpiId !== undefined ? cleanUpiId : null,
-            cleanUpiPayeeName !== undefined,
-            cleanUpiPayeeName !== undefined ? cleanUpiPayeeName : null,
-            cleanPrintUpiQr !== undefined ? cleanPrintUpiQr : null,
-            cleanAiTone,
-            cleanAiLanguage,
-            ai_brand_instructions !== undefined,
-            cleanAiBrandInstructions,
-            cleanAiAutoReplies,
-            cleanAiRequireApproval,
-            targetId
-          ]);
-        } catch (innerErr) {
-          console.error('Failed auto-adding presence/printer/upi/ai columns:', innerErr);
+              name !== undefined ? name : null,
+              tagline !== undefined ? tagline : null,
+              processedLogo !== null ? processedLogo : (logo !== undefined ? '' : null),
+              phone !== undefined ? phone : null,
+              address !== undefined ? address : null,
+              openingHours !== undefined ? openingHours : null,
+              google_review_url !== undefined ? google_review_url : null,
+              visJson !== undefined ? visJson : null,
+              currency_symbol !== undefined ? currency_symbol : null,
+              fssai_lic_no !== undefined ? fssai_lic_no : null,
+              resto_type !== undefined ? resto_type : null,
+              whatsapp_number !== undefined ? whatsapp_number : null,
+              whatsapp_enabled !== undefined ? (whatsapp_enabled !== false && whatsapp_enabled !== 0 ? 1 : 0) : null,
+              cleanTheme !== undefined ? cleanTheme : null,
+              latitude !== undefined && latitude !== null ? Number(latitude) : null,
+              longitude !== undefined && longitude !== null ? Number(longitude) : null,
+              max_distance_meters !== undefined ? Number(max_distance_meters) : null,
+              resolvedGstEnabled !== undefined ? resolvedGstEnabled : null,
+              resolvedGstinNumber !== undefined ? resolvedGstinNumber : null,
+              total_tables !== undefined && total_tables !== null ? Number(total_tables) : null,
+              total_cabins !== undefined && total_cabins !== null ? Number(total_cabins) : null,
+              total_rooms !== undefined && total_rooms !== null ? Number(total_rooms) : null,
+              total_vip !== undefined && total_vip !== null ? Number(total_vip) : null,
+              table_prefix !== undefined ? table_prefix : null,
+              order_retention_days !== undefined ? Number(order_retention_days) : null,
+              google_reviews_enabled !== undefined ? (google_reviews_enabled !== false && google_reviews_enabled !== 0 ? 1 : 0) : null,
+              cleanDomain !== null ? cleanDomain : (custom_domain !== undefined && isCustomDomainAllowed ? '' : null),
+              locBool,
+              owner_name !== undefined ? owner_name : null,
+              city !== undefined ? city : null,
+              state !== undefined ? state : null,
+              pincode !== undefined ? pincode : null,
+              cleanVerifMode,
+              cleanStaffTimeout,
+              printer_mode !== undefined ? (printer_mode === 'dual' ? 'dual' : 'single') : null,
+              auto_print_kot !== undefined ? (auto_print_kot ? 1 : 0) : null,
+              auto_print_bill !== undefined ? (auto_print_bill ? 1 : 0) : null,
+              printer_paper_width !== undefined ? (printer_paper_width === '58mm' ? '58mm' : '80mm') : null,
+              cleanBusinessType,
+              cleanFoodType,
+              cleanServiceModel,
+              cleanOwnerEmail !== undefined,
+              cleanOwnerEmail !== undefined ? cleanOwnerEmail : null,
+              cleanBusinessCategory,
+              finalCounterOrdering,
+              cleanUpiId !== undefined,
+              cleanUpiId !== undefined ? cleanUpiId : null,
+              cleanUpiPayeeName !== undefined,
+              cleanUpiPayeeName !== undefined ? cleanUpiPayeeName : null,
+              cleanPrintUpiQr !== undefined ? cleanPrintUpiQr : null,
+              cleanAiTone,
+              cleanAiLanguage,
+              ai_brand_instructions !== undefined,
+              cleanAiBrandInstructions,
+              cleanAiAutoReplies,
+              cleanAiRequireApproval,
+              targetId
+            ]);
+          } catch (innerErr) {
+            console.error('Failed auto-adding presence/printer/upi/ai columns:', innerErr);
+            throw sqlErr;
+          }
+        } else {
           throw sqlErr;
         }
-      } else {
-        throw sqlErr;
       }
-    }
     }
 
     clearRestoResolveCache();
@@ -2300,7 +2300,7 @@ const handleUpdateSettings = async (req, res) => {
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (cErr) {}
+    } catch (cErr) { }
 
     const ALLOWED_SETTING_FIELDS = [
       'name', 'tagline', 'logo', 'phone', 'address', 'openingHours',
@@ -2865,7 +2865,7 @@ const handleSavePrinters = async (req, res) => {
           `, [targetId, pRole, pName, pConn, pTarget, pWidth, pAutoKot, pAutoBill, pActive]);
         } catch (upsertErr) {
           // SQLite fallback if ON CONFLICT syntax differs
-          await query('DELETE FROM restaurant_printers WHERE restaurant_id = $1 AND role = $2', [targetId, pRole]).catch(() => {});
+          await query('DELETE FROM restaurant_printers WHERE restaurant_id = $1 AND role = $2', [targetId, pRole]).catch(() => { });
           await query(`
             INSERT INTO restaurant_printers (restaurant_id, role, name, connection_type, target_address, paper_width, auto_print_kot, auto_print_bill, active)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -3098,7 +3098,7 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
       const pRows = await query('SELECT * FROM saas_plans WHERE LOWER(key) = LOWER($1)', [planTierKey]);
       const pr = pRows?.rows || pRows;
       if (pr && pr.length > 0) planRow = pr[0];
-    } catch (pErr) {}
+    } catch (pErr) { }
 
     const isPlanPosEnabled = planRow
       ? (planRow.counter_ordering_enabled === 1 || planRow.counter_ordering_enabled === true || planRow.counter_ordering_enabled === '1' || planRow.counter_ordering_enabled === 'true')
@@ -3151,11 +3151,11 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
       const price = Math.max(0, parseFloat(it.price || 0));
       const sanitizedModifiers = Array.isArray(it.modifiers)
         ? it.modifiers
-            .filter(m => m && (typeof m === 'string' || String(m.name || '').trim() !== ''))
-            .map(m => ({
-              name: String(typeof m === 'string' ? m : m.name).trim().substring(0, 80),
-              price: Math.max(0, Number(typeof m === 'object' ? m.price : 0) || 0)
-            }))
+          .filter(m => m && (typeof m === 'string' || String(m.name || '').trim() !== ''))
+          .map(m => ({
+            name: String(typeof m === 'string' ? m : m.name).trim().substring(0, 80),
+            price: Math.max(0, Number(typeof m === 'object' ? m.price : 0) || 0)
+          }))
         : [];
       const itemName = String(it.name || 'Custom Item').trim();
       const alreadyHasPortionInName = /\((half|full)\)$/i.test(itemName);
@@ -3312,18 +3312,26 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const numericId = parseInt(id, 10);
     const orderId = isNaN(numericId) ? id : numericId;
 
-    // 1. Fetch target order strictly bound to authenticated restaurant
-    const existing = await query(`
-      SELECT id, session_id, parent_order_id, table_number, status, sent_to_kds,
-             kitchen_prepared, is_settled, payment_method, terminal_at
-      FROM orders
-      WHERE id = $1 AND restaurant_id = $2
-    `, [orderId, targetId]);
+    const isSettlementPreCheck = Boolean(settle && typeof settle === 'object');
+
+    // 1. Fetch target order strictly bound to authenticated restaurant (plus gst_enabled in parallel if settling)
+    const [existing, preGstRows] = await Promise.all([
+      query(`
+        SELECT id, session_id, parent_order_id, table_number, status, sent_to_kds,
+               kitchen_prepared, is_settled, payment_method, terminal_at
+        FROM orders
+        WHERE id = $1 AND restaurant_id = $2
+      `, [orderId, targetId]),
+      isSettlementPreCheck
+        ? query('SELECT gst_enabled FROM restaurants WHERE id = $1', [targetId])
+        : Promise.resolve(null)
+    ]);
 
     const targetOrder = existing[0] || null;
     if (!targetOrder) {
       return res.status(404).json({ error: 'Order not found or does not belong to this restaurant' });
     }
+    const preFetchedGstEnabled = preGstRows && preGstRows[0] ? preGstRows[0].gst_enabled : undefined;
 
     // Distinguish explicitly supplied status & lifecycle flags from stored fallback values
     const currentStatus = String(targetOrder.status || 'pending').toLowerCase();
@@ -3425,7 +3433,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
             })
           ]
         );
-      } catch (_) {}
+      } catch (_) { }
       return res.json({
         success: true,
         id: orderId,
@@ -3462,50 +3470,65 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
 
     await withTransaction(async (txQuery) => {
       let groupLocked = false;
-      if (isSettlementRequested) {
-        const seedRows = await txQuery(
-          'SELECT id, session_id, parent_order_id, table_number FROM orders WHERE id = $1 AND restaurant_id = $2',
-          [orderId, targetId]
-        );
-        const seedRow = seedRows && seedRows[0];
-        if (!seedRow) {
-          const notFoundErr = new Error('Order not found or does not belong to this restaurant');
-          notFoundErr.httpStatus = 404;
-          notFoundErr.code = 'order_not_found';
-          throw notFoundErr;
+      let txRow = null;
+      let lockedGroupRows = null;
+      const FULL_TX_COLS = 'id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at, table_number, session_id, parent_order_id, total_amount, subtotal_amount, tax_amount, cgst_amount, sgst_amount, items';
+
+      if (isSettlementRequested && !isCounterOrder) {
+        // Coordinate with concurrent add-round creation using shared table advisory lock in PostgreSQL
+        if (getDbType() === 'postgres' && targetOrder.table_number) {
+          await txQuery('SELECT pg_advisory_xact_lock(hashtext($1))', [`order_lock_${targetId}_${targetOrder.table_number}`]);
         }
-        const isSeedCounterOrder = String(seedRow.table_number || '').trim().toLowerCase() === 'counter';
-        if (!isSeedCounterOrder) {
-          // Coordinate with concurrent add-round creation using shared table advisory lock in PostgreSQL
-          if (getDbType() === 'postgres' && seedRow.table_number) {
-            await txQuery('SELECT pg_advisory_xact_lock(hashtext($1))', [`order_lock_${targetId}_${seedRow.table_number}`]);
-          }
-          // Lock group rows in ascending ID order before locking individual target row (including root orders without a session)
-          if (seedRow.session_id) {
-            await txQuery(
-              'SELECT id FROM orders WHERE restaurant_id = $1 AND session_id = $2 ORDER BY id ASC FOR UPDATE',
-              [targetId, seedRow.session_id]
-            );
-            groupLocked = 'session';
-          } else {
-            const rootGroupId = seedRow.parent_order_id || orderId;
-            await txQuery(
-              'SELECT id FROM orders WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) ORDER BY id ASC FOR UPDATE',
-              [targetId, rootGroupId]
-            );
-            groupLocked = 'parent';
+        // Single locked query: acquires FOR UPDATE locks in ascending ID order AND returns full row snapshots
+        if (targetOrder.session_id) {
+          lockedGroupRows = await txQuery(
+            `SELECT ${FULL_TX_COLS} FROM orders WHERE restaurant_id = $1 AND session_id = $2 ORDER BY id ASC FOR UPDATE`,
+            [targetId, targetOrder.session_id]
+          );
+          groupLocked = 'session';
+        } else {
+          const rootGroupId = targetOrder.parent_order_id || orderId;
+          lockedGroupRows = await txQuery(
+            `SELECT ${FULL_TX_COLS} FROM orders WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) ORDER BY id ASC FOR UPDATE`,
+            [targetId, rootGroupId]
+          );
+          groupLocked = 'parent';
+        }
+        txRow = (lockedGroupRows || []).find(r => String(r.id) === String(orderId)) || null;
+        if (txRow) {
+          const expectedSessionMismatch = groupLocked === 'session'
+            ? txRow.session_id !== targetOrder.session_id
+            : Boolean(txRow.session_id || (txRow.parent_order_id || txRow.id) !== (targetOrder.parent_order_id || orderId));
+          if (expectedSessionMismatch) {
+            if (txRow.session_id) {
+              lockedGroupRows = await txQuery(
+                `SELECT ${FULL_TX_COLS} FROM orders WHERE restaurant_id = $1 AND session_id = $2 ORDER BY id ASC FOR UPDATE`,
+                [targetId, txRow.session_id]
+              );
+              groupLocked = 'session';
+            } else {
+              const updatedRootId = txRow.parent_order_id || orderId;
+              lockedGroupRows = await txQuery(
+                `SELECT ${FULL_TX_COLS} FROM orders WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) ORDER BY id ASC FOR UPDATE`,
+                [targetId, updatedRootId]
+              );
+              groupLocked = 'parent';
+            }
+            txRow = (lockedGroupRows || []).find(r => String(r.id) === String(orderId)) || txRow;
           }
         }
       }
 
-      const txRows = await txQuery(`
-        SELECT id, status, sent_to_kds, kitchen_prepared, is_settled, payment_method, terminal_at, table_number, session_id, parent_order_id
-        FROM orders
-        WHERE id = $1 AND restaurant_id = $2
-        FOR UPDATE
-      `, [orderId, targetId]);
+      if (!txRow) {
+        const txRows = await txQuery(`
+          SELECT ${FULL_TX_COLS}
+          FROM orders
+          WHERE id = $1 AND restaurant_id = $2
+          FOR UPDATE
+        `, [orderId, targetId]);
+        txRow = txRows && txRows[0];
+      }
 
-      const txRow = txRows && txRows[0];
       if (!txRow) {
         const notFoundErr = new Error('Order not found or does not belong to this restaurant');
         notFoundErr.httpStatus = 404;
@@ -3588,8 +3611,8 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
         if ((hasStatusChange && (!isRecordTerminal || isTxTargetTerminal)) || hasExplicitFlagChange) {
           const nextTerminalAt = hasStatusChange
             ? (!isRecordTerminal && isTxTargetTerminal
-                ? (targetRecord.terminal_at || new Date().toISOString())
-                : (targetRecord.terminal_at ?? null))
+              ? (targetRecord.terminal_at || new Date().toISOString())
+              : (targetRecord.terminal_at ?? null))
             : (targetRecord.terminal_at ?? null);
           const statusUpdateRes = await txQuery(`
             UPDATE orders
@@ -3614,27 +3637,30 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
 
         if (!isTxCounterOrder && txRow.session_id) {
           if (groupLocked !== 'session') {
-            await txQuery(
-              'SELECT id FROM orders WHERE restaurant_id = $1 AND session_id = $2 ORDER BY id ASC FOR UPDATE',
+            lockedGroupRows = await txQuery(
+              `SELECT ${FULL_TX_COLS} FROM orders WHERE restaurant_id = $1 AND session_id = $2 ORDER BY id ASC FOR UPDATE`,
               [targetId, txRow.session_id]
             );
+            groupLocked = 'session';
           }
           settleWhere = 'WHERE restaurant_id = $7 AND session_id = $8 AND (is_settled = 0 OR is_settled IS NULL)';
           settleParams.push(txRow.session_id);
         } else if (!isTxCounterOrder && txRow.parent_order_id) {
           if (groupLocked !== 'parent') {
-            await txQuery(
-              'SELECT id FROM orders WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) ORDER BY id ASC FOR UPDATE',
+            lockedGroupRows = await txQuery(
+              `SELECT ${FULL_TX_COLS} FROM orders WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) ORDER BY id ASC FOR UPDATE`,
               [targetId, txRow.parent_order_id]
             );
+            groupLocked = 'parent';
           }
           settleWhere = 'WHERE restaurant_id = $7 AND (id = $8 OR parent_order_id = $8) AND (is_settled = 0 OR is_settled IS NULL)';
           settleParams.push(txRow.parent_order_id);
         } else if (!isTxCounterOrder && groupLocked !== 'parent') {
-          await txQuery(
-            'SELECT id FROM orders WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) ORDER BY id ASC FOR UPDATE',
+          lockedGroupRows = await txQuery(
+            `SELECT ${FULL_TX_COLS} FROM orders WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) ORDER BY id ASC FOR UPDATE`,
             [targetId, orderId]
           );
+          groupLocked = 'parent';
         }
 
         const expectedOrderIds = Array.isArray(settle.expected_order_ids)
@@ -3650,10 +3676,15 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
             snapshotWhere = "WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) AND (is_settled = 0 OR is_settled IS NULL) AND status NOT IN ('rejected', 'cancelled')";
             snapshotParams = [targetId, txRow.parent_order_id];
           }
-          const unsettledRows = await txQuery(
-            `SELECT id, total_amount, subtotal_amount, tax_amount, cgst_amount, sgst_amount, items FROM orders ${snapshotWhere} ORDER BY id ASC`,
-            snapshotParams
-          );
+          const unsettledRows = (Array.isArray(lockedGroupRows) && getDbType() !== 'postgres')
+            ? lockedGroupRows.filter(r =>
+              (r.is_settled === 0 || r.is_settled === null || r.is_settled === undefined) &&
+              !['rejected', 'cancelled'].includes(String(r.status || '').toLowerCase())
+            )
+            : await txQuery(
+              `SELECT id, total_amount, subtotal_amount, tax_amount, cgst_amount, sgst_amount, items FROM orders ${snapshotWhere} ORDER BY id ASC`,
+              snapshotParams
+            );
           if (unsettledRows && unsettledRows.length > 0) {
             const unbilledIds = unsettledRows
               .map(r => r.id)
@@ -3664,8 +3695,11 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
             let hasTotalMismatch = false;
             let authoritativeGrandTotal = null;
             if (settle.expected_total !== undefined && settle.expected_total !== null && Number.isFinite(Number(settle.expected_total))) {
-              const restoGstRows = await txQuery('SELECT gst_enabled FROM restaurants WHERE id = $1', [targetId]);
-              const gstFlag = restoGstRows && restoGstRows[0] ? restoGstRows[0].gst_enabled : false;
+              let gstFlag = preFetchedGstEnabled;
+              if (gstFlag === undefined) {
+                const restoGstRows = await txQuery('SELECT gst_enabled FROM restaurants WHERE id = $1', [targetId]);
+                gstFlag = restoGstRows && restoGstRows[0] ? restoGstRows[0].gst_enabled : false;
+              }
               const isGst = Boolean(gstFlag === 1 || gstFlag === '1' || gstFlag === true);
               let billSubtotal = 0;
               for (const uRow of unsettledRows) {
@@ -3894,7 +3928,7 @@ router.get('/service-requests', authenticateToken, requireActiveSubscription, as
               [targetId, r.table_number]
             );
           }
-        } catch (e) {}
+        } catch (e) { }
 
         const vRecord = verifRows && verifRows.length > 0 ? verifRows[0] : null;
         const isExpired = vRecord ? (new Date(vRecord.expires_at).getTime() <= Date.now()) : false;
@@ -4603,7 +4637,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         if (s.payment_methods_summary) {
           pMethodsSummary = typeof s.payment_methods_summary === 'string' ? JSON.parse(s.payment_methods_summary) : s.payment_methods_summary;
         }
-      } catch (e) {}
+      } catch (e) { }
 
       if (pMethodsSummary) {
         ['upi', 'cash', 'card', 'other'].forEach(pm => {
@@ -4886,11 +4920,11 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       standee_health: isHeatmapUnavailable
         ? null
         : {
-            total_spaces: totalHeatmapSpaces,
-            active_spaces: activeSpacesCount,
-            dormant_spaces: dormantSpacesCount,
-            health_score: standeeHealthScore
-          },
+          total_spaces: totalHeatmapSpaces,
+          active_spaces: activeSpacesCount,
+          dormant_spaces: dormantSpacesCount,
+          health_score: standeeHealthScore
+        },
       peak_scan_hour: peakScanHour,
       weekly_sales: weeklySales,
       days_7_revenue: weeklySales,
@@ -5024,7 +5058,7 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
       let timeStr = 'N/A';
       try {
         timeStr = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(d);
-      } catch (e) {}
+      } catch (e) { }
 
       const itemsList = parseJsonItems(o.items);
 
@@ -5096,7 +5130,7 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
         if (s.payment_methods_summary) {
           pMethodsSummary = typeof s.payment_methods_summary === 'string' ? JSON.parse(s.payment_methods_summary) : s.payment_methods_summary;
         }
-      } catch (e) {}
+      } catch (e) { }
 
       let cashAmt = 0;
       let upiAmt = 0;
@@ -5369,7 +5403,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       let timeStr = 'N/A';
       try {
         timeStr = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(d);
-      } catch (e) {}
+      } catch (e) { }
 
       const totalItemCount = itemsList.reduce((acc, i) => acc + (Number(i.quantity || i.qty) || 1), 0);
       const itemsDetailStr = itemsList.map(i => `${i.name || i.title || 'Item'} (x${i.quantity || i.qty || 1})`).join(', ');
@@ -5439,12 +5473,12 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       const totalItemCount = Array.isArray(itemsList) ? itemsList.reduce((acc, i) => acc + (Number(i.quantity ?? i.qty ?? i.count) || 1), 0) : 0;
       const itemsDetailStr = Array.isArray(itemsList) && itemsList.length > 0
         ? itemsList.map(i => {
-            const storedName = extractRawDishName(i);
-            const rawId = extractRawDishId(i);
-            const cleanId = (rawId !== null && rawId !== undefined && String(rawId).trim() !== '') ? String(rawId).trim() : null;
-            const resolvedName = storedName || (cleanId && dishNameById.get(cleanId)) || 'Item';
-            return `${resolvedName} (x${i.quantity ?? i.qty ?? i.count ?? 1})`;
-          }).join(', ')
+          const storedName = extractRawDishName(i);
+          const rawId = extractRawDishId(i);
+          const cleanId = (rawId !== null && rawId !== undefined && String(rawId).trim() !== '') ? String(rawId).trim() : null;
+          const resolvedName = storedName || (cleanId && dishNameById.get(cleanId)) || 'Item';
+          return `${resolvedName} (x${i.quantity ?? i.qty ?? i.count ?? 1})`;
+        }).join(', ')
         : 'Daily Summary';
 
       let pMethodsSummary = null;
@@ -5452,7 +5486,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
         if (s.payment_methods_summary) {
           pMethodsSummary = typeof s.payment_methods_summary === 'string' ? JSON.parse(s.payment_methods_summary) : s.payment_methods_summary;
         }
-      } catch (e) {}
+      } catch (e) { }
 
       let cashAmt = 0;
       let upiAmt = 0;
@@ -5941,7 +5975,7 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
       const oType = String(o.order_type || '').toLowerCase();
       const isDelivery = oType === 'delivery' || /^delivery/i.test(rawTable);
       const isTakeaway = oType === 'takeaway' || /^(takeaway|parcel|pickup|counter)/i.test(rawTable) || Boolean(o.token_number || o.token_display);
-      
+
       const isCinemaSeat = isCinema
         ? (!isTakeaway && !isDelivery)
         : (/^seat/i.test(rawTable) || /^screen/i.test(rawTable) || /^audi/i.test(rawTable) || /^s\d+[- ]/i.test(rawTable));
@@ -6173,7 +6207,7 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
       let items = [];
       try {
         items = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
-      } catch (_) {}
+      } catch (_) { }
       items.forEach(i => {
         const name = (i.name || i.dish?.name || 'Item').trim();
         const qty = Number(i.quantity) || 1;
@@ -6349,7 +6383,7 @@ router.post('/combos', authenticateToken, requireActiveSubscription, async (req,
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const newComboId = result[0]?.id || result.lastInsertRowid;
     await logAudit(
@@ -6406,7 +6440,7 @@ router.put('/combos/:id', authenticateToken, requireActiveSubscription, async (r
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const priceChanged = price !== undefined && Number(price) !== Number(oldCombo.price);
     const comboDetail = priceChanged
@@ -6439,14 +6473,14 @@ router.patch('/combos/:id/toggle', authenticateToken, requireActiveSubscription,
     const comboName = comboRows[0].name;
 
     await query('UPDATE combos SET available = $1 WHERE id = $2 AND restaurant_id = $3', [availBool, req.params.id, targetId]);
-    
+
     // Invalidate cache
     try {
       const slugRows = await query('SELECT slug FROM restaurants WHERE id = $1', [targetId]);
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     await logAudit(
       targetId,
@@ -6488,7 +6522,7 @@ router.delete('/combos/:id', authenticateToken, requireActiveSubscription, async
       if (slugRows && slugRows.length > 0 && slugRows[0].slug) {
         clearMenuBundleCache(slugRows[0].slug);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     await logAudit(
       targetId,
@@ -6533,10 +6567,10 @@ router.post('/generate-ai-review-reply', authenticateToken, requireActiveSubscri
 
     const businessLabel = isHotel ? 'Hotel & Hospitality'
       : isCinema ? 'Cinema & Theatre'
-      : isBakery ? 'Bakery & Sweet Shop'
-      : isCafe ? 'Cafe & Coffee Shop'
-      : isDhaba ? 'Dhaba & Casual Dining'
-      : 'Restaurant & Dining';
+        : isBakery ? 'Bakery & Sweet Shop'
+          : isCafe ? 'Cafe & Coffee Shop'
+            : isDhaba ? 'Dhaba & Casual Dining'
+              : 'Restaurant & Dining';
 
     // 1. Check if GEMINI_API_KEY is available in process.env
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.VITE_GEMINI_API_KEY;
@@ -6746,7 +6780,7 @@ async function clearOfferMenuCache(targetId) {
       clearMenuBundleCache(slugRows[0].slug);
       return;
     }
-  } catch (_) {}
+  } catch (_) { }
   clearMenuBundleCache();
 }
 
@@ -6893,7 +6927,7 @@ router.get('/offers', authenticateToken, async (req, res) => {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const offers = await query('SELECT * FROM offers WHERE restaurant_id = $1 ORDER BY id DESC', [targetId]);
-    
+
     // Fetch associated offer_items for each offer
     const offerItems = await query('SELECT * FROM offer_items WHERE restaurant_id = $1', [targetId]);
     const itemsByOffer = new Map();
@@ -7130,7 +7164,7 @@ router.get('/support/tickets', authenticateToken, async (req, res) => {
     try {
       const swRow = await query("SELECT value FROM system_settings WHERE key = 'support_whatsapp'");
       if (swRow && swRow[0] && swRow[0].value) supportWhatsapp = swRow[0].value;
-    } catch (_) {}
+    } catch (_) { }
 
     res.json({
       tickets: tickets || [],

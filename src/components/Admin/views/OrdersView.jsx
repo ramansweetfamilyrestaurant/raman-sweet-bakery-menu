@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Clock, 
-  Printer, 
-  MapPin, 
-  Bell, 
-  RefreshCw, 
-  CheckCircle2, 
-  QrCode, 
-  XCircle, 
-  UtensilsCrossed, 
-  Shield, 
-  ShieldCheck, 
-  ShieldAlert, 
-  Check, 
-  X, 
-  AlertTriangle, 
+import {
+  Clock,
+  Printer,
+  MapPin,
+  Bell,
+  RefreshCw,
+  CheckCircle2,
+  QrCode,
+  XCircle,
+  UtensilsCrossed,
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  Check,
+  X,
+  AlertTriangle,
   MessageSquare,
   ShoppingBag,
   ChefHat,
@@ -213,15 +213,19 @@ export default function OrdersView({
     }
   };
 
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedOrderState, setSelectedOrder] = useState(null);
+  const selectedOrder = useMemo(() => {
+    if (!selectedOrderState) return null;
+    return (Array.isArray(orders) ? orders.find(o => String(o.id) === String(selectedOrderState.id)) : null) || selectedOrderState;
+  }, [orders, selectedOrderState]);
   const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'direct' | 'whatsapp' | 'manual'
   const [spaceCategoryFilter, setSpaceCategoryFilter] = useState('all');
   const [processingReqState, setProcessingReqState] = useState({});
   const [rejectingModalReq, setRejectingModalReq] = useState(null);
-  const defaultRejectReason = isHotel 
-    ? 'Guest not reachable in room' 
-    : isCinema 
-      ? 'Customer not present at seat' 
+  const defaultRejectReason = isHotel
+    ? 'Guest not reachable in room'
+    : isCinema
+      ? 'Customer not present at seat'
       : 'Customer not visible at table';
   const [selectedRejectReason, setSelectedRejectReason] = useState(defaultRejectReason);
   const [customRejectReason, setCustomRejectReason] = useState('');
@@ -243,11 +247,11 @@ export default function OrdersView({
     }
 
     // Pure Counter check (Standee scan or explicit counter space without table number)
-    const isPureCounter = 
-      raw.toLowerCase() === 'counter' || 
-      raw.toLowerCase() === 'counter:counter' || 
-      expType === 'counter' || 
-      /^(takeaway|parcel|pickup)$/i.test(raw) || 
+    const isPureCounter =
+      raw.toLowerCase() === 'counter' ||
+      raw.toLowerCase() === 'counter:counter' ||
+      expType === 'counter' ||
+      /^(takeaway|parcel|pickup)$/i.test(raw) ||
       (!raw && (orderType === 'takeaway' || order.token_display || order.token_number));
 
     if (isPureCounter) {
@@ -537,11 +541,11 @@ export default function OrdersView({
     if (orderType === 'delivery') return '🛵 Home Delivery';
 
     const str = String(raw || '').trim();
-    const isPureCounter = 
-      spaceType === 'counter' || 
-      str.toLowerCase() === 'counter' || 
-      str.toLowerCase() === 'counter:counter' || 
-      /^(takeaway|parcel|pickup)$/i.test(str) || 
+    const isPureCounter =
+      spaceType === 'counter' ||
+      str.toLowerCase() === 'counter' ||
+      str.toLowerCase() === 'counter:counter' ||
+      /^(takeaway|parcel|pickup)$/i.test(str) ||
       (!str && (tokenDisplay || orderType === 'takeaway'));
 
     if (isPureCounter) {
@@ -613,7 +617,7 @@ export default function OrdersView({
     if (isCinema) return compact ? '🎬 Deliver' : '🎬 Deliver to Seat';
     if (isHotel) return compact ? '🏨 Deliver' : '🏨 Deliver to Room';
     if (isKitchenPreparedFlag(o)) return compact ? '🍽️ Serve' : '🍽️ Mark Order Served';
-    return compact ? '✓ Ready' : '✓ Mark Order as Ready / Served';
+    return compact ? '🍽️ Mark Served' : '🍽️ Mark Served (Skip KDS)';
   };
 
   // Metrics (Strictly unifies multi-round session settlement)
@@ -676,8 +680,15 @@ export default function OrdersView({
     if (isSettled && !isTakeawayOrToken && !isCinema) {
       return { label: 'COMPLETED', bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
     }
-    if (isPrepared || status === 'served' || status === 'ready') {
-      return { label: isTakeawayOrToken ? 'READY FOR PICKUP' : 'READY', bg: '#DCFCE7', color: '#16A34A', border: '#BBF7D0' };
+    if (status === 'served' || status === 'ready') {
+      return isTakeawayOrToken
+        ? { label: 'READY FOR PICKUP', bg: '#DCFCE7', color: '#16A34A', border: '#BBF7D0' }
+        : { label: '🍽️ SERVED', bg: '#DCFCE7', color: '#15803D', border: '#86EFAC' };
+    }
+    if (isPrepared) {
+      return isTakeawayOrToken
+        ? { label: 'READY FOR PICKUP', bg: '#DCFCE7', color: '#16A34A', border: '#BBF7D0' }
+        : { label: '🔔 KITCHEN READY', bg: '#ECFDF5', color: '#047857', border: '#6EE7B7' };
     }
     switch (status?.toLowerCase()) {
       case 'pending':
@@ -693,7 +704,9 @@ export default function OrdersView({
         return { label: isTakeawayOrToken ? 'PREPARING (PAID)' : 'PREPARING', bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' };
       case 'served':
       case 'ready':
-        return { label: isTakeawayOrToken ? 'READY FOR PICKUP' : 'READY', bg: '#DCFCE7', color: '#16A34A', border: '#BBF7D0' };
+        return isTakeawayOrToken
+          ? { label: 'READY FOR PICKUP', bg: '#DCFCE7', color: '#16A34A', border: '#BBF7D0' }
+          : { label: '🍽️ SERVED', bg: '#DCFCE7', color: '#15803D', border: '#86EFAC' };
       case 'completed':
         return { label: 'COMPLETED', bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
       default:
@@ -1077,10 +1090,10 @@ export default function OrdersView({
             </span>
           </div>
           <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '3px 0 0 0' }}>
-            {isCinema 
-              ? 'Manage seat-based snacks and beverage deliveries.' 
-              : isHotel 
-                ? 'Manage in-room dining orders and room service.' 
+            {isCinema
+              ? 'Manage seat-based snacks and beverage deliveries.'
+              : isHotel
+                ? 'Manage in-room dining orders and room service.'
                 : ['bakery_confectionery', 'sweet_shop'].includes(effectiveBiz)
                   ? 'Manage counter takeaway, packing, and customer billing.'
                   : 'Manage space orders, kitchen preparation, and customer bills.'}
@@ -1239,322 +1252,764 @@ export default function OrdersView({
       {(activeSubTab === 'orders' || !['floor-map', 'service-requests', 'kds'].includes(activeSubTab)) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="orders-metric-grid">
-        {/* Needs Attention (Pending) */}
-        <div 
-          className="orders-metric-card"
-          onClick={() => setKotFilter('pending')}
-          style={{
-            background: kotFilter === 'pending' ? '#FEF3C7' : '#FFFFFF',
-            borderRadius: '16px',
-            border: kotFilter === 'pending' ? '2px solid #D97706' : '1px solid #E2E8F0',
-            padding: '18px',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <div className={`orders-metric-icon${pendingCount > 0 ? ' orders-pending-pulse' : ''}`} style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: '#FEF3C7',
-            color: '#D97706',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <Clock size={20} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Needs Attention</div>
-            <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {pendingCount}
-            </div>
-            <span style={{ fontSize: '0.68rem', color: pendingCount > 0 ? '#D97706' : '#16A34A', fontWeight: 700 }}>
-              {pendingCount > 0 ? 'Pending acceptance' : 'All clear'}
-            </span>
-          </div>
-        </div>
-
-        {/* Preparing */}
-        <div 
-          className="orders-metric-card"
-          onClick={() => setKotFilter('kitchen')}
-          style={{
-            background: kotFilter === 'kitchen' ? '#E0F2FE' : '#FFFFFF',
-            borderRadius: '16px',
-            border: kotFilter === 'kitchen' ? '2px solid #0284C7' : '1px solid #E2E8F0',
-            padding: '18px',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <div className="orders-metric-icon" style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: '#E0F2FE',
-            color: '#0284C7',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <UtensilsCrossed size={20} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Preparing</div>
-            <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {kitchenCount}
-            </div>
-            <span style={{ fontSize: '0.68rem', color: '#0284C7', fontWeight: 700 }}>
-              In prep / kitchen
-            </span>
-          </div>
-        </div>
-
-        {/* Ready */}
-        <div 
-          className="orders-metric-card"
-          onClick={() => setKotFilter('served')}
-          style={{
-            background: kotFilter === 'served' ? '#DCFCE7' : '#FFFFFF',
-            borderRadius: '16px',
-            border: kotFilter === 'served' ? '2px solid #16A34A' : '1px solid #E2E8F0',
-            padding: '18px',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <div className="orders-metric-icon" style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: '#DCFCE7',
-            color: '#16A34A',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <CheckCircle2 size={20} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Ready to Bill</div>
-            <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {servedCount}
-            </div>
-            <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 700 }}>
-              Served / Ready
-            </span>
-          </div>
-        </div>
-
-        {/* Completed Today */}
-        <div 
-          className="orders-metric-card"
-          onClick={() => setKotFilter('completed')}
-          style={{
-            background: kotFilter === 'completed' ? '#F3E8FF' : '#FFFFFF',
-            borderRadius: '16px',
-            border: kotFilter === 'completed' ? '2px solid #7E22CE' : '1px solid #E2E8F0',
-            padding: '18px',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <div className="orders-metric-icon" style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: '#F3E8FF',
-            color: '#7E22CE',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <Receipt size={20} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Completed Today</div>
-            <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {completedCount}
-            </div>
-            <span style={{ fontSize: '0.68rem', color: '#7E22CE', fontWeight: 700 }}>
-              {currencySymbol}{Math.round(completedSales).toLocaleString('en-IN')} sales
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================
-          3. FILTER CONTROL STRIP
-         ======================================================== */}
-      <div
-        className="orders-filter-strip"
-        style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          padding: '12px 18px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-        }}
-      >
-        {/* Status Tabs */}
-        <div className="orders-status-tabs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {[
-            { id: 'all', label: `All (${validOrders.length})` },
-            { id: 'pending', label: `Pending (${pendingCount})` },
-            { id: 'kitchen', label: `Preparing (${kitchenCount})` },
-            { id: 'served', label: `Ready (${servedCount})` },
-            { id: 'completed', label: `Completed (${completedCount})` }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setKotFilter(tab.id)}
+            {/* Needs Attention (Pending) */}
+            <div
+              className="orders-metric-card"
+              onClick={() => setKotFilter('pending')}
               style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                border: kotFilter === tab.id ? '1px solid #0D3823' : '1px solid transparent',
-                background: kotFilter === tab.id ? '#0D3823' : '#F8FAFC',
-                color: kotFilter === tab.id ? '#FFFFFF' : '#475569',
-                fontSize: '0.76rem',
-                fontWeight: 700,
+                background: kotFilter === 'pending' ? '#FEF3C7' : '#FFFFFF',
+                borderRadius: '16px',
+                border: kotFilter === 'pending' ? '2px solid #D97706' : '1px solid #E2E8F0',
+                padding: '18px',
                 cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
                 transition: 'all 0.15s ease'
               }}
             >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+              <div className={`orders-metric-icon${pendingCount > 0 ? ' orders-pending-pulse' : ''}`} style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: '#FEF3C7',
+                color: '#D97706',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Clock size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Needs Attention</div>
+                <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+                  {pendingCount}
+                </div>
+                <span style={{ fontSize: '0.68rem', color: pendingCount > 0 ? '#D97706' : '#16A34A', fontWeight: 700 }}>
+                  {pendingCount > 0 ? 'Pending acceptance' : 'All clear'}
+                </span>
+              </div>
+            </div>
 
-        {/* Source Filters */}
-        <div className="orders-source-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>Source:</span>
-          <select
-            className="orders-source-select"
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '8px',
-              border: '1px solid #E2E8F0',
-              background: '#FFFFFF',
-              color: '#0F172A',
-              fontSize: '0.76rem',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-          >
-            <option value="all">All Sources</option>
-            <option value="direct">Direct QR</option>
-            <option value="whatsapp">WhatsApp Orders</option>
-            <option value="manual">Manual POS</option>
-          </select>
-        </div>
-      </div>
-
-      {/* ========================================================
-          4. MAIN LIVE ORDER WORKSPACE (DESKTOP HYBRID + MOBILE)
-         ======================================================== */}
-      {filteredOrders.length === 0 ? (
-        <div
-          className="orders-empty-state"
-          style={{
-            background: '#FFFFFF',
-            borderRadius: '18px',
-            border: '1px solid #E2E8F0',
-            padding: '48px 24px',
-            textAlign: 'center',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-          }}
-        >
-          <div style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            background: '#F1F5F9',
-            color: '#64748B',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px auto'
-          }}>
-            <ShoppingBag size={24} />
-          </div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0' }}>
-            No orders found
-          </h3>
-          <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 20px 0', maxWidth: '400px', marginInline: 'auto' }}>
-            {kotFilter !== 'all' 
-              ? `There are currently no orders in '${kotFilter}' state.` 
-              : 'Customer QR orders and manual POS bills will automatically appear here.'}
-          </p>
-          {kotFilter !== 'all' && (
-            <button
-              onClick={() => setKotFilter('all')}
+            {/* Preparing */}
+            <div
+              className="orders-metric-card"
+              onClick={() => setKotFilter('kitchen')}
               style={{
-                padding: '8px 16px',
-                borderRadius: '10px',
-                border: '1px solid #E2E8F0',
-                background: '#F8FAFC',
-                color: '#0F172A',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer'
+                background: kotFilter === 'kitchen' ? '#E0F2FE' : '#FFFFFF',
+                borderRadius: '16px',
+                border: kotFilter === 'kitchen' ? '2px solid #0284C7' : '1px solid #E2E8F0',
+                padding: '18px',
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+                transition: 'all 0.15s ease'
               }}
             >
-              Show All Orders
-            </button>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* DESKTOP TABLE VIEW */}
-          <div className="orders-table-wrapper" style={{
-            background: '#FFFFFF',
-            borderRadius: '18px',
-            border: '1px solid #E2E8F0',
-            overflowX: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
-              <thead>
-                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: '14px 18px' }}>ORDER</th>
-                  <th style={{ padding: '14px 18px' }}>LOCATION</th>
-                  <th style={{ padding: '14px 18px' }}>TIME</th>
-                  <th style={{ padding: '14px 18px' }}>ITEMS</th>
-                  <th style={{ padding: '14px 18px' }}>TOTAL</th>
-                  <th style={{ padding: '14px 18px' }}>STATUS</th>
-                  <th style={{ padding: '14px 18px', textAlign: 'right' }}>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
+              <div className="orders-metric-icon" style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: '#E0F2FE',
+                color: '#0284C7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <UtensilsCrossed size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Preparing</div>
+                <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+                  {kitchenCount}
+                </div>
+                <span style={{ fontSize: '0.68rem', color: '#0284C7', fontWeight: 700 }}>
+                  In prep / kitchen
+                </span>
+              </div>
+            </div>
+
+            {/* Ready */}
+            <div
+              className="orders-metric-card"
+              onClick={() => setKotFilter('served')}
+              style={{
+                background: kotFilter === 'served' ? '#DCFCE7' : '#FFFFFF',
+                borderRadius: '16px',
+                border: kotFilter === 'served' ? '2px solid #16A34A' : '1px solid #E2E8F0',
+                padding: '18px',
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div className="orders-metric-icon" style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: '#DCFCE7',
+                color: '#16A34A',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Ready to Bill</div>
+                <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+                  {servedCount}
+                </div>
+                <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 700 }}>
+                  Kitchen Ready / Served
+                </span>
+              </div>
+            </div>
+
+            {/* Completed Today */}
+            <div
+              className="orders-metric-card"
+              onClick={() => setKotFilter('completed')}
+              style={{
+                background: kotFilter === 'completed' ? '#F3E8FF' : '#FFFFFF',
+                borderRadius: '16px',
+                border: kotFilter === 'completed' ? '2px solid #7E22CE' : '1px solid #E2E8F0',
+                padding: '18px',
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div className="orders-metric-icon" style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: '#F3E8FF',
+                color: '#7E22CE',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Receipt size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Completed Today</div>
+                <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
+                  {completedCount}
+                </div>
+                <span style={{ fontSize: '0.68rem', color: '#7E22CE', fontWeight: 700 }}>
+                  {currencySymbol}{Math.round(completedSales).toLocaleString('en-IN')} sales
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================
+          3. FILTER CONTROL STRIP
+         ======================================================== */}
+          <div
+            className="orders-filter-strip"
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #E2E8F0',
+              padding: '12px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }}
+          >
+            {/* Status Tabs */}
+            <div className="orders-status-tabs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'all', label: `All (${validOrders.length})` },
+                { id: 'pending', label: `Pending (${pendingCount})` },
+                { id: 'kitchen', label: `Preparing (${kitchenCount})` },
+                { id: 'served', label: `Ready / Served (${servedCount})` },
+                { id: 'completed', label: `Completed (${completedCount})` }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setKotFilter(tab.id)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: kotFilter === tab.id ? '1px solid #0D3823' : '1px solid transparent',
+                    background: kotFilter === tab.id ? '#0D3823' : '#F8FAFC',
+                    color: kotFilter === tab.id ? '#FFFFFF' : '#475569',
+                    fontSize: '0.76rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Source Filters */}
+            <div className="orders-source-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>Source:</span>
+              <select
+                className="orders-source-select"
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  color: '#0F172A',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="all">All Sources</option>
+                <option value="direct">Direct QR</option>
+                <option value="whatsapp">WhatsApp Orders</option>
+                <option value="manual">Manual POS</option>
+              </select>
+            </div>
+          </div>
+
+          {/* ========================================================
+          4. MAIN LIVE ORDER WORKSPACE (DESKTOP HYBRID + MOBILE)
+         ======================================================== */}
+          {filteredOrders.length === 0 ? (
+            <div
+              className="orders-empty-state"
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '18px',
+                border: '1px solid #E2E8F0',
+                padding: '48px 24px',
+                textAlign: 'center',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              }}
+            >
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: '#F1F5F9',
+                color: '#64748B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px auto'
+              }}>
+                <ShoppingBag size={24} />
+              </div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0' }}>
+                No orders found
+              </h3>
+              <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 20px 0', maxWidth: '400px', marginInline: 'auto' }}>
+                {kotFilter !== 'all'
+                  ? `There are currently no orders in '${kotFilter}' state.`
+                  : 'Customer QR orders and manual POS bills will automatically appear here.'}
+              </p>
+              {kotFilter !== 'all' && (
+                <button
+                  onClick={() => setKotFilter('all')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid #E2E8F0',
+                    background: '#F8FAFC',
+                    color: '#0F172A',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Show All Orders
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* DESKTOP TABLE VIEW */}
+              <div className="orders-table-wrapper" style={{
+                background: '#FFFFFF',
+                borderRadius: '18px',
+                border: '1px solid #E2E8F0',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <th style={{ padding: '14px 18px' }}>ORDER</th>
+                      <th style={{ padding: '14px 18px' }}>LOCATION</th>
+                      <th style={{ padding: '14px 18px' }}>TIME</th>
+                      <th style={{ padding: '14px 18px' }}>ITEMS</th>
+                      <th style={{ padding: '14px 18px' }}>TOTAL</th>
+                      <th style={{ padding: '14px 18px' }}>STATUS</th>
+                      <th style={{ padding: '14px 18px', textAlign: 'right' }}>ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map(order => {
+                      const items = safeParseItems(order.items);
+                      const spaceInfo = parseOrderSpaceLocation(order);
+                      const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type, order.token_display, order);
+                      const isDone = isOrderCompleted(order);
+                      const statusInfo = getStatusBadge(order);
+                      const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
+                      const isServedStage = !isDone && isServedStageOrder(order);
+                      const isKitchenPrepDone = isKitchenPreparedFlag(order);
+                      const isKitchen = !isDone && !isServedStage && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
+                      const sessionInfo = sessionDetailsMap.get(order.id) || {
+                        sessionOrders: [order],
+                        totalRoundsCount: 1,
+                        isMultiRound: Boolean(Number(order.round_number) > 1),
+                        grandTotal: Number(order.total_amount || 0)
+                      };
+                      const roundNum = Number(order.round_number) || (sessionInfo.isMultiRound ? 1 : 1);
+                      const isAddonRound = roundNum > 1;
+                      const isMultiRoundSession = sessionInfo.isMultiRound;
+
+                      return (
+                        <tr
+                          key={order.id}
+                          style={{
+                            borderBottom: '1px solid #F1F5F9',
+                            transition: 'background 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          {/* Order # & Source */}
+                          <td style={{ padding: '14px 18px', fontWeight: 800, color: '#0F172A' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              {order.token_display ? (
+                                <span style={{
+                                  padding: '2px 7px',
+                                  borderRadius: '6px',
+                                  background: '#FEF3C7',
+                                  color: '#92400E',
+                                  border: '1px solid #F59E0B',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 900
+                                }}>
+                                  {order.token_display}
+                                </span>
+                              ) : (
+                                <span>#{order.id}</span>
+                              )}
+                              {isAddonRound ? (
+                                <span style={{
+                                  padding: '2px 6px',
+                                  borderRadius: '6px',
+                                  background: '#FEF3C7',
+                                  color: '#B45309',
+                                  border: '1px solid #FDE68A',
+                                  fontSize: '0.64rem',
+                                  fontWeight: 800,
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  🔄 Round {roundNum} (Add-on)
+                                </span>
+                              ) : isMultiRoundSession ? (
+                                <span style={{
+                                  padding: '2px 6px',
+                                  borderRadius: '6px',
+                                  background: '#E0F2FE',
+                                  color: '#0369A1',
+                                  border: '1px solid #BAE6FD',
+                                  fontSize: '0.64rem',
+                                  fontWeight: 800,
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  Round 1
+                                </span>
+                              ) : null}
+                            </div>
+                            <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
+                              {getOrderSourceDisplay(order)}
+                            </span>
+                          </td>
+
+                          {/* Location */}
+                          <td style={{ padding: '14px 18px', fontWeight: 700, color: '#0F172A' }}>
+                            <div>{cleanLoc}</div>
+                            {isMultiRoundSession && (
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                marginTop: '3px',
+                                fontSize: '0.66rem',
+                                color: '#0369A1',
+                                background: '#F0F9FF',
+                                border: '1px solid #BAE6FD',
+                                padding: '1px 6px',
+                                borderRadius: '5px',
+                                fontWeight: 700,
+                                whiteSpace: 'nowrap'
+                              }}>
+                                <span>🔗 Session ({sessionInfo.totalRoundsCount} Rds • {currencySymbol}{Math.round(sessionInfo.grandTotal).toLocaleString('en-IN')})</span>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Time */}
+                          <td style={{ padding: '14px 18px', color: '#64748B', fontSize: '0.76rem' }}>
+                            {getTimeAgo(order.created_at)}
+                          </td>
+
+                          {/* Items */}
+                          <td style={{ padding: '14px 18px' }}>
+                            <div style={{ fontWeight: 700, color: '#0F172A' }}>
+                              {items.length} item{items.length > 1 ? 's' : ''}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: '#64748B', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {items.map(i => {
+                                const mods = safeParseModifiers(i.modifiers);
+                                const modTxt = mods.length > 0 ? ` [+ ${mods.map(m => m.name || m).join(', ')}]` : '';
+                                return `${i.quantity || 1}x ${i.name}${i.portion ? ` (${i.portion})` : ''}${modTxt}`;
+                              }).join(', ')}
+                            </div>
+                            {getOrderNotes(order) && (
+                              <div style={{
+                                marginTop: '3px',
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                color: '#92400E',
+                                background: '#FEF3C7',
+                                border: '1px solid #FDE68A',
+                                borderRadius: '6px',
+                                padding: '2px 6px',
+                                maxWidth: '220px',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }} title={getOrderNotes(order)}>
+                                📝 {getOrderNotes(order)}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Total Amount */}
+                          <td style={{ padding: '14px 18px', fontWeight: 900, color: '#0F172A', fontSize: '0.90rem' }}>
+                            {currencySymbol}{Math.round(order.total_amount || order.total || 0).toLocaleString('en-IN')}
+                          </td>
+
+                          {/* Status */}
+                          <td style={{ padding: '14px 18px' }}>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '3px 8px',
+                              borderRadius: '8px',
+                              background: statusInfo.bg,
+                              color: statusInfo.color,
+                              border: `1px solid ${statusInfo.border}`,
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              letterSpacing: '0.02em'
+                            }}>
+                              {statusInfo.label}
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                              {isPending && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
+                                      if (isCounter) {
+                                        if (onOpenAcceptRouting) {
+                                          onOpenAcceptRouting(order);
+                                        }
+                                        return;
+                                      }
+                                      if (onUpdateStatus) {
+                                        onUpdateStatus(order.id, 'kitchen');
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '6px 12px',
+                                      borderRadius: '8px',
+                                      background: '#16A34A',
+                                      color: '#FFFFFF',
+                                      border: 'none',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    {isAutoPrintKotEnabled && !isCounterOrderSpace(order) ? '⚡ Accept + KOT' : '⚡ Accept'}
+                                  </button>
+                                  {onDirectPrint && !isAutoPrintKotEnabled && !isCounterOrderSpace(order) && (
+                                    <button
+                                      onClick={() => handleAcceptAndPrintKot(order)}
+                                      style={{
+                                        padding: '6px 9px',
+                                        borderRadius: '8px',
+                                        background: '#0F172A',
+                                        color: '#FFFFFF',
+                                        border: 'none',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 800,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                      }}
+                                      title="Accept Order & Print Kitchen KOT in one click"
+                                    >
+                                      <Printer size={12} /> +KOT
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleRejectOrder(order)}
+                                    style={{
+                                      padding: '6px 10px',
+                                      borderRadius: '8px',
+                                      background: '#FEE2E2',
+                                      color: '#DC2626',
+                                      border: '1px solid #FCA5A5',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer'
+                                    }}
+                                    title="Reject & Cancel Order"
+                                  >
+                                    ✕ Reject
+                                  </button>
+                                </>
+                              )}
+
+                              {isKitchen && (() => {
+                                const showSyncedKdsReadyBtn = !isKitchenPrepDone && !isCounterOrderSpace(order) && (
+                                  order.status === 'kitchen' ||
+                                  order.status === 'preparing' ||
+                                  (order.status === 'accepted' && Number(order.sent_to_kds) === 1)
+                                );
+                                return (
+                                <>
+                                  {showSyncedKdsReadyBtn && (
+                                    <button
+                                      onClick={() => onUpdateStatus ? onUpdateStatus(order.id, order.status === 'accepted' ? 'accepted' : 'kitchen', { kitchen_prepared: 1 }) : null}
+                                      style={{
+                                        padding: '6px 11px',
+                                        borderRadius: '8px',
+                                        background: '#10B981',
+                                        color: '#FFFFFF',
+                                        border: 'none',
+                                        fontSize: '0.74rem',
+                                        fontWeight: 800,
+                                        cursor: 'pointer'
+                                      }}
+                                      title="Mark food ready in kitchen (syncs live with KDS)"
+                                    >
+                                      🍳 Ready
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
+                                    style={{
+                                      padding: '6px 12px',
+                                      borderRadius: '8px',
+                                      background: isKitchenPrepDone ? '#0D9488' : '#0284C7',
+                                      color: '#FFFFFF',
+                                      border: 'none',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer'
+                                    }}
+                                    title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : isKitchenPrepDone ? 'Kitchen marked food ready — mark delivered to table' : 'Mark served to table directly (without waiting for KDS)'}
+                                  >
+                                    {getKitchenAdvanceLabel(order, { compact: true })}
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectOrder(order)}
+                                    style={{
+                                      padding: '6px 10px',
+                                      borderRadius: '8px',
+                                      background: '#FEE2E2',
+                                      color: '#DC2626',
+                                      border: '1px solid #FCA5A5',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer'
+                                    }}
+                                    title="Cancel order in kitchen (dish unavailable or guest cancelled)"
+                                  >
+                                    ✕ Cancel
+                                  </button>
+                                </>
+                                );
+                              })()}
+
+                              {isServedStage && (
+                                <>
+                                  {order.is_settled ? (
+                                    <button
+                                      onClick={() => handleCompleteSettledOrder(order)}
+                                      style={{
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        background: '#16A34A',
+                                        color: '#FFFFFF',
+                                        border: 'none',
+                                        fontSize: '0.74rem',
+                                        fontWeight: 800,
+                                        cursor: 'pointer'
+                                      }}
+                                      title={isCinema ? 'Complete prepaid seat delivery' : 'Customer picked up the order - mark complete'}
+                                    >
+                                      ✓ Handover
+                                    </button>
+                                  ) : isCinema ? (
+                                    <button
+                                      onClick={() => handleTriggerBillAction(order)} disabled={!onOpenBillModal}
+                                      style={{
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        background: '#16A34A',
+                                        color: '#FFFFFF',
+                                        border: 'none',
+                                        fontSize: '0.74rem',
+                                        fontWeight: 800,
+                                        cursor: 'pointer'
+                                      }}
+                                      title="Complete Seat Delivery"
+                                    >
+                                      ✓ Done
+                                    </button>
+                                  ) : (
+                                    <>
+                                      {/* Quick Table Check Slip Print (Guest bill review before payment) */}
+                                      <button
+                                        onClick={() => onPrintBill ? onPrintBill(order, 'CHECK_SLIP') : null}
+                                        style={{
+                                          padding: '6px 9px',
+                                          borderRadius: '8px',
+                                          border: '1px solid #DDD6FE',
+                                          background: '#F5F3FF',
+                                          color: '#7E22CE',
+                                          fontSize: '0.74rem',
+                                          fontWeight: 800,
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '4px'
+                                        }}
+                                        title="Print Table Check Slip (Guest bill review before settlement)"
+                                      >
+                                        <Receipt size={13} /> Slip
+                                      </button>
+
+                                      {/* Settle Bill Button */}
+                                      <button
+                                        onClick={() => handleTriggerBillAction(order)}
+                                        disabled={!onOpenBillModal}
+                                        title={!onOpenBillModal ? 'Billing modal unavailable' : isMultiRoundSession ? `Combined Bill for all ${sessionInfo.totalRoundsCount} rounds of this session (${currencySymbol}${Math.round(sessionInfo.grandTotal)})` : 'Open Bill & Settle Payment'}
+                                        style={{
+                                          padding: '6px 12px',
+                                          borderRadius: '8px',
+                                          background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
+                                          color: '#FFFFFF',
+                                          border: 'none',
+                                          fontSize: '0.74rem',
+                                          fontWeight: 800,
+                                          cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
+                                          opacity: onOpenBillModal ? 1 : 0.6
+                                        }}
+                                      >
+                                        {isMultiRoundSession ? `💳 Settle (${sessionInfo.totalRoundsCount} Rds)` : '💳 Settle'}
+                                      </button>
+                                    </>
+                                  )}
+                                </>
+                              )}
+
+                              {/* Print KOT: ONLY during kitchen stage after acceptance (pending already has 1-tap +KOT) */}
+                              {isKitchen && (
+                                <button
+                                  onClick={() => onDirectPrint ? onDirectPrint(order, 'kot') : null}
+                                  style={{
+                                    padding: '6px 8px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #E2E8F0',
+                                    background: '#FFFFFF',
+                                    color: '#334155',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Print KOT to Kitchen"
+                                >
+                                  <Printer size={14} />
+                                </button>
+                              )}
+
+                              {/* Print Bill Receipt (for completed/settled orders) */}
+                              {(order.status === 'completed' || order.is_settled === 1) && (
+                                <button
+                                  onClick={() => onPrintBill ? onPrintBill(order, order.payment_method || 'CASH') : null}
+                                  style={{
+                                    padding: '6px 8px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #E2E8F0',
+                                    background: '#FFFFFF',
+                                    color: '#7E22CE',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Print / Re-print Bill Receipt"
+                                >
+                                  <Receipt size={14} />
+                                </button>
+                              )}
+
+                              {/* Open Details */}
+                              <button
+                                onClick={() => setSelectedOrder(order)}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  border: '1px solid #E2E8F0',
+                                  background: '#F8FAFC',
+                                  color: '#0F172A',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                View
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE ORDER CARDS VIEW */}
+              <div className="orders-mobile-cards">
                 {filteredOrders.map(order => {
                   const items = safeParseItems(order.items);
                   const spaceInfo = parseOrderSpaceLocation(order);
@@ -1576,18 +2031,23 @@ export default function OrdersView({
                   const isMultiRoundSession = sessionInfo.isMultiRound;
 
                   return (
-                    <tr 
+                    <div
+                      className="orders-mobile-card"
                       key={order.id}
                       style={{
-                        borderBottom: '1px solid #F1F5F9',
-                        transition: 'background 0.15s ease'
+                        background: '#FFFFFF',
+                        borderRadius: '16px',
+                        border: '1px solid #E2E8F0',
+                        padding: '16px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px'
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
-                      {/* Order # & Source */}
-                      <td style={{ padding: '14px 18px', fontWeight: 800, color: '#0F172A' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      {/* Top Bar: Order ID + Round Badge + Status Badge */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
                           {order.token_display ? (
                             <span style={{
                               padding: '2px 7px',
@@ -1595,13 +2055,13 @@ export default function OrdersView({
                               background: '#FEF3C7',
                               color: '#92400E',
                               border: '1px solid #F59E0B',
-                              fontSize: '0.74rem',
+                              fontSize: '0.76rem',
                               fontWeight: 900
                             }}>
                               {order.token_display}
                             </span>
                           ) : (
-                            <span>#{order.id}</span>
+                            <strong style={{ fontSize: '0.92rem', color: '#0F172A' }}>#{order.id}</strong>
                           )}
                           {isAddonRound ? (
                             <span style={{
@@ -1611,8 +2071,7 @@ export default function OrdersView({
                               color: '#B45309',
                               border: '1px solid #FDE68A',
                               fontSize: '0.64rem',
-                              fontWeight: 800,
-                              whiteSpace: 'nowrap'
+                              fontWeight: 800
                             }}>
                               🔄 Round {roundNum} (Add-on)
                             </span>
@@ -1624,217 +2083,237 @@ export default function OrdersView({
                               color: '#0369A1',
                               border: '1px solid #BAE6FD',
                               fontSize: '0.64rem',
-                              fontWeight: 800,
-                              whiteSpace: 'nowrap'
+                              fontWeight: 800
                             }}>
                               Round 1
                             </span>
                           ) : null}
+                          <span style={{ fontSize: '0.70rem', color: '#64748B', marginLeft: '4px' }}>
+                            {getTimeAgo(order.created_at)}
+                          </span>
                         </div>
-                        <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
-                          {getOrderSourceDisplay(order)}
-                        </span>
-                      </td>
-
-                      {/* Location */}
-                      <td style={{ padding: '14px 18px', fontWeight: 700, color: '#0F172A' }}>
-                        <div>{cleanLoc}</div>
-                        {isMultiRoundSession && (
-                          <div style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            marginTop: '3px',
-                            fontSize: '0.66rem',
-                            color: '#0369A1',
-                            background: '#F0F9FF',
-                            border: '1px solid #BAE6FD',
-                            padding: '1px 6px',
-                            borderRadius: '5px',
-                            fontWeight: 700,
-                            whiteSpace: 'nowrap'
-                          }}>
-                            <span>🔗 Session ({sessionInfo.totalRoundsCount} Rds • {currencySymbol}{Math.round(sessionInfo.grandTotal).toLocaleString('en-IN')})</span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Time */}
-                      <td style={{ padding: '14px 18px', color: '#64748B', fontSize: '0.76rem' }}>
-                        {getTimeAgo(order.created_at)}
-                      </td>
-
-                      {/* Items */}
-                      <td style={{ padding: '14px 18px' }}>
-                        <div style={{ fontWeight: 700, color: '#0F172A' }}>
-                          {items.length} item{items.length > 1 ? 's' : ''}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: '#64748B', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {items.map(i => {
-                            const mods = safeParseModifiers(i.modifiers);
-                            const modTxt = mods.length > 0 ? ` [+ ${mods.map(m => m.name || m).join(', ')}]` : '';
-                            return `${i.quantity || 1}x ${i.name}${i.portion ? ` (${i.portion})` : ''}${modTxt}`;
-                          }).join(', ')}
-                        </div>
-                        {getOrderNotes(order) && (
-                          <div style={{
-                            marginTop: '3px',
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            color: '#92400E',
-                            background: '#FEF3C7',
-                            border: '1px solid #FDE68A',
-                            borderRadius: '6px',
-                            padding: '2px 6px',
-                            maxWidth: '220px',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }} title={getOrderNotes(order)}>
-                            📝 {getOrderNotes(order)}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Total Amount */}
-                      <td style={{ padding: '14px 18px', fontWeight: 900, color: '#0F172A', fontSize: '0.90rem' }}>
-                        {currencySymbol}{Math.round(order.total_amount || order.total || 0).toLocaleString('en-IN')}
-                      </td>
-
-                      {/* Status */}
-                      <td style={{ padding: '14px 18px' }}>
                         <span style={{
-                          display: 'inline-block',
                           padding: '3px 8px',
                           borderRadius: '8px',
                           background: statusInfo.bg,
                           color: statusInfo.color,
                           border: `1px solid ${statusInfo.border}`,
-                          fontSize: '0.68rem',
-                          fontWeight: 800,
-                          letterSpacing: '0.02em'
+                          fontSize: '0.66rem',
+                          fontWeight: 800
                         }}>
                           {statusInfo.label}
                         </span>
-                      </td>
+                      </div>
 
-                      {/* Actions */}
-                      <td style={{ padding: '14px 18px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                      {/* Location & Source */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', minWidth: 0, fontSize: '0.78rem' }}>
+                        <div style={{ minWidth: 0, flex: '1 1 160px', overflowWrap: 'anywhere' }}>
+                          <span style={{ fontWeight: 700, color: '#0F172A' }}>{cleanLoc}</span>
+                          {isMultiRoundSession && (
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              marginTop: '3px',
+                              fontSize: '0.66rem',
+                              color: '#0369A1',
+                              background: '#F0F9FF',
+                              border: '1px solid #BAE6FD',
+                              padding: '1px 6px',
+                              borderRadius: '5px',
+                              fontWeight: 700
+                            }}>
+                              <span>🔗 Session ({sessionInfo.totalRoundsCount} Rds • {currencySymbol}{Math.round(sessionInfo.grandTotal).toLocaleString('en-IN')})</span>
+                            </div>
+                          )}
+                        </div>
+                        <span style={{ color: '#64748B', fontSize: '0.72rem' }}>
+                          {getOrderSourceDisplay(order)}
+                        </span>
+                      </div>
+
+                      {/* Items List */}
+                      <div style={{
+                        background: '#F8FAFC',
+                        borderRadius: '10px',
+                        padding: '10px 12px',
+                        fontSize: '0.76rem',
+                        color: '#334155',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}>
+                        {items.map((it, idx) => {
+                          const mods = safeParseModifiers(it.modifiers);
+                          return (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span style={{ overflowWrap: 'anywhere' }}>{it.quantity || 1}x {it.name}</span>
+                                  {it.portion && (
+                                    <span style={{ fontSize: '0.66rem', color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                      {it.portion}
+                                    </span>
+                                  )}
+                                </div>
+                                {mods.length > 0 && (
+                                  <div style={{ fontSize: '0.68rem', color: '#64748B', marginTop: '2px', lineHeight: 1.3, overflowWrap: 'anywhere' }}>
+                                    + {mods.map(m => `${m.name || m}${Number(m.price) > 0 ? ` (+${currencySymbol}${m.price})` : ''}`).join(', ')}
+                                  </div>
+                                )}
+                              </div>
+                              <strong style={{ color: '#0F172A', flexShrink: 0 }}>{currencySymbol}{Math.round((it.price || 0) * (it.quantity || 1))}</strong>
+                            </div>
+                          );
+                        })}
+                        {getOrderNotes(order) && (
+                          <div style={{
+                            marginTop: '6px',
+                            padding: '6px 8px',
+                            borderRadius: '8px',
+                            background: '#FEF3C7',
+                            border: '1px solid #FDE68A',
+                            color: '#92400E',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            overflowWrap: 'anywhere'
+                          }}>
+                            📝 Kitchen Note: {getOrderNotes(order)}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Total & Action Buttons */}
+                      <div className="orders-card-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', paddingTop: '4px' }}>
+                        <div className="orders-card-total">
+                          <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
+                            {isMultiRoundSession ? `Round ${roundNum} • Session Total ${currencySymbol}${Math.round(sessionInfo.grandTotal).toLocaleString('en-IN')}` : 'Total Amount'}
+                          </span>
+                          <strong style={{ fontSize: '1.1rem', color: '#0F172A' }}>
+                            {currencySymbol}{Math.round(order.total_amount || order.total || 0).toLocaleString('en-IN')}
+                          </strong>
+                        </div>
+
+                        <div className="orders-card-actions" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                           {isPending && (
                             <>
                               <button
                                 onClick={() => {
                                   const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
-                                if (isCounter) {
-                                  if (onOpenAcceptRouting) {
-                                    onOpenAcceptRouting(order);
+                                  if (isCounter) {
+                                    if (onOpenAcceptRouting) {
+                                      onOpenAcceptRouting(order);
+                                    }
+                                    return;
                                   }
-                                  return;
-                                }
                                   if (onUpdateStatus) {
                                     onUpdateStatus(order.id, 'kitchen');
                                   }
                                 }}
                                 style={{
-                                  padding: '6px 12px',
-                                  borderRadius: '8px',
+                                  padding: '8px 14px',
+                                  borderRadius: '10px',
                                   background: '#16A34A',
                                   color: '#FFFFFF',
                                   border: 'none',
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.78rem',
                                   fontWeight: 800,
                                   cursor: 'pointer'
                                 }}
                               >
-                                  {isAutoPrintKotEnabled && !isCounterOrderSpace(order) ? '⚡ Accept + KOT' : '⚡ Accept'}
-                                </button>
+                                {isAutoPrintKotEnabled && !isCounterOrderSpace(order) ? '⚡ Accept + KOT' : '⚡ Accept'}
+                              </button>
                               {onDirectPrint && !isAutoPrintKotEnabled && !isCounterOrderSpace(order) && (
                                 <button
                                   onClick={() => handleAcceptAndPrintKot(order)}
                                   style={{
-                                    padding: '6px 9px',
-                                    borderRadius: '8px',
+                                    padding: '8px 11px',
+                                    borderRadius: '10px',
                                     background: '#0F172A',
                                     color: '#FFFFFF',
                                     border: 'none',
-                                    fontSize: '0.72rem',
+                                    fontSize: '0.76rem',
                                     fontWeight: 800,
                                     cursor: 'pointer',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: '4px'
                                   }}
-                                  title="Accept Order & Print Kitchen KOT in one click"
+                                  title="Accept Order & Print KOT"
                                 >
-                                  <Printer size={12} /> +KOT
+                                  <Printer size={13} /> +KOT
                                 </button>
                               )}
                               <button
                                 onClick={() => handleRejectOrder(order)}
                                 style={{
-                                  padding: '6px 10px',
-                                  borderRadius: '8px',
+                                  padding: '8px 12px',
+                                  borderRadius: '10px',
                                   background: '#FEE2E2',
                                   color: '#DC2626',
                                   border: '1px solid #FCA5A5',
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.78rem',
                                   fontWeight: 800,
                                   cursor: 'pointer'
                                 }}
-                                title="Reject & Cancel Order"
+                                title="Reject Order"
                               >
                                 ✕ Reject
                               </button>
                             </>
                           )}
 
-                          {isKitchen && (
+                          {isKitchen && (() => {
+                            const showSyncedKdsReadyBtn = !isKitchenPrepDone && !isCounterOrderSpace(order) && (
+                              order.status === 'kitchen' ||
+                              order.status === 'preparing' ||
+                              (order.status === 'accepted' && Number(order.sent_to_kds) === 1)
+                            );
+                            return (
                             <>
-                              <button
-                                onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
-                                style={{
-                                  padding: '6px 12px',
-                                  borderRadius: '8px',
-                                  background: isKitchenPrepDone ? '#0D9488' : '#0284C7',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  fontSize: '0.74rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer'
-                                }}
-                                title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : isKitchenPrepDone ? 'Kitchen prepared — mark served to guest' : 'Mark order ready / served to guest'}
-                              >
-                                {getKitchenAdvanceLabel(order, { compact: true })}
-                              </button>
-                              {isKitchenPrepDone && !order.is_settled && !isCinema && (
+                              {showSyncedKdsReadyBtn && (
                                 <button
-                                  onClick={() => handleTriggerBillAction(order)}
-                                  disabled={!onOpenBillModal}
-                                  title={!onOpenBillModal ? 'Billing modal unavailable' : 'Quick settle bill'}
+                                  onClick={() => onUpdateStatus ? onUpdateStatus(order.id, order.status === 'accepted' ? 'accepted' : 'kitchen', { kitchen_prepared: 1 }) : null}
                                   style={{
-                                    padding: '6px 10px',
-                                    borderRadius: '8px',
-                                    background: onOpenBillModal ? '#F5F3FF' : '#F1F5F9',
-                                    color: onOpenBillModal ? '#7E22CE' : '#94A3B8',
-                                    border: `1px solid ${onOpenBillModal ? '#DDD6FE' : '#E2E8F0'}`,
-                                    fontSize: '0.72rem',
+                                    padding: '8px 13px',
+                                    borderRadius: '10px',
+                                    background: '#10B981',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    fontSize: '0.78rem',
                                     fontWeight: 800,
-                                    cursor: onOpenBillModal ? 'pointer' : 'not-allowed'
+                                    cursor: 'pointer'
                                   }}
+                                  title="Mark food ready in kitchen (syncs live with KDS)"
                                 >
-                                  💳 Settle
+                                  🍳 Ready
                                 </button>
                               )}
                               <button
+                                onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
+                                style={{
+                                  padding: '8px 14px',
+                                  borderRadius: '10px',
+                                  background: isKitchenPrepDone ? '#0D9488' : '#0284C7',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                                title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : isKitchenPrepDone ? 'Kitchen marked food ready — mark delivered to table' : 'Mark served to table directly (without waiting for KDS)'}
+                              >
+                                {getKitchenAdvanceLabel(order, { compact: true })}
+                              </button>
+                              <button
                                 onClick={() => handleRejectOrder(order)}
                                 style={{
-                                  padding: '6px 10px',
-                                  borderRadius: '8px',
+                                  padding: '8px 12px',
+                                  borderRadius: '10px',
                                   background: '#FEE2E2',
                                   color: '#DC2626',
                                   border: '1px solid #FCA5A5',
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.78rem',
                                   fontWeight: 800,
                                   cursor: 'pointer'
                                 }}
@@ -1843,7 +2322,8 @@ export default function OrdersView({
                                 ✕ Cancel
                               </button>
                             </>
-                          )}
+                            );
+                          })()}
 
                           {isServedStage && (
                             <>
@@ -1851,12 +2331,12 @@ export default function OrdersView({
                                 <button
                                   onClick={() => handleCompleteSettledOrder(order)}
                                   style={{
-                                    padding: '6px 14px',
-                                    borderRadius: '8px',
+                                    padding: '8px 14px',
+                                    borderRadius: '10px',
                                     background: '#16A34A',
                                     color: '#FFFFFF',
                                     border: 'none',
-                                    fontSize: '0.74rem',
+                                    fontSize: '0.78rem',
                                     fontWeight: 800,
                                     cursor: 'pointer'
                                   }}
@@ -1868,12 +2348,12 @@ export default function OrdersView({
                                 <button
                                   onClick={() => handleTriggerBillAction(order)} disabled={!onOpenBillModal}
                                   style={{
-                                    padding: '6px 12px',
-                                    borderRadius: '8px',
+                                    padding: '8px 14px',
+                                    borderRadius: '10px',
                                     background: '#16A34A',
                                     color: '#FFFFFF',
                                     border: 'none',
-                                    fontSize: '0.74rem',
+                                    fontSize: '0.78rem',
                                     fontWeight: 800,
                                     cursor: 'pointer'
                                   }}
@@ -1883,39 +2363,36 @@ export default function OrdersView({
                                 </button>
                               ) : (
                                 <>
-                                  {/* Quick Table Check Slip Print (Guest bill review before payment) */}
                                   <button
                                     onClick={() => onPrintBill ? onPrintBill(order, 'CHECK_SLIP') : null}
                                     style={{
-                                      padding: '6px 9px',
-                                      borderRadius: '8px',
+                                      padding: '8px 12px',
+                                      borderRadius: '10px',
                                       border: '1px solid #DDD6FE',
                                       background: '#F5F3FF',
                                       color: '#7E22CE',
-                                      fontSize: '0.74rem',
+                                      fontSize: '0.78rem',
                                       fontWeight: 800,
                                       cursor: 'pointer',
                                       display: 'flex',
                                       alignItems: 'center',
                                       gap: '4px'
                                     }}
-                                    title="Print Table Check Slip (Guest bill review before settlement)"
+                                    title="Print Table Check Slip"
                                   >
-                                    <Receipt size={13} /> Slip
+                                    <Receipt size={14} /> Slip
                                   </button>
-
-                                  {/* Settle Bill Button */}
                                   <button
                                     onClick={() => handleTriggerBillAction(order)}
                                     disabled={!onOpenBillModal}
-                                    title={!onOpenBillModal ? 'Billing modal unavailable' : isMultiRoundSession ? `Combined Bill for all ${sessionInfo.totalRoundsCount} rounds of this session (${currencySymbol}${Math.round(sessionInfo.grandTotal)})` : 'Open Bill & Settle Payment'}
+                                    title={!onOpenBillModal ? 'Billing modal unavailable' : isMultiRoundSession ? `Combined Bill for all ${sessionInfo.totalRoundsCount} rounds (${currencySymbol}${Math.round(sessionInfo.grandTotal)})` : 'Open Bill & Settle Payment'}
                                     style={{
-                                      padding: '6px 12px',
-                                      borderRadius: '8px',
+                                      padding: '8px 14px',
+                                      borderRadius: '10px',
                                       background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
                                       color: '#FFFFFF',
                                       border: 'none',
-                                      fontSize: '0.74rem',
+                                      fontSize: '0.78rem',
                                       fontWeight: 800,
                                       cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
                                       opacity: onOpenBillModal ? 1 : 0.6
@@ -1928,528 +2405,76 @@ export default function OrdersView({
                             </>
                           )}
 
-                          {/* Print KOT: ONLY during kitchen stage after acceptance (pending already has 1-tap +KOT) */}
+                          {/* Print KOT on mobile ONLY during kitchen stage after acceptance */}
                           {isKitchen && (
                             <button
                               onClick={() => onDirectPrint ? onDirectPrint(order, 'kot') : null}
                               style={{
-                                padding: '6px 8px',
-                                borderRadius: '8px',
+                                padding: '8px 12px',
+                                borderRadius: '10px',
                                 border: '1px solid #E2E8F0',
                                 background: '#FFFFFF',
                                 color: '#334155',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '0.78rem',
+                                fontWeight: 700
                               }}
-                              title="Print KOT to Kitchen"
+                              title="Print KOT"
                             >
-                              <Printer size={14} />
+                              <Printer size={14} /> KOT
                             </button>
                           )}
 
-                          {/* Print Bill Receipt (for completed/settled orders) */}
                           {(order.status === 'completed' || order.is_settled === 1) && (
                             <button
                               onClick={() => onPrintBill ? onPrintBill(order, order.payment_method || 'CASH') : null}
                               style={{
-                                padding: '6px 8px',
-                                borderRadius: '8px',
+                                padding: '8px 12px',
+                                borderRadius: '10px',
                                 border: '1px solid #E2E8F0',
                                 background: '#FFFFFF',
                                 color: '#7E22CE',
-                                cursor: 'pointer'
+                                fontSize: '0.78rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
                               }}
                               title="Print / Re-print Bill Receipt"
                             >
-                              <Receipt size={14} />
+                              <Receipt size={14} /> Receipt
                             </button>
                           )}
 
-                          {/* Open Details */}
                           <button
                             onClick={() => setSelectedOrder(order)}
                             style={{
-                              padding: '6px 10px',
-                              borderRadius: '8px',
+                              padding: '8px 12px',
+                              borderRadius: '10px',
                               border: '1px solid #E2E8F0',
                               background: '#F8FAFC',
                               color: '#0F172A',
-                              fontSize: '0.74rem',
+                              fontSize: '0.78rem',
                               fontWeight: 700,
                               cursor: 'pointer'
                             }}
                           >
-                            View
+                            Details
                           </button>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* MOBILE ORDER CARDS VIEW */}
-          <div className="orders-mobile-cards">
-            {filteredOrders.map(order => {
-              const items = safeParseItems(order.items);
-              const spaceInfo = parseOrderSpaceLocation(order);
-              const cleanLoc = formatCleanTableLabel(order.table_number, spaceInfo.space_type, order.token_display, order);
-              const isDone = isOrderCompleted(order);
-              const statusInfo = getStatusBadge(order);
-              const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
-              const isServedStage = !isDone && isServedStageOrder(order);
-              const isKitchenPrepDone = isKitchenPreparedFlag(order);
-              const isKitchen = !isDone && !isServedStage && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
-              const sessionInfo = sessionDetailsMap.get(order.id) || {
-                sessionOrders: [order],
-                totalRoundsCount: 1,
-                isMultiRound: Boolean(Number(order.round_number) > 1),
-                grandTotal: Number(order.total_amount || 0)
-              };
-              const roundNum = Number(order.round_number) || (sessionInfo.isMultiRound ? 1 : 1);
-              const isAddonRound = roundNum > 1;
-              const isMultiRoundSession = sessionInfo.isMultiRound;
-
-              return (
-                <div
-                  className="orders-mobile-card"
-                  key={order.id}
-                  style={{
-                    background: '#FFFFFF',
-                    borderRadius: '16px',
-                    border: '1px solid #E2E8F0',
-                    padding: '16px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                  }}
-                >
-                  {/* Top Bar: Order ID + Round Badge + Status Badge */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-                      {order.token_display ? (
-                        <span style={{
-                          padding: '2px 7px',
-                          borderRadius: '6px',
-                          background: '#FEF3C7',
-                          color: '#92400E',
-                          border: '1px solid #F59E0B',
-                          fontSize: '0.76rem',
-                          fontWeight: 900
-                        }}>
-                          {order.token_display}
-                        </span>
-                      ) : (
-                        <strong style={{ fontSize: '0.92rem', color: '#0F172A' }}>#{order.id}</strong>
-                      )}
-                      {isAddonRound ? (
-                        <span style={{
-                          padding: '2px 6px',
-                          borderRadius: '6px',
-                          background: '#FEF3C7',
-                          color: '#B45309',
-                          border: '1px solid #FDE68A',
-                          fontSize: '0.64rem',
-                          fontWeight: 800
-                        }}>
-                          🔄 Round {roundNum} (Add-on)
-                        </span>
-                      ) : isMultiRoundSession ? (
-                        <span style={{
-                          padding: '2px 6px',
-                          borderRadius: '6px',
-                          background: '#E0F2FE',
-                          color: '#0369A1',
-                          border: '1px solid #BAE6FD',
-                          fontSize: '0.64rem',
-                          fontWeight: 800
-                        }}>
-                          Round 1
-                        </span>
-                      ) : null}
-                      <span style={{ fontSize: '0.70rem', color: '#64748B', marginLeft: '4px' }}>
-                        {getTimeAgo(order.created_at)}
-                      </span>
-                    </div>
-                    <span style={{
-                      padding: '3px 8px',
-                      borderRadius: '8px',
-                      background: statusInfo.bg,
-                      color: statusInfo.color,
-                      border: `1px solid ${statusInfo.border}`,
-                      fontSize: '0.66rem',
-                      fontWeight: 800
-                    }}>
-                      {statusInfo.label}
-                    </span>
-                  </div>
-
-                  {/* Location & Source */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', minWidth: 0, fontSize: '0.78rem' }}>
-                    <div style={{ minWidth: 0, flex: '1 1 160px', overflowWrap: 'anywhere' }}>
-                      <span style={{ fontWeight: 700, color: '#0F172A' }}>{cleanLoc}</span>
-                      {isMultiRoundSession && (
-                        <div style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          marginTop: '3px',
-                          fontSize: '0.66rem',
-                          color: '#0369A1',
-                          background: '#F0F9FF',
-                          border: '1px solid #BAE6FD',
-                          padding: '1px 6px',
-                          borderRadius: '5px',
-                          fontWeight: 700
-                        }}>
-                          <span>🔗 Session ({sessionInfo.totalRoundsCount} Rds • {currencySymbol}{Math.round(sessionInfo.grandTotal).toLocaleString('en-IN')})</span>
-                        </div>
-                      )}
-                    </div>
-                    <span style={{ color: '#64748B', fontSize: '0.72rem' }}>
-                      {getOrderSourceDisplay(order)}
-                    </span>
-                  </div>
-
-                  {/* Items List */}
-                  <div style={{
-                    background: '#F8FAFC',
-                    borderRadius: '10px',
-                    padding: '10px 12px',
-                    fontSize: '0.76rem',
-                    color: '#334155',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}>
-                    {items.map((it, idx) => {
-                      const mods = safeParseModifiers(it.modifiers);
-                      return (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <span style={{ overflowWrap: 'anywhere' }}>{it.quantity || 1}x {it.name}</span>
-                              {it.portion && (
-                                <span style={{ fontSize: '0.66rem', color: '#0F766E', background: '#CCFBF1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                                  {it.portion}
-                                </span>
-                              )}
-                            </div>
-                            {mods.length > 0 && (
-                              <div style={{ fontSize: '0.68rem', color: '#64748B', marginTop: '2px', lineHeight: 1.3, overflowWrap: 'anywhere' }}>
-                                + {mods.map(m => `${m.name || m}${Number(m.price) > 0 ? ` (+${currencySymbol}${m.price})` : ''}`).join(', ')}
-                              </div>
-                            )}
-                          </div>
-                          <strong style={{ color: '#0F172A', flexShrink: 0 }}>{currencySymbol}{Math.round((it.price || 0) * (it.quantity || 1))}</strong>
-                        </div>
-                      );
-                    })}
-                    {getOrderNotes(order) && (
-                      <div style={{
-                        marginTop: '6px',
-                        padding: '6px 8px',
-                        borderRadius: '8px',
-                        background: '#FEF3C7',
-                        border: '1px solid #FDE68A',
-                        color: '#92400E',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        overflowWrap: 'anywhere'
-                      }}>
-                        📝 Kitchen Note: {getOrderNotes(order)}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Total & Action Buttons */}
-                  <div className="orders-card-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', paddingTop: '4px' }}>
-                    <div className="orders-card-total">
-                      <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
-                        {isMultiRoundSession ? `Round ${roundNum} • Session Total ${currencySymbol}${Math.round(sessionInfo.grandTotal).toLocaleString('en-IN')}` : 'Total Amount'}
-                      </span>
-                      <strong style={{ fontSize: '1.1rem', color: '#0F172A' }}>
-                        {currencySymbol}{Math.round(order.total_amount || order.total || 0).toLocaleString('en-IN')}
-                      </strong>
-                    </div>
-
-                    <div className="orders-card-actions" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                      {isPending && (
-                        <>
-                          <button
-                            onClick={() => {
-                              const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
-                            if (isCounter) {
-                              if (onOpenAcceptRouting) {
-                                onOpenAcceptRouting(order);
-                              }
-                              return;
-                            }
-                              if (onUpdateStatus) {
-                                onUpdateStatus(order.id, 'kitchen');
-                              }
-                            }}
-                            style={{
-                              padding: '8px 14px',
-                              borderRadius: '10px',
-                              background: '#16A34A',
-                              color: '#FFFFFF',
-                              border: 'none',
-                              fontSize: '0.78rem',
-                              fontWeight: 800,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {isAutoPrintKotEnabled && !isCounterOrderSpace(order) ? '⚡ Accept + KOT' : '⚡ Accept'}
-                          </button>
-                          {onDirectPrint && !isAutoPrintKotEnabled && !isCounterOrderSpace(order) && (
-                            <button
-                              onClick={() => handleAcceptAndPrintKot(order)}
-                              style={{
-                                padding: '8px 11px',
-                                borderRadius: '10px',
-                                background: '#0F172A',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                fontSize: '0.76rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                              title="Accept Order & Print KOT"
-                            >
-                              <Printer size={13} /> +KOT
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleRejectOrder(order)}
-                            style={{
-                              padding: '8px 12px',
-                              borderRadius: '10px',
-                              background: '#FEE2E2',
-                              color: '#DC2626',
-                              border: '1px solid #FCA5A5',
-                              fontSize: '0.78rem',
-                              fontWeight: 800,
-                              cursor: 'pointer'
-                            }}
-                            title="Reject Order"
-                          >
-                            ✕ Reject
-                          </button>
-                        </>
-                      )}
-
-                      {isKitchen && (
-                        <>
-                          <button
-                            onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
-                            style={{
-                              padding: '8px 14px',
-                              borderRadius: '10px',
-                              background: isKitchenPrepDone ? '#0D9488' : '#0284C7',
-                              color: '#FFFFFF',
-                              border: 'none',
-                              fontSize: '0.78rem',
-                              fontWeight: 800,
-                              cursor: 'pointer'
-                            }}
-                            title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : isKitchenPrepDone ? 'Kitchen prepared — mark served to guest' : 'Mark order ready / served to guest'}
-                          >
-                            {getKitchenAdvanceLabel(order, { compact: true })}
-                          </button>
-                          {isKitchenPrepDone && !order.is_settled && !isCinema && (
-                            <button
-                              onClick={() => handleTriggerBillAction(order)}
-                              disabled={!onOpenBillModal}
-                              title={!onOpenBillModal ? 'Billing modal unavailable' : 'Quick settle bill'}
-                              style={{
-                                padding: '8px 12px',
-                                borderRadius: '10px',
-                                background: onOpenBillModal ? '#F5F3FF' : '#F1F5F9',
-                                color: onOpenBillModal ? '#7E22CE' : '#94A3B8',
-                                border: `1px solid ${onOpenBillModal ? '#DDD6FE' : '#E2E8F0'}`,
-                                fontSize: '0.76rem',
-                                fontWeight: 800,
-                                cursor: onOpenBillModal ? 'pointer' : 'not-allowed'
-                              }}
-                            >
-                              💳 Settle
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleRejectOrder(order)}
-                            style={{
-                              padding: '8px 12px',
-                              borderRadius: '10px',
-                              background: '#FEE2E2',
-                              color: '#DC2626',
-                              border: '1px solid #FCA5A5',
-                              fontSize: '0.78rem',
-                              fontWeight: 800,
-                              cursor: 'pointer'
-                            }}
-                            title="Cancel order in kitchen (dish unavailable or guest cancelled)"
-                          >
-                            ✕ Cancel
-                          </button>
-                        </>
-                      )}
-
-                      {isServedStage && (
-                        <>
-                          {order.is_settled ? (
-                            <button
-                              onClick={() => handleCompleteSettledOrder(order)}
-                              style={{
-                                padding: '8px 14px',
-                                borderRadius: '10px',
-                                background: '#16A34A',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                fontSize: '0.78rem',
-                                fontWeight: 800,
-                                cursor: 'pointer'
-                              }}
-                              title={isCinema ? 'Complete prepaid seat delivery' : 'Customer picked up the order - mark complete'}
-                            >
-                              ✓ Handover
-                            </button>
-                          ) : isCinema ? (
-                            <button
-                              onClick={() => handleTriggerBillAction(order)} disabled={!onOpenBillModal}
-                              style={{
-                                padding: '8px 14px',
-                                borderRadius: '10px',
-                                background: '#16A34A',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                fontSize: '0.78rem',
-                                fontWeight: 800,
-                                cursor: 'pointer'
-                              }}
-                              title="Complete Seat Delivery"
-                            >
-                              ✓ Done
-                            </button>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => onPrintBill ? onPrintBill(order, 'CHECK_SLIP') : null}
-                                style={{
-                                  padding: '8px 12px',
-                                  borderRadius: '10px',
-                                  border: '1px solid #DDD6FE',
-                                  background: '#F5F3FF',
-                                  color: '#7E22CE',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}
-                                title="Print Table Check Slip"
-                              >
-                                <Receipt size={14} /> Slip
-                              </button>
-                              <button
-                                onClick={() => handleTriggerBillAction(order)}
-                                disabled={!onOpenBillModal}
-                                title={!onOpenBillModal ? 'Billing modal unavailable' : isMultiRoundSession ? `Combined Bill for all ${sessionInfo.totalRoundsCount} rounds (${currencySymbol}${Math.round(sessionInfo.grandTotal)})` : 'Open Bill & Settle Payment'}
-                                style={{
-                                  padding: '8px 14px',
-                                  borderRadius: '10px',
-                                  background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 800,
-                                  cursor: onOpenBillModal ? 'pointer' : 'not-allowed',
-                                  opacity: onOpenBillModal ? 1 : 0.6
-                                }}
-                              >
-                                {isMultiRoundSession ? `💳 Settle (${sessionInfo.totalRoundsCount} Rds)` : '💳 Settle'}
-                              </button>
-                            </>
-                          )}
-                        </>
-                      )}
-
-                      {/* Print KOT on mobile ONLY during kitchen stage after acceptance */}
-                      {isKitchen && (
-                        <button
-                          onClick={() => onDirectPrint ? onDirectPrint(order, 'kot') : null}
-                          style={{
-                            padding: '8px 12px',
-                            borderRadius: '10px',
-                            border: '1px solid #E2E8F0',
-                            background: '#FFFFFF',
-                            color: '#334155',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '0.78rem',
-                            fontWeight: 700
-                          }}
-                          title="Print KOT"
-                        >
-                          <Printer size={14} /> KOT
-                        </button>
-                      )}
-
-                      {(order.status === 'completed' || order.is_settled === 1) && (
-                        <button
-                          onClick={() => onPrintBill ? onPrintBill(order, order.payment_method || 'CASH') : null}
-                          style={{
-                            padding: '8px 12px',
-                            borderRadius: '10px',
-                            border: '1px solid #E2E8F0',
-                            background: '#FFFFFF',
-                            color: '#7E22CE',
-                            fontSize: '0.78rem',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                          title="Print / Re-print Bill Receipt"
-                        >
-                          <Receipt size={14} /> Receipt
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => setSelectedOrder(order)}
-                        style={{
-                          padding: '8px 12px',
-                          borderRadius: '10px',
-                          border: '1px solid #E2E8F0',
-                          background: '#F8FAFC',
-                          color: '#0F172A',
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
+              </div>
+            </>
+          )}
+        </div>
       )}
-    </div>
-  )}
 
       {/* ========================================================
           3. FLOOR / FLEET SPACE MAP (TABLES, CABINS, VIP, ROOMS)
@@ -2581,170 +2606,215 @@ export default function OrdersView({
               gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))',
               gap: '14px'
             }}>
-            {filteredSpaceGrid.map(space => {
-              const isFree = space.status === 'free';
-              const isOrder = Boolean(space.activeOrder);
-              const isCall = Boolean(space.serviceRequest);
-              const isServed = space.status === 'served';
+              {filteredSpaceGrid.map(space => {
+                const isFree = space.status === 'free';
+                const isOrder = Boolean(space.activeOrder);
+                const isCall = Boolean(space.serviceRequest);
+                const isServed = space.status === 'served';
 
-              let cardBg = '#FFFFFF';
-              let borderColor = '#E2E8F0';
-              let badgeText = '🟢 FREE';
-              let badgeBg = '#DCFCE7';
-              let badgeColor = '#15803D';
+                let cardBg = '#FFFFFF';
+                let borderColor = '#E2E8F0';
+                let badgeText = '🟢 FREE';
+                let badgeBg = '#DCFCE7';
+                let badgeColor = '#15803D';
 
-              if (isCall) {
-                cardBg = '#FFFDF5';
-                borderColor = '#FCD34D';
-                badgeText = '🛎️ CALL';
-                badgeBg = '#FEF3C7';
-                badgeColor = '#B45309';
-              } else if (isServed) {
-                cardBg = '#F0FDF4';
-                borderColor = '#BBF7D0';
-                badgeText = '🍽️ SERVED';
-                badgeBg = '#DCFCE7';
-                badgeColor = '#15803D';
-              } else if (isOrder) {
-                cardBg = '#FEF2F2';
-                borderColor = '#FECACA';
-                badgeText = '🔴 ACTIVE';
-                badgeBg = '#FEE2E2';
-                badgeColor = '#DC2626';
-              }
+                if (isCall) {
+                  cardBg = '#FFFDF5';
+                  borderColor = '#FCD34D';
+                  badgeText = '🛎️ CALL';
+                  badgeBg = '#FEF3C7';
+                  badgeColor = '#B45309';
+                } else if (isServed) {
+                  cardBg = '#F0FDF4';
+                  borderColor = '#BBF7D0';
+                  badgeText = '🍽️ SERVED';
+                  badgeBg = '#DCFCE7';
+                  badgeColor = '#15803D';
+                } else if (isOrder) {
+                  cardBg = '#FEF2F2';
+                  borderColor = '#FECACA';
+                  badgeText = '🔴 ACTIVE';
+                  badgeBg = '#FEE2E2';
+                  badgeColor = '#DC2626';
+                }
 
-              return (
-                <div
-                  className="orders-space-card"
-                  key={space.id}
-                  style={{
-                    background: cardBg,
-                    border: `1px solid ${borderColor}`,
-                    borderRadius: '16px',
-                    padding: '14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                    minHeight: '140px'
-                  }}
-                >
-                  {/* Space Header */}
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
-                      <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 900 }}>
-                        {space.displayLabel}
-                      </strong>
-                      <span style={{
-                        padding: '2px 7px',
-                        borderRadius: '6px',
-                        background: badgeBg,
-                        color: badgeColor,
-                        fontSize: '0.64rem',
-                        fontWeight: 800
-                      }}>
-                        {badgeText}
-                      </span>
-                    </div>
-
-                    {/* Active Order Details */}
-                    {isOrder && space.activeOrder && (
-                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #E2E8F0', marginTop: '6px', minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', fontSize: '0.74rem', fontWeight: 800 }}>
-                          <span>
-                            {space.activeOrders && space.activeOrders.length > 1
-                              ? `Session (${space.activeOrders.length} Rounds)`
-                              : (space.activeOrder.token_display ? `Token ${space.activeOrder.token_display}` : `Active Order`)}
-                          </span>
-                          <span style={{ color: '#DC2626' }}>
-                            {currencySymbol}{Math.round(space.sessionTotal || space.activeOrder.total_amount || 0)}
-                          </span>
-                        </div>
-                        {space.activeOrders && space.activeOrders.length > 1 && (
-                          <div style={{ fontSize: '0.64rem', color: '#0369A1', marginTop: '2px', fontWeight: 700 }}>
-                            {space.activeOrders.map((o, idx) => `Round ${o.round_number || (idx + 1)}`).join(' + ')}
-                          </div>
-                        )}
-                        <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginTop: '2px', overflowWrap: 'anywhere' }}>
-                          ⏱️ {getTimeAgo(space.activeOrder.created_at)} • {space.activeOrder.customer_name || 'Guest'}
+                return (
+                  <div
+                    className="orders-space-card"
+                    key={space.id}
+                    style={{
+                      background: cardBg,
+                      border: `1px solid ${borderColor}`,
+                      borderRadius: '16px',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                      minHeight: '140px'
+                    }}
+                  >
+                    {/* Space Header */}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
+                        <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: 900 }}>
+                          {space.displayLabel}
+                        </strong>
+                        <span style={{
+                          padding: '2px 7px',
+                          borderRadius: '6px',
+                          background: badgeBg,
+                          color: badgeColor,
+                          fontSize: '0.64rem',
+                          fontWeight: 800
+                        }}>
+                          {badgeText}
                         </span>
                       </div>
-                    )}
 
-                    {/* Service Call Details */}
-                    {isCall && space.serviceRequest && (
-                      <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #FCD34D', marginTop: '6px' }}>
-                        <strong style={{ fontSize: '0.74rem', color: '#B45309', display: 'block', overflowWrap: 'anywhere' }}>
-                          {space.serviceRequest.request_type || 'Service Call'}
-                        </strong>
-                        {space.serviceRequest.note && (
-                          <span style={{ fontSize: '0.66rem', color: '#64748B', fontStyle: 'italic', display: 'block', marginTop: '2px', overflowWrap: 'anywhere' }}>
-                            "{space.serviceRequest.note}"
+                      {/* Active Order Details */}
+                      {isOrder && space.activeOrder && (
+                        <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #E2E8F0', marginTop: '6px', minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', fontSize: '0.74rem', fontWeight: 800 }}>
+                            <span>
+                              {space.activeOrders && space.activeOrders.length > 1
+                                ? `Session (${space.activeOrders.length} Rounds)`
+                                : (space.activeOrder.token_display ? `Token ${space.activeOrder.token_display}` : `Active Order`)}
+                            </span>
+                            <span style={{ color: '#DC2626' }}>
+                              {currencySymbol}{Math.round(space.sessionTotal || space.activeOrder.total_amount || 0)}
+                            </span>
+                          </div>
+                          {space.activeOrders && space.activeOrders.length > 1 && (
+                            <div style={{ fontSize: '0.64rem', color: '#0369A1', marginTop: '2px', fontWeight: 700 }}>
+                              {space.activeOrders.map((o, idx) => `Round ${o.round_number || (idx + 1)}`).join(' + ')}
+                            </div>
+                          )}
+                          <span style={{ fontSize: '0.66rem', color: '#64748B', display: 'block', marginTop: '2px', overflowWrap: 'anywhere' }}>
+                            ⏱️ {getTimeAgo(space.activeOrder.created_at)} • {space.activeOrder.customer_name || 'Guest'}
                           </span>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      )}
 
-                    {isFree && (
-                      <span style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 600, display: 'block', marginTop: '6px' }}>
-                        Ready for guests ✨
-                      </span>
-                    )}
-                  </div>
+                      {/* Service Call Details */}
+                      {isCall && space.serviceRequest && (
+                        <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #FCD34D', marginTop: '6px' }}>
+                          <strong style={{ fontSize: '0.74rem', color: '#B45309', display: 'block', overflowWrap: 'anywhere' }}>
+                            {space.serviceRequest.request_type || 'Service Call'}
+                          </strong>
+                          {space.serviceRequest.note && (
+                            <span style={{ fontSize: '0.66rem', color: '#64748B', fontStyle: 'italic', display: 'block', marginTop: '2px', overflowWrap: 'anywhere' }}>
+                              "{space.serviceRequest.note}"
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                  {/* Actions Row */}
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '8px' }}>
-                    {isOrder && space.activeOrder && (
-                      <>
-                        <button
-                          onClick={() => setSelectedOrder(space.activeOrder)}
-                          style={{
-                            flex: 1,
-                            padding: '6px 8px',
-                            borderRadius: '8px',
-                            background: '#FFFFFF',
-                            border: '1px solid #E2E8F0',
-                            color: '#0F172A',
-                            minHeight: '36px',
-                            fontSize: '0.70rem',
-                            fontWeight: 700,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Details
-                        </button>
-                        {!space.activeOrder?.is_settled && space.activeOrder?.status !== 'completed' && !isCinema && (
+                      {isFree && (
+                        <span style={{ fontSize: '0.74rem', color: '#16A34A', fontWeight: 600, display: 'block', marginTop: '6px' }}>
+                          Ready for guests ✨
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Actions Row */}
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '8px' }}>
+                      {isOrder && space.activeOrder && (
+                        <>
                           <button
-                            onClick={() => onPrintBill ? onPrintBill(space.activeOrder, 'CHECK_SLIP') : null}
+                            onClick={() => setSelectedOrder(space.activeOrder)}
                             style={{
+                              flex: 1,
                               padding: '6px 8px',
-                              minHeight: '36px',
                               borderRadius: '8px',
-                              background: '#F5F3FF',
-                              border: '1px solid #DDD6FE',
-                              color: '#7E22CE',
+                              background: '#FFFFFF',
+                              border: '1px solid #E2E8F0',
+                              color: '#0F172A',
+                              minHeight: '36px',
                               fontSize: '0.70rem',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '2px'
+                              fontWeight: 700,
+                              cursor: 'pointer'
                             }}
-                            title="Print Table Check Slip (Guest bill review before settlement)"
                           >
-                            <Receipt size={12} /> Slip
+                            Details
                           </button>
-                        )}
-                        {space.activeOrder?.is_settled === 1 || space.activeOrder?.is_settled === true ? (
-                          <>
+                          {!space.activeOrder?.is_settled && space.activeOrder?.status !== 'completed' && !isCinema && (
                             <button
-                              onClick={() => handleCompleteSettledOrder(space.activeOrder)}
+                              onClick={() => onPrintBill ? onPrintBill(space.activeOrder, 'CHECK_SLIP') : null}
+                              style={{
+                                padding: '6px 8px',
+                                minHeight: '36px',
+                                borderRadius: '8px',
+                                background: '#F5F3FF',
+                                border: '1px solid #DDD6FE',
+                                color: '#7E22CE',
+                                fontSize: '0.70rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px'
+                              }}
+                              title="Print Table Check Slip (Guest bill review before settlement)"
+                            >
+                              <Receipt size={12} /> Slip
+                            </button>
+                          )}
+                          {space.activeOrder?.is_settled === 1 || space.activeOrder?.is_settled === true ? (
+                            <>
+                              <button
+                                onClick={() => handleCompleteSettledOrder(space.activeOrder)}
+                                style={{
+                                  flex: 1,
+                                  padding: '6px 8px',
+                                  borderRadius: '8px',
+                                  background: '#16A34A',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  minHeight: '36px',
+                                  fontSize: '0.70rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                                title="Customer picked up prepaid order - mark complete"
+                              >
+                                ✓ Handover
+                              </button>
+                              <button
+                                onClick={() => onPrintBill ? onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH') : null}
+                                style={{
+                                  padding: '6px 8px',
+                                  borderRadius: '8px',
+                                  background: '#0F766E',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  minHeight: '36px',
+                                  fontSize: '0.70rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                                title="Print Bill Receipt"
+                              >
+                                Bill
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (space.activeOrder?.status === 'completed') {
+                                  if (onPrintBill) onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH');
+                                } else {
+                                  handleTriggerBillAction(space.activeOrder);
+                                }
+                              }}
+                              disabled={!onOpenBillModal && space.activeOrder?.status !== 'completed'}
+                              title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
                               style={{
                                 flex: 1,
                                 padding: '6px 8px',
                                 borderRadius: '8px',
-                                background: '#16A34A',
+                                background: space.activeOrder?.status === 'completed' ? '#0F766E' : (onOpenBillModal ? '#7E22CE' : '#9CA3AF'),
                                 color: '#FFFFFF',
                                 border: 'none',
                                 minHeight: '36px',
@@ -2752,152 +2822,107 @@ export default function OrdersView({
                                 fontWeight: 800,
                                 cursor: 'pointer'
                               }}
-                              title="Customer picked up prepaid order - mark complete"
                             >
-                              ✓ Handover
+                              {space.activeOrder?.status === 'completed' ? 'Print Bill' : (space.activeOrders && space.activeOrders.length > 1 ? `Settle (${space.activeOrders.length} Rds)` : 'Settle')}
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {isCall && space.serviceRequest && (
+                        space.serviceRequest.request_type === 'presence_verification' ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', width: '100%' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleApprove(space.serviceRequest)}
+                              disabled={processingReqState[space.serviceRequest.id] === 'approving'}
+                              style={{
+                                flex: 1,
+                                padding: '7px 8px',
+                                minHeight: '36px',
+                                borderRadius: '8px',
+                                background: '#10B981',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              ✓ Approve
                             </button>
                             <button
-                              onClick={() => onPrintBill ? onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH') : null}
+                              type="button"
+                              onClick={() => handleOpenRejectModal(space.serviceRequest)}
                               style={{
-                                padding: '6px 8px',
+                                padding: '7px 8px',
+                                minHeight: '36px',
                                 borderRadius: '8px',
-                                background: '#0F766E',
+                                background: '#EF4444',
                                 color: '#FFFFFF',
                                 border: 'none',
-                                minHeight: '36px',
-                                fontSize: '0.70rem',
+                                fontSize: '0.72rem',
                                 fontWeight: 800,
                                 cursor: 'pointer'
                               }}
-                              title="Print Bill Receipt"
                             >
-                              Bill
+                              ✕ Reject
                             </button>
-                          </>
+                          </div>
                         ) : (
                           <button
-                            onClick={() => {
-                              if (space.activeOrder?.status === 'completed') {
-                                if (onPrintBill) onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH');
-                              } else {
-                                handleTriggerBillAction(space.activeOrder);
-                              }
-                            }}
-                            disabled={!onOpenBillModal && space.activeOrder?.status !== 'completed'}
-                            title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
+                            onClick={() => onResolveServiceRequest && onResolveServiceRequest(space.serviceRequest.id)}
                             style={{
-                              flex: 1,
-                              padding: '6px 8px',
+                              width: '100%',
+                              padding: '7px 10px',
+                              minHeight: '36px',
                               borderRadius: '8px',
-                              background: space.activeOrder?.status === 'completed' ? '#0F766E' : (onOpenBillModal ? '#7E22CE' : '#9CA3AF'),
+                              background: '#D97706',
                               color: '#FFFFFF',
                               border: 'none',
-                              minHeight: '36px',
-                              fontSize: '0.70rem',
+                              fontSize: '0.72rem',
                               fontWeight: 800,
                               cursor: 'pointer'
                             }}
                           >
-                            {space.activeOrder?.status === 'completed' ? 'Print Bill' : (space.activeOrders && space.activeOrders.length > 1 ? `Settle (${space.activeOrders.length} Rds)` : 'Settle')}
+                            ✓ Attend Call
                           </button>
-                        )}
-                      </>
-                    )}
+                        )
+                      )}
 
-                    {isCall && space.serviceRequest && (
-                      space.serviceRequest.request_type === 'presence_verification' ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', width: '100%' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleApprove(space.serviceRequest)}
-                            disabled={processingReqState[space.serviceRequest.id] === 'approving'}
-                            style={{
-                              flex: 1,
-                              padding: '7px 8px',
-                              minHeight: '36px',
-                              borderRadius: '8px',
-                              background: '#10B981',
-                              color: '#FFFFFF',
-                              border: 'none',
-                              fontSize: '0.72rem',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            ✓ Approve
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenRejectModal(space.serviceRequest)}
-                            style={{
-                              padding: '7px 8px',
-                              minHeight: '36px',
-                              borderRadius: '8px',
-                              background: '#EF4444',
-                              color: '#FFFFFF',
-                              border: 'none',
-                              fontSize: '0.72rem',
-                              fontWeight: 800,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            ✕ Reject
-                          </button>
-                        </div>
-                      ) : (
+                      {isFree && onPrintQR && (
                         <button
-                          onClick={() => onResolveServiceRequest && onResolveServiceRequest(space.serviceRequest.id)}
+                          onClick={() => onPrintQR(space.space_number, space.space_type)}
                           style={{
                             width: '100%',
-                            padding: '7px 10px',
+                            padding: '6px 10px',
                             minHeight: '36px',
                             borderRadius: '8px',
-                            background: '#D97706',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            fontSize: '0.72rem',
-                            fontWeight: 800,
-                            cursor: 'pointer'
+                            background: '#F8FAFC',
+                            border: '1px solid #E2E8F0',
+                            color: '#475569',
+                            fontSize: '0.70rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px'
                           }}
                         >
-                          ✓ Attend Call
+                          <QrCode size={12} />
+                          <span>Print Standee QR</span>
                         </button>
-                      )
-                    )}
-
-                    {isFree && onPrintQR && (
-                      <button
-                        onClick={() => onPrintQR(space.space_number, space.space_type)}
-                        style={{
-                          width: '100%',
-                          padding: '6px 10px',
-                          minHeight: '36px',
-                          borderRadius: '8px',
-                          background: '#F8FAFC',
-                          border: '1px solid #E2E8F0',
-                          color: '#475569',
-                          fontSize: '0.70rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <QrCode size={12} />
-                        <span>Print Standee QR</span>
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
@@ -3158,12 +3183,12 @@ export default function OrdersView({
                   <span style={{
                     padding: '4px 10px',
                     borderRadius: '8px',
-                    background: getStatusBadge(selectedOrder.status).bg,
-                    color: getStatusBadge(selectedOrder.status).color,
+                    background: getStatusBadge(selectedOrder).bg,
+                    color: getStatusBadge(selectedOrder).color,
                     fontWeight: 800,
                     fontSize: '0.72rem'
                   }}>
-                    {getStatusBadge(selectedOrder.status).label}
+                    {getStatusBadge(selectedOrder).label}
                   </span>
                 </div>
 
@@ -3246,8 +3271,8 @@ export default function OrdersView({
                           const isCurrent = String(sOrd.id) === String(selectedOrder.id);
                           const sStatus = getStatusBadge(sOrd);
                           return (
-                            <div 
-                              key={sOrd.id} 
+                            <div
+                              key={sOrd.id}
                               onClick={() => setSelectedOrder(sOrd)}
                               style={{
                                 display: 'flex',
@@ -3577,8 +3602,37 @@ export default function OrdersView({
                 </div>
               )}
 
-              {!isOrderCompleted(selectedOrder) && !isServedStageOrder(selectedOrder) && (selectedOrder.status === 'kitchen' || selectedOrder.status === 'accepted' || selectedOrder.status === 'preparing') && (
+              {!isOrderCompleted(selectedOrder) && !isServedStageOrder(selectedOrder) && (selectedOrder.status === 'kitchen' || selectedOrder.status === 'accepted' || selectedOrder.status === 'preparing') && (() => {
+                const showDrawerKdsReadyBtn = !isKitchenPreparedFlag(selectedOrder) && !isCounterOrderSpace(selectedOrder) && (
+                  selectedOrder.status === 'kitchen' ||
+                  selectedOrder.status === 'preparing' ||
+                  (selectedOrder.status === 'accepted' && Number(selectedOrder.sent_to_kds) === 1)
+                );
+                return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {showDrawerKdsReadyBtn && (
+                    <button
+                      onClick={() => {
+                        const targetKitchenStatus = selectedOrder.status === 'accepted' ? 'accepted' : 'kitchen';
+                        if (onUpdateStatus) onUpdateStatus(selectedOrder.id, targetKitchenStatus, { kitchen_prepared: 1 });
+                        setSelectedOrder(prev => prev ? { ...prev, kitchen_prepared: 1 } : null);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        background: '#10B981',
+                        color: '#FFFFFF',
+                        fontSize: '0.86rem',
+                        fontWeight: 900,
+                        border: 'none',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                      }}
+                    >
+                      🍳 Mark Food Ready (Sync with Kitchen KDS)
+                    </button>
+                  )}
                   <div className="orders-drawer-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
                     <button
                       onClick={() => {
@@ -3620,34 +3674,9 @@ export default function OrdersView({
                       ✕ Cancel Order
                     </button>
                   </div>
-                  {isKitchenPreparedFlag(selectedOrder) && !selectedOrder.is_settled && !isCinema && (
-                    <button
-                      onClick={() => {
-                        if (typeof onOpenBillModal === 'function') {
-                          setSelectedOrder(null);
-                          handleTriggerBillAction(selectedOrder);
-                        } else {
-                          handleTriggerBillAction(selectedOrder);
-                        }
-                      }}
-                      disabled={!onOpenBillModal}
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        borderRadius: '10px',
-                        background: onOpenBillModal ? '#F5F3FF' : '#F1F5F9',
-                        color: onOpenBillModal ? '#7E22CE' : '#94A3B8',
-                        fontSize: '0.80rem',
-                        fontWeight: 800,
-                        border: `1px solid ${onOpenBillModal ? '#DDD6FE' : '#E2E8F0'}`,
-                        cursor: onOpenBillModal ? 'pointer' : 'not-allowed'
-                      }}
-                    >
-                      💳 Quick Settle Bill Now
-                    </button>
-                  )}
                 </div>
-              )}
+                );
+              })()}
 
               {!isOrderCompleted(selectedOrder) && isServedStageOrder(selectedOrder) && (
                 selectedOrder.is_settled ? (

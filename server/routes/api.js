@@ -2913,6 +2913,84 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
   }
 });
 
+function parseOrderItemsSafe(rawItems) {
+  if (typeof rawItems === 'string') {
+    try { return JSON.parse(rawItems); } catch (e) { return []; }
+  }
+  return Array.isArray(rawItems) ? rawItems : [];
+}
+
+function buildConsolidatedOrderSummary(resto, anchorOrder, billRows) {
+  const allItems = [];
+  let runningSubtotal = 0;
+  let runningCgst = 0;
+  let runningSgst = 0;
+  let runningTax = 0;
+  let runningGrandTotal = 0;
+  let resolvedPaymentMethod = anchorOrder.payment_method || null;
+  let resolvedSettledAt = anchorOrder.terminal_at || anchorOrder.created_at || null;
+
+  const rounds = billRows.map((row, idx) => {
+    const rowItems = parseOrderItemsSafe(row.items);
+    const rSub = Number(row.subtotal_amount) > 0 ? Number(row.subtotal_amount) : (Number(row.total_amount) || 0);
+    const rCgst = Number(row.cgst_amount) || 0;
+    const rSgst = Number(row.sgst_amount) || 0;
+    const rTax = Number(row.tax_amount) || (rCgst + rSgst);
+    const rGrand = Number(row.grand_total_amount) > 0 ? Number(row.grand_total_amount) : (Number(row.total_amount) || 0);
+
+    runningSubtotal += rSub;
+    runningCgst += rCgst;
+    runningSgst += rSgst;
+    runningTax += rTax;
+    runningGrandTotal += rGrand;
+
+    if (!resolvedPaymentMethod && row.payment_method) {
+      resolvedPaymentMethod = row.payment_method;
+    }
+    if (row.terminal_at) {
+      resolvedSettledAt = row.terminal_at;
+    }
+    allItems.push(...rowItems);
+
+    return {
+      id: row.id,
+      round_number: Number(row.round_number) || (idx + 1),
+      status: row.status,
+      items: rowItems,
+      notes: row.notes || null,
+      subtotal_amount: Math.round(rSub * 100) / 100,
+      tax_amount: Math.round(rTax * 100) / 100,
+      grand_total_amount: Math.round(rGrand * 100) / 100,
+      created_at: row.created_at
+    };
+  });
+
+  const sharedSummary = {
+    order_id: anchorOrder.id,
+    session_id: anchorOrder.session_id || null,
+    round_count: rounds.length,
+    rounds,
+    items: allItems,
+    subtotal_amount: Math.round(runningSubtotal * 100) / 100,
+    cgst_amount: Math.round(runningCgst * 100) / 100,
+    sgst_amount: Math.round(runningSgst * 100) / 100,
+    tax_amount: Math.round(runningTax * 100) / 100,
+    grand_total_amount: Math.round(runningGrandTotal * 100) / 100
+  };
+
+  return {
+    sharedSummary,
+    billSummary: {
+      ...sharedSummary,
+      gst_enabled: Boolean(resto.gst_enabled === true || resto.gst_enabled === 1 || resto.gst_enabled === '1'),
+      gstin_number: resto.gstin_number || '',
+      currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
+      payment_method: String(resolvedPaymentMethod || 'cash').toLowerCase(),
+      settled_at: resolvedSettledAt
+    }
+  };
+}
+
 // GET Track Order Status (Public Customer Route - Strict Tenant Scoped & Token Protected)
 router.get('/orders/track/:id', async (req, res) => {
   try {
@@ -3016,14 +3094,7 @@ router.get('/orders/track/:id', async (req, res) => {
     }
 
     // 🛡️ Step 4: Parse items & build consolidated bill summary when settled/completed
-    const parseOrderItems = (rawItems) => {
-      if (typeof rawItems === 'string') {
-        try { return JSON.parse(rawItems); } catch (e) { return []; }
-      }
-      return Array.isArray(rawItems) ? rawItems : [];
-    };
-
-    const parsedItems = parseOrderItems(order.items);
+    const parsedItems = parseOrderItemsSafe(order.items);
     let sessionSummary = null;
     let billSummary = null;
 
@@ -3062,76 +3133,13 @@ router.get('/orders/track/:id', async (req, res) => {
         } catch (e) {}
       }
 
-      const allItems = [];
-      let runningSubtotal = 0;
-      let runningCgst = 0;
-      let runningSgst = 0;
-      let runningTax = 0;
-      let runningGrandTotal = 0;
-      let resolvedPaymentMethod = order.payment_method || null;
-      let resolvedSettledAt = order.terminal_at || order.created_at || null;
-
-      const rounds = billRows.map((row, idx) => {
-        const rowItems = parseOrderItems(row.items);
-        const rSub = Number(row.subtotal_amount) > 0 ? Number(row.subtotal_amount) : (Number(row.total_amount) || 0);
-        const rCgst = Number(row.cgst_amount) || 0;
-        const rSgst = Number(row.sgst_amount) || 0;
-        const rTax = Number(row.tax_amount) || (rCgst + rSgst);
-        const rGrand = Number(row.grand_total_amount) > 0 ? Number(row.grand_total_amount) : (Number(row.total_amount) || 0);
-
-        runningSubtotal += rSub;
-        runningCgst += rCgst;
-        runningSgst += rSgst;
-        runningTax += rTax;
-        runningGrandTotal += rGrand;
-
-        if (!resolvedPaymentMethod && row.payment_method) {
-          resolvedPaymentMethod = row.payment_method;
-        }
-        if (row.terminal_at) {
-          resolvedSettledAt = row.terminal_at;
-        }
-        allItems.push(...rowItems);
-
-        return {
-          id: row.id,
-          round_number: Number(row.round_number) || (idx + 1),
-          status: row.status,
-          items: rowItems,
-          notes: row.notes || null,
-          subtotal_amount: Math.round(rSub * 100) / 100,
-          tax_amount: Math.round(rTax * 100) / 100,
-          grand_total_amount: Math.round(rGrand * 100) / 100,
-          created_at: row.created_at
-        };
-      });
-
-      const sharedSummary = {
-        order_id: order.id,
-        session_id: order.session_id || null,
-        round_count: rounds.length,
-        rounds,
-        items: allItems,
-        subtotal_amount: Math.round(runningSubtotal * 100) / 100,
-        cgst_amount: Math.round(runningCgst * 100) / 100,
-        sgst_amount: Math.round(runningSgst * 100) / 100,
-        tax_amount: Math.round(runningTax * 100) / 100,
-        grand_total_amount: Math.round(runningGrandTotal * 100) / 100
-      };
-
-      if (rounds.length > 1) {
+      const { sharedSummary, billSummary: builtBillSummary } = buildConsolidatedOrderSummary(resto, order, billRows);
+      if (sharedSummary.rounds.length > 1) {
         sessionSummary = sharedSummary;
       }
 
       if (isSettled || order.status === 'completed') {
-        billSummary = {
-          ...sharedSummary,
-          gst_enabled: Boolean(resto.gst_enabled === true || resto.gst_enabled === 1 || resto.gst_enabled === '1'),
-          gstin_number: resto.gstin_number || '',
-          currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
-          payment_method: String(resolvedPaymentMethod || 'cash').toLowerCase(),
-          settled_at: resolvedSettledAt
-        };
+        billSummary = builtBillSummary;
       }
     }
 
@@ -3154,7 +3162,7 @@ router.get('/orders/track/:id', async (req, res) => {
 // GET Active Table Order Sync (Consolidates active session items & round history)
 router.get('/orders/active-table', async (req, res) => {
   try {
-    const { slug, table_number, space_type, tkn, token, table_token } = req.query;
+    const { slug, table_number, space_type, tkn, token, table_token, prev_order_id } = req.query;
     if (!table_number) return res.json(null);
     const resto = await resolveRestaurant(req, slug);
     if (!resto) return res.status(404).json({ error: 'Restaurant not found' });
@@ -3267,7 +3275,84 @@ router.get('/orders/active-table', async (req, res) => {
       `, [targetId, rawTable, queryTable, queryAlt]);
     }
 
-    if (orders.length === 0) return res.json(null);
+    if (orders.length === 0) {
+      // Allow a device already tracking prev_order_id (with valid QR token) to detect terminal settlement/cancellation cleanly
+      const prevOrderIdNum = prev_order_id ? parseInt(prev_order_id, 10) : NaN;
+      if (!isNaN(prevOrderIdNum) && prevOrderIdNum > 0) {
+        try {
+          const prevRows = await query(
+            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method, rejection_reason
+             FROM orders
+             WHERE id = $1 AND restaurant_id = $2 AND (table_number = $3 OR table_number = $4 OR table_number = $5)`,
+            [prevOrderIdNum, targetId, rawTable, queryTable, queryAlt]
+          );
+          const prevOrder = prevRows && prevRows[0];
+          if (prevOrder) {
+            const prevStatus = String(prevOrder.status || '').toLowerCase();
+            const isPrevSettled = Boolean(prevOrder.is_settled === 1 || prevOrder.is_settled === '1' || prevOrder.is_settled === true);
+            const isPrevCancelled = prevStatus === 'cancelled' || prevStatus === 'rejected';
+            const terminalTime = prevOrder.terminal_at ? new Date(prevOrder.terminal_at).getTime() : new Date(prevOrder.created_at).getTime();
+            const withinTerminalWindow = !isNaN(terminalTime) && (Date.now() - terminalTime <= 2 * 60 * 60 * 1000);
+
+            if (withinTerminalWindow && isPrevCancelled) {
+              return res.json({
+                id: prevOrder.id,
+                table_number: prevOrder.table_number,
+                space_type: resolvedSpaceType,
+                status: prevStatus,
+                rejection_reason: prevOrder.rejection_reason || null
+              });
+            }
+
+            if (withinTerminalWindow && (isPrevSettled || prevStatus === 'completed')) {
+              let billRows = [prevOrder];
+              if (prevOrder.session_id) {
+                const siblingRows = await query(
+                  `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+                   FROM orders
+                   WHERE restaurant_id = $1 AND session_id = $2 AND status NOT IN ('rejected', 'cancelled')
+                   ORDER BY id ASC`,
+                  [targetId, prevOrder.session_id]
+                );
+                if (Array.isArray(siblingRows) && siblingRows.length > 0) billRows = siblingRows;
+              } else {
+                const rootId = prevOrder.parent_order_id || prevOrder.id;
+                const siblingRows = await query(
+                  `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+                   FROM orders
+                   WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) AND status NOT IN ('rejected', 'cancelled')
+                   ORDER BY id ASC`,
+                  [targetId, rootId]
+                );
+                if (Array.isArray(siblingRows) && siblingRows.length > 0) billRows = siblingRows;
+              }
+              const { billSummary } = buildConsolidatedOrderSummary(resto, prevOrder, billRows);
+              return res.json({
+                id: prevOrder.id,
+                table_number: prevOrder.table_number,
+                space_type: resolvedSpaceType,
+                customer_name: prevOrder.customer_name,
+                status: prevStatus === 'completed' ? 'completed' : prevOrder.status,
+                is_settled: 1,
+                payment_method: billSummary.payment_method,
+                terminal_at: prevOrder.terminal_at || prevOrder.created_at,
+                items: billSummary.items,
+                total_amount: billSummary.grand_total_amount,
+                subtotal_amount: billSummary.subtotal_amount,
+                cgst_amount: billSummary.cgst_amount,
+                sgst_amount: billSummary.sgst_amount,
+                tax_amount: billSummary.tax_amount,
+                grand_total_amount: billSummary.grand_total_amount,
+                bill_summary: billSummary
+              });
+            }
+          }
+        } catch (prevErr) {
+          console.warn('prev_order_id active-table check notice:', prevErr.message);
+        }
+      }
+      return res.json(null);
+    }
 
     const primaryOrder = orders[0];
     const latestOrder = orders[orders.length - 1];

@@ -1182,6 +1182,7 @@ export default function AdminDashboard({
       }
 
       if (extraParams.kitchen_prepared === 1 || extraParams.kitchen_prepared === '1' || extraParams.kitchen_prepared === true) {
+        notifiedPreparedIdsRef.current.add(key);
         if (!extraParams.silent) {
           try {
             playWaiterAlert();
@@ -2053,14 +2054,22 @@ export default function AdminDashboard({
         throw new Error(settleResult?.error || settleResult?.message || 'Settlement failed');
       }
 
-      // 2. Settlement confirmed by backend: update local orders state & close modal
+      // 2. Settlement confirmed by backend: protect optimistic state from concurrent polls, update UI & unlock immediately
+      expectedOrderIds.forEach((settledId) => {
+        const sKey = String(settledId);
+        pendingUpdatesRef.current.set(sKey, { status: 'completed', is_settled: 1, payment_method: settleMethod });
+        setTimeout(() => {
+          pendingUpdatesRef.current.delete(sKey);
+        }, 3000);
+      });
+
       setOrders(prev => prev.map(o => {
         const matchesSession = Boolean(order.session_id && o.session_id === order.session_id);
         const matchesParent = Boolean(
           (order.parent_order_id && (o.id === order.parent_order_id || o.parent_order_id === order.parent_order_id)) ||
           (!order.session_id && (o.parent_order_id === order.id || o.id === order.id))
         );
-        if (matchesSession || matchesParent) {
+        if (matchesSession || matchesParent || expectedOrderIds.some(eid => String(eid) === String(o.id))) {
           // In multi-round session, all rounds are marked settled & completed
           return {
             ...o,
@@ -2076,6 +2085,8 @@ export default function AdminDashboard({
 
       setBillOrderModal(null);
       setSettleModalError('');
+      setIsSettlingOrder(false);
+      setSettlingMethod(null);
 
       // 3. Audio & Notification feedback
       try {
@@ -2088,8 +2099,8 @@ export default function AdminDashboard({
       setToastMessage(`💳 ${tblNum} Payment Settled & Order Completed!`);
       setTimeout(() => setToastMessage(''), 4000);
 
-      // 4. Authoritative reload from server
-      await loadOrders();
+      // 4. Authoritative sync in background (never block UI modal/spinner)
+      loadOrders().catch(() => {});
 
       // 5. Generate / Print Customer Bill only when print toggle / auto_print_bill is active
       const willPrintReceipt = printReceiptOverride !== null ? Boolean(printReceiptOverride) : Boolean(shouldPrintOnSettle);

@@ -671,7 +671,16 @@ export async function trackOrderStatus(id, slug = '', trackingToken = '') {
     ? `${API_BASE}/orders/track/${id}?slug=${encodeURIComponent(cleanSlug)}`
     : `${API_BASE}/orders/track/${id}`;
   const headers = {};
-  const cleanTrackingToken = trackingToken || (typeof window !== 'undefined' ? (window.sessionStorage?.getItem(`tq_track_${id}`) || window.sessionStorage?.getItem('tq_active_tracking_token')) : '');
+  let storedToken = '';
+  if (typeof window !== 'undefined') {
+    try {
+      storedToken = window.sessionStorage?.getItem(`tq_track_${id}`) ||
+        window.localStorage?.getItem(`tq_track_${id}`) ||
+        window.sessionStorage?.getItem('tq_active_tracking_token') ||
+        '';
+    } catch (e) {}
+  }
+  const cleanTrackingToken = trackingToken || storedToken;
   if (cleanTrackingToken) {
     headers['X-Order-Tracking-Token'] = cleanTrackingToken;
   }
@@ -679,10 +688,11 @@ export async function trackOrderStatus(id, slug = '', trackingToken = '') {
   return handleResponse(res, 'Failed to track order');
 }
 
-export async function fetchActiveTableOrder(slug, tableNumber, token = '', spaceType = 'table') {
+export async function fetchActiveTableOrder(slug, tableNumber, token = '', spaceType = 'table', prevOrderId = '') {
   let url = `${API_BASE}/orders/active-table?slug=${encodeURIComponent(slug)}&table_number=${encodeURIComponent(tableNumber)}`;
   if (token) url += `&tkn=${encodeURIComponent(token)}`;
   if (spaceType) url += `&space_type=${encodeURIComponent(spaceType)}`;
+  if (prevOrderId) url += `&prev_order_id=${encodeURIComponent(prevOrderId)}`;
   const res = await fetch(url);
   return handleResponse(res, 'Failed to fetch active space order');
 }
