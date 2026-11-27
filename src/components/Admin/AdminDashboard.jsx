@@ -600,6 +600,7 @@ export default function AdminDashboard({
   const pendingUpdatesRef = useRef(new Map());
   const statusUpdateSeqRef = useRef(new Map());
   const activeSettlementIdRef = useRef(0);
+  const isSettlingOrderRef = useRef(false);
   const activeTenantKeyRef = useRef('');
   const activeRequestIdRef = useRef(0);
 
@@ -2115,7 +2116,8 @@ export default function AdminDashboard({
   };
 
   const handleSettleAndCompleteOrder = async (order, paymentMode = 'CASH', explicitSnapshot = null, printReceiptOverride = null) => {
-    if (!order || isSettlingOrder) return;
+    if (!order || isSettlingOrder || isSettlingOrderRef.current) return;
+    isSettlingOrderRef.current = true;
     const settlementAttemptId = ++activeSettlementIdRef.current;
     setIsSettlingOrder(true);
     setSettlingMethod(paymentMode);
@@ -2209,6 +2211,7 @@ export default function AdminDashboard({
       setBillOrderModal(null);
       setSettleModalError('');
       if (activeSettlementIdRef.current === settlementAttemptId) {
+        isSettlingOrderRef.current = false;
         setIsSettlingOrder(false);
         setSettlingMethod(null);
       }
@@ -2244,6 +2247,7 @@ export default function AdminDashboard({
       setSettleModalError(err.message || 'Payment settlement failed. Order remains unsettled.');
     } finally {
       if (activeSettlementIdRef.current === settlementAttemptId) {
+        isSettlingOrderRef.current = false;
         setIsSettlingOrder(false);
         setSettlingMethod(null);
       }
@@ -5628,39 +5632,51 @@ export default function AdminDashboard({
                   { id: 'CARD', title: '💳 Credit / Debit Card', sub: 'POS swipe or tap machine', bg: '#7C3AED', color: '#FFFFFF' }
                 ].map(m => {
                   const isThisSettling = isSettlingOrder && settlingMethod === m.id;
+                  const isOtherSettling = isSettlingOrder && !isThisSettling;
+                  const isBlocked = isSettlingOrder || hasBillSnapshotChanged;
                   return (
                     <button
+                      type="button"
                       key={m.id}
                       id={`settle-payment-btn-${m.id.toLowerCase().replace(/[^a-z]/g, '')}`}
-                      disabled={isSettlingOrder || hasBillSnapshotChanged}
-                      onClick={() => handleSettleAndCompleteOrder(billOrderModal, m.id, billData)}
+                      disabled={isBlocked}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSettleAndCompleteOrder(billOrderModal, m.id, billData);
+                      }}
                       style={{
-                        background: (isSettlingOrder || hasBillSnapshotChanged) ? '#94A3B8' : m.bg,
-                        color: m.color,
-                        border: 'none',
+                        background: hasBillSnapshotChanged
+                          ? '#94A3B8'
+                          : (isOtherSettling ? '#E2E8F0' : m.bg),
+                        color: hasBillSnapshotChanged
+                          ? '#FFFFFF'
+                          : (isOtherSettling ? '#64748B' : m.color),
+                        border: isThisSettling ? '2px solid #0F172A' : 'none',
                         padding: '11px 14px',
                         borderRadius: '12px',
                         fontWeight: 800,
-                        cursor: (isSettlingOrder || hasBillSnapshotChanged) ? 'not-allowed' : 'pointer',
-                        boxShadow: (isSettlingOrder || hasBillSnapshotChanged) ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.14)',
-                        opacity: (isSettlingOrder || hasBillSnapshotChanged) ? 0.72 : 1,
+                        cursor: isBlocked ? 'not-allowed' : 'pointer',
+                        boxShadow: isBlocked ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.14)',
+                        opacity: hasBillSnapshotChanged ? 0.72 : (isOtherSettling ? 0.55 : 1),
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         gap: '10px',
-                        textAlign: 'left'
+                        textAlign: 'left',
+                        touchAction: 'manipulation',
+                        WebkitTapHighlightColor: 'transparent'
                       }}
                     >
                       <div>
                         <div style={{ fontSize: '0.88rem', fontWeight: 900 }}>
-                          {isThisSettling ? `⏳ Settling ${m.id}...` : m.title}
+                          {isThisSettling ? `⏳ Settling via ${m.id}...` : m.title}
                         </div>
                         <div style={{ fontSize: '0.70rem', opacity: 0.9, fontWeight: 600 }}>
                           {m.sub}
                         </div>
                       </div>
                       <span style={{ fontSize: '0.82rem', fontWeight: 900, whiteSpace: 'nowrap' }}>
-                        {currency}{formatPriceNumber(billData.grandTotal)} →
+                        {isThisSettling ? '⏳' : `${currency}${formatPriceNumber(billData.grandTotal)} →`}
                       </span>
                     </button>
                   );
