@@ -688,12 +688,21 @@ export async function trackOrderStatus(id, slug = '', trackingToken = '') {
   return handleResponse(res, 'Failed to track order');
 }
 
-export async function fetchActiveTableOrder(slug, tableNumber, token = '', spaceType = 'table', prevOrderId = '') {
+export async function fetchActiveTableOrder(slug, tableNumber, token = '', spaceType = 'table', prevOrderId = '', authCredentials = {}) {
   let url = `${API_BASE}/orders/active-table?slug=${encodeURIComponent(slug)}&table_number=${encodeURIComponent(tableNumber)}`;
   if (token) url += `&tkn=${encodeURIComponent(token)}`;
   if (spaceType) url += `&space_type=${encodeURIComponent(spaceType)}`;
   if (prevOrderId) url += `&prev_order_id=${encodeURIComponent(prevOrderId)}`;
-  const res = await fetch(url);
+  const headers = {};
+  const observerToken = typeof authCredentials === 'string'
+    ? String(authCredentials).trim()
+    : String(authCredentials?.observerToken || '').trim();
+  const trackingToken = typeof authCredentials === 'object' && authCredentials
+    ? String(authCredentials?.trackingToken || '').trim()
+    : '';
+  if (observerToken) headers['X-Session-Observer-Token'] = observerToken;
+  if (trackingToken) headers['X-Order-Tracking-Token'] = trackingToken;
+  const res = await fetch(url, Object.keys(headers).length > 0 ? { headers } : undefined);
   return handleResponse(res, 'Failed to fetch active space order');
 }
 

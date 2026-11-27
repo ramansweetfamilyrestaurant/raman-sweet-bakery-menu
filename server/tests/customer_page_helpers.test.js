@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import esbuild from 'esbuild';
+import React from 'react';
+import { renderToString } from 'react-dom/server';
 import {
   isFlagEnabled,
   isCustomDomainHost,
@@ -15,10 +19,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '../..');
 
-function runTests() {
+async function runTests() {
   let passed = 0;
   function test(name, fn) {
     fn();
+    passed += 1;
+    console.log(`PASS: ${name}`);
+  }
+  async function testAsync(name, fn) {
+    await fn();
     passed += 1;
     console.log(`PASS: ${name}`);
   }
@@ -348,6 +357,90 @@ function runTests() {
     assert.ok(ordersViewSrc.includes('🔔 KITCHEN READY'), 'OrdersView renders distinct Kitchen Ready badge');
     assert.ok(ordersViewSrc.includes('🍽️ SERVED'), 'OrdersView renders distinct Served badge for served dining orders');
     assert.ok(!ordersViewSrc.includes("return compact ? '✓ Ready' : '✓ Mark Order as Ready / Served'"), 'OrdersView Dine-In button does not collide with KDS Mark Ready');
+  });
+
+  test('App.jsx guards active-table polling responses with a per-effect ownership marker', () => {
+    const appSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/App.jsx'), 'utf8');
+    assert.ok(appSrc.includes('let isCurrentEffect = true;'), 'Polling effect declares per-effect ownership flag');
+    assert.ok(appSrc.includes('isCurrentEffect = false;'), 'Polling effect clears ownership flag in cleanup');
+    const trackIdx = appSrc.indexOf('await trackOrderStatus(');
+    const activeIdx = appSrc.indexOf('await fetchActiveTableOrder(');
+    assert.ok(trackIdx !== -1 && appSrc.slice(trackIdx, trackIdx + 220).includes('if (!isCurrentEffect) return;'), 'trackOrderStatus response checks effect ownership before mutating state/refs');
+    assert.ok(activeIdx !== -1 && appSrc.slice(activeIdx, activeIdx + 300).includes('if (!isCurrentEffect) return;'), 'fetchActiveTableOrder response checks effect ownership before mutating state/refs/URL');
+    assert.ok(appSrc.includes('hasRoundPrepared') && appSrc.includes('modalStatusLabel'), 'Customer banner and orderSuccessModal read live kitchen_prepared and round statuses cleanly');
+    const themeCss = fs.readFileSync(path.join(ROOT_DIR, 'src/styles/theme.css'), 'utf8');
+    assert.ok(themeCss.includes('@keyframes tqOrderModalEnter') && themeCss.includes('@keyframes tqCheckCircleBounce'), 'Smooth GPU-composited order confirmation animations defined in theme.css');
+  });
+
+  await testAsync('App component executes initial minified render without ReferenceError', async () => {
+    const tmpCompileDir = fs.mkdtempSync(path.join(ROOT_DIR, '.tmp-app-render-'));
+    const outFile = path.join(tmpCompileDir, 'App.bundle.mjs');
+    const savedKeys = ['window', 'document', 'localStorage', 'sessionStorage', 'location', 'fetch'];
+    const prevGlobals = Object.fromEntries(savedKeys.map(k => [k, globalThis[k]]));
+
+    try {
+      await esbuild.build({
+        entryPoints: [path.join(ROOT_DIR, 'src/App.jsx')],
+        outfile: outFile,
+        bundle: true,
+        minify: true,
+        format: 'esm',
+        platform: 'node',
+        mainFields: ['module', 'main'],
+        jsx: 'automatic',
+        loader: { '.png': 'dataurl', '.jpg': 'dataurl', '.svg': 'dataurl', '.css': 'empty' },
+        external: ['react', 'react-dom', 'react/jsx-runtime']
+      });
+
+      const storeMock = () => {
+        const map = new Map();
+        return {
+          getItem: (k) => (map.has(k) ? map.get(k) : null),
+          setItem: (k, v) => map.set(k, String(v)),
+          removeItem: (k) => map.delete(k)
+        };
+      };
+      const loc = {
+        search: '?t=2&tkn=qr_test',
+        pathname: '/r/demo-cafe',
+        host: 'localhost',
+        hostname: 'localhost',
+        origin: 'http://localhost',
+        href: 'http://localhost/r/demo-cafe?t=2&tkn=qr_test'
+      };
+      globalThis.location = loc;
+      globalThis.localStorage = storeMock();
+      globalThis.sessionStorage = storeMock();
+      globalThis.window = {
+        location: loc,
+        history: { replaceState: () => { }, pushState: () => { } },
+        localStorage: globalThis.localStorage,
+        sessionStorage: globalThis.sessionStorage,
+        addEventListener: () => { },
+        removeEventListener: () => { },
+        innerWidth: 390,
+        scrollTo: () => { }
+      };
+      globalThis.document = {
+        cookie: '',
+        documentElement: { style: { setProperty: () => { } } },
+        createElement: () => ({ style: {} })
+      };
+      globalThis.fetch = async () => ({ ok: true, json: async () => ({}) });
+
+      const appMod = await import(pathToFileURL(outFile).href);
+      const AppComp = appMod.default;
+      assert.equal(typeof AppComp, 'function', 'Bundled App default export must be a component function');
+      const html = renderToString(React.createElement(AppComp));
+      assert.equal(typeof html, 'string');
+      assert.ok(html.length > 0, 'Minified App component renders non-empty HTML without ReferenceError');
+    } finally {
+      for (const k of savedKeys) {
+        if (prevGlobals[k] === undefined) delete globalThis[k];
+        else globalThis[k] = prevGlobals[k];
+      }
+      try { fs.rmSync(tmpCompileDir, { recursive: true, force: true }); } catch { }
+    }
   });
 
   console.log(`\nAll ${passed} Customer Page helper/regression tests passed.`);

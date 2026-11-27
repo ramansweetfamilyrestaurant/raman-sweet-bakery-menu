@@ -888,7 +888,10 @@ export default function App() {
         try {
           sessionStorage.removeItem(`tq_track_${orderIdKey}`);
           localStorage.removeItem(`tq_track_${orderIdKey}`);
+          sessionStorage.removeItem(`tq_obs_${orderIdKey}`);
+          localStorage.removeItem(`tq_obs_${orderIdKey}`);
           sessionStorage.removeItem('tq_active_tracking_token');
+          sessionStorage.removeItem('tq_active_observer_token');
         } catch (e) { }
       }
       lastActiveTableOrderIdRef.current = null;
@@ -935,6 +938,12 @@ export default function App() {
           tableNumber: numForReuse
         });
         if (scanKey) localStorage.removeItem(scanKey);
+        const obsKey = buildScopedStorageKey('touchqr_observer_token', {
+          slug: tenantSlug,
+          spaceType: resolvedType,
+          tableNumber: numForReuse
+        });
+        if (obsKey) localStorage.removeItem(obsKey);
       }
       setActiveOrderId(null);
       setActiveOrderTrack(null);
@@ -1055,10 +1064,58 @@ export default function App() {
       return;
     }
 
+    let isCurrentEffect = true;
     const currentSlug = getSlugFromUrl() || (info && info.slug) || '';
+
+    const readStoredObserverToken = (orderKeyId, spaceType) => {
+      try {
+        const storageSlug = currentSlug || getActiveStorageTenantSlug();
+        const scopedObsKey = storageSlug
+          ? buildScopedStorageKey('touchqr_observer_token', {
+              slug: storageSlug,
+              spaceType: spaceType || 'table',
+              tableNumber: effectiveTableNum
+            })
+          : null;
+        return (
+          (orderKeyId && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`tq_obs_${orderKeyId}`)) ||
+          (orderKeyId && typeof localStorage !== 'undefined' && localStorage.getItem(`tq_obs_${orderKeyId}`)) ||
+          (scopedObsKey && typeof localStorage !== 'undefined' && localStorage.getItem(scopedObsKey)) ||
+          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('tq_active_observer_token')) ||
+          ''
+        );
+      } catch (e) {
+        return '';
+      }
+    };
+
+    const persistStoredObserverToken = (tok, orderIds = [], spaceType) => {
+      if (!tok) return;
+      try {
+        orderIds.filter(Boolean).forEach((oid) => {
+          if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(`tq_obs_${oid}`, tok);
+          if (typeof localStorage !== 'undefined') localStorage.setItem(`tq_obs_${oid}`, tok);
+        });
+        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('tq_active_observer_token', tok);
+        const storageSlug = currentSlug || getActiveStorageTenantSlug();
+        const scopedObsKey = storageSlug
+          ? buildScopedStorageKey('touchqr_observer_token', {
+              slug: storageSlug,
+              spaceType: spaceType || 'table',
+              tableNumber: effectiveTableNum
+            })
+          : null;
+        if (scopedObsKey && typeof localStorage !== 'undefined') {
+          localStorage.setItem(scopedObsKey, tok);
+        }
+      } catch (e) {}
+    };
 
     const checkTableStatus = async () => {
       try {
+        if (!isCurrentEffect) {
+          return;
+        }
         if (trackingExpiredRef.current) {
           return;
         }
@@ -1069,6 +1126,7 @@ export default function App() {
               ? (sessionStorage.getItem(`tq_track_${activeOrderId}`) || localStorage.getItem(`tq_track_${activeOrderId}`) || sessionStorage.getItem('tq_active_tracking_token') || '')
               : '';
             const data = await trackOrderStatus(activeOrderId, currentSlug, trackingToken);
+            if (!isCurrentEffect) return;
             if (data) {
               const dStatus = String(data.status || '').toLowerCase();
               const isDTerminal = Boolean(
@@ -1084,6 +1142,7 @@ export default function App() {
               return;
             }
           } catch (trackErr) {
+            if (!isCurrentEffect) return;
             // Order tracking expired (410) -> clean up stored token, halt polling, and preserve order status
             if (trackErr?.status === 410 || trackErr?.message?.includes('expired') || trackErr?.error === 'tracking_expired') {
               try {
@@ -1113,14 +1172,40 @@ export default function App() {
             }
           }
         }
+        if (!isCurrentEffect) return;
         // Multi-device table sync ONLY if table QR code was scanned
         if (effectiveTableNum && !sessionExpired && !isPostBillViewOnly && !isViewOnlyUrl) {
           const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
           const targetSpaceType = currentSpaceType || initialSpaceInfo.type || 'table';
           const prevTrackedId = lastActiveTableOrderIdRef.current || activeOrderId || '';
+          const observerToken = readStoredObserverToken(prevTrackedId, targetSpaceType);
+          let trackingToken = '';
+          try {
+            if (prevTrackedId) {
+              trackingToken =
+                (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`tq_track_${prevTrackedId}`) : '') ||
+                (typeof localStorage !== 'undefined' ? localStorage.getItem(`tq_track_${prevTrackedId}`) : '') ||
+                '';
+            }
+          } catch (e) {}
           if (effectiveQrToken) {
-            const tableData = await fetchActiveTableOrder(currentSlug, effectiveTableNum, effectiveQrToken, targetSpaceType, prevTrackedId);
+            const tableData = await fetchActiveTableOrder(
+              currentSlug,
+              effectiveTableNum,
+              effectiveQrToken,
+              targetSpaceType,
+              prevTrackedId,
+              { observerToken, trackingToken }
+            );
+            if (!isCurrentEffect) return;
             if (tableData) {
+              if (tableData.session_observer_token) {
+                persistStoredObserverToken(
+                  tableData.session_observer_token,
+                  [tableData.id, tableData.latest_order_id],
+                  targetSpaceType
+                );
+              }
               const tdStatus = String(tableData.status || '').toLowerCase();
               const isTdTerminal = Boolean(
                 tableData.is_settled === 1 ||
@@ -1141,6 +1226,8 @@ export default function App() {
                 try {
                   localStorage.removeItem(`tq_track_${prevTrackedId}`);
                   sessionStorage.removeItem(`tq_track_${prevTrackedId}`);
+                  localStorage.removeItem(`tq_obs_${prevTrackedId}`);
+                  sessionStorage.removeItem(`tq_obs_${prevTrackedId}`);
                 } catch (e) {}
                 setActiveOrderId(null);
                 setActiveOrderTrack(null);
@@ -1163,14 +1250,97 @@ export default function App() {
           }
         }
       } catch (err) {
+        if (!isCurrentEffect) return;
         console.error('Failed to sync table order:', err);
       }
     };
 
     checkTableStatus();
-    const interval = setInterval(checkTableStatus, 4000);
-    return () => clearInterval(interval);
+    const interval = setInterval(checkTableStatus, 2500);
+    return () => {
+      isCurrentEffect = false;
+      clearInterval(interval);
+    };
   }, [activeOrderId, effectiveTableNum, info, sessionExpired, isPostBillViewOnly]);
+
+  const buildOptimisticOrderTrack = (prev, res, orderItems, fallbackMeta) => {
+    const nextRoundItems = Array.isArray(orderItems) ? orderItems : [];
+    const primaryId = res.primary_order_id || res.order_id;
+    if (res.is_addon && prev && String(prev.id) === String(primaryId)) {
+      const prevItems = Array.isArray(prev.items) ? prev.items : [];
+      const prevRounds = Array.isArray(prev.session_summary?.rounds)
+        ? prev.session_summary.rounds
+        : (Array.isArray(prev.rounds) ? prev.rounds : [{
+            id: prev.id,
+            round_number: Number(prev.round_number) || 1,
+            status: prev.status,
+            kitchen_prepared: Number(prev.kitchen_prepared) || 0,
+            items: prevItems,
+            subtotal_amount: prev.subtotal_amount || 0,
+            tax_amount: prev.tax_amount || 0,
+            grand_total_amount: prev.grand_total_amount || prev.total_amount || 0
+          }]);
+      const newRoundEntry = {
+        id: res.order_id,
+        round_number: res.round_number || (prevRounds.length + 1),
+        status: res.status || 'pending',
+        kitchen_prepared: 0,
+        items: nextRoundItems,
+        notes: res.notes || '',
+        subtotal_amount: res.subtotal_amount || 0,
+        tax_amount: res.tax_amount || 0,
+        grand_total_amount: res.grand_total_amount || res.total_amount || 0
+      };
+      const mergedRounds = [...prevRounds, newRoundEntry];
+      const mergedGrand = (Number(prev.grand_total_amount ?? prev.total_amount ?? 0) || 0) + (Number(res.grand_total_amount ?? res.total_amount ?? 0) || 0);
+      const mergedSub = (Number(prev.subtotal_amount || 0) || 0) + (Number(res.subtotal_amount || 0) || 0);
+      const mergedTax = (Number(prev.tax_amount || 0) || 0) + (Number(res.tax_amount || 0) || 0);
+      const mergedItems = [...prevItems, ...nextRoundItems];
+      return {
+        ...prev,
+        latest_order_id: res.order_id,
+        status: res.status || 'pending',
+        kitchen_prepared: 0,
+        round_number: res.round_number || mergedRounds.length,
+        items: mergedItems,
+        total_amount: mergedGrand,
+        subtotal_amount: mergedSub,
+        tax_amount: mergedTax,
+        grand_total_amount: mergedGrand,
+        rounds: mergedRounds,
+        ...(prev.session_summary ? {
+          session_summary: {
+            ...prev.session_summary,
+            round_count: mergedRounds.length,
+            rounds: mergedRounds,
+            items: mergedItems,
+            subtotal_amount: mergedSub,
+            tax_amount: mergedTax,
+            grand_total_amount: mergedGrand
+          }
+        } : {})
+      };
+    }
+    return {
+      id: primaryId,
+      latest_order_id: res.order_id,
+      session_id: res.session_id || null,
+      table_number: res.table_number || fallbackMeta.tableNumber,
+      space_type: fallbackMeta.spaceType,
+      status: res.status || 'pending',
+      kitchen_prepared: 0,
+      round_number: res.round_number || 1,
+      order_type: res.order_type || fallbackMeta.orderType,
+      token_number: res.token_number || null,
+      token_display: res.token_display || null,
+      total_amount: res.total_amount,
+      subtotal_amount: res.subtotal_amount,
+      tax_amount: res.tax_amount,
+      grand_total_amount: res.grand_total_amount,
+      notes: res.notes || '',
+      items: nextRoundItems
+    };
+  };
 
   const handleSendDirectOrder = async () => {
     const slug = getSlugFromUrl() || (info && info.slug) || '';
@@ -1249,6 +1419,17 @@ export default function App() {
             sessionStorage.setItem('tq_active_tracking_token', res.tracking_token);
           } catch (e) { }
         }
+        if (res.session_observer_token) {
+          try {
+            sessionStorage.setItem(`tq_obs_${res.order_id}`, res.session_observer_token);
+            localStorage.setItem(`tq_obs_${res.order_id}`, res.session_observer_token);
+            if (res.primary_order_id) {
+              sessionStorage.setItem(`tq_obs_${res.primary_order_id}`, res.session_observer_token);
+              localStorage.setItem(`tq_obs_${res.primary_order_id}`, res.session_observer_token);
+            }
+            sessionStorage.setItem('tq_active_observer_token', res.session_observer_token);
+          } catch (e) { }
+        }
         const storageSlug = slug || getActiveStorageTenantSlug();
         if (storageSlug) {
           const storageKey = buildScopedStorageKey('touchqr_active_order_id', {
@@ -1266,6 +1447,11 @@ export default function App() {
         }
         lastActiveTableOrderIdRef.current = String(res.order_id);
         setActiveOrderId(String(res.order_id));
+        setActiveOrderTrack(prev => buildOptimisticOrderTrack(prev, res, itemsPayload, {
+          tableNumber: targetTable,
+          spaceType: targetSpaceType,
+          orderType: effectiveOrderType
+        }));
       }
 
       setLastCompletedBill(null);
@@ -1364,6 +1550,17 @@ export default function App() {
             sessionStorage.setItem('tq_active_tracking_token', res.tracking_token);
           } catch (e) { }
         }
+        if (res.session_observer_token) {
+          try {
+            sessionStorage.setItem(`tq_obs_${res.order_id}`, res.session_observer_token);
+            localStorage.setItem(`tq_obs_${res.order_id}`, res.session_observer_token);
+            if (res.primary_order_id) {
+              sessionStorage.setItem(`tq_obs_${res.primary_order_id}`, res.session_observer_token);
+              localStorage.setItem(`tq_obs_${res.primary_order_id}`, res.session_observer_token);
+            }
+            sessionStorage.setItem('tq_active_observer_token', res.session_observer_token);
+          } catch (e) { }
+        }
         const retrySlug = payload.slug || getActiveStorageTenantSlug();
         const retrySpaceType = payload.space_type || currentSpaceType || 'table';
         if (retrySlug) {
@@ -1382,6 +1579,11 @@ export default function App() {
         }
         lastActiveTableOrderIdRef.current = String(res.order_id);
         setActiveOrderId(String(res.order_id));
+        setActiveOrderTrack(prev => buildOptimisticOrderTrack(prev, res, payload.items, {
+          tableNumber: payload.table_number,
+          spaceType: retrySpaceType,
+          orderType: payload.order_type
+        }));
       }
 
       setLastCompletedBill(null);
@@ -3006,11 +3208,33 @@ export default function App() {
       {/* Live Customer Order Tracker Banner */}
       {activeOrderTrack && (info?.direct_ordering_enabled !== false && info?.direct_ordering_enabled !== 0) && (() => {
         const statusRaw = String(activeOrderTrack.status || '').toLowerCase();
-        const isCompleted = statusRaw === 'completed';
+        const trackRoundsArr = Array.isArray(activeOrderTrack.session_summary?.rounds)
+          ? activeOrderTrack.session_summary.rounds
+          : (Array.isArray(activeOrderTrack.rounds) ? activeOrderTrack.rounds : []);
+        const latestRoundObj = trackRoundsArr.length > 0 ? trackRoundsArr[trackRoundsArr.length - 1] : null;
+        const effectiveStatusRaw = String((latestRoundObj?.status || statusRaw || '')).toLowerCase();
+        const hasRoundPrepared = trackRoundsArr.some(r =>
+          (r.kitchen_prepared === 1 || r.kitchen_prepared === '1' || r.kitchen_prepared === true) &&
+          !['served', 'completed', 'cancelled', 'rejected'].includes(String(r.status || '').toLowerCase())
+        );
+        const isCompleted = statusRaw === 'completed' || (effectiveStatusRaw === 'completed' && trackRoundsArr.length > 0 && trackRoundsArr.every(r => String(r.status || '').toLowerCase() === 'completed'));
         const isCancelled = statusRaw === 'cancelled' || statusRaw === 'rejected';
-        const isServed = statusRaw === 'served';
-        const isPrepared = activeOrderTrack.kitchen_prepared === 1 || activeOrderTrack.kitchen_prepared === '1' || activeOrderTrack.kitchen_prepared === true;
-        const isPreparing = statusRaw === 'accepted' || statusRaw === 'kitchen' || statusRaw === 'preparing';
+        const isServed = effectiveStatusRaw === 'served';
+        const isPrepared = trackRoundsArr.length > 0
+          ? Boolean(
+              effectiveStatusRaw === 'ready' ||
+              latestRoundObj?.kitchen_prepared === 1 ||
+              latestRoundObj?.kitchen_prepared === '1' ||
+              latestRoundObj?.kitchen_prepared === true ||
+              hasRoundPrepared
+            )
+          : Boolean(
+              activeOrderTrack.kitchen_prepared === 1 ||
+              activeOrderTrack.kitchen_prepared === '1' ||
+              activeOrderTrack.kitchen_prepared === true ||
+              statusRaw === 'ready'
+            );
+        const isPreparing = effectiveStatusRaw === 'accepted' || effectiveStatusRaw === 'kitchen' || effectiveStatusRaw === 'preparing';
         const isActiveCooking = !isCompleted && !isCancelled && !isServed;
 
         const bizType = String(info?.business_type || '').toLowerCase();
@@ -5662,8 +5886,52 @@ export default function App() {
                   ? 'आपका ऑर्डर किचन में भेज दिया गया है! तैयार होते ही आपकी टेबल पर सर्व किया जाएगा।'
                   : 'Your order has been sent directly to the kitchen! It will be prepared and served to your table shortly.');
 
+        const liveMatchTrack = activeOrderTrack && (
+          String(activeOrderTrack.id) === String(orderSuccessModal.primary_order_id || orderSuccessModal.order_id) ||
+          String(activeOrderTrack.latest_order_id || '') === String(orderSuccessModal.order_id) ||
+          (orderSuccessModal.session_id && activeOrderTrack.session_id === orderSuccessModal.session_id)
+        ) ? activeOrderTrack : null;
+        const liveRoundsArr = Array.isArray(liveMatchTrack?.session_summary?.rounds)
+          ? liveMatchTrack.session_summary.rounds
+          : (Array.isArray(liveMatchTrack?.rounds) ? liveMatchTrack.rounds : []);
+        const liveLatestRound = liveRoundsArr.length > 0 ? liveRoundsArr[liveRoundsArr.length - 1] : null;
+        const liveModalStatus = String((liveLatestRound?.status || liveMatchTrack?.status || orderSuccessModal.status || 'pending')).toLowerCase();
+        const hasLiveRoundPrepared = liveRoundsArr.some(r =>
+          (r.kitchen_prepared === 1 || r.kitchen_prepared === '1' || r.kitchen_prepared === true) &&
+          !['served', 'completed', 'cancelled', 'rejected'].includes(String(r.status || '').toLowerCase())
+        );
+        const isLiveModalPrepared = liveRoundsArr.length > 0
+          ? Boolean(
+              liveModalStatus === 'ready' ||
+              liveLatestRound?.kitchen_prepared === 1 ||
+              liveLatestRound?.kitchen_prepared === '1' ||
+              liveLatestRound?.kitchen_prepared === true ||
+              hasLiveRoundPrepared
+            )
+          : Boolean(
+              liveMatchTrack?.kitchen_prepared === 1 ||
+              liveMatchTrack?.kitchen_prepared === '1' ||
+              liveMatchTrack?.kitchen_prepared === true ||
+              liveModalStatus === 'ready'
+            );
+        const modalStatusLabel = liveModalStatus === 'served'
+          ? (lang === 'hi' ? 'सर्व हो चुका है 🍽️' : 'Served to Table 🍽️')
+          : isLiveModalPrepared
+            ? (lang === 'hi' ? 'ऑर्डर तैयार है! अभी आ रहा है 🛎️' : 'Order Ready! Coming Shortly 🛎️')
+            : ['accepted', 'kitchen', 'preparing'].includes(liveModalStatus)
+              ? (lang === 'hi' ? 'स्वीकृत — किचन में बन रहा है 👨‍🍳' : 'Accepted — Preparing Now 👨‍🍳')
+              : (isAddonRound
+                  ? (lang === 'hi' ? 'रनिंग बिल में जुड़ा 🟢' : 'Added to Active Order 🟢')
+                  : (lang === 'hi' ? 'स्वीकृति की प्रतीक्षा में 🟡' : 'Pending Acceptance 🟡'));
+        const modalStatusColor = (liveModalStatus === 'served' || isLiveModalPrepared)
+          ? '#4ADE80'
+          : ['accepted', 'kitchen', 'preparing'].includes(liveModalStatus)
+            ? '#38BDF8'
+            : '#FCD34D';
+
         return (
           <div
+            key={orderSuccessModal.order_id || 'order-success'}
             onClick={() => setOrderSuccessModal(null)}
             style={{
               position: 'fixed',
@@ -5676,7 +5944,7 @@ export default function App() {
               alignItems: 'center',
               justifyContent: 'center',
               padding: '16px',
-              animation: 'sheetBackdropFade 0.2s ease-out'
+              animation: 'tqBackdropSmooth 0.32s cubic-bezier(0.22, 1, 0.36, 1) both'
             }}
           >
             <div
@@ -5694,10 +5962,11 @@ export default function App() {
                 textAlign: 'center',
                 boxShadow: '0 24px 48px rgba(0, 0, 0, 0.45)',
                 color: '#FFFFFF',
-                animation: 'tqPopIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                willChange: 'transform, opacity',
+                animation: 'tqOrderModalEnter 0.48s cubic-bezier(0.22, 1, 0.36, 1) both'
               }}
             >
-              <div style={{ position: 'relative', width: '58px', height: '58px', margin: '0 auto 14px' }}>
+              <div style={{ position: 'relative', width: '62px', height: '62px', margin: '0 auto 14px' }}>
                 {[
                   { sx: '-38px', sy: '-24px', size: 6, bg: '#4ADE80' },
                   { sx: '38px', sy: '-22px', size: 6, bg: '#FBBF24' },
@@ -5724,19 +5993,20 @@ export default function App() {
                   className="tq-check-ripple"
                   style={{
                     position: 'relative',
-                    width: '58px',
-                    height: '58px',
+                    width: '62px',
+                    height: '62px',
                     borderRadius: '50%',
                     background: 'linear-gradient(135deg, #25D366 0%, #10B981 100%)',
                     color: '#FFFFFF',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 8px 22px rgba(16, 185, 129, 0.45)',
-                    animation: 'tqPopIn 0.34s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                    boxShadow: '0 10px 26px rgba(16, 185, 129, 0.5)',
+                    willChange: 'transform, opacity',
+                    animation: 'tqCheckCircleBounce 0.54s cubic-bezier(0.34, 1.56, 0.64, 1) 0.08s both'
                   }}
                 >
-                  <svg className="tq-svg-check" viewBox="0 0 28 28" width="28" height="28" fill="none" aria-hidden="true">
+                  <svg className="tq-svg-check" viewBox="0 0 28 28" width="30" height="30" fill="none" aria-hidden="true">
                     <path
                       pathLength="1"
                       d="M6.5 14.5 L11.5 19.5 L21.5 9"
@@ -5755,7 +6025,7 @@ export default function App() {
                 color: '#FFFFFF',
                 margin: '0 0 6px 0',
                 lineHeight: 1.25,
-                animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.07s both'
+                animation: 'tqCardIn 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both'
               }}>
                 {isAddonRound
                   ? (lang === 'hi' ? `राउंड ${roundNum} आइटम जुड़ गए!` : `Round ${roundNum} Items Sent!`)
@@ -5768,7 +6038,7 @@ export default function App() {
                 padding: '14px',
                 margin: '14px 0',
                 border: '1px solid rgba(255, 255, 255, 0.14)',
-                animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.13s both'
+                animation: 'tqCardIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both'
               }}>
                 {hasToken ? (
                   <div
@@ -5807,10 +6077,8 @@ export default function App() {
                   <span style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.8)' }}>
                     {lang === 'hi' ? 'स्थिति:' : 'Status:'}
                   </span>
-                  <strong style={{ fontSize: '0.80rem', color: '#FCD34D' }}>
-                    {isAddonRound
-                      ? (lang === 'hi' ? 'रनिंग बिल में जुड़ा 🟢' : 'Added to Active Order 🟢')
-                      : (lang === 'hi' ? 'स्वीकृति की प्रतीक्षा में 🟡' : 'Pending Acceptance 🟡')}
+                  <strong style={{ fontSize: '0.80rem', color: modalStatusColor }}>
+                    {modalStatusLabel}
                   </strong>
                 </div>
               </div>
@@ -5820,7 +6088,7 @@ export default function App() {
                 color: 'rgba(255, 255, 255, 0.86)',
                 lineHeight: 1.5,
                 margin: '0 0 18px 0',
-                animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both'
+                animation: 'tqCardIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both'
               }}>
                 {destinationMsg}
               </p>
@@ -5840,7 +6108,7 @@ export default function App() {
                   border: 'none',
                   cursor: 'pointer',
                   boxShadow: '0 6px 18px rgba(0, 0, 0, 0.25)',
-                  animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) 0.23s both'
+                  animation: 'tqCardIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.34s both'
                 }}
               >
                 {lang === 'hi' ? 'ठीक है, लाइव स्टेटस देखें' : 'Track Live Order →'}

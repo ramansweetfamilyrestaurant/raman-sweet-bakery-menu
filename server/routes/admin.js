@@ -3312,26 +3312,18 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const numericId = parseInt(id, 10);
     const orderId = isNaN(numericId) ? id : numericId;
 
-    const isSettlementPreCheck = Boolean(settle && typeof settle === 'object');
-
-    // 1. Fetch target order strictly bound to authenticated restaurant (plus gst_enabled in parallel if settling)
-    const [existing, preGstRows] = await Promise.all([
-      query(`
-        SELECT id, session_id, parent_order_id, table_number, status, sent_to_kds,
-               kitchen_prepared, is_settled, payment_method, terminal_at
-        FROM orders
-        WHERE id = $1 AND restaurant_id = $2
-      `, [orderId, targetId]),
-      isSettlementPreCheck
-        ? query('SELECT gst_enabled FROM restaurants WHERE id = $1', [targetId])
-        : Promise.resolve(null)
-    ]);
+    // 1. Fetch target order strictly bound to authenticated restaurant
+    const existing = await query(`
+      SELECT id, session_id, parent_order_id, table_number, status, sent_to_kds,
+             kitchen_prepared, is_settled, payment_method, terminal_at
+      FROM orders
+      WHERE id = $1 AND restaurant_id = $2
+    `, [orderId, targetId]);
 
     const targetOrder = existing[0] || null;
     if (!targetOrder) {
       return res.status(404).json({ error: 'Order not found or does not belong to this restaurant' });
     }
-    const preFetchedGstEnabled = preGstRows && preGstRows[0] ? preGstRows[0].gst_enabled : undefined;
 
     // Distinguish explicitly supplied status & lifecycle flags from stored fallback values
     const currentStatus = String(targetOrder.status || 'pending').toLowerCase();
@@ -3577,12 +3569,17 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
         counterKitchenAckValidated = true;
       }
 
-      const isExplicitKitchenTransition = normalizedNewStatus === 'kitchen' && txCurrentStatus !== 'kitchen';
+      // Prevent stale prep updates (e.g. delayed Ready sending 'kitchen') from reverting already-served/ready orders
+      const PRE_SERVE_STATUSES = ['pending', 'ordered', 'accepted', 'preparing', 'kitchen'];
+      const isRegressiveToPreServe = ['served', 'ready'].includes(txCurrentStatus) && normalizedNewStatus && PRE_SERVE_STATUSES.includes(normalizedNewStatus);
+      const effectiveTargetStatus = isRegressiveToPreServe ? txCurrentStatus : normalizedNewStatus;
+
+      const isExplicitKitchenTransition = effectiveTargetStatus === 'kitchen' && txCurrentStatus !== 'kitchen';
       const sqlKdsParam = hasExplicitKds
         ? requestedKdsVal
         : (isExplicitKitchenTransition ? 1 : null);
       const sqlPrepParam = requestedPrepVal;
-      const sqlStatusParam = normalizedNewStatus;
+      const sqlStatusParam = isRegressiveToPreServe ? null : effectiveTargetStatus;
 
       let txTerminalAt = txRow.terminal_at ?? null;
       if (sqlStatusParam !== null) {
@@ -3695,11 +3692,9 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
             let hasTotalMismatch = false;
             let authoritativeGrandTotal = null;
             if (settle.expected_total !== undefined && settle.expected_total !== null && Number.isFinite(Number(settle.expected_total))) {
-              let gstFlag = preFetchedGstEnabled;
-              if (gstFlag === undefined) {
-                const restoGstRows = await txQuery('SELECT gst_enabled FROM restaurants WHERE id = $1', [targetId]);
-                gstFlag = restoGstRows && restoGstRows[0] ? restoGstRows[0].gst_enabled : false;
-              }
+              // Read GST setting inside the transaction after acquiring the order-group locks
+              const restoGstRows = await txQuery('SELECT gst_enabled FROM restaurants WHERE id = $1', [targetId]);
+              const gstFlag = restoGstRows && restoGstRows[0] ? restoGstRows[0].gst_enabled : false;
               const isGst = Boolean(gstFlag === 1 || gstFlag === '1' || gstFlag === true);
               let billSubtotal = 0;
               for (const uRow of unsettledRows) {
@@ -3993,6 +3988,12 @@ router.patch('/service-requests/:id/approve-presence', authenticateToken, requir
       return res.status(404).json({ error: 'service_request_not_found', message: 'Presence verification service request not found' });
     }
     const sr = srRows[0];
+    if (String(sr.status || '').toLowerCase() !== 'pending') {
+      return res.status(409).json({
+        error: 'presence_request_already_decided',
+        message: 'This presence verification request has already been decided.'
+      });
+    }
 
     // 2. Extract verification token from note (or fallback to space/table search)
     let tokenMatch = sr.note ? sr.note.match(/(?:pv_staff_|tq_staff_)[a-z0-9_]+/i) : null;
@@ -4008,22 +4009,36 @@ router.patch('/service-requests/:id/approve-presence', authenticateToken, requir
       return res.status(404).json({ error: 'verification_record_not_found', message: 'Linked presence verification record not found' });
     }
     const verifRecord = verifRows[0];
+    if (String(verifRecord.status || '').toLowerCase() !== 'pending') {
+      return res.status(409).json({
+        error: 'presence_request_already_decided',
+        current_status: verifRecord.status,
+        message: `This presence verification request was already ${verifRecord.status}.`
+      });
+    }
 
     // 3. Check expiration
     if (new Date(verifRecord.expires_at).getTime() <= Date.now()) {
-      await query("UPDATE table_location_verifications SET status = 'expired' WHERE id = $1", [verifRecord.id]);
+      await query("UPDATE table_location_verifications SET status = 'expired' WHERE id = $1 AND status = 'pending'", [verifRecord.id]);
       await query("UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2", [id, targetId]);
       return res.status(400).json({ error: 'request_expired', message: 'This presence verification request has already expired.' });
     }
 
-    // 4. Atomically approve
+    // 4. Atomically approve only if still pending
     const nowIso = new Date().toISOString();
-    await query(
+    const approvedRows = await query(
       `UPDATE table_location_verifications 
        SET status = 'verified', verification_method = 'STAFF', approved_by_admin_id = $1, verified_at = $2
-       WHERE id = $3 AND restaurant_id = $4`,
+       WHERE id = $3 AND restaurant_id = $4 AND status = 'pending'
+       RETURNING id`,
       [req.user.id || null, nowIso, verifRecord.id, targetId]
     );
+    if (!approvedRows || approvedRows.length === 0) {
+      return res.status(409).json({
+        error: 'presence_request_already_decided',
+        message: 'This presence verification request has already been decided by another action.'
+      });
+    }
 
     // 5. Resolve service request(s) linked to this verification
     if (vToken || verifRecord.verification_token) {
@@ -4065,6 +4080,12 @@ router.patch('/service-requests/:id/reject-presence', authenticateToken, require
       return res.status(404).json({ error: 'service_request_not_found', message: 'Presence verification service request not found' });
     }
     const sr = srRows[0];
+    if (String(sr.status || '').toLowerCase() !== 'pending') {
+      return res.status(409).json({
+        error: 'presence_request_already_decided',
+        message: 'This presence verification request has already been decided.'
+      });
+    }
 
     let tokenMatch = sr.note ? sr.note.match(/(?:pv_staff_|tq_staff_)[a-z0-9_]+/i) : null;
     let vToken = tokenMatch ? tokenMatch[0] : null;
@@ -4077,12 +4098,37 @@ router.patch('/service-requests/:id/reject-presence', authenticateToken, require
     const verifRows = await query(verifQuery, verifParams);
     if (verifRows && verifRows.length > 0) {
       const verifRecord = verifRows[0];
-      await query(
+      if (String(verifRecord.status || '').toLowerCase() !== 'pending') {
+        return res.status(409).json({
+          error: 'presence_request_already_decided',
+          current_status: verifRecord.status,
+          message: `This presence verification request was already ${verifRecord.status}.`
+        });
+      }
+      const rejectedRows = await query(
         `UPDATE table_location_verifications 
          SET status = 'rejected', rejection_reason = $1, approved_by_admin_id = $2
-         WHERE id = $3 AND restaurant_id = $4`,
+         WHERE id = $3 AND restaurant_id = $4 AND status = 'pending'
+         RETURNING id`,
         [rejection_reason || 'Rejected by staff', req.user.id || null, verifRecord.id, targetId]
       );
+      if (!rejectedRows || rejectedRows.length === 0) {
+        return res.status(409).json({
+          error: 'presence_request_already_decided',
+          message: 'This presence verification request has already been decided by another action.'
+        });
+      }
+    } else {
+      const resolvedRows = await query(
+        "UPDATE service_requests SET status = 'resolved' WHERE id = $1 AND restaurant_id = $2 AND status = 'pending' RETURNING id",
+        [id, targetId]
+      );
+      if (!resolvedRows || resolvedRows.length === 0) {
+        return res.status(409).json({
+          error: 'presence_request_already_decided',
+          message: 'This presence verification request has already been decided.'
+        });
+      }
     }
 
     if (vToken) {

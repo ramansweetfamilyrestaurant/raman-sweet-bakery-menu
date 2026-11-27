@@ -41,7 +41,7 @@ async function initDb(options = {}) {
       process.env.ENABLE_DEMO_TENANT_SEED === 'true'
     );
     if (requestedDemoSeed && isDemoSeedPermitted()) {
-      await seedData(options).catch(() => {});
+      await seedData(options).catch(() => { });
     }
     return;
   }
@@ -108,7 +108,7 @@ async function initDb(options = {}) {
       }
       isDbInitialized = true;
       if (!options.skipSeed) {
-        await seedData(options).catch(() => {});
+        await seedData(options).catch(() => { });
       }
     } else {
       // Vercel cold-start verification mode in test environment
@@ -150,7 +150,7 @@ async function initDb(options = {}) {
     } catch (err) {
       console.warn('⚠️ PostgreSQL connection failed. Falling back to SQLite database:', err.message);
       if (pgPool) {
-        await pgPool.end().catch(() => {});
+        await pgPool.end().catch(() => { });
         pgPool = null;
       }
       dbType = 'sqlite';
@@ -177,7 +177,7 @@ async function initDb(options = {}) {
     }
     isDbInitialized = true;
     if (!options.skipSeed) {
-      await seedData(options).catch(() => {});
+      await seedData(options).catch(() => { });
     }
   } else {
     // Vercel Serverless Runtime: Execute lightweight read-only schema verification on cold start (ZERO runtime DDL)
@@ -218,7 +218,7 @@ export async function assertPhase1SchemaPresence(pgClientOrPool) {
     const relSchemaMap = new Map((regRows || []).map(r => [r.table_name, r.table_schema]));
     ordersSchema = relSchemaMap.get('orders') || 'public';
     restaurantsSchema = relSchemaMap.get('restaurants') || 'public';
-  } catch (_) {}
+  } catch (_) { }
 
   const { rows: columns } = await pgClientOrPool.query(`
     SELECT table_schema, table_name, column_name
@@ -861,8 +861,6 @@ async function createTables(options = {}) {
       `CREATE INDEX IF NOT EXISTS idx_combos_resto_sort ON combos(restaurant_id, sort_order ASC, id ASC);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_created ON orders(restaurant_id, created_at DESC);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_status ON orders(restaurant_id, status);`,
-      `CREATE INDEX IF NOT EXISTS idx_orders_resto_session ON orders(restaurant_id, session_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_orders_resto_parent ON orders(restaurant_id, parent_order_id);`,
       `CREATE INDEX IF NOT EXISTS idx_service_req_resto ON service_requests(restaurant_id, status, created_at DESC);`,
       `CREATE INDEX IF NOT EXISTS idx_stored_images_resto_filename ON stored_images(restaurant_id, filename);`,
       // Master 24-Point SaaS Plan Permission Matrix Columns
@@ -933,6 +931,8 @@ async function createTables(options = {}) {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_type VARCHAR(20) DEFAULT 'dine_in';`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_number INT DEFAULT NULL;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_display VARCHAR(50) DEFAULT NULL;`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_resto_session ON orders(restaurant_id, session_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_resto_parent ON orders(restaurant_id, parent_order_id);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_idemp ON orders (restaurant_id, idempotency_key);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash);`,
       `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS dine_in_sales DECIMAL(10, 2) DEFAULT 0.00;`,
@@ -1067,8 +1067,8 @@ async function createTables(options = {}) {
       const existingDef = existingIdxRes.rows[0]?.indexdef || '';
       const oldIndexExists = existingIdxRes.rows.length > 0;
       const isUpToDate = oldIndexExists && (
-        existingDef.includes("<> ''") || 
-        existingDef.includes("!= ''") || 
+        existingDef.includes("<> ''") ||
+        existingDef.includes("!= ''") ||
         existingDef.includes("<> ''::text") ||
         existingDef.includes("!= ''::text")
       );
@@ -1110,8 +1110,8 @@ async function createTables(options = {}) {
             `);
             const verifiedDefTx = verifyTx.rows[0]?.indexdef || '';
             const isVerifiedTx = verifyTx.rows.length > 0 && (
-              verifiedDefTx.includes("<> ''") || 
-              verifiedDefTx.includes("!= ''") || 
+              verifiedDefTx.includes("<> ''") ||
+              verifiedDefTx.includes("!= ''") ||
               verifiedDefTx.includes("<> ''::text") ||
               verifiedDefTx.includes("!= ''::text")
             );
@@ -1121,7 +1121,7 @@ async function createTables(options = {}) {
             await client.query('COMMIT');
             console.log(`✅ [MIGRATION] idx_payments_gateway_payid successfully upgraded to exclude empty strings.`);
           } catch (txErr) {
-            try { await client.query('ROLLBACK'); } catch (_) {}
+            try { await client.query('ROLLBACK'); } catch (_) { }
             throw txErr;
           } finally {
             client.release();
@@ -1136,8 +1136,8 @@ async function createTables(options = {}) {
       `);
       const verifiedDef = verifyRes.rows[0]?.indexdef || '';
       paymentIndexVerified = verifyRes.rows.length > 0 && (
-        verifiedDef.includes("<> ''") || 
-        verifiedDef.includes("!= ''") || 
+        verifiedDef.includes("<> ''") ||
+        verifiedDef.includes("!= ''") ||
         verifiedDef.includes("<> ''::text") ||
         verifiedDef.includes("!= ''::text")
       );
@@ -1352,11 +1352,11 @@ async function createTables(options = {}) {
       );
     `);
 
-    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN storage_provider TEXT DEFAULT 'local'"); } catch (e) {}
-    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_key TEXT"); } catch (e) {}
-    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_url TEXT"); } catch (e) {}
-    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN restaurant_id INTEGER DEFAULT 1"); } catch (e) {}
-    try { sqliteDb.exec("ALTER TABLE announcements ADD COLUMN audience TEXT DEFAULT 'all'"); } catch (e) {}
+    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN storage_provider TEXT DEFAULT 'local'"); } catch (e) { }
+    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_key TEXT"); } catch (e) { }
+    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN image_url TEXT"); } catch (e) { }
+    try { sqliteDb.exec("ALTER TABLE stored_images ADD COLUMN restaurant_id INTEGER DEFAULT 1"); } catch (e) { }
+    try { sqliteDb.exec("ALTER TABLE announcements ADD COLUMN audience TEXT DEFAULT 'all'"); } catch (e) { }
 
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS daily_sales_summaries (
@@ -1374,12 +1374,10 @@ async function createTables(options = {}) {
       );
     `);
 
-    try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN items_summary TEXT"); } catch (e) {}
-    try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN payment_methods_summary TEXT"); } catch (e) {}
-    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_created_status ON orders(restaurant_id, created_at, status)"); } catch (e) {}
-    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_session ON orders(restaurant_id, session_id)"); } catch (e) {}
-    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_parent ON orders(restaurant_id, parent_order_id)"); } catch (e) {}
-    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_daily_sales_summaries_resto_date ON daily_sales_summaries(restaurant_id, summary_date)"); } catch (e) {}
+    try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN items_summary TEXT"); } catch (e) { }
+    try { sqliteDb.exec("ALTER TABLE daily_sales_summaries ADD COLUMN payment_methods_summary TEXT"); } catch (e) { }
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_created_status ON orders(restaurant_id, created_at, status)"); } catch (e) { }
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_daily_sales_summaries_resto_date ON daily_sales_summaries(restaurant_id, summary_date)"); } catch (e) { }
 
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS day_closings (
@@ -1414,7 +1412,7 @@ async function createTables(options = {}) {
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
     `);
-    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_day_closings_resto_date ON day_closings(restaurant_id, closing_date)"); } catch (e) {}
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_day_closings_resto_date ON day_closings(restaurant_id, closing_date)"); } catch (e) { }
 
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS qr_scan_events (
@@ -1426,8 +1424,8 @@ async function createTables(options = {}) {
         FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE
       );
     `);
-    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_qr_scan_events_resto_created ON qr_scan_events(restaurant_id, created_at DESC)"); } catch (e) {}
-    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_qr_scan_events_created ON qr_scan_events(created_at DESC)"); } catch (e) {}
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_qr_scan_events_resto_created ON qr_scan_events(restaurant_id, created_at DESC)"); } catch (e) { }
+    try { sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_qr_scan_events_created ON qr_scan_events(created_at DESC)"); } catch (e) { }
 
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS subscriptions (
@@ -1753,6 +1751,8 @@ async function createTables(options = {}) {
         sqliteDb.exec("ALTER TABLE orders ADD COLUMN updated_at TEXT DEFAULT NULL");
         sqliteDb.exec("UPDATE orders SET updated_at = created_at WHERE updated_at IS NULL");
       }
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_session ON orders(restaurant_id, session_id)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_parent ON orders(restaurant_id, parent_order_id)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash)");
 
       if (!restoCols.some(c => c.name === 'counter_ordering_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN counter_ordering_enabled INTEGER DEFAULT NULL");
@@ -1924,7 +1924,7 @@ async function createTables(options = {}) {
         const existingSql = existingIdx?.sql || '';
         const oldIndexExists = Boolean(existingIdx);
         const isUpToDate = oldIndexExists && (
-          existingSql.includes("!= ''") || 
+          existingSql.includes("!= ''") ||
           existingSql.includes("<> ''")
         );
 
@@ -1963,7 +1963,7 @@ async function createTables(options = {}) {
               `).get();
               const verifiedSqlTx = verifyTx?.sql || '';
               const isVerifiedTx = Boolean(verifyTx) && (
-                verifiedSqlTx.includes("!= ''") || 
+                verifiedSqlTx.includes("!= ''") ||
                 verifiedSqlTx.includes("<> ''")
               );
               if (!isVerifiedTx) {
@@ -1982,7 +1982,7 @@ async function createTables(options = {}) {
         `).get();
         const verifiedSql = verifyIdx?.sql || '';
         paymentIndexVerified = Boolean(verifyIdx) && (
-          verifiedSql.includes("!= ''") || 
+          verifiedSql.includes("!= ''") ||
           verifiedSql.includes("<> ''")
         );
         if (!paymentIndexVerified) {
@@ -2080,7 +2080,7 @@ async function seedData(options = {}) {
           90
         ]);
         primaryRestoId = demoRes[0]?.id || demoRes.lastInsertRowid;
-        
+
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash('admin123', salt);
         await query(`
@@ -2111,14 +2111,14 @@ async function seedData(options = {}) {
       await query("UPDATE saas_plans SET max_tables = 20 WHERE key = 'basic' AND (max_tables IS NULL OR max_tables = 9999)");
       await query("UPDATE saas_plans SET max_tables = 100 WHERE key = 'pro' AND (max_tables IS NULL OR max_tables = 9999)");
       await query("UPDATE saas_plans SET max_tables = 9999 WHERE key = 'enterprise'");
-    } catch {}
+    } catch { }
 
     try {
       await query('ALTER TABLE saas_plans ADD COLUMN original_price NUMERIC DEFAULT 999');
       await query("UPDATE saas_plans SET original_price = 999 WHERE key = 'basic'");
       await query("UPDATE saas_plans SET original_price = 1999 WHERE key = 'pro'");
       await query("UPDATE saas_plans SET original_price = 3999 WHERE key = 'enterprise'");
-    } catch {}
+    } catch { }
 
     try {
       await query("UPDATE saas_plans SET dual_printer_enabled = 1 WHERE key LIKE '%enterprise%' OR key LIKE '%vip%'");
@@ -2126,34 +2126,34 @@ async function seedData(options = {}) {
       await query("UPDATE saas_plans SET max_rooms = 60, max_dishes = 500, max_combos = 20, direct_ordering_enabled = 1, kds_enabled = 1, bluetooth_kot_enabled = 1 WHERE key = 'hotel_pro'");
       await query("UPDATE saas_plans SET max_screens = 1, max_seats = 200, max_dishes = 50, max_combos = 5 WHERE key = 'cinema_basic'");
       await query("UPDATE saas_plans SET max_screens = 3, max_seats = 800, max_dishes = 500, max_combos = 20, direct_ordering_enabled = 1, kds_enabled = 1, bluetooth_kot_enabled = 1 WHERE key = 'cinema_pro'");
-      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS tables_enabled INT DEFAULT 1").catch(() => {});
-      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS cabins_enabled INT DEFAULT 0").catch(() => {});
-      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_cabins INT DEFAULT 0").catch(() => {});
-      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS vip_enabled INT DEFAULT 0").catch(() => {});
-      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_vip INT DEFAULT 0").catch(() => {});
-      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS rooms_enabled INT DEFAULT 1").catch(() => {});
-      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS screens_enabled INT DEFAULT 1").catch(() => {});
-      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS seats_enabled INT DEFAULT 1").catch(() => {});
-      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 1").catch(() => {});
-      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 0, max_cabins = 0, vip_enabled = 0, max_vip = 0, counter_ordering_enabled = 0 WHERE key = 'basic'").catch(() => {});
-      await query("UPDATE saas_plans SET counter_ordering_enabled = 0 WHERE key IN ('hotel_basic', 'cinema_basic')").catch(() => {});
-      await query("UPDATE saas_plans SET counter_ordering_enabled = 1 WHERE key NOT IN ('basic', 'hotel_basic', 'cinema_basic') AND (counter_ordering_enabled IS NULL)").catch(() => {});
-      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 4, vip_enabled = 1, max_vip = 2 WHERE key = 'pro'").catch(() => {});
-      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 9999, vip_enabled = 1, max_vip = 9999 WHERE key = 'enterprise'").catch(() => {});
-      await query("UPDATE saas_plans SET rooms_enabled = 1 WHERE industry = 'hotel' OR key LIKE 'hotel_%'").catch(() => {});
-      await query("UPDATE saas_plans SET screens_enabled = 1, seats_enabled = 1 WHERE industry = 'cinema' OR key LIKE 'cinema_%'").catch(() => {});
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS tables_enabled INT DEFAULT 1").catch(() => { });
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS cabins_enabled INT DEFAULT 0").catch(() => { });
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_cabins INT DEFAULT 0").catch(() => { });
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS vip_enabled INT DEFAULT 0").catch(() => { });
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS max_vip INT DEFAULT 0").catch(() => { });
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS rooms_enabled INT DEFAULT 1").catch(() => { });
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS screens_enabled INT DEFAULT 1").catch(() => { });
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS seats_enabled INT DEFAULT 1").catch(() => { });
+      await query("ALTER TABLE saas_plans ADD COLUMN IF NOT EXISTS counter_ordering_enabled INT DEFAULT 1").catch(() => { });
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 0, max_cabins = 0, vip_enabled = 0, max_vip = 0, counter_ordering_enabled = 0 WHERE key = 'basic'").catch(() => { });
+      await query("UPDATE saas_plans SET counter_ordering_enabled = 0 WHERE key IN ('hotel_basic', 'cinema_basic')").catch(() => { });
+      await query("UPDATE saas_plans SET counter_ordering_enabled = 1 WHERE key NOT IN ('basic', 'hotel_basic', 'cinema_basic') AND (counter_ordering_enabled IS NULL)").catch(() => { });
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 4, vip_enabled = 1, max_vip = 2 WHERE key = 'pro'").catch(() => { });
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 9999, vip_enabled = 1, max_vip = 9999 WHERE key = 'enterprise'").catch(() => { });
+      await query("UPDATE saas_plans SET rooms_enabled = 1 WHERE industry = 'hotel' OR key LIKE 'hotel_%'").catch(() => { });
+      await query("UPDATE saas_plans SET screens_enabled = 1, seats_enabled = 1 WHERE industry = 'cinema' OR key LIKE 'cinema_%'").catch(() => { });
       await query(`
         UPDATE restaurants 
         SET counter_ordering_enabled = 1 
         WHERE (counter_ordering_enabled = 0 OR counter_ordering_enabled IS NULL) 
         AND plan_tier IN (SELECT key FROM saas_plans WHERE counter_ordering_enabled = 1)
-      `).catch(() => {});
-    } catch {}
+      `).catch(() => { });
+    } catch { }
 
     try {
       await query('ALTER TABLE restaurants ADD COLUMN grace_period_expires_at TIMESTAMP');
       await query('ALTER TABLE subscriptions ADD COLUMN grace_period_expires_at TIMESTAMP');
-    } catch {}
+    } catch { }
 
     try {
       await query('DROP TABLE IF EXISTS coupon_redemptions CASCADE');
@@ -2166,7 +2166,7 @@ async function seedData(options = {}) {
         await query("INSERT INTO system_settings (key, value) VALUES ('support_whatsapp', '919876543210') ON CONFLICT (key) DO NOTHING");
         await query("INSERT INTO system_settings (key, value) VALUES ('global_order_retention_days', '90') ON CONFLICT (key) DO NOTHING");
       }
-    } catch {}
+    } catch { }
 
     // Auto-initialize cryptographically secure random qr_secret for existing restaurants
     try {
@@ -2195,18 +2195,18 @@ async function seedData(options = {}) {
       `);
       console.log('💳 Seeded default SaaS Plans into saas_plans table');
     } else {
-      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 0, max_cabins = 0, vip_enabled = 0, max_vip = 0 WHERE key = 'basic' AND cabins_enabled IS NULL").catch(() => {});
-      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 4, vip_enabled = 1, max_vip = 2 WHERE key = 'pro' AND (cabins_enabled IS NULL OR max_cabins = 0)").catch(() => {});
-      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 9999, vip_enabled = 1, max_vip = 9999 WHERE key = 'enterprise' AND (cabins_enabled IS NULL OR max_cabins = 0)").catch(() => {});
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 0, max_cabins = 0, vip_enabled = 0, max_vip = 0 WHERE key = 'basic' AND cabins_enabled IS NULL").catch(() => { });
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 4, vip_enabled = 1, max_vip = 2 WHERE key = 'pro' AND (cabins_enabled IS NULL OR max_cabins = 0)").catch(() => { });
+      await query("UPDATE saas_plans SET tables_enabled = 1, cabins_enabled = 1, max_cabins = 9999, vip_enabled = 1, max_vip = 9999 WHERE key = 'enterprise' AND (cabins_enabled IS NULL OR max_cabins = 0)").catch(() => { });
     }
 
     // Auto-seed industry specific plans (Hotel & Cinema) if not present
     try {
       const existingPlanRows = await query('SELECT key FROM saas_plans');
       const existingPlanKeys = (existingPlanRows || []).map(p => (p.key || '').toLowerCase());
-      
+
       // Update legacy plans with industry = 'restaurant'
-      await query("UPDATE saas_plans SET industry = 'restaurant' WHERE industry IS NULL OR industry = '' OR key IN ('basic', 'pro', 'enterprise')").catch(() => {});
+      await query("UPDATE saas_plans SET industry = 'restaurant' WHERE industry IS NULL OR industry = '' OR key IN ('basic', 'pro', 'enterprise')").catch(() => { });
 
       // Seed Hotel Plans
       if (!existingPlanKeys.includes('hotel_basic')) {
@@ -2271,7 +2271,7 @@ async function seedData(options = {}) {
         for (const r of restosWithoutSub) {
           const tier = r.plan_tier || 'pro';
           const p = planMap[tier] || planMap['pro'] || { id: 2, price: 999 };
-          
+
           const tStart = r.trial_started_at ? new Date(r.trial_started_at) : now;
           const tEnd = r.trial_ends_at ? new Date(r.trial_ends_at) : defaultTrialEnd;
 
@@ -2750,7 +2750,7 @@ async function runAutoDataSummarization(daysOld = 30, targetRestaurantId = null)
               if (exist.payment_methods_summary) {
                 existPayments = typeof exist.payment_methods_summary === 'string' ? JSON.parse(exist.payment_methods_summary) : exist.payment_methods_summary;
               }
-            } catch (e) {}
+            } catch (e) { }
 
             finalPaymentMethods.upi += Number(existPayments.upi || existPayments.upi?.amount || 0);
             finalPaymentMethods.cash += Number(existPayments.cash || existPayments.cash?.amount || 0);
@@ -2848,7 +2848,7 @@ async function withTransaction(callback, options = {}) {
         await client.query('COMMIT');
         return result;
       } catch (err) {
-        try { await client.query('ROLLBACK'); } catch (_) {}
+        try { await client.query('ROLLBACK'); } catch (_) { }
         const isRetryablePgConflict = err && (err.code === '40P01' || err.code === '40001');
         if (isRetryablePgConflict && attempt < maxAttempts) {
           retryDelayMs = 15 + Math.floor(Math.random() * 35);
@@ -2872,8 +2872,8 @@ async function withTransaction(callback, options = {}) {
         sqliteDb.exec(`RELEASE SAVEPOINT ${spName}`);
         return result;
       } catch (err) {
-        try { sqliteDb.exec(`ROLLBACK TO SAVEPOINT ${spName}`); } catch (_) {}
-        try { sqliteDb.exec(`RELEASE SAVEPOINT ${spName}`); } catch (_) {}
+        try { sqliteDb.exec(`ROLLBACK TO SAVEPOINT ${spName}`); } catch (_) { }
+        try { sqliteDb.exec(`RELEASE SAVEPOINT ${spName}`); } catch (_) { }
         throw err;
       }
     }
@@ -2887,7 +2887,7 @@ async function withTransaction(callback, options = {}) {
         sqliteDb.exec('COMMIT');
         return result;
       } catch (err) {
-        try { sqliteDb.exec('ROLLBACK'); } catch (_) {}
+        try { sqliteDb.exec('ROLLBACK'); } catch (_) { }
         throw err;
       } finally {
         activeSqliteTxToken = null;
@@ -3079,7 +3079,7 @@ async function closeDbPool() {
   if (pgPool) {
     try {
       await pgPool.end();
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 
@@ -3092,11 +3092,11 @@ function getPaymentIndexStatus() {
 
 async function resetDbForTesting() {
   if (pgPool) {
-    try { await pgPool.end(); } catch (e) {}
+    try { await pgPool.end(); } catch (e) { }
     pgPool = null;
   }
   if (sqliteDb) {
-    try { sqliteDb.close(); } catch (e) {}
+    try { sqliteDb.close(); } catch (e) { }
     sqliteDb = null;
   }
   isDbInitialized = false;

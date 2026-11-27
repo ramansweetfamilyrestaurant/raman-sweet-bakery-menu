@@ -17,6 +17,8 @@ validateTestDatabaseUrl(process.env.TEST_DATABASE_URL);
 
 const { initDb, query, closeDbPool } = await import('../db.js');
 const { default: adminRoutes } = await import('../routes/admin.js');
+const { default: apiRoutes } = await import('../routes/api.js');
+const { generateHmacQrToken } = await import('../utils/qrSecurity.js');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'touchqr_ultra_secure_jwt_secret_dev_2026';
 const __filename = fileURLToPath(import.meta.url);
@@ -36,6 +38,7 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
     const app = express();
     app.use(express.json());
     app.use('/api/admin', adminRoutes);
+    app.use('/api', apiRoutes);
     await new Promise((resolve, reject) => {
       server = app.listen(0);
       const onError = (err) => {
@@ -768,9 +771,9 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
                 serviceRequests: sampleReqs,
                 restaurantInfo: sampleResto,
                 ordersEnabled: true,
-                onOpenDayClosing: () => {},
-                onOpenBillModal: () => {},
-                onUpdateStatus: () => {}
+                onOpenDayClosing: () => { },
+                onOpenBillModal: () => { },
+                onUpdateStatus: () => { }
               })
             );
             await flushMicrotasks();
@@ -864,15 +867,15 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
             React.createElement(OrdersView, {
               orders: [kdsPreparedDiningOrder],
               activeSubTab: 'orders',
-              setActiveSubTab: () => {},
+              setActiveSubTab: () => { },
               kotFilter: 'all',
-              setKotFilter: () => {},
+              setKotFilter: () => { },
               serviceRequests: [],
               restaurantInfo: sampleResto,
               ordersEnabled: true,
-              onOpenDayClosing: () => {},
-              onOpenBillModal: () => {},
-              onUpdateStatus: () => {}
+              onOpenDayClosing: () => { },
+              onOpenBillModal: () => { },
+              onUpdateStatus: () => { }
             })
           );
           await flushMicrotasks();
@@ -910,14 +913,14 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
             React.createElement(OrdersView, {
               orders: [unpreparedKitchenOrder],
               activeSubTab: 'orders',
-              setActiveSubTab: () => {},
+              setActiveSubTab: () => { },
               kotFilter: 'all',
-              setKotFilter: () => {},
+              setKotFilter: () => { },
               serviceRequests: [],
               restaurantInfo: sampleResto,
               ordersEnabled: true,
-              onOpenDayClosing: () => {},
-              onOpenBillModal: () => {},
+              onOpenDayClosing: () => { },
+              onOpenBillModal: () => { },
               onUpdateStatus: (...args) => syncedReadyCalls.push(args)
             })
           );
@@ -949,14 +952,14 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
             React.createElement(OrdersView, {
               orders: [{ ...unpreparedKitchenOrder, kitchen_prepared: 1 }],
               activeSubTab: 'orders',
-              setActiveSubTab: () => {},
+              setActiveSubTab: () => { },
               kotFilter: 'all',
-              setKotFilter: () => {},
+              setKotFilter: () => { },
               serviceRequests: [],
               restaurantInfo: sampleResto,
               ordersEnabled: true,
-              onOpenDayClosing: () => {},
-              onOpenBillModal: () => {},
+              onOpenDayClosing: () => { },
+              onOpenBillModal: () => { },
               onUpdateStatus: (...args) => syncedReadyCalls.push(args)
             })
           );
@@ -982,15 +985,15 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
                 items: [{ name: 'Caramel Popcorn', price: 310, quantity: 1 }]
               }],
               activeSubTab: 'orders',
-              setActiveSubTab: () => {},
+              setActiveSubTab: () => { },
               kotFilter: 'all',
-              setKotFilter: () => {},
+              setKotFilter: () => { },
               serviceRequests: [],
               restaurantInfo: { ...sampleResto, business_type: 'cinema_theatre' },
               ordersEnabled: true,
-              onOpenDayClosing: () => {},
-              onOpenBillModal: () => {},
-              onUpdateStatus: () => {}
+              onOpenDayClosing: () => { },
+              onOpenBillModal: () => { },
+              onUpdateStatus: () => { }
             })
           );
           await flushMicrotasks();
@@ -1022,17 +1025,17 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
             React.createElement(OrdersView, {
               orders: [sampleOrders[0], counterSkippedOrder],
               activeSubTab: 'orders',
-              setActiveSubTab: () => {},
+              setActiveSubTab: () => { },
               kotFilter: 'all',
-              setKotFilter: () => {},
+              setKotFilter: () => { },
               serviceRequests: [],
               restaurantInfo: { ...sampleResto, auto_print_kot: 1 },
               settingsForm: { auto_print_kot: 1 },
               ordersEnabled: true,
-              onDirectPrint: () => {},
-              onOpenDayClosing: () => {},
-              onOpenBillModal: () => {},
-              onUpdateStatus: () => {}
+              onDirectPrint: () => { },
+              onOpenDayClosing: () => { },
+              onOpenBillModal: () => { },
+              onUpdateStatus: () => { }
             })
           );
           await flushMicrotasks();
@@ -1055,9 +1058,9 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
             React.createElement(OrdersView, {
               orders: [],
               activeSubTab: 'orders',
-              setActiveSubTab: () => {},
+              setActiveSubTab: () => { },
               kotFilter: 'all',
-              setKotFilter: () => {},
+              setKotFilter: () => { },
               serviceRequests: [],
               restaurantInfo: sampleResto,
               ordersEnabled: true
@@ -1067,6 +1070,162 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
         });
         assert.ok(findNodes(container, n => hasClass(n, 'orders-empty-state')).length === 1, 'OrdersView renders .orders-empty-state when orders list is empty');
         pass('OrdersView mobile responsive classes, drawer, floor map, service calls, and empty state verified');
+
+        // 5. Targeted code-review regression checks on OrdersView rendering, floor map, filters, and mutual exclusion
+        let resetKotCalls = 0;
+        let currentSourceRendered = false;
+        await React.act(async () => {
+          activeRoot.render(
+            React.createElement(OrdersView, {
+              orders: [
+                {
+                  id: 920,
+                  table_number: '2',
+                  space_type: 'table',
+                  customer_name: 'Prepared Guest',
+                  status: 'kitchen',
+                  kitchen_prepared: 1,
+                  is_settled: 0,
+                  round_number: 1,
+                  total_amount: 150,
+                  order_source: 'direct',
+                  created_at: new Date().toISOString(),
+                  items: [{ name: 'Idli', price: 150, quantity: 1 }]
+                },
+                {
+                  id: 921,
+                  table_number: 'Counter:Counter',
+                  order_type: 'takeaway',
+                  token_display: 'TK-99',
+                  customer_name: 'Prepaid Takeaway',
+                  status: 'kitchen',
+                  kitchen_prepared: 0,
+                  is_settled: '1',
+                  session_id: 'sess_counter_a',
+                  round_number: 1,
+                  total_amount: 100,
+                  created_at: new Date().toISOString(),
+                  items: [{ name: 'Tea', price: 100, quantity: 1 }]
+                },
+                {
+                  id: 922,
+                  table_number: 'Counter',
+                  space_type: 'counter',
+                  order_type: 'takeaway',
+                  token_display: 'TK-100',
+                  customer_name: 'Other Counter',
+                  status: 'pending',
+                  is_settled: 0,
+                  session_id: 'sess_counter_b',
+                  round_number: 1,
+                  total_amount: 450,
+                  created_at: new Date().toISOString(),
+                  items: [{ name: 'Platter', price: 450, quantity: 1 }]
+                }
+              ],
+              activeSubTab: 'floor-map',
+              setActiveSubTab: () => { },
+              kotFilter: 'all',
+              setKotFilter: () => { resetKotCalls += 1; },
+              serviceRequests: [],
+              restaurantInfo: { ...sampleResto, counter_ordering_enabled: 1, total_tables: 3 },
+              settingsForm: { counter_ordering_enabled: 1, total_tables: 3 },
+              ordersEnabled: true,
+              onOpenDayClosing: () => { },
+              onOpenBillModal: () => { },
+              onUpdateStatus: () => true
+            })
+          );
+          await flushMicrotasks();
+        });
+
+        const spaceCards = findNodes(container, n => hasClass(n, 'orders-space-card'));
+        const table2Card = spaceCards.find(c => c.textContent.includes('TABLE 2'));
+        const counterCard = spaceCards.find(c => c.textContent.includes('Takeaway Counter'));
+        assert.ok(table2Card && table2Card.textContent.includes('🍳 READY'), 'Floor-map card displays READY badge when active order has kitchen_prepared=1');
+        assert.ok(table2Card && table2Card.textContent.includes('Serve') && !table2Card.textContent.includes('Settle'), 'Floor-map Ready dine-in card shows Serve instead of premature Settle');
+        assert.ok(counterCard && counterCard.textContent.includes('+1 queued'), 'Counter floor card separates second queued session instead of merging totals');
+        assert.ok(counterCard && counterCard.textContent.includes('100') && !counterCard.textContent.includes('550'), 'Counter floor card session total matches active session only');
+        assert.ok(counterCard && !counterCard.textContent.includes('Slip') && counterCard.textContent.includes('Preparing') && !counterCard.textContent.includes('✓ Handover'), 'Floor card handles string is_settled="1" (hides Slip) and gates Handover until Ready/Served');
+
+        await React.act(async () => {
+          activeRoot.render(
+            React.createElement(OrdersView, {
+              orders: [
+                {
+                  id: 920,
+                  table_number: '2',
+                  status: 'kitchen',
+                  kitchen_prepared: 0,
+                  is_settled: 0,
+                  round_number: 1,
+                  total_amount: 150,
+                  order_source: 'direct',
+                  created_at: new Date().toISOString(),
+                  items: [{ name: 'Idli', price: 150, quantity: 1 }]
+                },
+                {
+                  id: 921,
+                  table_number: 'Counter:Counter',
+                  order_type: 'takeaway',
+                  token_display: 'TK-99',
+                  customer_name: 'Takeaway Colon',
+                  status: 'kitchen',
+                  kitchen_prepared: 0,
+                  is_settled: 0,
+                  created_at: new Date().toISOString(),
+                  items: [{ name: 'Tea', price: 100, quantity: 1 }]
+                }
+              ],
+              activeSubTab: 'orders',
+              setActiveSubTab: () => { },
+              kotFilter: 'all',
+              setKotFilter: () => { resetKotCalls += 1; },
+              serviceRequests: [],
+              restaurantInfo: sampleResto,
+              ordersEnabled: true,
+              onOpenDayClosing: () => { },
+              onOpenBillModal: () => { },
+              onUpdateStatus: () => true
+            })
+          );
+          await flushMicrotasks();
+        });
+
+        assert.ok(container.textContent.includes('Ready / Served'), 'Metric label reads Ready / Served');
+        const sourceSelect = findNodes(container, n => n.tagName === 'SELECT' && hasClass(n, 'orders-source-select'))[0];
+        const sourceLabel = findNodes(container, n => n.tagName === 'LABEL' && n.textContent.trim() === 'Source:')[0];
+        assert.ok(sourceLabel && sourceSelect && sourceLabel.getAttribute('for') === 'orders-source-filter' && sourceSelect.getAttribute('id') === 'orders-source-filter', 'Source filter label is associated with select via htmlFor/id');
+
+        const counterRow = findNodes(container, n => hasClass(n, 'orders-mobile-card')).find(c => c.textContent.includes('TK-99'));
+        assert.ok(counterRow && counterRow.textContent.includes('Mark Ready') && !counterRow.textContent.includes('🍳 Ready'), 'Counter:Counter order without space_type shows counter pickup label instead of dine-in Ready');
+
+        // Open drawer on order 920 then remove order 920 from orders prop -> drawer must close automatically
+        const detailsBtn920 = findNodes(container, n => n.tagName === 'BUTTON' && n.textContent.includes('Details'))[0];
+        await React.act(async () => {
+          detailsBtn920.dispatchEvent({ type: 'click', bubbles: true, target: detailsBtn920 });
+          await flushMicrotasks();
+        });
+        assert.equal(findNodes(container, n => hasClass(n, 'orders-drawer-panel')).length, 1, 'Detail drawer opens for selected order');
+        await React.act(async () => {
+          activeRoot.render(
+            React.createElement(OrdersView, {
+              orders: [],
+              activeSubTab: 'orders',
+              setActiveSubTab: () => { },
+              kotFilter: 'all',
+              setKotFilter: () => { resetKotCalls += 1; },
+              serviceRequests: [],
+              restaurantInfo: sampleResto,
+              ordersEnabled: true,
+              onOpenDayClosing: () => { }
+            })
+          );
+          await flushMicrotasks();
+        });
+        assert.equal(findNodes(container, n => hasClass(n, 'orders-drawer-panel')).length, 0, 'Detail drawer closes when selected order disappears from orders list');
+        assert.ok(!currentSourceRendered);
+        pass('OrdersView floor-map Ready state, Counter:Counter routing, session scoping, Slip/Handover gates, accessible source filter, and drawer cleanup verified');
       } finally {
         try {
           if (activeRoot) {
@@ -1085,6 +1244,101 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
       }
     }
     pass('StandaloneKdsPage Mark Ready & Undo action sequence verified with deferred requests');
+
+    // 6. Backend security & lifecycle regression checks: prev_order_id observer credential, non-regressive served guard, atomic presence lock, db index ordering, AdminDashboard reconciliation
+    const prevSlug = `orders-kds-${ts}`;
+    const prevQrSecret = `secret_prev_${ts}`;
+    await query('UPDATE restaurants SET qr_secret = $1 WHERE id = $2', [prevQrSecret, restoId]);
+    const t2Token = generateHmacQrToken(prevSlug, 'table', '2', prevQrSecret, restoId);
+
+    const p1Ins = await query(`
+      INSERT INTO orders (restaurant_id, table_number, customer_name, items, total_amount, status, session_id, round_number, tracking_token_hash, created_at)
+      VALUES ($1, '2', 'Device A', '[{"name":"Coffee","price":90,"quantity":1}]', 90, 'kitchen', $2, 1, $3, CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [restoId, `sess_${restoId}_2_obs`, 'a'.repeat(64)]);
+    const obsOrderId = p1Ins[0].id;
+
+    // Second device observes active session with QR token and receives opaque observer token + kitchen_prepared sync
+    await query(`UPDATE orders SET kitchen_prepared = 1 WHERE id = $1`, [obsOrderId]);
+    const obsActiveRes = await fetch(`${baseUrl}/api/orders/active-table?slug=${encodeURIComponent(prevSlug)}&table_number=2&space_type=table&tkn=${encodeURIComponent(t2Token)}`);
+    assert.equal(obsActiveRes.status, 200);
+    const obsActiveBody = await obsActiveRes.json();
+    assert.ok(obsActiveBody && obsActiveBody.session_observer_token && obsActiveBody.session_observer_token.startsWith('tq_obs_'), 'Active-table endpoint issues opaque session_observer_token while session is active');
+    assert.equal(obsActiveBody.kitchen_prepared, 1, 'Active-table endpoint forwards top-level kitchen_prepared=1 to customer polling when Ready is tapped');
+
+    // Non-regressive status guard: served order cannot be reverted to kitchen by delayed Ready write
+    await query(`UPDATE orders SET status = 'served', kitchen_prepared = 0 WHERE id = $1`, [obsOrderId]);
+    const nonRegRes = await fetch(`${baseUrl}/api/admin/orders/${obsOrderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: 'kitchen', kitchen_prepared: 1 })
+    });
+    assert.equal(nonRegRes.status, 200);
+    const [afterNonReg] = await query('SELECT status, kitchen_prepared FROM orders WHERE id = $1', [obsOrderId]);
+    assert.equal(afterNonReg.status, 'served', 'Delayed Ready write preserves served status without reverting to kitchen');
+    assert.equal(Number(afterNonReg.kitchen_prepared), 1, 'Delayed Ready write still sets kitchen_prepared=1');
+
+    // Settle the order so orders.length === 0 for table 2
+    const settleObsRes = await fetch(`${baseUrl}/api/admin/orders/${obsOrderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: 'completed', settle: { method: 'cash', expected_order_ids: [obsOrderId], expected_total: 90 } })
+    });
+    assert.equal(settleObsRes.status, 200);
+
+    // Table QR alone WITHOUT observer/tracking credential MUST NOT leak settled historical order
+    const qrOnlyHistRes = await fetch(`${baseUrl}/api/orders/active-table?slug=${encodeURIComponent(prevSlug)}&table_number=2&space_type=table&tkn=${encodeURIComponent(t2Token)}&prev_order_id=${obsOrderId}`);
+    assert.equal(qrOnlyHistRes.status, 200);
+    assert.equal(await qrOnlyHistRes.json(), null, 'prev_order_id with table QR alone does not return historical order details');
+
+    // Device 2 holding session_observer_token CAN still retrieve the settled bill confirmation
+    const obsHistRes = await fetch(`${baseUrl}/api/orders/active-table?slug=${encodeURIComponent(prevSlug)}&table_number=2&space_type=table&tkn=${encodeURIComponent(t2Token)}&prev_order_id=${obsOrderId}`, {
+      headers: { 'X-Session-Observer-Token': obsActiveBody.session_observer_token }
+    });
+    assert.equal(obsHistRes.status, 200);
+    const obsHistBody = await obsHistRes.json();
+    assert.ok(obsHistBody && obsHistBody.id === obsOrderId && obsHistBody.is_settled === 1, 'Authorized observer device retrieves settled confirmation for its session');
+
+    // Atomic presence Approve vs Reject mutual exclusion
+    const pvTok = `tq_staff_race_${ts}`;
+    await query(`
+      INSERT INTO table_location_verifications (restaurant_id, table_number, space_type, verification_token, verification_method, status, expires_at)
+      VALUES ($1, '2', 'table', $2, 'STAFF', 'pending', '2030-01-01T00:00:00Z')
+    `, [restoId, pvTok]);
+    const srIns = await query(`
+      INSERT INTO service_requests (restaurant_id, table_number, space_type, request_type, note, status)
+      VALUES ($1, '2', 'table', 'presence_verification', $2, 'pending') RETURNING id
+    `, [restoId, `Staff check ${pvTok}`]);
+    const srId = srIns[0].id;
+    const approveRace = await fetch(`${baseUrl}/api/admin/service-requests/${srId}/approve-presence`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    assert.equal(approveRace.status, 200);
+    const rejectRace = await fetch(`${baseUrl}/api/admin/service-requests/${srId}/reject-presence`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ rejection_reason: 'Late reject' })
+    });
+    assert.equal(rejectRace.status, 409, 'Second conflicting presence decision is rejected as stale (409)');
+
+    // db.js index creation happens after column migrations in both PG & SQLite blocks
+    const dbSrc = fs.readFileSync(path.join(ROOT_DIR, 'server/db.js'), 'utf8');
+    const pgColIdx = dbSrc.indexOf('ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id');
+    const pgSessIdx = dbSrc.indexOf('idx_orders_resto_session ON orders');
+    const pgParentIdx = dbSrc.indexOf('idx_orders_resto_parent ON orders');
+    assert.ok(pgColIdx !== -1 && pgSessIdx > pgColIdx && pgParentIdx > pgColIdx, 'Postgres session/parent index creation runs after column migrations');
+    const sqColIdx = dbSrc.indexOf("ALTER TABLE orders ADD COLUMN parent_order_id");
+    const sqSessIdx = dbSrc.lastIndexOf('idx_orders_resto_session ON orders');
+    const sqParentIdx = dbSrc.lastIndexOf('idx_orders_resto_parent ON orders');
+    assert.ok(sqColIdx !== -1 && sqSessIdx > sqColIdx && sqParentIdx > sqColIdx, 'SQLite session/parent index creation runs after column migrations');
+
+    // AdminDashboard source checks for sibling status preservation, settlement attempt identity, and KOT non-reprint on Ready
+    const adminDashAudit = fs.readFileSync(path.join(ROOT_DIR, 'src/components/Admin/AdminDashboard.jsx'), 'utf8');
+    assert.ok(adminDashAudit.includes('activeSettlementIdRef') && adminDashAudit.includes('if (activeSettlementIdRef.current === settlementAttemptId)'), 'Settlement cleanup is guarded by activeSettlementIdRef');
+    assert.ok(adminDashAudit.includes('sKey === key\n          ? { status: confirmedStatus') || adminDashAudit.includes(': { is_settled: confirmedSettled, payment_method: confirmedPaymentMethod }'), 'Sibling settlement override preserves sibling lifecycle status');
+    assert.ok(adminDashAudit.includes('!isMarkingPrepared &&') && adminDashAudit.includes('!wasAlreadyInKds'), 'Ready action skips auto KOT re-printing');
+    pass('Backend observer-token history protection, non-regressive status guard, atomic presence check, DB index ordering, and AdminDashboard settlement reconciliation verified');
 
     console.log(`\nAll ${passed} Orders & KDS audit tests passed.`);
   } catch (err) {

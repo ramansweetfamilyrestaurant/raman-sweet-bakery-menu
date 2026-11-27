@@ -91,7 +91,7 @@ const getInitialAdminTabFromUrl = () => {
     if (tabParam && VALID_ADMIN_TABS.has(tabParam)) {
       return tabParam;
     }
-  } catch {}
+  } catch { }
   return 'home';
 };
 
@@ -99,7 +99,7 @@ const getInitialSetupSectionFromUrl = () => {
   if (typeof window === 'undefined') return null;
   try {
     return normalizeSetupSection(new URLSearchParams(window.location.search).get('section'));
-  } catch {}
+  } catch { }
   return null;
 };
 
@@ -188,7 +188,7 @@ export default function AdminDashboard({
       if (changed) {
         window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
       }
-    } catch {}
+    } catch { }
   }, [activeTab, activeSubPage]);
 
   useEffect(() => {
@@ -564,6 +564,7 @@ export default function AdminDashboard({
   const pendingLoopRef = useRef(null);
   const orderAlarmEnabledRef = useRef(true);
   const pendingUpdatesRef = useRef(new Map());
+  const activeSettlementIdRef = useRef(0);
   const activeTenantKeyRef = useRef('');
   const activeRequestIdRef = useRef(0);
 
@@ -1171,11 +1172,20 @@ export default function AdminDashboard({
         pendingUpdatesRef.current.delete(key);
       }, 3000);
 
+      const prevOrder = orders.find(o => String(o.id) === key);
+      const prevStatus = String(prevOrder?.status || '').toLowerCase();
+      const wasAlreadyInKds = prevStatus === 'kitchen' || prevStatus === 'preparing' || Number(prevOrder?.sent_to_kds) === 1;
+      const isMarkingPrepared =
+        apiExtraParams.kitchen_prepared === 1 ||
+        apiExtraParams.kitchen_prepared === '1' ||
+        apiExtraParams.kitchen_prepared === true;
       const isKotRouting =
+        !isMarkingPrepared &&
+        !wasAlreadyInKds &&
         (newStatus === 'kitchen' || (newStatus === 'accepted' && apiExtraParams.sent_to_kds === 1)) &&
         apiExtraParams.sent_to_kds !== 0;
       if (isKotRouting && !skipAutoKot && !silent && isAutoPrintKotEnabled()) {
-        const acceptedOrder = orders.find(o => String(o.id) === key);
+        const acceptedOrder = prevOrder || orders.find(o => String(o.id) === key);
         if (acceptedOrder) {
           handlePrintKOT(acceptedOrder);
         }
@@ -1208,10 +1218,12 @@ export default function AdminDashboard({
         setToastMessage(msg);
         setTimeout(() => setToastMessage(''), 4000);
       }
+      return true;
     } catch (err) {
       pendingUpdatesRef.current.delete(key);
       alert(err.message || 'Failed to update order status');
       loadOrders(); // rollback on failure
+      return false;
     }
   };
 
@@ -1416,7 +1428,7 @@ export default function AdminDashboard({
         let printed = false;
         const cleanup = () => {
           setTimeout(() => {
-            try { iframe.remove(); } catch (_) {}
+            try { iframe.remove(); } catch (_) { }
           }, 3500);
         };
 
@@ -1595,9 +1607,9 @@ export default function AdminDashboard({
             <h2>${escapeThermalHtml(ticketTitle)}</h2>
             <div class="table-badge">${escapeThermalHtml(spaceLoc.toUpperCase())}</div>
             ${(order.token_display || order.token_number)
-              ? `<div style="font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px dashed #000;padding:5px;margin:5px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;word-break:break-word;">TOKEN ${escapeThermalHtml(order.token_display || order.token_number)}</div>`
-              : ''
-            }
+        ? `<div style="font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px dashed #000;padding:5px;margin:5px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;word-break:break-word;">TOKEN ${escapeThermalHtml(order.token_display || order.token_number)}</div>`
+        : ''
+      }
             <div style="font-size:12px;font-weight:900;margin-top:2px;">KOT #${escapeThermalHtml(order.id)}</div>
             ${isRoundAddon
         ? `<div class="round-badge">🔄 ROUND ${escapeThermalHtml(order.round_number)} (ADD-ON ORDER)</div>`
@@ -1776,9 +1788,9 @@ export default function AdminDashboard({
               </span>
             </div>
             ${cleanToken
-              ? `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px solid #000;padding:6px 4px;margin:6px 0;letter-spacing:1px;border-radius:4px;background:#FFF;color:#000;word-break:break-word;">TOKEN ${escapeThermalHtml(cleanToken)}</div>`
-              : `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '15px' : '18px'};font-weight:900;border:2px solid #000;padding:5px 4px;margin:5px 0;border-radius:4px;letter-spacing:0.5px;word-break:break-word;">${escapeThermalHtml(resolvedSpace.toUpperCase())}</div>`
-            }
+        ? `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px solid #000;padding:6px 4px;margin:6px 0;letter-spacing:1px;border-radius:4px;background:#FFF;color:#000;word-break:break-word;">TOKEN ${escapeThermalHtml(cleanToken)}</div>`
+        : `<div style="text-align:center;font-size:${selectedWidth === '58mm' ? '15px' : '18px'};font-weight:900;border:2px solid #000;padding:5px 4px;margin:5px 0;border-radius:4px;letter-spacing:0.5px;word-break:break-word;">${escapeThermalHtml(resolvedSpace.toUpperCase())}</div>`
+      }
             ${isTakeaway ? `<div><strong>Order Type:</strong> Takeaway / Counter</div>` : `<div><strong>Table / Space:</strong> ${escapeThermalHtml(resolvedSpace)}</div>`}
             <div><strong>Date:</strong> ${escapeThermalHtml(formatDateTimeString(order.created_at || Date.now()))}</div>
             <div><strong>${isGst ? 'Invoice No:' : 'Bill No:'}</strong> ${isGst ? `INV-${escapeThermalHtml(cleanToken ? cleanToken.replace(/^TK-?/i, '') : order.id)}` : escapeThermalHtml(billNumberDisplay)}</div>
@@ -2016,6 +2028,7 @@ export default function AdminDashboard({
 
   const handleSettleAndCompleteOrder = async (order, paymentMode = 'CASH', explicitSnapshot = null, printReceiptOverride = null) => {
     if (!order || isSettlingOrder) return;
+    const settlementAttemptId = ++activeSettlementIdRef.current;
     setIsSettlingOrder(true);
     setSettlingMethod(paymentMode);
     setSettleModalError('');
@@ -2054,39 +2067,53 @@ export default function AdminDashboard({
         throw new Error(settleResult?.error || settleResult?.message || 'Settlement failed');
       }
 
-      // 2. Settlement confirmed by backend: protect optimistic state from concurrent polls, update UI & unlock immediately
+      const confirmedStatus = settleResult.status || 'completed';
+      const confirmedSettled = settleResult.is_settled ?? 1;
+      const confirmedPaymentMethod = settleResult.payment_method || settleMethod;
+
+      // 2. Settlement confirmed by backend: preserve sibling lifecycle statuses while applying financial reconciliation
       expectedOrderIds.forEach((settledId) => {
         const sKey = String(settledId);
-        pendingUpdatesRef.current.set(sKey, { status: 'completed', is_settled: 1, payment_method: settleMethod });
+        const override = sKey === key
+          ? { status: confirmedStatus, is_settled: confirmedSettled, payment_method: confirmedPaymentMethod }
+          : { is_settled: confirmedSettled, payment_method: confirmedPaymentMethod };
+        pendingUpdatesRef.current.set(sKey, override);
         setTimeout(() => {
           pendingUpdatesRef.current.delete(sKey);
         }, 3000);
       });
 
       setOrders(prev => prev.map(o => {
+        const oKey = String(o.id);
+        if (oKey === key) {
+          return {
+            ...o,
+            status: confirmedStatus,
+            is_settled: confirmedSettled,
+            payment_method: confirmedPaymentMethod
+          };
+        }
         const matchesSession = Boolean(order.session_id && o.session_id === order.session_id);
         const matchesParent = Boolean(
           (order.parent_order_id && (o.id === order.parent_order_id || o.parent_order_id === order.parent_order_id)) ||
           (!order.session_id && (o.parent_order_id === order.id || o.id === order.id))
         );
-        if (matchesSession || matchesParent || expectedOrderIds.some(eid => String(eid) === String(o.id))) {
-          // In multi-round session, all rounds are marked settled & completed
+        if (matchesSession || matchesParent || expectedOrderIds.some(eid => String(eid) === oKey)) {
           return {
             ...o,
-            status: 'completed',
-            is_settled: 1,
-            payment_method: settleMethod
+            is_settled: confirmedSettled,
+            payment_method: confirmedPaymentMethod
           };
         }
-        return String(o.id) === key
-          ? { ...o, status: 'completed', is_settled: 1, payment_method: settleMethod }
-          : o;
+        return o;
       }));
 
       setBillOrderModal(null);
       setSettleModalError('');
-      setIsSettlingOrder(false);
-      setSettlingMethod(null);
+      if (activeSettlementIdRef.current === settlementAttemptId) {
+        setIsSettlingOrder(false);
+        setSettlingMethod(null);
+      }
 
       // 3. Audio & Notification feedback
       try {
@@ -2100,7 +2127,7 @@ export default function AdminDashboard({
       setTimeout(() => setToastMessage(''), 4000);
 
       // 4. Authoritative sync in background (never block UI modal/spinner)
-      loadOrders().catch(() => {});
+      loadOrders().catch(() => { });
 
       // 5. Generate / Print Customer Bill only when print toggle / auto_print_bill is active
       const willPrintReceipt = printReceiptOverride !== null ? Boolean(printReceiptOverride) : Boolean(shouldPrintOnSettle);
@@ -2114,12 +2141,14 @@ export default function AdminDashboard({
     } catch (err) {
       console.error('Settlement error:', err);
       if (err && (err.status === 409 || err.code === 'bill_snapshot_stale')) {
-        await loadOrders().catch(() => {});
+        await loadOrders().catch(() => { });
       }
       setSettleModalError(err.message || 'Payment settlement failed. Order remains unsettled.');
     } finally {
-      setIsSettlingOrder(false);
-      setSettlingMethod(null);
+      if (activeSettlementIdRef.current === settlementAttemptId) {
+        setIsSettlingOrder(false);
+        setSettlingMethod(null);
+      }
     }
   };
 
@@ -2156,7 +2185,7 @@ export default function AdminDashboard({
               errorCorrectionLevel: 'M',
               color: { dark: '#000000', light: '#FFFFFF' }
             });
-          } catch (_) {}
+          } catch (_) { }
         }
       }
       htmlContent = getBillHTML(order, paymentMode, isReprint, settingsForm.printer_paper_width || '80mm', upiQrDataUrl, { upiId, payeeName });
@@ -2383,7 +2412,7 @@ export default function AdminDashboard({
               const parsed = JSON.parse(cached);
               parsed[field] = currentCount;
               localStorage.setItem(`admin_cache_${currentSlug}_info`, JSON.stringify(parsed));
-            } catch {}
+            } catch { }
           }
         }
         alert(errData.message || errData.error || 'Cannot update space count. Plan limit reached or feature locked.');
@@ -2654,12 +2683,12 @@ export default function AdminDashboard({
           watermark_removal_enabled: infoData.watermark_removal_enabled === 1 || infoData.watermark_removal_enabled === true || infoData.watermark_removal_enabled === '1',
           custom_domain_enabled: infoData.custom_domain_enabled === 1 || infoData.custom_domain_enabled === true || infoData.custom_domain_enabled === '1',
           analytics_export_enabled: Boolean(
-          infoData.is_vip ||
-          infoData.is_complimentary ||
-          infoData.analytics_export_enabled === 1 ||
-          infoData.analytics_export_enabled === true ||
-          infoData.analytics_export_enabled === '1'
-        ),
+            infoData.is_vip ||
+            infoData.is_complimentary ||
+            infoData.analytics_export_enabled === 1 ||
+            infoData.analytics_export_enabled === true ||
+            infoData.analytics_export_enabled === '1'
+          ),
           gst_invoice_enabled: infoData.gst_invoice_enabled === 1 || infoData.gst_invoice_enabled === true || infoData.gst_invoice_enabled === '1',
           ai_review_enabled: infoData.ai_review_enabled === 1 || infoData.ai_review_enabled === true || infoData.ai_review_enabled === '1',
           ai_review_tone: infoData.ai_review_tone || 'warm',
@@ -2750,7 +2779,7 @@ export default function AdminDashboard({
 
     loadData();
     fetchAnnouncements().then(data => {
-      if (Array.isArray(data)) { setAnnouncements(data); try { localStorage.setItem('touchqr_cached_announcements', JSON.stringify(data)); } catch {} }
+      if (Array.isArray(data)) { setAnnouncements(data); try { localStorage.setItem('touchqr_cached_announcements', JSON.stringify(data)); } catch { } }
     }).catch(() => { });
   }, [token, propSlug]);
 
@@ -2846,7 +2875,7 @@ export default function AdminDashboard({
       fetchAnnouncements().then(data => {
         if (Array.isArray(data)) {
           setAnnouncements(data);
-          try { localStorage.setItem('touchqr_cached_announcements', JSON.stringify(data)); } catch {}
+          try { localStorage.setItem('touchqr_cached_announcements', JSON.stringify(data)); } catch { }
         }
       }).catch(() => { });
     };
@@ -2864,13 +2893,13 @@ export default function AdminDashboard({
           }
         };
       }
-    } catch {}
+    } catch { }
 
     return () => {
       clearInterval(pollTimer);
       window.removeEventListener('focus', refreshAnnouncements);
       if (bc) {
-        try { bc.close(); } catch {}
+        try { bc.close(); } catch { }
       }
     };
   }, []);
@@ -4210,111 +4239,111 @@ export default function AdminDashboard({
           })()}
 
           {/* 🔔 1. First-Time Full Width Sound Onboarding Banner */}
-      {!isAudioReady && !hasSoundSetupCompleted && !audioBannerDismissed && (
-        <div style={{
-          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-          color: '#FFFFFF',
-          padding: '10px 16px',
-          borderBottom: '2px solid #F59E0B',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '10px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '240px' }}>
-            <span style={{ fontSize: '1.4rem' }}>🔔</span>
-            <div>
-              <strong style={{ fontSize: '0.88rem', color: '#FBBF24', display: 'block' }}>
-                Enable Alert Sounds
-              </strong>
-              <span style={{ fontSize: '0.76rem', color: '#94A3B8', fontWeight: 600 }}>
-                Enable sound alerts for orders, kitchen, and staff service notifications.
-              </span>
+          {!isAudioReady && !hasSoundSetupCompleted && !audioBannerDismissed && (
+            <div style={{
+              background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+              color: '#FFFFFF',
+              padding: '10px 16px',
+              borderBottom: '2px solid #F59E0B',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '240px' }}>
+                <span style={{ fontSize: '1.4rem' }}>🔔</span>
+                <div>
+                  <strong style={{ fontSize: '0.88rem', color: '#FBBF24', display: 'block' }}>
+                    Enable Alert Sounds
+                  </strong>
+                  <span style={{ fontSize: '0.76rem', color: '#94A3B8', fontWeight: 600 }}>
+                    Enable sound alerts for orders, kitchen, and staff service notifications.
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={handleEnableSound}
+                  style={{
+                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '7px 16px',
+                    borderRadius: '9999px',
+                    fontWeight: 800,
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(245,158,11,0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  🔔 Enable
+                </button>
+                <button
+                  onClick={handleDismissAudioBanner}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748B',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    padding: '4px 8px'
+                  }}
+                  title="Dismiss"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              onClick={handleEnableSound}
-              style={{
-                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                color: '#FFFFFF',
-                border: 'none',
-                padding: '7px 16px',
-                borderRadius: '9999px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(245,158,11,0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              🔔 Enable
-            </button>
-            <button
-              onClick={handleDismissAudioBanner}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#64748B',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                padding: '4px 8px'
-              }}
-              title="Dismiss"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* ⏳ Trial Expiry Warning Banner (3 Days Remaining) */}
-      {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
-        <div style={{
-          background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-          borderBottom: '2px solid #F59E0B',
-          padding: '10px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '10px',
-          color: '#78350F'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '20px' }}>⏳</span>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
-              Your Free Pro Trial expires in <strong style={{ color: '#B45309', fontSize: '0.88rem' }}>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>! Renew now to prevent menu interruption.
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              style={{
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
-                border: 'none', fontWeight: 900, fontSize: '0.78rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16,185,129,0.4)', whiteSpace: 'nowrap'
-              }}
-            >
-              💳 Pay & Renew Instant
-            </button>
-            <a
-              href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, I want to renew/upgrade my business subscription plan for '${restaurantInfo?.name || 'my business'}'.`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                background: '#B45309', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
-                textDecoration: 'none', fontWeight: 900, fontSize: '0.78rem', boxShadow: '0 2px 8px rgba(180,83,9,0.3)', whiteSpace: 'nowrap'
-              }}
-            >
-              💬 WhatsApp Support
-            </a>
-          </div>
-        </div>
-      )}
+          {/* ⏳ Trial Expiry Warning Banner (3 Days Remaining) */}
+          {daysLeft !== null && daysLeft <= 3 && daysLeft > 0 && (
+            <div style={{
+              background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+              borderBottom: '2px solid #F59E0B',
+              padding: '10px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px',
+              color: '#78350F'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '20px' }}>⏳</span>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
+                  Your Free Pro Trial expires in <strong style={{ color: '#B45309', fontSize: '0.88rem' }}>{daysLeft} day{daysLeft > 1 ? 's' : ''}</strong>! Renew now to prevent menu interruption.
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  style={{
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
+                    border: 'none', fontWeight: 900, fontSize: '0.78rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16,185,129,0.4)', whiteSpace: 'nowrap'
+                  }}
+                >
+                  💳 Pay & Renew Instant
+                </button>
+                <a
+                  href={`https://wa.me/${(masterSupportPhone || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Super Admin, I want to renew/upgrade my business subscription plan for '${restaurantInfo?.name || 'my business'}'.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: '#B45309', color: '#FFFFFF', padding: '6px 14px', borderRadius: '10px',
+                    textDecoration: 'none', fontWeight: 900, fontSize: '0.78rem', boxShadow: '0 2px 8px rgba(180,83,9,0.3)', whiteSpace: 'nowrap'
+                  }}
+                >
+                  💬 WhatsApp Support
+                </a>
+              </div>
+            </div>
+          )}
 
           <AdminHeader
             restaurantInfo={restaurantInfo}
@@ -5657,10 +5686,10 @@ export default function AdminDashboard({
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
               {(() => {
                 const isDual = (settingsForm.printer_mode === 'dual' && Boolean(
-        restaurantInfo?.dual_printer_enabled === 1 ||
-        restaurantInfo?.permissions?.dual_printer_enabled ||
-        resolveTenantCapabilities(restaurantInfo, settingsForm)?.dual_printer_enabled
-      ));
+                  restaurantInfo?.dual_printer_enabled === 1 ||
+                  restaurantInfo?.permissions?.dual_printer_enabled ||
+                  resolveTenantCapabilities(restaurantInfo, settingsForm)?.dual_printer_enabled
+                ));
                 const sampleKOT = { id: 999, table_number: '1', customer_name: 'Sample Guest', total_amount: 280, items: [{ name: 'Paneer Butter Masala', quantity: 1, price: 220 }, { name: 'Butter Naan', quantity: 2, price: 30 }] };
                 const sampleBill = { id: 999, table_number: '1', customer_name: 'Sample Guest', total_amount: 280, items: [{ name: 'Paneer Butter Masala', quantity: 1, price: 220 }, { name: 'Butter Naan', quantity: 2, price: 30 }] };
 

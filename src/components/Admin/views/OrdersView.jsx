@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Clock,
   Printer,
@@ -74,11 +74,25 @@ export default function OrdersView({
     triggerBillAction(order, onOpenBillModal);
   };
 
-  const handleCompleteSettledOrder = (targetOrder) => {
-    if (!targetOrder) return;
-    const isSettled = targetOrder.is_settled === 1 || targetOrder.is_settled === '1' || targetOrder.is_settled === true;
-    if (isSettled && typeof onUpdateStatus === 'function') {
-      onUpdateStatus(targetOrder.id, 'completed');
+  const isOrderSettledFlag = (o) => Boolean(
+    o?.is_settled === 1 || o?.is_settled === '1' || o?.is_settled === true
+  );
+
+  const handleCompleteSettledOrder = async (targetOrder) => {
+    if (!targetOrder) return false;
+    if (!isOrderSettledFlag(targetOrder)) return false;
+    const isFulfillmentReady = isServedStageOrder(targetOrder) || isKitchenPreparedFlag(targetOrder);
+    if (!isFulfillmentReady) {
+      alert('Please mark this prepaid order Ready or Served before completing handover.');
+      return false;
+    }
+    if (typeof onUpdateStatus !== 'function') return false;
+    try {
+      const result = await onUpdateStatus(targetOrder.id, 'completed');
+      return result !== false;
+    } catch (err) {
+      alert(err?.message || 'Failed to complete order handover');
+      return false;
     }
   };
 
@@ -216,11 +230,17 @@ export default function OrdersView({
   const [selectedOrderState, setSelectedOrder] = useState(null);
   const selectedOrder = useMemo(() => {
     if (!selectedOrderState) return null;
-    return (Array.isArray(orders) ? orders.find(o => String(o.id) === String(selectedOrderState.id)) : null) || selectedOrderState;
+    return Array.isArray(orders) ? (orders.find(o => String(o.id) === String(selectedOrderState.id)) || null) : null;
   }, [orders, selectedOrderState]);
+  useEffect(() => {
+    if (selectedOrderState && !selectedOrder) {
+      setSelectedOrder(null);
+    }
+  }, [selectedOrderState, selectedOrder]);
   const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'direct' | 'whatsapp' | 'manual'
   const [spaceCategoryFilter, setSpaceCategoryFilter] = useState('all');
   const [processingReqState, setProcessingReqState] = useState({});
+  const pendingPresenceReqIdsRef = useRef(new Set());
   const [rejectingModalReq, setRejectingModalReq] = useState(null);
   const defaultRejectReason = isHotel
     ? 'Guest not reachable in room'
@@ -449,6 +469,13 @@ export default function OrdersView({
       });
 
       const activeOrder = spaceActiveOrders.length > 0 ? spaceActiveOrders[0] : null;
+      const activeSessionBill = activeOrder
+        ? calculateBillDetails(activeOrder, spaceActiveOrders, restaurantInfo, settingsForm)
+        : null;
+      const sessionScopedOrders = (activeSessionBill && Array.isArray(activeSessionBill.sessionOrders) && activeSessionBill.sessionOrders.length > 0)
+        ? activeSessionBill.sessionOrders
+        : (activeOrder ? [activeOrder] : []);
+      const queuedOrdersCount = Math.max(0, spaceActiveOrders.length - sessionScopedOrders.length);
 
       const serviceReq = safeServiceRequests.find(s => {
         const loc = parseServiceReqSpaceLocation(s);
@@ -458,9 +485,9 @@ export default function OrdersView({
       let status = 'free';
       if (serviceReq) {
         status = 'call';
-      } else if (spaceActiveOrders.length > 0) {
-        const allServed = spaceActiveOrders.every(o => o.status === 'served');
-        const anyReady = spaceActiveOrders.some(o => o.status === 'served' || o.kitchen_prepared === 1 || o.kitchen_prepared === '1' || o.kitchen_prepared === true);
+      } else if (sessionScopedOrders.length > 0) {
+        const allServed = sessionScopedOrders.every(o => o.status === 'served');
+        const anyReady = sessionScopedOrders.some(o => o.status === 'served' || o.kitchen_prepared === 1 || o.kitchen_prepared === '1' || o.kitchen_prepared === true);
         if (allServed) {
           status = 'served';
         } else if (anyReady) {
@@ -470,18 +497,21 @@ export default function OrdersView({
         }
       }
 
-      const spaceSessionTotal = spaceActiveOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+      const spaceSessionTotal = activeSessionBill
+        ? activeSessionBill.grandTotal
+        : sessionScopedOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
 
       return {
         ...space,
         status,
         activeOrder,
-        activeOrders: spaceActiveOrders,
+        activeOrders: sessionScopedOrders,
+        queuedOrdersCount,
         sessionTotal: spaceSessionTotal,
         serviceRequest: serviceReq
       };
     });
-  }, [spaceInventory, validOrders, safeServiceRequests, isHotel]);
+  }, [spaceInventory, validOrders, safeServiceRequests, restaurantInfo, settingsForm]);
 
   // Summary operational counters
   const summaryCounters = useMemo(() => {
@@ -509,15 +539,27 @@ export default function OrdersView({
 
   const handleApprove = async (req) => {
     if (!req || !onApprovePresenceRequest) return;
-    setProcessingReqState(prev => ({ ...prev, [req.id]: 'approving' }));
+    const reqId = req.id;
+    if (pendingPresenceReqIdsRef.current.has(reqId) || processingReqState[reqId]) {
+      alert('Another decision for this presence request is already in progress or completed.');
+      return;
+    }
+    pendingPresenceReqIdsRef.current.add(reqId);
+    setProcessingReqState(prev => ({ ...prev, [reqId]: 'approving' }));
     try {
-      await onApprovePresenceRequest(req.id, req);
+      await onApprovePresenceRequest(reqId, req);
     } finally {
-      setProcessingReqState(prev => ({ ...prev, [req.id]: null }));
+      pendingPresenceReqIdsRef.current.delete(reqId);
+      setProcessingReqState(prev => ({ ...prev, [reqId]: null }));
     }
   };
 
   const handleOpenRejectModal = (req) => {
+    if (!req) return;
+    if (pendingPresenceReqIdsRef.current.has(req.id) || processingReqState[req.id]) {
+      alert('A decision for this presence request is already being processed.');
+      return;
+    }
     setRejectingModalReq(req);
     setSelectedRejectReason(defaultRejectReason);
     setCustomRejectReason('');
@@ -525,13 +567,20 @@ export default function OrdersView({
 
   const handleConfirmReject = async () => {
     if (!rejectingModalReq || !onRejectPresenceRequest) return;
-    const finalReason = selectedRejectReason === 'Other' ? (customRejectReason.trim() || 'Presence check rejected by admin') : selectedRejectReason;
     const reqId = rejectingModalReq.id;
+    if (pendingPresenceReqIdsRef.current.has(reqId) || processingReqState[reqId]) {
+      setRejectingModalReq(null);
+      alert('This presence request has already been decided or is currently being processed.');
+      return;
+    }
+    const finalReason = selectedRejectReason === 'Other' ? (customRejectReason.trim() || 'Presence check rejected by admin') : selectedRejectReason;
+    pendingPresenceReqIdsRef.current.add(reqId);
     setProcessingReqState(prev => ({ ...prev, [reqId]: 'rejecting' }));
     try {
       await onRejectPresenceRequest(reqId, finalReason, rejectingModalReq);
       setRejectingModalReq(null);
     } finally {
+      pendingPresenceReqIdsRef.current.delete(reqId);
       setProcessingReqState(prev => ({ ...prev, [reqId]: null }));
     }
   };
@@ -603,13 +652,22 @@ export default function OrdersView({
   );
 
   const isServedStageOrder = (o) => Boolean(
-    o?.status === 'served' || o?.status === 'ready'
+    o?.status === 'served' || (o?.status === 'ready' && isCounterOrderSpace(o))
   );
 
   const isCounterOrderSpace = (o) => {
+    if (!o) return false;
     const tbl = String(o?.table_number || '').trim().toLowerCase();
     const sp = String(o?.space_type || '').trim().toLowerCase();
-    return tbl === 'counter' || sp === 'counter';
+    const orderType = String(o?.order_type || '').trim().toLowerCase();
+    if (orderType === 'delivery' || /^delivery/i.test(tbl)) return false;
+    return Boolean(
+      tbl === 'counter' ||
+      tbl === 'counter:counter' ||
+      sp === 'counter' ||
+      /^(takeaway|parcel|pickup)$/i.test(tbl) ||
+      (!tbl && (orderType === 'takeaway' || o?.token_display || o?.token_number))
+    );
   };
 
   const getKitchenAdvanceLabel = (o, { compact = false } = {}) => {
@@ -1365,7 +1423,7 @@ export default function OrdersView({
                 <CheckCircle2 size={20} />
               </div>
               <div>
-                <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Ready to Bill</div>
+                <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Ready / Served</div>
                 <div className="orders-metric-value" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
                   {servedCount}
                 </div>
@@ -1466,8 +1524,9 @@ export default function OrdersView({
 
             {/* Source Filters */}
             <div className="orders-source-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>Source:</span>
+              <label htmlFor="orders-source-filter" style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>Source:</label>
               <select
+                id="orders-source-filter"
                 className="orders-source-select"
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value)}
@@ -1522,13 +1581,16 @@ export default function OrdersView({
                 No orders found
               </h3>
               <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 20px 0', maxWidth: '400px', marginInline: 'auto' }}>
-                {kotFilter !== 'all'
-                  ? `There are currently no orders in '${kotFilter}' state.`
+                {(kotFilter !== 'all' || sourceFilter !== 'all')
+                  ? 'No orders match the active status or source filters.'
                   : 'Customer QR orders and manual POS bills will automatically appear here.'}
               </p>
-              {kotFilter !== 'all' && (
+              {(kotFilter !== 'all' || sourceFilter !== 'all') && (
                 <button
-                  onClick={() => setKotFilter('all')}
+                  onClick={() => {
+                    if (setKotFilter) setKotFilter('all');
+                    setSourceFilter('all');
+                  }}
                   style={{
                     padding: '8px 16px',
                     borderRadius: '10px',
@@ -1577,7 +1639,7 @@ export default function OrdersView({
                       const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
                       const isServedStage = !isDone && isServedStageOrder(order);
                       const isKitchenPrepDone = isKitchenPreparedFlag(order);
-                      const isKitchen = !isDone && !isServedStage && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
+                      const isKitchen = !isDone && !isServedStage && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing' || order.status === 'ready');
                       const sessionInfo = sessionDetailsMap.get(order.id) || {
                         sessionOrders: [order],
                         totalRoundsCount: 1,
@@ -1738,8 +1800,7 @@ export default function OrdersView({
                                 <>
                                   <button
                                     onClick={() => {
-                                      const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
-                                      if (isCounter) {
+                                      if (isCounterOrderSpace(order)) {
                                         if (onOpenAcceptRouting) {
                                           onOpenAcceptRouting(order);
                                         }
@@ -1812,7 +1873,11 @@ export default function OrdersView({
                                 <>
                                   {showSyncedKdsReadyBtn && (
                                     <button
-                                      onClick={() => onUpdateStatus ? onUpdateStatus(order.id, order.status === 'accepted' ? 'accepted' : 'kitchen', { kitchen_prepared: 1 }) : null}
+                                      onClick={() => {
+                                        if (!onUpdateStatus) return null;
+                                        const readyStatus = ['accepted', 'preparing', 'kitchen'].includes(order.status) ? order.status : 'kitchen';
+                                        return onUpdateStatus(order.id, readyStatus, { kitchen_prepared: 1 });
+                                      }}
                                       style={{
                                         padding: '6px 11px',
                                         borderRadius: '8px',
@@ -2019,7 +2084,7 @@ export default function OrdersView({
                   const isPending = !isDone && (order.status === 'pending' || order.status === 'ordered');
                   const isServedStage = !isDone && isServedStageOrder(order);
                   const isKitchenPrepDone = isKitchenPreparedFlag(order);
-                  const isKitchen = !isDone && !isServedStage && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing');
+                  const isKitchen = !isDone && !isServedStage && (order.status === 'kitchen' || order.status === 'accepted' || order.status === 'preparing' || order.status === 'ready');
                   const sessionInfo = sessionDetailsMap.get(order.id) || {
                     sessionOrders: [order],
                     totalRoundsCount: 1,
@@ -2199,8 +2264,7 @@ export default function OrdersView({
                             <>
                               <button
                                 onClick={() => {
-                                  const isCounter = (String(order?.table_number || '').trim().toLowerCase() === 'counter') || (String(order?.space_type || '').trim().toLowerCase() === 'counter');
-                                  if (isCounter) {
+                                  if (isCounterOrderSpace(order)) {
                                     if (onOpenAcceptRouting) {
                                       onOpenAcceptRouting(order);
                                     }
@@ -2273,7 +2337,11 @@ export default function OrdersView({
                             <>
                               {showSyncedKdsReadyBtn && (
                                 <button
-                                  onClick={() => onUpdateStatus ? onUpdateStatus(order.id, order.status === 'accepted' ? 'accepted' : 'kitchen', { kitchen_prepared: 1 }) : null}
+                                  onClick={() => {
+                                    if (!onUpdateStatus) return null;
+                                    const readyStatus = ['accepted', 'preparing', 'kitchen'].includes(order.status) ? order.status : 'kitchen';
+                                    return onUpdateStatus(order.id, readyStatus, { kitchen_prepared: 1 });
+                                  }}
                                   style={{
                                     padding: '8px 13px',
                                     borderRadius: '10px',
@@ -2611,6 +2679,7 @@ export default function OrdersView({
                 const isOrder = Boolean(space.activeOrder);
                 const isCall = Boolean(space.serviceRequest);
                 const isServed = space.status === 'served';
+                const isReady = space.status === 'ready';
 
                 let cardBg = '#FFFFFF';
                 let borderColor = '#E2E8F0';
@@ -2630,6 +2699,12 @@ export default function OrdersView({
                   badgeText = '🍽️ SERVED';
                   badgeBg = '#DCFCE7';
                   badgeColor = '#15803D';
+                } else if (isReady) {
+                  cardBg = '#ECFDF5';
+                  borderColor = '#6EE7B7';
+                  badgeText = '🍳 READY';
+                  badgeBg = '#D1FAE5';
+                  badgeColor = '#047857';
                 } else if (isOrder) {
                   cardBg = '#FEF2F2';
                   borderColor = '#FECACA';
@@ -2681,6 +2756,7 @@ export default function OrdersView({
                               {space.activeOrders && space.activeOrders.length > 1
                                 ? `Session (${space.activeOrders.length} Rounds)`
                                 : (space.activeOrder.token_display ? `Token ${space.activeOrder.token_display}` : `Active Order`)}
+                              {space.queuedOrdersCount > 0 ? ` • +${space.queuedOrdersCount} queued` : ''}
                             </span>
                             <span style={{ color: '#DC2626' }}>
                               {currencySymbol}{Math.round(space.sessionTotal || space.activeOrder.total_amount || 0)}
@@ -2739,7 +2815,7 @@ export default function OrdersView({
                           >
                             Details
                           </button>
-                          {!space.activeOrder?.is_settled && space.activeOrder?.status !== 'completed' && !isCinema && (
+                          {!isOrderSettledFlag(space.activeOrder) && space.activeOrder?.status !== 'completed' && !isCinema && (isServedStageOrder(space.activeOrder) || isCounterOrderSpace(space.activeOrder)) && (
                             <button
                               onClick={() => onPrintBill ? onPrintBill(space.activeOrder, 'CHECK_SLIP') : null}
                               style={{
@@ -2761,60 +2837,77 @@ export default function OrdersView({
                               <Receipt size={12} /> Slip
                             </button>
                           )}
-                          {space.activeOrder?.is_settled === 1 || space.activeOrder?.is_settled === true ? (
-                            <>
-                              <button
-                                onClick={() => handleCompleteSettledOrder(space.activeOrder)}
-                                style={{
-                                  flex: 1,
-                                  padding: '6px 8px',
-                                  borderRadius: '8px',
-                                  background: '#16A34A',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  minHeight: '36px',
-                                  fontSize: '0.70rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer'
-                                }}
-                                title="Customer picked up prepaid order - mark complete"
-                              >
-                                ✓ Handover
-                              </button>
-                              <button
-                                onClick={() => onPrintBill ? onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH') : null}
-                                style={{
-                                  padding: '6px 8px',
-                                  borderRadius: '8px',
-                                  background: '#0F766E',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  minHeight: '36px',
-                                  fontSize: '0.70rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer'
-                                }}
-                                title="Print Bill Receipt"
-                              >
-                                Bill
-                              </button>
-                            </>
-                          ) : (
+                          {isOrderSettledFlag(space.activeOrder) ? (() => {
+                            const isReadyForHandover = isServedStageOrder(space.activeOrder) || isKitchenPreparedFlag(space.activeOrder);
+                            return (
+                              <>
+                                {isReadyForHandover ? (
+                                  <button
+                                    onClick={() => handleCompleteSettledOrder(space.activeOrder)}
+                                    style={{
+                                      flex: 1,
+                                      padding: '6px 8px',
+                                      borderRadius: '8px',
+                                      background: '#16A34A',
+                                      color: '#FFFFFF',
+                                      border: 'none',
+                                      minHeight: '36px',
+                                      fontSize: '0.70rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer'
+                                    }}
+                                    title="Customer picked up prepaid order - mark complete"
+                                  >
+                                    ✓ Handover
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled
+                                    style={{
+                                      flex: 1,
+                                      padding: '6px 8px',
+                                      borderRadius: '8px',
+                                      background: '#E2E8F0',
+                                      color: '#64748B',
+                                      border: '1px solid #CBD5E1',
+                                      minHeight: '36px',
+                                      fontSize: '0.68rem',
+                                      fontWeight: 800,
+                                      cursor: 'not-allowed'
+                                    }}
+                                    title="Mark order Ready or Served before completing handover"
+                                  >
+                                    🍳 Preparing
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => onPrintBill ? onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH') : null}
+                                  style={{
+                                    padding: '6px 8px',
+                                    borderRadius: '8px',
+                                    background: '#0F766E',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    minHeight: '36px',
+                                    fontSize: '0.70rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Print Bill Receipt"
+                                >
+                                  Bill
+                                </button>
+                              </>
+                            );
+                          })() : space.activeOrder?.status === 'completed' ? (
                             <button
-                              onClick={() => {
-                                if (space.activeOrder?.status === 'completed') {
-                                  if (onPrintBill) onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH');
-                                } else {
-                                  handleTriggerBillAction(space.activeOrder);
-                                }
-                              }}
-                              disabled={!onOpenBillModal && space.activeOrder?.status !== 'completed'}
-                              title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
+                              onClick={() => { if (onPrintBill) onPrintBill(space.activeOrder, space.activeOrder?.payment_method || 'CASH'); }}
                               style={{
                                 flex: 1,
                                 padding: '6px 8px',
                                 borderRadius: '8px',
-                                background: space.activeOrder?.status === 'completed' ? '#0F766E' : (onOpenBillModal ? '#7E22CE' : '#9CA3AF'),
+                                background: '#0F766E',
                                 color: '#FFFFFF',
                                 border: 'none',
                                 minHeight: '36px',
@@ -2823,7 +2916,98 @@ export default function OrdersView({
                                 cursor: 'pointer'
                               }}
                             >
-                              {space.activeOrder?.status === 'completed' ? 'Print Bill' : (space.activeOrders && space.activeOrders.length > 1 ? `Settle (${space.activeOrders.length} Rds)` : 'Settle')}
+                              Print Bill
+                            </button>
+                          ) : (!isServedStageOrder(space.activeOrder) && !isCounterOrderSpace(space.activeOrder)) ? (() => {
+                            const ord = space.activeOrder;
+                            const ordStatus = String(ord?.status || '').toLowerCase();
+                            if (ordStatus === 'pending' || ordStatus === 'ordered') {
+                              return (
+                                <button
+                                  onClick={() => onUpdateStatus ? onUpdateStatus(ord.id, 'kitchen') : null}
+                                  style={{
+                                    flex: 1,
+                                    padding: '6px 8px',
+                                    borderRadius: '8px',
+                                    background: '#16A34A',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    minHeight: '36px',
+                                    fontSize: '0.70rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Accept order and send to kitchen"
+                                >
+                                  ⚡ Accept
+                                </button>
+                              );
+                            }
+                            if (isKitchenPreparedFlag(ord) || ordStatus === 'ready') {
+                              return (
+                                <button
+                                  onClick={() => onUpdateStatus ? onUpdateStatus(ord.id, 'served') : null}
+                                  style={{
+                                    flex: 1,
+                                    padding: '6px 8px',
+                                    borderRadius: '8px',
+                                    background: '#0D9488',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    minHeight: '36px',
+                                    fontSize: '0.70rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Food is ready in kitchen — mark served to table before billing"
+                                >
+                                  🍽️ Serve
+                                </button>
+                              );
+                            }
+                            return (
+                              <button
+                                onClick={() => {
+                                  if (!onUpdateStatus) return;
+                                  const readyStatus = ['accepted', 'preparing', 'kitchen'].includes(ordStatus) ? ordStatus : 'kitchen';
+                                  onUpdateStatus(ord.id, readyStatus, { kitchen_prepared: 1 });
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: '6px 8px',
+                                  borderRadius: '8px',
+                                  background: '#10B981',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  minHeight: '36px',
+                                  fontSize: '0.70rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                                title="Mark food ready in kitchen"
+                              >
+                                🍳 Ready
+                              </button>
+                            );
+                          })() : (
+                            <button
+                              onClick={() => handleTriggerBillAction(space.activeOrder)}
+                              disabled={!onOpenBillModal}
+                              title={!onOpenBillModal ? 'Billing modal unavailable' : 'Open Bill & Settle Payment'}
+                              style={{
+                                flex: 1,
+                                padding: '6px 8px',
+                                borderRadius: '8px',
+                                background: onOpenBillModal ? '#7E22CE' : '#9CA3AF',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                minHeight: '36px',
+                                fontSize: '0.70rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {space.activeOrders && space.activeOrders.length > 1 ? `Settle (${space.activeOrders.length} Rds)` : 'Settle'}
                             </button>
                           )}
                         </>
@@ -2835,7 +3019,7 @@ export default function OrdersView({
                             <button
                               type="button"
                               onClick={() => handleApprove(space.serviceRequest)}
-                              disabled={processingReqState[space.serviceRequest.id] === 'approving'}
+                              disabled={Boolean(processingReqState[space.serviceRequest.id])}
                               style={{
                                 flex: 1,
                                 padding: '7px 8px',
@@ -2846,7 +3030,8 @@ export default function OrdersView({
                                 border: 'none',
                                 fontSize: '0.72rem',
                                 fontWeight: 800,
-                                cursor: 'pointer',
+                                cursor: processingReqState[space.serviceRequest.id] ? 'not-allowed' : 'pointer',
+                                opacity: processingReqState[space.serviceRequest.id] ? 0.65 : 1,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -2858,6 +3043,7 @@ export default function OrdersView({
                             <button
                               type="button"
                               onClick={() => handleOpenRejectModal(space.serviceRequest)}
+                              disabled={Boolean(processingReqState[space.serviceRequest.id])}
                               style={{
                                 padding: '7px 8px',
                                 minHeight: '36px',
@@ -2867,7 +3053,8 @@ export default function OrdersView({
                                 border: 'none',
                                 fontSize: '0.72rem',
                                 fontWeight: 800,
-                                cursor: 'pointer'
+                                cursor: processingReqState[space.serviceRequest.id] ? 'not-allowed' : 'pointer',
+                                opacity: processingReqState[space.serviceRequest.id] ? 0.65 : 1
                               }}
                             >
                               ✕ Reject
@@ -3013,7 +3200,7 @@ export default function OrdersView({
                           <button
                             type="button"
                             onClick={() => handleApprove(req)}
-                            disabled={processingReqState[req.id] === 'approving'}
+                            disabled={Boolean(processingReqState[req.id])}
                             style={{
                               flex: 1,
                               padding: '10px 14px',
@@ -3023,7 +3210,8 @@ export default function OrdersView({
                               border: 'none',
                               fontSize: '0.80rem',
                               fontWeight: 800,
-                              cursor: 'pointer',
+                              cursor: processingReqState[req.id] ? 'not-allowed' : 'pointer',
+                              opacity: processingReqState[req.id] ? 0.65 : 1,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -3035,6 +3223,7 @@ export default function OrdersView({
                           <button
                             type="button"
                             onClick={() => handleOpenRejectModal(req)}
+                            disabled={Boolean(processingReqState[req.id])}
                             style={{
                               padding: '10px 14px',
                               borderRadius: '10px',
@@ -3043,7 +3232,8 @@ export default function OrdersView({
                               border: '1.5px solid #EF4444',
                               fontSize: '0.80rem',
                               fontWeight: 800,
-                              cursor: 'pointer',
+                              cursor: processingReqState[req.id] ? 'not-allowed' : 'pointer',
+                              opacity: processingReqState[req.id] ? 0.65 : 1,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -3602,7 +3792,7 @@ export default function OrdersView({
                 </div>
               )}
 
-              {!isOrderCompleted(selectedOrder) && !isServedStageOrder(selectedOrder) && (selectedOrder.status === 'kitchen' || selectedOrder.status === 'accepted' || selectedOrder.status === 'preparing') && (() => {
+              {!isOrderCompleted(selectedOrder) && !isServedStageOrder(selectedOrder) && (selectedOrder.status === 'kitchen' || selectedOrder.status === 'accepted' || selectedOrder.status === 'preparing' || selectedOrder.status === 'ready') && (() => {
                 const showDrawerKdsReadyBtn = !isKitchenPreparedFlag(selectedOrder) && !isCounterOrderSpace(selectedOrder) && (
                   selectedOrder.status === 'kitchen' ||
                   selectedOrder.status === 'preparing' ||
@@ -3613,7 +3803,7 @@ export default function OrdersView({
                   {showDrawerKdsReadyBtn && (
                     <button
                       onClick={() => {
-                        const targetKitchenStatus = selectedOrder.status === 'accepted' ? 'accepted' : 'kitchen';
+                        const targetKitchenStatus = ['accepted', 'preparing', 'kitchen'].includes(selectedOrder.status) ? selectedOrder.status : 'kitchen';
                         if (onUpdateStatus) onUpdateStatus(selectedOrder.id, targetKitchenStatus, { kitchen_prepared: 1 });
                         setSelectedOrder(prev => prev ? { ...prev, kitchen_prepared: 1 } : null);
                       }}
@@ -3855,7 +4045,7 @@ export default function OrdersView({
               <button
                 type="button"
                 onClick={handleConfirmReject}
-                disabled={processingReqState[rejectingModalReq.id] === 'rejecting'}
+                disabled={Boolean(processingReqState[rejectingModalReq.id])}
                 style={{
                   padding: '10px 18px',
                   borderRadius: '10px',

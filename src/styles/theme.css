@@ -991,14 +991,58 @@ img {
   }
 }
 
-@keyframes tqCheckRipple {
+@keyframes tqBackdropSmooth {
   0% {
-    transform: scale(0.9);
-    opacity: 0.65;
+    opacity: 0;
   }
 
   100% {
-    transform: scale(1.7);
+    opacity: 1;
+  }
+}
+
+@keyframes tqOrderModalEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(28px) scale(0.9);
+  }
+
+  65% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.015);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tqCheckCircleBounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.35) rotate(-14deg);
+  }
+
+  62% {
+    opacity: 1;
+    transform: scale(1.1) rotate(2deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes tqCheckRipple {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.85;
+  }
+
+  100% {
+    transform: scale(1.95);
     opacity: 0;
   }
 }
@@ -1037,14 +1081,14 @@ img {
 .tq-check-ripple::after {
   content: '';
   position: absolute;
-  top: -4px;
-  right: -4px;
-  bottom: -4px;
-  left: -4px;
+  top: -5px;
+  right: -5px;
+  bottom: -5px;
+  left: -5px;
   opacity: 0;
   border-radius: 50%;
-  border: 2px solid rgba(16, 185, 129, 0.75);
-  animation: tqCheckRipple 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+  border: 2.5px solid rgba(74, 222, 128, 0.85);
+  animation: tqCheckRipple 1.05s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both;
   pointer-events: none;
 }
 
@@ -1084,7 +1128,7 @@ img {
 
   28% {
     opacity: 1;
-    transform: translate(calc(var(--sx, 0px) * 0.6), calc(var(--sy, 0px) * 0.6)) scale(1.15);
+    transform: translate(calc(var(--sx, 0px) * 0.6), calc(var(--sy, 0px) * 0.6)) scale(1.2);
   }
 
   100% {
@@ -1096,7 +1140,7 @@ img {
 .tq-svg-check path {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: tqDrawCheck 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.14s both;
+  animation: tqDrawCheck 0.46s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
 }
 
 .tq-sparkle-dot {
@@ -1105,7 +1149,7 @@ img {
   left: 50%;
   border-radius: 50%;
   opacity: 0;
-  animation: tqSparkleBurst 0.72s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
+  animation: tqSparkleBurst 0.92s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
   pointer-events: none;
 }
 

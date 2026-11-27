@@ -57,6 +57,70 @@ setInterval(() => {
   }
 }, 30000);
 
+// 🔐 Opaque session-bound observer credential so multiple devices observing an active table session
+// can track post-settlement/cancelled confirmation, while a valid table QR alone cannot retrieve history.
+function buildSessionObserverHmacKey(resto) {
+  return `${JWT_SECRET}::${String(resto?.qr_secret || resto?.id || '')}::session_observer_v1`;
+}
+
+function normalizeObserverTableKey(tableNumber) {
+  const raw = String(tableNumber || '').trim();
+  return normalizeSpaceNumber(raw) || raw.toLowerCase();
+}
+
+function signSessionObserverToken(resto, sessionKey, tableNumber) {
+  const cleanSession = String(sessionKey || '').trim();
+  const cleanTable = normalizeObserverTableKey(tableNumber);
+  if (!resto?.id || !cleanSession || !cleanTable) return '';
+  const mac = crypto
+    .createHmac('sha256', buildSessionObserverHmacKey(resto))
+    .update(`${resto.id}|${cleanSession}|${cleanTable}`)
+    .digest('hex');
+  return `tq_obs_${mac}`;
+}
+
+function safeTokenEquals(a, b) {
+  const sa = String(a || '');
+  const sb = String(b || '');
+  if (!sa || !sb || sa.length !== sb.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(sa, 'utf8'), Buffer.from(sb, 'utf8'));
+  } catch {
+    return false;
+  }
+}
+
+function verifyHistoricalSessionCredential(req, resto, prevOrder) {
+  if (!resto || !prevOrder) return false;
+  const candidateObserver = String(
+    req.headers['x-session-observer-token'] ||
+    req.query?.observer_token ||
+    ''
+  ).trim();
+  const candidateTracking = String(
+    req.headers['x-order-tracking-token'] ||
+    req.query?.tracking_token ||
+    ''
+  ).trim();
+
+  if (candidateTracking && prevOrder.tracking_token_hash) {
+    const hashed = crypto.createHash('sha256').update(candidateTracking).digest('hex');
+    if (safeTokenEquals(hashed, prevOrder.tracking_token_hash)) {
+      return true;
+    }
+  }
+
+  if (candidateObserver) {
+    const sessionKey = prevOrder.session_id || `sess_${resto.id}_${prevOrder.table_number}_${prevOrder.parent_order_id || prevOrder.id}`;
+    const expectedObserver = signSessionObserverToken(resto, sessionKey, prevOrder.table_number);
+    if (expectedObserver && safeTokenEquals(candidateObserver, expectedObserver)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // Haversine formula: Calculates distance in meters between two GPS points
 function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371000;
@@ -2861,12 +2925,16 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         }
 
         const orderId = result[0]?.id || result.lastInsertRowid;
+        const sessionObserverToken = isPureCounterOrder
+          ? ''
+          : signSessionObserverToken(resto, sessionId, cleanTable);
 
         return {
           success: true,
           order_id: orderId,
           primary_order_id: parentOrderId || orderId,
           session_id: sessionId,
+          ...(sessionObserverToken ? { session_observer_token: sessionObserverToken } : {}),
           round_number: roundNumber,
           is_addon: isAddonOrder,
           status: 'pending',
@@ -2956,6 +3024,8 @@ function buildConsolidatedOrderSummary(resto, anchorOrder, billRows) {
       id: row.id,
       round_number: Number(row.round_number) || (idx + 1),
       status: row.status,
+      kitchen_prepared: Number(row.kitchen_prepared) || 0,
+      sent_to_kds: Number(row.sent_to_kds) || 0,
       items: rowItems,
       notes: row.notes || null,
       subtotal_amount: Math.round(rSub * 100) / 100,
@@ -3107,7 +3177,7 @@ router.get('/orders/track/:id', async (req, res) => {
       if (!isCounterOrder && order.session_id) {
         try {
           const siblingRows = await query(
-            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
              FROM orders
              WHERE restaurant_id = $1 AND session_id = $2 AND status NOT IN ('rejected', 'cancelled')
              ORDER BY id ASC`,
@@ -3121,7 +3191,7 @@ router.get('/orders/track/:id', async (req, res) => {
         const rootId = order.parent_order_id || order.id;
         try {
           const siblingRows = await query(
-            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
              FROM orders
              WHERE restaurant_id = $1 AND (id = $2 OR parent_order_id = $2) AND status NOT IN ('rejected', 'cancelled')
              ORDER BY id ASC`,
@@ -3179,6 +3249,7 @@ router.get('/orders/active-table', async (req, res) => {
 
     // 1. Authorize Request: Admin/Staff JWT OR Customer Valid Modern HMAC QR Token
     let isAuthorized = false;
+    let isStaffAuthorized = false;
 
     if (req.headers && req.headers.authorization) {
       try {
@@ -3188,6 +3259,7 @@ router.get('/orders/active-table', async (req, res) => {
           const decoded = jwt.verify(authToken, JWT_SECRET);
           if (decoded && (decoded.role === 'superadmin' || decoded.restaurant_id === targetId)) {
             isAuthorized = true;
+            isStaffAuthorized = true;
           }
         }
       } catch (e) {}
@@ -3276,18 +3348,22 @@ router.get('/orders/active-table', async (req, res) => {
     }
 
     if (orders.length === 0) {
-      // Allow a device already tracking prev_order_id (with valid QR token) to detect terminal settlement/cancellation cleanly
+      // Allow a device holding an opaque session-bound credential (observer_token or order tracking_token) to detect terminal settlement/cancellation cleanly
       const prevOrderIdNum = prev_order_id ? parseInt(prev_order_id, 10) : NaN;
       if (!isNaN(prevOrderIdNum) && prevOrderIdNum > 0) {
         try {
           const prevRows = await query(
-            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method, rejection_reason
+            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method, rejection_reason, tracking_token_hash
              FROM orders
              WHERE id = $1 AND restaurant_id = $2 AND (table_number = $3 OR table_number = $4 OR table_number = $5)`,
             [prevOrderIdNum, targetId, rawTable, queryTable, queryAlt]
           );
           const prevOrder = prevRows && prevRows[0];
-          if (prevOrder) {
+          const hasHistoricalCredential = Boolean(
+            prevOrder &&
+            (isStaffAuthorized || verifyHistoricalSessionCredential(req, resto, prevOrder))
+          );
+          if (prevOrder && hasHistoricalCredential) {
             const prevStatus = String(prevOrder.status || '').toLowerCase();
             const isPrevSettled = Boolean(prevOrder.is_settled === 1 || prevOrder.is_settled === '1' || prevOrder.is_settled === true);
             const isPrevCancelled = prevStatus === 'cancelled' || prevStatus === 'rejected';
@@ -3407,13 +3483,28 @@ router.get('/orders/active-table', async (req, res) => {
       };
     });
 
+    const activeSessionId = primaryOrder.session_id || `sess_${targetId}_${primaryOrder.table_number}_${primaryOrder.id}`;
+    const sessionObserverToken = signSessionObserverToken(resto, activeSessionId, primaryOrder.table_number);
+    const hasPreparedUnserved = orders.some(o =>
+      (o.kitchen_prepared === 1 || o.kitchen_prepared === '1' || o.kitchen_prepared === true) &&
+      !['served', 'completed', 'cancelled', 'rejected'].includes(String(o.status || '').toLowerCase())
+    );
+    const isLatestPrepared =
+      latestOrder.kitchen_prepared === 1 ||
+      latestOrder.kitchen_prepared === '1' ||
+      latestOrder.kitchen_prepared === true ||
+      hasPreparedUnserved;
+
     res.json({
       id: primaryOrder.id,
       latest_order_id: latestOrder.id,
-      session_id: primaryOrder.session_id || `sess_${targetId}_${primaryOrder.table_number}_${primaryOrder.id}`,
+      session_id: activeSessionId,
+      ...(sessionObserverToken ? { session_observer_token: sessionObserverToken } : {}),
       table_number: primaryOrder.table_number,
       customer_name: primaryOrder.customer_name,
       status: latestOrder.status,
+      kitchen_prepared: isLatestPrepared ? 1 : 0,
+      sent_to_kds: Number(latestOrder.sent_to_kds) || 0,
       current_round: Number(latestOrder.round_number) || 1,
       order_type: latestOrder.order_type || 'dine_in',
       token_number: latestOrder.token_number || null,
