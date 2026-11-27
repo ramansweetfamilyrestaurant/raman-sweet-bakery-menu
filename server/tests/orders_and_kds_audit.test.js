@@ -1437,11 +1437,12 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
     assert.equal(settledDbRows.length, 2);
     assert.ok(settledDbRows[0].terminal_at && settledDbRows[1].terminal_at, 'Settlement stamps terminal_at on BOTH primary and sibling TK-01 rounds');
 
-    // Tracking Round 2 (even though >2h after created_at and order_type='takeaway') returns 200 with consolidated 2-round bill_summary!
+    // Tracking Round 2 (even though >2h after created_at and order_type='takeaway') returns 200 with consolidated 2-round bill_summary and no-store cache headers!
     const customerR2TrackRes = await fetch(`${baseUrl}/api/orders/track/${billR2Id}?slug=${encodeURIComponent(prevSlug)}`, {
       headers: { 'X-Order-Tracking-Token': tk2Raw }
     });
     assert.equal(customerR2TrackRes.status, 200, 'Recently settled sibling round must NOT fail with 410 tracking_expired');
+    assert.ok(String(customerR2TrackRes.headers.get('cache-control') || '').includes('no-store'), 'Track endpoint must send Cache-Control: no-store');
     const customerR2TrackBody = await customerR2TrackRes.json();
     assert.equal(customerR2TrackBody.is_settled, 1);
     assert.equal(customerR2TrackBody.payment_method, 'upi');

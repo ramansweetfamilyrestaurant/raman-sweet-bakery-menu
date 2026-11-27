@@ -684,8 +684,7 @@ export async function trackOrderStatus(id, slug = '', trackingToken = '') {
   if (cleanTrackingToken) {
     headers['X-Order-Tracking-Token'] = cleanTrackingToken;
   }
-  const res = await fetch(url, { headers });
-  return handleResponse(res, 'Failed to track order');
+  return fetchWithTimeout(url, { headers, cache: 'no-store' }, 8000, 'Failed to track order');
 }
 
 export async function fetchActiveTableOrder(slug, tableNumber, token = '', spaceType = 'table', prevOrderId = '', authCredentials = {}) {
@@ -702,8 +701,9 @@ export async function fetchActiveTableOrder(slug, tableNumber, token = '', space
     : '';
   if (observerToken) headers['X-Session-Observer-Token'] = observerToken;
   if (trackingToken) headers['X-Order-Tracking-Token'] = trackingToken;
-  const res = await fetch(url, Object.keys(headers).length > 0 ? { headers } : undefined);
-  return handleResponse(res, 'Failed to fetch active space order');
+  const opts = { cache: 'no-store' };
+  if (Object.keys(headers).length > 0) opts.headers = headers;
+  return fetchWithTimeout(url, opts, 8000, 'Failed to fetch active space order');
 }
 
 export const fetchActiveSpaceOrder = fetchActiveTableOrder;

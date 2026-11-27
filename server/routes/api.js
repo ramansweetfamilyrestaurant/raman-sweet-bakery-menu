@@ -3075,6 +3075,9 @@ function buildConsolidatedOrderSummary(resto, anchorOrder, billRows) {
 
 // GET Track Order Status (Public Customer Route - Strict Tenant Scoped & Token Protected)
 router.get('/orders/track/:id', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { id } = req.params;
     const { slug } = req.query;
@@ -3245,6 +3248,9 @@ router.get('/orders/track/:id', async (req, res) => {
 
 // GET Active Table Order Sync (Consolidates active session items & round history)
 router.get('/orders/active-table', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { slug, table_number, space_type, tkn, token, table_token, prev_order_id } = req.query;
     if (!table_number) return res.json(null);

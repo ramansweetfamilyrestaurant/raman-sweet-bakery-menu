@@ -183,7 +183,7 @@ export default function BillCompletedModal({
         const unitPrice = Number(item.price) || 0;
         const portion = item.portion ? ` (${escapeHtml(item.portion)})` : '';
         const mods = Array.isArray(item.modifiers) && item.modifiers.length > 0
-          ? `<div class="mods">+ ${item.modifiers.map(m => escapeHtml(m.name)).join(', ')}</div>`
+          ? `<div class="mods">+ ${item.modifiers.map(m => escapeHtml(m && typeof m === 'object' ? m.name : m)).filter(Boolean).join(', ')}</div>`
           : '';
         return `
           <div class="row">
@@ -426,7 +426,7 @@ export default function BillCompletedModal({
                           </div>
                           {mods.length > 0 && (
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748B)', marginTop: '1px' }}>
-                              + {mods.map(m => m.name).join(', ')}
+                              + {mods.map(m => (m && typeof m === 'object' ? m.name : m) || '').filter(Boolean).join(', ')}
                             </div>
                           )}
                         </div>
