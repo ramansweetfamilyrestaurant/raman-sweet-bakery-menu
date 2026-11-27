@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 const EMPTY_CART_SLICE = [];
+const useIsomorphicLayoutEffect = (typeof window !== 'undefined' && typeof document !== 'undefined' && typeof window.requestAnimationFrame === 'function') ? useLayoutEffect : useEffect;
 import CustomerHeader from './components/CustomerHeader';
 import MenuCardItem from './components/MenuCardItem';
 import SearchBar from './components/SearchBar';
@@ -868,7 +869,7 @@ export default function App() {
       });
       localStorage.setItem(key, record);
       if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(key, record);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   // Restore saved order & recent completed receipt once tenant slug resolves (path-slug & custom-domain URLs)
@@ -912,7 +913,7 @@ export default function App() {
               if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(compKey);
             }
           }
-        } catch (e) {}
+        } catch (e) { }
       }
     }
     if (restoredOrderSlug !== tenantSlug) {
@@ -973,10 +974,10 @@ export default function App() {
       const numForReuse = currentTableNum || activeOrderTrack.table_number || '';
       const reuseSnapshot = (canReuseForOrderAgain && numForReuse && tokenForReuse)
         ? {
-            num: numForReuse,
-            type: resolvedType,
-            token: tokenForReuse
-          }
+          num: numForReuse,
+          type: resolvedType,
+          token: tokenForReuse
+        }
         : null;
       setCompletedSpaceSnapshot(reuseSnapshot);
 
@@ -1014,7 +1015,7 @@ export default function App() {
         });
         if (lastObsKey) {
           localStorage.removeItem(lastObsKey);
-          try { sessionStorage.removeItem(lastObsKey); } catch (e) {}
+          try { sessionStorage.removeItem(lastObsKey); } catch (e) { }
         }
       }
       setActiveOrderId(null);
@@ -1144,10 +1145,10 @@ export default function App() {
         const storageSlug = currentSlug || getActiveStorageTenantSlug();
         const scopedObsKey = storageSlug
           ? buildScopedStorageKey('touchqr_observer_token', {
-              slug: storageSlug,
-              spaceType: spaceType || 'table',
-              tableNumber: effectiveTableNum
-            })
+            slug: storageSlug,
+            spaceType: spaceType || 'table',
+            tableNumber: effectiveTableNum
+          })
           : null;
         return (
           (orderKeyId && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(`tq_obs_${orderKeyId}`)) ||
@@ -1193,7 +1194,7 @@ export default function App() {
         const cleanVal = String(orderIdVal);
         if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(obsOrderKey, cleanVal);
         if (typeof localStorage !== 'undefined') localStorage.setItem(obsOrderKey, cleanVal);
-      } catch (e) {}
+      } catch (e) { }
     };
 
     const persistStoredObserverToken = (tok, orderIds = [], spaceType) => {
@@ -1207,15 +1208,15 @@ export default function App() {
         const storageSlug = currentSlug || getActiveStorageTenantSlug();
         const scopedObsKey = storageSlug
           ? buildScopedStorageKey('touchqr_observer_token', {
-              slug: storageSlug,
-              spaceType: spaceType || 'table',
-              tableNumber: effectiveTableNum
-            })
+            slug: storageSlug,
+            spaceType: spaceType || 'table',
+            tableNumber: effectiveTableNum
+          })
           : null;
         if (scopedObsKey && typeof localStorage !== 'undefined') {
           localStorage.setItem(scopedObsKey, tok);
         }
-      } catch (e) {}
+      } catch (e) { }
     };
 
     const checkTableStatus = async () => {
@@ -1301,7 +1302,7 @@ export default function App() {
                 (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tq_active_tracking_token') : '') ||
                 '';
             }
-          } catch (e) {}
+          } catch (e) { }
           if (effectiveQrToken) {
             const tableData = await fetchActiveTableOrder(
               currentSlug,
@@ -1348,32 +1349,32 @@ export default function App() {
                       setActiveOrderTrack(recoveredOrder);
                       return;
                     }
-                  } catch (e) {}
+                  } catch (e) { }
                 }
                 lastActiveTableOrderIdRef.current = null;
                 const staleKey = getOrderStorageKey(effectiveTableNum, targetSpaceType);
                 if (staleKey) localStorage.removeItem(staleKey);
                 const obsOrderKey = getObservedOrderStorageKey(targetSpaceType);
                 if (obsOrderKey) {
-                  try { localStorage.removeItem(obsOrderKey); sessionStorage.removeItem(obsOrderKey); } catch (e) {}
+                  try { localStorage.removeItem(obsOrderKey); sessionStorage.removeItem(obsOrderKey); } catch (e) { }
                 }
                 const storageSlug = currentSlug || getActiveStorageTenantSlug();
                 const scopedObsKey = storageSlug
                   ? buildScopedStorageKey('touchqr_observer_token', {
-                      slug: storageSlug,
-                      spaceType: targetSpaceType || 'table',
-                      tableNumber: effectiveTableNum
-                    })
+                    slug: storageSlug,
+                    spaceType: targetSpaceType || 'table',
+                    tableNumber: effectiveTableNum
+                  })
                   : null;
                 if (scopedObsKey) {
-                  try { localStorage.removeItem(scopedObsKey); } catch (e) {}
+                  try { localStorage.removeItem(scopedObsKey); } catch (e) { }
                 }
                 try {
                   localStorage.removeItem(`tq_track_${prevTrackedId}`);
                   sessionStorage.removeItem(`tq_track_${prevTrackedId}`);
                   localStorage.removeItem(`tq_obs_${prevTrackedId}`);
                   sessionStorage.removeItem(`tq_obs_${prevTrackedId}`);
-                } catch (e) {}
+                } catch (e) { }
                 setActiveOrderId(null);
                 setActiveOrderTrack(null);
                 setCurrentTableNum('');
@@ -1392,7 +1393,7 @@ export default function App() {
               }
               const staleObsOrderKey = getObservedOrderStorageKey(targetSpaceType);
               if (staleObsOrderKey) {
-                try { localStorage.removeItem(staleObsOrderKey); sessionStorage.removeItem(staleObsOrderKey); } catch (e) {}
+                try { localStorage.removeItem(staleObsOrderKey); sessionStorage.removeItem(staleObsOrderKey); } catch (e) { }
               }
               lastActiveTableOrderIdRef.current = null;
               setActiveOrderTrack(null);
@@ -1442,7 +1443,7 @@ export default function App() {
           if (isCurrentEffect) runStatusSync();
         };
       }
-    } catch {}
+    } catch { }
 
     const handleWakeup = () => {
       if (!isCurrentEffect) return;
@@ -1476,7 +1477,7 @@ export default function App() {
             (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tq_active_tracking_token') : '') ||
             '';
         }
-      } catch {}
+      } catch { }
       const streamObserverTok = readStoredObserverToken(trackedKey, streamSpaceType);
       const canAuthOrder = Boolean(activeOrderId && (streamTrackingTok || streamObserverTok));
       const canAuthTable = Boolean(effectiveTableNum && streamQrToken && streamSpaceType !== 'counter');
@@ -1511,10 +1512,10 @@ export default function App() {
       clearInterval(interval);
       if (streamReconnectTimer) clearTimeout(streamReconnectTimer);
       if (streamAbort) {
-        try { streamAbort.abort(); } catch {}
+        try { streamAbort.abort(); } catch { }
       }
       if (bcChannel) {
-        try { bcChannel.close(); } catch {}
+        try { bcChannel.close(); } catch { }
       }
       if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
         window.removeEventListener('focus', handleWakeup);
@@ -1533,15 +1534,15 @@ export default function App() {
       const prevRounds = Array.isArray(prev.session_summary?.rounds)
         ? prev.session_summary.rounds
         : (Array.isArray(prev.rounds) ? prev.rounds : [{
-            id: prev.id,
-            round_number: Number(prev.round_number) || 1,
-            status: prev.status,
-            kitchen_prepared: Number(prev.kitchen_prepared) || 0,
-            items: prevItems,
-            subtotal_amount: prev.subtotal_amount || 0,
-            tax_amount: prev.tax_amount || 0,
-            grand_total_amount: prev.grand_total_amount || prev.total_amount || 0
-          }]);
+          id: prev.id,
+          round_number: Number(prev.round_number) || 1,
+          status: prev.status,
+          kitchen_prepared: Number(prev.kitchen_prepared) || 0,
+          items: prevItems,
+          subtotal_amount: prev.subtotal_amount || 0,
+          tax_amount: prev.tax_amount || 0,
+          grand_total_amount: prev.grand_total_amount || prev.total_amount || 0
+        }]);
       const newRoundEntry = {
         id: res.order_id,
         round_number: res.round_number || (prevRounds.length + 1),
@@ -1728,7 +1729,7 @@ export default function App() {
           bc.postMessage({ type: 'order_created', slug: slug || (info && info.slug) || '', order_id: res.order_id, ts: Date.now() });
           bc.close();
         }
-      } catch {}
+      } catch { }
       setOrderSuccessModal(res);
       setCartItems([]);
       setOrderNotesInput('');
@@ -1806,7 +1807,7 @@ export default function App() {
       try {
         localStorage.setItem(obsOrderKey, String(orderIdVal));
         sessionStorage.setItem(obsOrderKey, String(orderIdVal));
-      } catch (e) {}
+      } catch (e) { }
     }
     if (observerTok) {
       const scopedObsKey = buildScopedStorageKey('touchqr_observer_token', {
@@ -1815,7 +1816,7 @@ export default function App() {
         tableNumber: tableNumVal
       });
       if (scopedObsKey) {
-        try { localStorage.setItem(scopedObsKey, observerTok); } catch (e) {}
+        try { localStorage.setItem(scopedObsKey, observerTok); } catch (e) { }
       }
     }
   };
@@ -1894,7 +1895,7 @@ export default function App() {
           bc.postMessage({ type: 'order_created', slug: payload?.slug || (info && info.slug) || '', order_id: res.order_id, ts: Date.now() });
           bc.close();
         }
-      } catch {}
+      } catch { }
       setOrderSuccessModal(res);
       setCartItems([]);
       setOrderNotesInput('');
@@ -2056,6 +2057,19 @@ export default function App() {
       if (infoData.suspended) {
         console.warn('[MENU] Restaurant suspended:', infoData.name);
         setRestaurantStatus('suspended');
+        // Apply restaurant theme synchronously BEFORE React renders/paints infoData to prevent 1-frame theme flash (FOUC)
+        if (infoData?.theme_color && typeof document !== 'undefined') {
+          const preResolved = resolveTheme(infoData.theme_color);
+          document.documentElement.setAttribute('data-theme', preResolved.key);
+          try {
+            const slugKey = String(infoData.slug || slug || '').trim().toLowerCase();
+            if (slugKey) localStorage.setItem(`touchqr_theme_${slugKey}`, preResolved.key);
+            if (typeof window !== 'undefined' && isCustomDomainHost(window.location.hostname)) {
+              localStorage.setItem(`touchqr_theme_${window.location.hostname.toLowerCase()}`, preResolved.key);
+            }
+          } catch { }
+        }
+
         setInfo(infoData);
         setLoading(false);
         return;
@@ -2065,6 +2079,19 @@ export default function App() {
       console.log('[MENU] API dishes count:', dishData ? dishData.length : 0);
       console.log('[MENU] API categories count:', catData ? catData.length : 0);
       console.log('[MENU] final dishes count:', dishData ? dishData.length : 0);
+
+      // Apply restaurant theme synchronously BEFORE React renders/paints infoData to prevent 1-frame theme flash (FOUC)
+      if (infoData?.theme_color && typeof document !== 'undefined') {
+        const preResolved = resolveTheme(infoData.theme_color);
+        document.documentElement.setAttribute('data-theme', preResolved.key);
+        try {
+          const slugKey = String(infoData.slug || slug || '').trim().toLowerCase();
+          if (slugKey) localStorage.setItem(`touchqr_theme_${slugKey}`, preResolved.key);
+          if (typeof window !== 'undefined' && isCustomDomainHost(window.location.hostname)) {
+            localStorage.setItem(`touchqr_theme_${window.location.hostname.toLowerCase()}`, preResolved.key);
+          }
+        } catch { }
+      }
 
       setInfo(infoData);
       setCategories(catData);
@@ -2105,15 +2132,35 @@ export default function App() {
     }
   }, [adminToken, view]);
 
-  // Dynamic Theme Color Engine Applicator
-  useEffect(() => {
+  // Dynamic Theme Color Engine Applicator (runs synchronously before paint to prevent theme flash)
+  useIsomorphicLayoutEffect(() => {
     if (['menu', 'customer', 'admin', 'admin-dashboard', 'admin-setup', 'menu-preview'].includes(view)) {
-      const resolved = resolveTheme(info?.theme_color);
+      let rawTheme = info?.theme_color;
+      if (!rawTheme) {
+        try {
+          const slugHint = getSlugFromUrl()
+            || (view.startsWith('admin') ? localStorage.getItem('touchqr_admin_slug') : '')
+            || (typeof window !== 'undefined' ? window.location.hostname : '')
+            || '';
+          const cacheKey = String(slugHint || '').trim().toLowerCase();
+          if (cacheKey) rawTheme = localStorage.getItem(`touchqr_theme_${cacheKey}`) || '';
+        } catch { }
+      }
+      const resolved = resolveTheme(rawTheme);
       document.documentElement.setAttribute('data-theme', resolved.key);
+      if (info?.theme_color) {
+        try {
+          const slugKey = String(info?.slug || getSlugFromUrl() || '').trim().toLowerCase();
+          if (slugKey) localStorage.setItem(`touchqr_theme_${slugKey}`, resolved.key);
+          if (typeof window !== 'undefined' && isCustomDomainHost(window.location.hostname)) {
+            localStorage.setItem(`touchqr_theme_${window.location.hostname.toLowerCase()}`, resolved.key);
+          }
+        } catch { }
+      }
     } else if (!['super-admin-dashboard', 'super-admin-login'].includes(view)) {
       document.documentElement.setAttribute('data-theme', DEFAULT_THEME);
     }
-  }, [info?.theme_color, view]);
+  }, [info?.theme_color, info?.slug, view]);
 
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
@@ -3554,18 +3601,18 @@ export default function App() {
         const isServed = effectiveStatusRaw === 'served';
         const isPrepared = trackRoundsArr.length > 0
           ? Boolean(
-              effectiveStatusRaw === 'ready' ||
-              latestRoundObj?.kitchen_prepared === 1 ||
-              latestRoundObj?.kitchen_prepared === '1' ||
-              latestRoundObj?.kitchen_prepared === true ||
-              hasRoundPrepared
-            )
+            effectiveStatusRaw === 'ready' ||
+            latestRoundObj?.kitchen_prepared === 1 ||
+            latestRoundObj?.kitchen_prepared === '1' ||
+            latestRoundObj?.kitchen_prepared === true ||
+            hasRoundPrepared
+          )
           : Boolean(
-              activeOrderTrack.kitchen_prepared === 1 ||
-              activeOrderTrack.kitchen_prepared === '1' ||
-              activeOrderTrack.kitchen_prepared === true ||
-              statusRaw === 'ready'
-            );
+            activeOrderTrack.kitchen_prepared === 1 ||
+            activeOrderTrack.kitchen_prepared === '1' ||
+            activeOrderTrack.kitchen_prepared === true ||
+            statusRaw === 'ready'
+          );
         const isPreparing = effectiveStatusRaw === 'accepted' || effectiveStatusRaw === 'kitchen' || effectiveStatusRaw === 'preparing';
         const isActiveCooking = !isCompleted && !isCancelled && !isServed;
 
@@ -3682,123 +3729,123 @@ export default function App() {
 
         return (
           <>
-          <div style={{
-            background: 'var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
-            color: '#FFFFFF',
-            padding: '9px 14px 10px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.16)',
-            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.18)',
-            animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1)'
-          }}>
             <div style={{
-              maxWidth: '800px',
-              margin: '0 auto',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '8px'
+              background: 'var(--header-gradient, linear-gradient(135deg, #0A2315 0%, #143A24 100%))',
+              color: '#FFFFFF',
+              padding: '9px 14px 10px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.16)',
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.18)',
+              animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0, flex: '1 1 200px' }}>
-                <span
-                  className={(!isCompleted && !isCancelled) ? 'tq-live-beacon' : undefined}
-                  style={{
-                    '--beacon-color': dotColor,
-                    position: 'relative',
-                    width: '10px',
-                    height: '10px',
-                    borderRadius: '50%',
-                    background: dotColor,
-                    boxShadow: `0 0 0 3px rgba(255,255,255,0.14)`,
-                    flexShrink: 0
-                  }}
-                />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <strong style={{ fontSize: '0.84rem', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span>
-                      {(activeOrderTrack.token_display || activeOrderTrack.token_number)
-                        ? `${lang === 'hi' ? 'टोकन' : 'Token'} ${activeOrderTrack.token_display || `TK-${String(activeOrderTrack.token_number).padStart(2, '0')}`}`
-                        : formatCustomerLocation(activeOrderTrack.table_number)}
-                    </span>
-                    {activeOrderTrack.round_number && Number(activeOrderTrack.round_number) > 1 && (
-                      <span style={{ fontSize: '0.68rem', background: 'rgba(255,255,255,0.16)', padding: '1px 7px', borderRadius: '9999px', fontWeight: 800 }}>
-                        {lang === 'hi' ? `राउंड ${activeOrderTrack.round_number}` : `Round ${activeOrderTrack.round_number}`}
+              <div style={{
+                maxWidth: '800px',
+                margin: '0 auto',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0, flex: '1 1 200px' }}>
+                  <span
+                    className={(!isCompleted && !isCancelled) ? 'tq-live-beacon' : undefined}
+                    style={{
+                      '--beacon-color': dotColor,
+                      position: 'relative',
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      background: dotColor,
+                      boxShadow: `0 0 0 3px rgba(255,255,255,0.14)`,
+                      flexShrink: 0
+                    }}
+                  />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <strong style={{ fontSize: '0.84rem', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span>
+                        {(activeOrderTrack.token_display || activeOrderTrack.token_number)
+                          ? `${lang === 'hi' ? 'टोकन' : 'Token'} ${activeOrderTrack.token_display || `TK-${String(activeOrderTrack.token_number).padStart(2, '0')}`}`
+                          : formatCustomerLocation(activeOrderTrack.table_number)}
                       </span>
-                    )}
-                  </strong>
-                  <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.88)', fontWeight: 700, display: 'block', overflowWrap: 'break-word', marginTop: '1px' }}>
-                    {statusLabel}
-                  </span>
+                      {activeOrderTrack.round_number && Number(activeOrderTrack.round_number) > 1 && (
+                        <span style={{ fontSize: '0.68rem', background: 'rgba(255,255,255,0.16)', padding: '1px 7px', borderRadius: '9999px', fontWeight: 800 }}>
+                          {lang === 'hi' ? `राउंड ${activeOrderTrack.round_number}` : `Round ${activeOrderTrack.round_number}`}
+                        </span>
+                      )}
+                    </strong>
+                    <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.88)', fontWeight: 700, display: 'block', overflowWrap: 'break-word', marginTop: '1px' }}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    className="tq-tap"
+                    onClick={() => { triggerHaptic('light'); setShowRunningOrderModal(true); }}
+                    style={{
+                      background: '#FFFFFF',
+                      color: '#0F172A',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.74rem',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.16)'
+                    }}
+                  >
+                    🧾 {lang === 'hi' ? 'मेरा ऑर्डर' : 'View Order'}
+                  </button>
+                  <button
+                    type="button"
+                    className="tq-tap"
+                    onClick={handleEndTrackingSession}
+                    aria-label={isActiveCooking ? (lang === 'hi' ? 'सेशन बंद करें' : 'End Session') : (lang === 'hi' ? 'हटाएं' : 'Dismiss')}
+                    title={isActiveCooking ? (lang === 'hi' ? 'लाइव ट्रैकिंग बंद करें' : 'End Live Tracking') : (lang === 'hi' ? 'हटाएं' : 'Dismiss')}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.14)',
+                      color: '#FFFFFF',
+                      border: '1px solid rgba(255, 255, 255, 0.28)',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '9999px',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                <button
-                  type="button"
-                  className="tq-tap"
-                  onClick={() => { triggerHaptic('light'); setShowRunningOrderModal(true); }}
-                  style={{
-                    background: '#FFFFFF',
-                    color: '#0F172A',
-                    border: 'none',
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.74rem',
-                    fontWeight: 900,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.16)'
-                  }}
-                >
-                  🧾 {lang === 'hi' ? 'मेरा ऑर्डर' : 'View Order'}
-                </button>
-                <button
-                  type="button"
-                  className="tq-tap"
-                  onClick={handleEndTrackingSession}
-                  aria-label={isActiveCooking ? (lang === 'hi' ? 'सेशन बंद करें' : 'End Session') : (lang === 'hi' ? 'हटाएं' : 'Dismiss')}
-                  title={isActiveCooking ? (lang === 'hi' ? 'लाइव ट्रैकिंग बंद करें' : 'End Live Tracking') : (lang === 'hi' ? 'हटाएं' : 'Dismiss')}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.14)',
-                    color: '#FFFFFF',
-                    border: '1px solid rgba(255, 255, 255, 0.28)',
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '9999px',
-                    fontSize: '0.78rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
+              {stepIdx >= 0 && (
+                <div style={{ maxWidth: '800px', margin: '8px auto 0', display: 'flex', gap: '5px' }} aria-label="Order progress">
+                  {[0, 1, 2, 3].map((step) => (
+                    <div
+                      key={step}
+                      style={{
+                        flex: 1,
+                        height: '4px',
+                        borderRadius: '9999px',
+                        background: step <= stepIdx ? dotColor : 'rgba(255, 255, 255, 0.2)',
+                        animation: (step === stepIdx && !isCompleted && !isCancelled) ? 'tqProgressPulse 1.6s ease-in-out infinite' : undefined,
+                        transition: 'background 0.25s ease'
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
-            {stepIdx >= 0 && (
-              <div style={{ maxWidth: '800px', margin: '8px auto 0', display: 'flex', gap: '5px' }} aria-label="Order progress">
-                {[0, 1, 2, 3].map((step) => (
-                  <div
-                    key={step}
-                    style={{
-                      flex: 1,
-                      height: '4px',
-                      borderRadius: '9999px',
-                      background: step <= stepIdx ? dotColor : 'rgba(255, 255, 255, 0.2)',
-                      animation: (step === stepIdx && !isCompleted && !isCancelled) ? 'tqProgressPulse 1.6s ease-in-out infinite' : undefined,
-                      transition: 'background 0.25s ease'
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {showRunningOrderModal && (
+            {showRunningOrderModal && (
               <div
                 role="dialog"
                 aria-modal="true"
@@ -4003,7 +4050,7 @@ export default function App() {
                   </div>
                 </div>
               </div>
-          )}
+            )}
           </>
         );
       })()}
@@ -6223,18 +6270,18 @@ export default function App() {
         );
         const isLiveModalPrepared = liveRoundsArr.length > 0
           ? Boolean(
-              liveModalStatus === 'ready' ||
-              liveLatestRound?.kitchen_prepared === 1 ||
-              liveLatestRound?.kitchen_prepared === '1' ||
-              liveLatestRound?.kitchen_prepared === true ||
-              hasLiveRoundPrepared
-            )
+            liveModalStatus === 'ready' ||
+            liveLatestRound?.kitchen_prepared === 1 ||
+            liveLatestRound?.kitchen_prepared === '1' ||
+            liveLatestRound?.kitchen_prepared === true ||
+            hasLiveRoundPrepared
+          )
           : Boolean(
-              liveMatchTrack?.kitchen_prepared === 1 ||
-              liveMatchTrack?.kitchen_prepared === '1' ||
-              liveMatchTrack?.kitchen_prepared === true ||
-              liveModalStatus === 'ready'
-            );
+            liveMatchTrack?.kitchen_prepared === 1 ||
+            liveMatchTrack?.kitchen_prepared === '1' ||
+            liveMatchTrack?.kitchen_prepared === true ||
+            liveModalStatus === 'ready'
+          );
         const modalStatusLabel = liveModalStatus === 'served'
           ? (lang === 'hi' ? 'सर्व हो चुका है 🍽️' : 'Served to Table 🍽️')
           : isLiveModalPrepared
@@ -6242,8 +6289,8 @@ export default function App() {
             : ['accepted', 'kitchen', 'preparing'].includes(liveModalStatus)
               ? (lang === 'hi' ? 'स्वीकृत — किचन में बन रहा है 👨‍🍳' : 'Accepted — Preparing Now 👨‍🍳')
               : (isAddonRound
-                  ? (lang === 'hi' ? 'रनिंग बिल में जुड़ा 🟢' : 'Added to Active Order 🟢')
-                  : (lang === 'hi' ? 'स्वीकृति की प्रतीक्षा में 🟡' : 'Pending Acceptance 🟡'));
+                ? (lang === 'hi' ? 'रनिंग बिल में जुड़ा 🟢' : 'Added to Active Order 🟢')
+                : (lang === 'hi' ? 'स्वीकृति की प्रतीक्षा में 🟡' : 'Pending Acceptance 🟡'));
         const modalStatusColor = (liveModalStatus === 'served' || isLiveModalPrepared)
           ? '#4ADE80'
           : ['accepted', 'kitchen', 'preparing'].includes(liveModalStatus)

@@ -20,6 +20,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      (function () {
+        try {
+          var p = window.location.pathname || '/';
+          var m = p.match(/^\/([^\/?#]+)/);
+          var seg = m ? m[1].toLowerCase() : '';
+          var sys = { '': 1, admin: 1, superadmin: 1, 'super-admin': 1, register: 1, billing: 1, kitchen: 1, 'privacy-policy': 1, privacy: 1, terms: 1, 'terms-of-service': 1, 'refund-policy': 1, refunds: 1, security: 1, contact: 1, support: 1 };
+          var key = (seg && !sys[seg]) ? seg : (window.location.hostname || '').toLowerCase();
+          if (key) {
+            var cachedTheme = window.localStorage.getItem('touchqr_theme_' + key);
+            if (cachedTheme) {
+              document.documentElement.setAttribute('data-theme', cachedTheme);
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
