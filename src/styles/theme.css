@@ -505,12 +505,22 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+html,
+body,
+button,
+a,
+[role="button"],
+article,
+[tabindex] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 button {
   font-family: var(--font-body);
   cursor: pointer;
   border: none;
   background: none;
-  touch-action: manipulation;
 }
 
 /* Prevent iOS Safari unwanted auto-zoom on inputs while keeping text legible */
@@ -630,12 +640,28 @@ img {
 }
 
 .hover-lift {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.hover-lift:hover {
-  transform: translateY(-3px) !important;
-  box-shadow: 0 12px 28px rgba(10, 35, 21, 0.12) !important;
+@media (hover: hover) {
+  .hover-lift:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 12px 28px rgba(10, 35, 21, 0.12) !important;
+  }
+}
+
+.dish-category-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 420px;
+}
+
+@media (max-width: 768px) {
+  .glass-header,
+  .glass-card,
+  .glass-card-dark {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
 }
 
 .btn-pulse {
@@ -924,12 +950,13 @@ img {
 }
 
 .tq-tap {
-  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.14s ease !important;
+  transition: transform 0.08s ease, opacity 0.08s ease !important;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .tq-tap:active {
-  transform: scale(0.94) !important;
+  transform: scale(0.95) !important;
 }
 
 .tq-qty-pop {
@@ -967,16 +994,13 @@ img {
 }
 
 .tq-pill-smooth {
-  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-    background 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease !important;
+  transition: transform 0.09s ease, opacity 0.09s ease !important;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .tq-pill-smooth:active {
-  transform: scale(0.94) !important;
+  transform: scale(0.95) !important;
 }
 
 @keyframes tqLiveBeacon {

@@ -3,13 +3,13 @@ import { Layers } from 'lucide-react';
 import CategoryImage from './CategoryImage';
 import { triggerHaptic } from '../utils/haptics';
 
-export default function CategoryJumpRail({ categories, lang, selectedCategory, onSelectCategory, hasCombos = false }) {
+const CategoryJumpRail = React.memo(function CategoryJumpRail({ categories, lang, selectedCategory, onSelectCategory, hasCombos = false }) {
   const pillRefs = useRef({});
 
   useEffect(() => {
     const activeEl = pillRefs.current[String(selectedCategory || 'all')];
     if (activeEl && typeof activeEl.scrollIntoView === 'function') {
-      activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      activeEl.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
     }
   }, [selectedCategory]);
 
@@ -20,7 +20,7 @@ export default function CategoryJumpRail({ categories, lang, selectedCategory, o
     onSelectCategory(catId);
     window.scrollTo({
       top: 0,
-      behavior: 'smooth'
+      behavior: 'auto'
     });
   };
 
@@ -44,9 +44,10 @@ export default function CategoryJumpRail({ categories, lang, selectedCategory, o
       : '1px solid var(--theme-card-border, rgba(148, 163, 184, 0.28))',
     whiteSpace: 'nowrap',
     boxShadow: isSelected ? '0 2px 8px rgba(10, 35, 21, 0.14)' : 'none',
-    transition: 'var(--transition-fast)',
     cursor: 'pointer',
-    flexShrink: 0
+    flexShrink: 0,
+    touchAction: 'manipulation',
+    WebkitTapHighlightColor: 'transparent'
   });
 
   const pillItems = [
@@ -74,7 +75,6 @@ export default function CategoryJumpRail({ categories, lang, selectedCategory, o
       top: 0,
       zIndex: 90,
       background: 'var(--bg-app)',
-      backdropFilter: 'blur(10px)',
       borderBottom: '1px solid var(--border-light)',
       padding: '6px 0',
       boxShadow: '0 2px 10px rgba(10, 35, 21, 0.04)'
@@ -128,4 +128,6 @@ export default function CategoryJumpRail({ categories, lang, selectedCategory, o
       </div>
     </div>
   );
-}
+});
+
+export default CategoryJumpRail;

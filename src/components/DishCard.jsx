@@ -6,7 +6,7 @@ import { getValidDishModifiers } from '../utils/billingHelper';
 import { triggerHaptic } from '../utils/haptics';
 import { isFlagEnabled } from '../utils/customerHelpers';
 
-export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuantity, cartItems = [], currencySymbol = '₹', lang = 'en', filtersVisibility, modifiersEnabled = true }) {
+const DishCard = React.memo(function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuantity, cartItems = [], dishCartItems = null, currencySymbol = '₹', lang = 'en', filtersVisibility, modifiersEnabled = true }) {
   const symbol = getCurrencySymbol(currencySymbol);
   const isAvailable = isFlagEnabled(dish.available, true);
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
@@ -14,6 +14,7 @@ export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuant
   const displayName = (lang === 'hi' && dish.name_hi) ? dish.name_hi : dish.name;
   const displayDesc = (lang === 'hi' && dish.description_hi) ? dish.description_hi : dish.description;
   const hasModifiers = modifiersEnabled !== false && getValidDishModifiers(dish?.modifiers).length > 0;
+  const effectiveCartItems = dishCartItems ?? cartItems;
 
   const handleAddAction = (e, portion) => {
     e.stopPropagation();
@@ -26,8 +27,8 @@ export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuant
   };
 
   const renderCartAction = (portion, label, isSecondary = false) => {
-    const matchedItem = (!hasModifiers && Array.isArray(cartItems))
-      ? cartItems.find(i => !i.isCombo && String(i.dish?.id) === String(dish.id) && (!i.modifiers || i.modifiers.length === 0) && String(i.portion_type || 'full') === portion)
+    const matchedItem = (!hasModifiers && Array.isArray(effectiveCartItems))
+      ? effectiveCartItems.find(i => !i.isCombo && String(i.dish?.id) === String(dish.id) && (!i.modifiers || i.modifiers.length === 0) && String(i.portion_type || 'full') === portion)
       : null;
     const qty = matchedItem ? matchedItem.quantity : 0;
 
@@ -76,7 +77,6 @@ export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuant
             −
           </button>
           <span
-            key={qty}
             className="tq-qty-pop"
             style={{
               minWidth: '14px',
@@ -139,10 +139,10 @@ export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuant
           fontWeight: 900,
           cursor: 'pointer',
           boxShadow: isSecondary ? 'var(--theme-shadow, 0 2px 8px rgba(0, 0, 0, 0.15))' : 'var(--theme-shadow, 0 3px 10px rgba(0, 0, 0, 0.25))',
-          transition: 'transform 0.15s ease'
+          transition: 'transform 0.08s ease',
+          touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent'
         }}
-        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
       >
         {label}
       </button>
@@ -150,7 +150,7 @@ export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuant
   };
 
   return (
-    <article 
+    <article
       onClick={() => {
         triggerHaptic('light');
         onClick(dish);
@@ -164,20 +164,11 @@ export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuant
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        transition: 'all 0.2s ease',
+        transition: 'transform 0.1s ease',
         cursor: 'pointer',
         opacity: isAvailable ? 1 : 0.6,
-        animation: 'fadeIn 0.3s ease-out'
-      }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.transform = 'translateY(-3px)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-        e.currentTarget.style.borderColor = 'var(--theme-card-hover, var(--gold-bright))';
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'var(--theme-shadow, var(--shadow-sm))';
-        e.currentTarget.style.borderColor = 'var(--theme-card-border, var(--border-light))';
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent'
       }}
     >
       {/* Image Wrap */}
@@ -223,7 +214,6 @@ export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuant
           {/* Dynamic Dietary Badge */}
           <div style={{
             background: 'rgba(255, 255, 255, 0.96)',
-            backdropFilter: 'blur(6px)',
             border: dish.type === 'nonveg' ? '1px solid #DC2626' : dish.type === 'egg' ? '1px solid #D97706' : '1px solid var(--veg-green)',
             borderRadius: 'var(--radius-pill)',
             padding: '1.5px 5px',
@@ -289,8 +279,6 @@ export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuant
               background: 'var(--theme-badge-bg, rgba(255, 255, 255, 0.95))',
               color: 'var(--theme-badge-text, var(--primary-emerald, #0A2315))',
               border: '1px solid var(--theme-card-border, var(--border-light, rgba(0, 0, 0, 0.15)))',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
               borderRadius: 'var(--radius-pill)',
               padding: '2px 7px',
               fontSize: '0.62rem',
@@ -378,8 +366,7 @@ export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuant
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(33, 37, 41, 0.65)',
-            backdropFilter: 'blur(2px)',
+            background: 'rgba(33, 37, 41, 0.72)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -527,4 +514,6 @@ export default function DishCard({ dish, onClick, onAddToCart, onUpdateCartQuant
       </div>
     </article>
   );
-}
+});
+
+export default DishCard;

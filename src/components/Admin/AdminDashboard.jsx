@@ -416,6 +416,12 @@ export default function AdminDashboard({
       };
     }
 
+    if (!showModalUpiQr) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
     const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
     if (upiId) {
@@ -446,7 +452,35 @@ export default function AdminDashboard({
     return () => {
       cancelled = true;
     };
-  }, [billOrderModal, restaurantInfo, settingsForm]);
+  }, [billOrderModal, showModalUpiQr, restaurantInfo, settingsForm]);
+
+  const billModalComputed = useMemo(() => {
+    if (!billOrderModal) return null;
+    const billData = billOrderModal.__billSnapshot || calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
+    const liveBillData = calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
+    const capIds = Array.isArray(billData?.sessionOrders) ? billData.sessionOrders.map(o => String(o.id)) : [String(billOrderModal.id)];
+    const liveIds = Array.isArray(liveBillData?.sessionOrders) ? liveBillData.sessionOrders.map(o => String(o.id)) : [String(billOrderModal.id)];
+    const capIdSet = new Set(capIds);
+    const hasBillSnapshotChanged = capIds.length !== liveIds.length || liveIds.some(id => !capIdSet.has(id)) || Math.abs(Number(billData?.grandTotal || 0) - Number(liveBillData?.grandTotal || 0)) > 0.01;
+    const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'));
+    const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
+    const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
+    const currentQrSnapshotKey = getModalQrSnapshotKey(billOrderModal, billData, upiId, payeeName);
+    const settleLocationLabel = billData.spaceLabel || formatOrderLocation(billOrderModal, restaurantInfo || settingsForm) || `Order #${billOrderModal.id}`;
+    const modalTaxTotal = Number(billData.cgst || 0) + Number(billData.sgst || 0);
+    const modalServiceCharge = Number(billData.serviceChargeAmount || 0);
+    return {
+      billData,
+      liveBillData,
+      hasBillSnapshotChanged,
+      currency,
+      upiId,
+      currentQrSnapshotKey,
+      settleLocationLabel,
+      modalTaxTotal,
+      modalServiceCharge
+    };
+  }, [billOrderModal, orders, restaurantInfo, settingsForm]);
 
   useEffect(() => {
     if (!billOrderModal && !acceptRoutingModal) return undefined;
@@ -737,7 +771,15 @@ export default function AdminDashboard({
   const serviceReqSeqRef = useRef(0);
   const activeTokenRef = useRef(token);
   const lastAcceptedOrdersRef = useRef(orders);
+  const lastOrdersSignatureRef = useRef('');
+  const lastServiceReqSigRef = useRef('');
+  const ordersCacheTimerRef = useRef(null);
   const notifiedPreparedIdsRef = useRef(new Set());
+
+  const buildOrdersSignature = (list) => {
+    if (!Array.isArray(list) || list.length === 0) return '0';
+    return `${list.length}:${list.map(o => `${o.id}|${o.status}|${o.is_settled ?? 0}|${o.kitchen_prepared ?? 0}|${o.sent_to_kds ?? 0}|${o.round_number ?? 1}|${o.total_amount ?? 0}|${o.payment_method || ''}|${o.updated_at || o.terminal_at || ''}`).join(';')}`;
+  };
 
   useEffect(() => {
     return () => {
@@ -745,6 +787,10 @@ export default function AdminDashboard({
       if (lifetimeRetryTimerRef.current) {
         clearTimeout(lifetimeRetryTimerRef.current);
         lifetimeRetryTimerRef.current = null;
+      }
+      if (ordersCacheTimerRef.current) {
+        clearTimeout(ordersCacheTimerRef.current);
+        ordersCacheTimerRef.current = null;
       }
     };
   }, []);
@@ -823,14 +869,24 @@ export default function AdminDashboard({
       }
     }
     lastAcceptedOrdersRef.current = safeData;
+    const nextOrdersSig = buildOrdersSignature(mergedOrders);
+    if (nextOrdersSig === lastOrdersSignatureRef.current) {
+      return;
+    }
+    lastOrdersSignatureRef.current = nextOrdersSig;
     setOrders(mergedOrders);
-    try {
-      const currentSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
-      if (currentSlug) {
-        localStorage.setItem(`admin_cache_${currentSlug}_orders`, JSON.stringify(mergedOrders));
-      }
-      localStorage.setItem('admin_cache_orders', JSON.stringify(mergedOrders));
-    } catch (e) { }
+    if (ordersCacheTimerRef.current) clearTimeout(ordersCacheTimerRef.current);
+    const cacheSlug = propSlug || localStorage.getItem('touchqr_admin_slug') || (restaurantInfo && restaurantInfo.slug) || '';
+    ordersCacheTimerRef.current = setTimeout(() => {
+      ordersCacheTimerRef.current = null;
+      try {
+        const serialized = JSON.stringify(mergedOrders);
+        if (cacheSlug) {
+          localStorage.setItem(`admin_cache_${cacheSlug}_orders`, serialized);
+        }
+        localStorage.setItem('admin_cache_orders', serialized);
+      } catch (e) { }
+    }, 0);
   };
 
   const fetchServiceRequestsOnly = async () => {
@@ -894,6 +950,9 @@ export default function AdminDashboard({
     isInitialServiceReqFetchRef.current = false;
     prevServiceReqIdsRef.current = new Set(safeReqs.map(r => String(r.id)));
     serviceRequestsTenantKeyRef.current = reqTenantKey;
+    const nextReqSig = `${safeReqs.length}:${safeReqs.map(r => `${r.id}|${r.status || ''}|${r.request_type || ''}`).join(';')}`;
+    if (nextReqSig === lastServiceReqSigRef.current) return;
+    lastServiceReqSigRef.current = nextReqSig;
     setServiceRequests(safeReqs);
   };
 
@@ -1173,6 +1232,7 @@ export default function AdminDashboard({
     pendingUpdatesRef.current.set(key, { status: newStatus, ...apiExtraParams });
 
     // ⚡ Optimistic UI update (0ms lag, zero flickering)
+    lastOrdersSignatureRef.current = '';
     if (newStatus === 'rejected' || newStatus === 'cancelled') {
       setOrders(prev => prev.filter(o => String(o.id) !== key));
     } else {
@@ -2118,6 +2178,7 @@ export default function AdminDashboard({
         }, 3000);
       });
 
+      lastOrdersSignatureRef.current = '';
       setOrders(prev => prev.map(o => {
         const oKey = String(o.id);
         if (oKey === key) {
@@ -2805,6 +2866,8 @@ export default function AdminDashboard({
       }
       notifiedPreparedIdsRef.current = new Set();
       lastAcceptedOrdersRef.current = [];
+      lastOrdersSignatureRef.current = '';
+      lastServiceReqSigRef.current = '';
       setLifetimeAnalyticsData(currentSlug ? getInitialAdminState('analytics', null) : null);
       setSubscriptionStatus(currentSlug ? getInitialAdminState('subscription_status', null) : null);
       setSettingsForm({});
@@ -2818,21 +2881,36 @@ export default function AdminDashboard({
     }).catch(() => { });
   }, [token, propSlug]);
 
-  // Independent sequential polling loops run AFTER tenant-switch state reset so switching tenants clears A cleanly first
+  // Real-time Admin SSE + BroadcastChannel + Focus + Fast Sequential Polling
   useEffect(() => {
     if (!token) return undefined;
     ordersRequestSeqRef.current += 1;
     serviceReqSeqRef.current += 1;
+    lastOrdersSignatureRef.current = '';
+    lastServiceReqSigRef.current = '';
 
     let cancelled = false;
     let ordersTimerId = null;
     let serviceReqTimerId = null;
+    let streamReconnectTimer = null;
+    let hasLiveStream = false;
+    const streamAbort = typeof AbortController !== 'undefined' ? new AbortController() : null;
+
+    const triggerImmediateSync = () => {
+      if (cancelled) return;
+      if (ordersTimerId) {
+        clearTimeout(ordersTimerId);
+        ordersTimerId = null;
+      }
+      void pollOrders();
+    };
 
     const pollOrders = async () => {
       if (cancelled) return;
       await fetchOrdersOnly();
       if (!cancelled) {
-        ordersTimerId = setTimeout(pollOrders, 2000);
+        const delayMs = hasLiveStream ? 4000 : 1500;
+        ordersTimerId = setTimeout(pollOrders, delayMs);
       }
     };
 
@@ -2844,12 +2922,88 @@ export default function AdminDashboard({
       }
     };
 
+    const connectOrderStream = async () => {
+      if (cancelled || typeof fetch !== 'function' || !streamAbort) return;
+      try {
+        const res = await fetch('/api/admin/orders/stream', {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: streamAbort.signal
+        });
+        if (cancelled || !res?.ok || !res.body || typeof res.body.getReader !== 'function') {
+          hasLiveStream = false;
+          return;
+        }
+        hasLiveStream = true;
+        const reader = res.body.getReader();
+        const decoder = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
+        let buffer = '';
+        while (!cancelled) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (!decoder || !value) continue;
+          buffer += decoder.decode(value, { stream: true });
+          const frames = buffer.split('\n\n');
+          buffer = frames.pop() || '';
+          for (const frame of frames) {
+            if (frame.includes('event: order_update')) {
+              triggerImmediateSync();
+            }
+          }
+        }
+      } catch (_) {
+        // Silent fallback to sequential polling
+      } finally {
+        hasLiveStream = false;
+        if (!cancelled) {
+          streamReconnectTimer = setTimeout(() => {
+            if (!cancelled) void connectOrderStream();
+          }, 3000);
+        }
+      }
+    };
+
+    let bcChannel = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bcChannel = new BroadcastChannel('touchqr_live_orders');
+        bcChannel.onmessage = (event) => {
+          const msg = event?.data;
+          if (!msg) return;
+          if (msg.type === 'order_created' || msg.type === 'order_update') {
+            triggerImmediateSync();
+          }
+        };
+      }
+    } catch (_) {}
+
+    const handleWakeSync = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      triggerImmediateSync();
+      void fetchServiceRequestsOnly();
+    };
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('focus', handleWakeSync);
+    }
+    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+      document.addEventListener('visibilitychange', handleWakeSync);
+    }
+
     void pollOrders();
     void pollServiceRequests();
+    void connectOrderStream();
     return () => {
       cancelled = true;
       if (ordersTimerId) clearTimeout(ordersTimerId);
       if (serviceReqTimerId) clearTimeout(serviceReqTimerId);
+      if (streamReconnectTimer) clearTimeout(streamReconnectTimer);
+      try { streamAbort?.abort(); } catch (_) {}
+      try { if (bcChannel) bcChannel.close(); } catch (_) {}
+      if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('focus', handleWakeSync);
+      }
+      if (typeof document !== 'undefined' && typeof document.removeEventListener === 'function') {
+        document.removeEventListener('visibilitychange', handleWakeSync);
+      }
     };
   }, [token, propSlug]);
 
@@ -4975,14 +5129,12 @@ export default function AdminDashboard({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(6px)',
+          background: 'rgba(15, 23, 42, 0.78)',
           zIndex: 10025,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '16px',
-          animation: 'sheetBackdropFade 0.18s ease-out'
+          padding: '16px'
         }}>
           <div style={{
             background: '#FFFFFF',
@@ -4996,8 +5148,7 @@ export default function AdminDashboard({
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px',
-            animation: 'tqPopIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+            gap: '16px'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <strong style={{ fontSize: '1.1rem', color: 'var(--adm-primary)', minWidth: 0, flex: 1 }}>
@@ -5197,20 +5348,18 @@ export default function AdminDashboard({
       )}
 
       {/* 🧾 Select Payment Mode Modal before Printing Bill */}
-      {billOrderModal && (() => {
-        const billData = billOrderModal.__billSnapshot || calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
-        const liveBillData = calculateBillDetails(billOrderModal, orders, restaurantInfo, settingsForm);
-        const capIds = Array.isArray(billData?.sessionOrders) ? billData.sessionOrders.map(o => String(o.id)) : [String(billOrderModal.id)];
-        const liveIds = Array.isArray(liveBillData?.sessionOrders) ? liveBillData.sessionOrders.map(o => String(o.id)) : [String(billOrderModal.id)];
-        const capIdSet = new Set(capIds);
-        const hasBillSnapshotChanged = capIds.length !== liveIds.length || liveIds.some(id => !capIdSet.has(id)) || Math.abs(Number(billData?.grandTotal || 0) - Number(liveBillData?.grandTotal || 0)) > 0.01;
-        const currency = (restaurantInfo?.currency_symbol !== undefined && restaurantInfo?.currency_symbol !== null ? restaurantInfo.currency_symbol : (settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'));
-        const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
-        const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
-        const currentQrSnapshotKey = getModalQrSnapshotKey(billOrderModal, billData, upiId, payeeName);
-        const settleLocationLabel = billData.spaceLabel || formatOrderLocation(billOrderModal, restaurantInfo || settingsForm) || `Order #${billOrderModal.id}`;
-        const modalTaxTotal = Number(billData.cgst || 0) + Number(billData.sgst || 0);
-        const modalServiceCharge = Number(billData.serviceChargeAmount || 0);
+      {billOrderModal && billModalComputed && (() => {
+        const {
+          billData,
+          liveBillData,
+          hasBillSnapshotChanged,
+          currency,
+          upiId,
+          currentQrSnapshotKey,
+          settleLocationLabel,
+          modalTaxTotal,
+          modalServiceCharge
+        } = billModalComputed;
 
         return (
           <div
@@ -5226,15 +5375,12 @@ export default function AdminDashboard({
             style={{
               position: 'fixed',
               top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(15, 23, 42, 0.72)',
-              backdropFilter: 'blur(6px)',
-              WebkitBackdropFilter: 'blur(6px)',
+              background: 'rgba(15, 23, 42, 0.78)',
               zIndex: 10020,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '16px',
-              animation: 'sheetBackdropFade 0.18s ease-out'
+              padding: '16px'
             }}
           >
             <div
@@ -5250,8 +5396,7 @@ export default function AdminDashboard({
                 padding: '20px',
                 boxShadow: '0 24px 60px rgba(0, 0, 0, 0.42)',
                 textAlign: 'left',
-                border: '1px solid #E2E8F0',
-                animation: 'tqPopIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                border: '1px solid #E2E8F0'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>

@@ -1417,6 +1417,47 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
       sseAbort.abort();
     }
 
+    // Admin SSE stream requires auth (401 without token) and immediately pushes order_update events
+    const unauthAdminSse = await fetch(`${baseUrl}/api/admin/orders/stream`);
+    assert.equal(unauthAdminSse.status, 401, 'Admin SSE stream rejects unauthenticated requests with 401');
+
+    const adminSseAbort = new AbortController();
+    const adminSseRes = await fetch(`${baseUrl}/api/admin/orders/stream`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: adminSseAbort.signal
+    });
+    assert.equal(adminSseRes.status, 200, 'Authenticated admin opens /api/admin/orders/stream SSE feed');
+    const adminSseReader = adminSseRes.body.getReader();
+    const adminSseDecoder = new TextDecoder();
+    const adminSseTimeout = setTimeout(() => adminSseAbort.abort(), 2500);
+    let adminGotOrderUpdate = false;
+    try {
+      const adminPatch = await fetch(`${baseUrl}/api/admin/orders/${sseOrderId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: 'served' })
+      });
+      assert.equal(adminPatch.status, 200);
+      let adminBuf = '';
+      while (!adminGotOrderUpdate) {
+        const { value, done } = await adminSseReader.read();
+        if (done) break;
+        adminBuf += adminSseDecoder.decode(value, { stream: true });
+        const frames = adminBuf.split(/\r?\n\r?\n/);
+        adminBuf = frames.pop() || '';
+        for (const frame of frames) {
+          if (frame.includes('event: order_update') && frame.includes(String(sseOrderId))) {
+            adminGotOrderUpdate = true;
+            break;
+          }
+        }
+      }
+      assert.ok(adminGotOrderUpdate, 'Admin SSE stream pushes live order_update event immediately');
+    } finally {
+      clearTimeout(adminSseTimeout);
+      adminSseAbort.abort();
+    }
+
     // Verify order-scoped SSE stream does not leak unrelated same-table order events and binds cleanup to res (not req)
     const ordTrackSecret = 'sse_order_scope_secret';
     const ordTrackHash = (await import('crypto')).createHash('sha256').update(ordTrackSecret).digest('hex');

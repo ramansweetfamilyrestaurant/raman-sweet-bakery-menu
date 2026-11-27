@@ -35,7 +35,7 @@ import { resolveBusinessProfile, getBusinessTerminology } from '../../../utils/b
 import { fetchCinemaScreens, fetchCinemaSeats } from '../../../api/client';
 import { triggerBillAction, safeParseModifiers, safeParseItems, calculateBillDetails } from '../../../utils/billingHelper';
 
-export default function OrdersView({
+const OrdersView = React.memo(function OrdersView({
   orders = [],
   activeSubTab = 'orders',
   setActiveSubTab,
@@ -4191,4 +4191,6 @@ export default function OrdersView({
       )}
     </div>
   );
-}
+});
+
+export default OrdersView;

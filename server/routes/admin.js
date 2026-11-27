@@ -13,7 +13,7 @@ import { JWT_SECRET } from '../config/jwt.js';
 import { adminLoginRateLimiter, supportTicketCreateRateLimiter, supportTicketReplyRateLimiter } from '../middleware/rateLimiters.js';
 import { generateTicketReference, validateTicketInput, validateReplyInput, VALID_CATEGORIES, VALID_PRIORITIES, VALID_STATUSES } from '../services/supportTicketService.js';
 import { clearRestoResolveCache, clearMenuBundleCache, calculateOrderTax } from './api.js';
-import { publishOrderLiveEvent } from '../utils/orderLiveBus.js';
+import { publishOrderLiveEvent, subscribeRestaurantOrders } from '../utils/orderLiveBus.js';
 import {
   parseSafeDate,
   getFormattedLocalDate,
@@ -3251,6 +3251,52 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
     console.error('POS order creation error:', err);
     res.status(500).json({ error: 'Failed to create POS order', message: err.message });
   }
+});
+
+// GET Real-Time SSE Stream for Tenant Restaurant Orders (OPERATIONAL ROUTE)
+router.get('/orders/stream', authenticateToken, requireActiveSubscription, (req, res) => {
+  const targetId = req.user?.restaurant_id;
+  if (!targetId) {
+    return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+  const writeSse = (eventName, payload) => {
+    if (res.writableEnded || res.destroyed) return;
+    try {
+      res.write(`event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`);
+    } catch (_) {}
+  };
+
+  writeSse('ready', { restaurant_id: targetId, ts: Date.now() });
+
+  const unsubscribe = subscribeRestaurantOrders(targetId, (evt) => {
+    if (!evt) return;
+    writeSse('order_update', evt);
+  });
+
+  const keepalive = setInterval(() => {
+    if (res.writableEnded || res.destroyed) return;
+    try {
+      res.write(': keepalive\n\n');
+    } catch (_) {}
+  }, 20000);
+
+  let cleanedUp = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    clearInterval(keepalive);
+    unsubscribe();
+  };
+
+  res.on('close', cleanup);
+  req.on('error', cleanup);
 });
 
 // GET Live Orders for Tenant Restaurant (OPERATIONAL ROUTE)

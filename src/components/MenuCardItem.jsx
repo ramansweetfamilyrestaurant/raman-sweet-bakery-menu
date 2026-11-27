@@ -5,7 +5,7 @@ import { getValidDishModifiers } from '../utils/billingHelper';
 import { triggerHaptic } from '../utils/haptics';
 import { isFlagEnabled } from '../utils/customerHelpers';
 
-export default function MenuCardItem({ dish, lang, onClick, onAddToCart, onUpdateCartQuantity, cartItems = [], currencySymbol, filtersVisibility, modifiersEnabled = true }) {
+const MenuCardItem = React.memo(function MenuCardItem({ dish, lang, onClick, onAddToCart, onUpdateCartQuantity, cartItems = [], dishCartItems = null, currencySymbol, filtersVisibility, modifiersEnabled = true }) {
   const symbol = getCurrencySymbol(currencySymbol);
   const isAvailable = isFlagEnabled(dish.available, true);
   const hasHalfPrice = dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0;
@@ -33,8 +33,9 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, onUpdat
   const fullPriceNum = Math.round(Number(dish.price));
   const halfPriceNum = hasHalfPrice ? Math.round(Number(dish.price_half)) : null;
   const activePortion = hasHalfPrice ? portionMode : 'full';
-  const matchedCartItem = (!hasModifiers && Array.isArray(cartItems))
-    ? cartItems.find(i => !i.isCombo && String(i.dish?.id) === String(dish.id) && (!i.modifiers || i.modifiers.length === 0) && String(i.portion_type || 'full') === activePortion)
+  const effectiveCartItems = dishCartItems ?? cartItems;
+  const matchedCartItem = (!hasModifiers && Array.isArray(effectiveCartItems))
+    ? effectiveCartItems.find(i => !i.isCombo && String(i.dish?.id) === String(dish.id) && (!i.modifiers || i.modifiers.length === 0) && String(i.portion_type || 'full') === activePortion)
     : null;
   const inCartQty = matchedCartItem ? matchedCartItem.quantity : 0;
 
@@ -53,17 +54,10 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, onUpdat
         gap: '8px',
         opacity: isAvailable ? 1 : 0.65,
         position: 'relative',
-        transition: 'var(--transition-smooth)',
-        animation: 'tqCardIn 0.24s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'transform 0.08s ease',
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent',
         overflow: 'hidden'
-      }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.borderColor = 'var(--theme-card-hover, var(--gold-bright))';
-        e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.borderColor = isAvailable ? 'var(--theme-card-border, var(--gold-border))' : '#FCA5A5';
-        e.currentTarget.style.boxShadow = 'var(--theme-shadow, var(--shadow-md))';
       }}
     >
       {/* Left Details */}
@@ -524,10 +518,10 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, onUpdat
                   fontWeight: 900,
                   cursor: 'pointer',
                   boxShadow: 'var(--theme-shadow, 0 3px 10px rgba(0, 0, 0, 0.25))',
-                  transition: 'transform 0.15s ease'
+                  transition: 'transform 0.08s ease',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 title="Add to Order Cart"
               >
                 + Add
@@ -556,4 +550,6 @@ export default function MenuCardItem({ dish, lang, onClick, onAddToCart, onUpdat
       </div>
     </div>
   );
-}
+});
+
+export default MenuCardItem;

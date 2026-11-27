@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
+const EMPTY_CART_SLICE = [];
 import CustomerHeader from './components/CustomerHeader';
 import MenuCardItem from './components/MenuCardItem';
 import SearchBar from './components/SearchBar';
@@ -520,11 +521,11 @@ export default function App() {
   const [selectedDishModal, setSelectedDishModal] = useState(null);
   const [selectedDishInitialPortion, setSelectedDishInitialPortion] = useState(null);
   const [selectedDishModalMode, setSelectedDishModalMode] = useState('detail');
-  const openDishCustomizationModal = (dish, initialPortion = null, modalMode = 'detail') => {
+  const openDishCustomizationModal = useCallback((dish, initialPortion = null, modalMode = 'detail') => {
     setSelectedDishInitialPortion(initialPortion || null);
     setSelectedDishModalMode(modalMode === 'addon' ? 'addon' : 'detail');
     setSelectedDishModal(dish);
-  };
+  }, []);
   const [selectedComboModal, setSelectedComboModal] = useState(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showCategoryDrawer, setShowCategoryDrawer] = useState(false);
@@ -564,7 +565,7 @@ export default function App() {
   const [combos, setCombos] = useState([]);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
 
-  const handleAddToCart = (dish, portionType = 'full', selectedModifiers = [], quantity = 1, sourceEl = null) => {
+  const handleAddToCart = useCallback((dish, portionType = 'full', selectedModifiers = [], quantity = 1, sourceEl = null) => {
     if (!dish || !isFlagEnabled(dish.available, true)) return;
     triggerHaptic('success');
     if (sourceEl) {
@@ -620,7 +621,7 @@ export default function App() {
         quantity: addQty
       }];
     });
-  };
+  }, []);
 
   const handleAddComboToCart = (combo, sourceEl = null) => {
     triggerHaptic('success');
@@ -666,7 +667,7 @@ export default function App() {
     setCartItems(prev => prev.filter(i => (i.key || i.dish?.id) !== cartKey));
   };
 
-  const handleUpdateCartQuantity = (cartKey, delta) => {
+  const handleUpdateCartQuantity = useCallback((cartKey, delta) => {
     triggerHaptic('light');
     setCartItems(prev => prev.reduce((acc, item) => {
       if ((item.key || item.dish?.id) !== cartKey) {
@@ -679,7 +680,20 @@ export default function App() {
       }
       return acc;
     }, []));
-  };
+  }, []);
+
+  const cartItemsByDishId = useMemo(() => {
+    const map = new Map();
+    for (const item of cartItems) {
+      if (item.isCombo || (Array.isArray(item.modifiers) && item.modifiers.length > 0)) continue;
+      const did = String(item.dish?.id || '');
+      if (!did) continue;
+      const arr = map.get(did);
+      if (arr) arr.push(item);
+      else map.set(did, [item]);
+    }
+    return map;
+  }, [cartItems]);
 
   const handleClearCart = () => {
     triggerHaptic('light');
@@ -1708,6 +1722,13 @@ export default function App() {
       setCompletedSpaceSnapshot(null);
       setIsPostBillViewOnly(false);
       persistLastCompletedBill(slug || getActiveStorageTenantSlug(), null);
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const bc = new BroadcastChannel('touchqr_live_orders');
+          bc.postMessage({ type: 'order_created', slug: slug || (info && info.slug) || '', order_id: res.order_id, ts: Date.now() });
+          bc.close();
+        }
+      } catch {}
       setOrderSuccessModal(res);
       setCartItems([]);
       setOrderNotesInput('');
@@ -1867,6 +1888,13 @@ export default function App() {
       setCompletedSpaceSnapshot(null);
       setIsPostBillViewOnly(false);
       persistLastCompletedBill(payload?.slug || getActiveStorageTenantSlug(), null);
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const bc = new BroadcastChannel('touchqr_live_orders');
+          bc.postMessage({ type: 'order_created', slug: payload?.slug || (info && info.slug) || '', order_id: res.order_id, ts: Date.now() });
+          bc.close();
+        }
+      } catch {}
       setOrderSuccessModal(res);
       setCartItems([]);
       setOrderNotesInput('');
@@ -2680,14 +2708,41 @@ export default function App() {
     setSelectedCategory('all');
   };
 
-  const scrollToCategory = (catId) => {
+  const specialOfferItems = useMemo(() => {
+    const offerDishes = (dishes || []).filter(d => {
+      if (!isFlagEnabled(d.available, true)) return false;
+      const basePrice = Number(d.regular_price ?? d.price ?? d.portion_full_price ?? 0);
+      return d.offer_price !== undefined && d.offer_price !== null && d.offer_price !== '' && Number(d.offer_price) < basePrice;
+    });
+    const offerCombos = (combos || []).filter(c => {
+      if (!isFlagEnabled(c.available, true)) return false;
+      const basePrice = Number(c.regular_price ?? c.price ?? 0);
+      return c.offer_price !== undefined && c.offer_price !== null && c.offer_price !== '' && Number(c.offer_price) < basePrice;
+    });
+    return [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
+  }, [dishes, combos]);
+
+  const parsedCombosMetaMap = useMemo(() => {
+    const map = new Map();
+    for (const c of (combos || [])) {
+      if (!c) continue;
+      let comboItems = [];
+      try { comboItems = typeof c.items === 'string' ? JSON.parse(c.items) : (c.items || []); } catch { comboItems = []; }
+      const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
+      const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
+      map.set(c.id, { comboItems, originalTotal, itemsSummaryText });
+    }
+    return map;
+  }, [combos]);
+
+  const scrollToCategory = useCallback((catId) => {
     triggerHaptic('light');
     if (searchQuery) setSearchQuery('');
     if (activeQuickFilter) setActiveQuickFilter('');
     setSelectedCategory(catId);
     setShowCategoryDrawer(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [searchQuery, activeQuickFilter]);
 
   const handleRateUsClick = () => {
     if (!Boolean(info?.google_reviews_enabled)) return;
@@ -4441,19 +4496,8 @@ export default function App() {
         ) : (
           <>
             {/* 🔥 SPECIAL OFFERS BANNER */}
-            {!searchQuery && !activeQuickFilter && selectedCategory === 'all' && (() => {
-              const offerDishes = dishes.filter(d => {
-                if (!isFlagEnabled(d.available, true)) return false;
-                const basePrice = Number(d.regular_price ?? d.price ?? d.portion_full_price ?? 0);
-                return d.offer_price !== undefined && d.offer_price !== null && d.offer_price !== '' && Number(d.offer_price) < basePrice;
-              });
-              const offerCombos = (combos || []).filter(c => {
-                if (!isFlagEnabled(c.available, true)) return false;
-                const basePrice = Number(c.regular_price ?? c.price ?? 0);
-                return c.offer_price !== undefined && c.offer_price !== null && c.offer_price !== '' && Number(c.offer_price) < basePrice;
-              });
-              const allOfferItems = [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
-              if (allOfferItems.length === 0) return null;
+            {!searchQuery && !activeQuickFilter && selectedCategory === 'all' && specialOfferItems.length > 0 && (() => {
+              const allOfferItems = specialOfferItems;
               const sym = getCurrencySymbol(info?.currency_symbol);
               return (
                 <section style={{ marginBottom: '16px' }}>
@@ -4815,10 +4859,9 @@ export default function App() {
                   msOverflowStyle: 'none'
                 }}>
                   {filteredCombos.map(combo => {
-                    let comboItems = [];
-                    try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
-                    const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
-                    const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
+                    const comboMeta = parsedCombosMetaMap.get(combo.id);
+                    const originalTotal = comboMeta ? comboMeta.originalTotal : 0;
+                    const itemsSummaryText = comboMeta ? comboMeta.itemsSummaryText : '';
 
                     const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null && combo.regular_price !== '') ? Number(combo.regular_price) : Number(combo.price || 0);
                     const hasValidOffer = combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) < regularPrice;
@@ -5069,6 +5112,7 @@ export default function App() {
               <section
                 key={group.category.id}
                 id={`cat-sec-${group.category.id}`}
+                className="dish-category-section"
                 style={{
                   marginBottom: '28px',
                   scrollMarginTop: '110px'
@@ -5116,10 +5160,10 @@ export default function App() {
                         currencySymbol={getCurrencySymbol(info?.currency_symbol)}
                         filtersVisibility={info?.filters_visibility}
                         modifiersEnabled={isFlagEnabled(info?.modifiers_enabled, true)}
-                        onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
+                        onClick={openDishCustomizationModal}
                         onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                         onUpdateCartQuantity={isDirectOrderingActive ? handleUpdateCartQuantity : undefined}
-                        cartItems={cartItems}
+                        dishCartItems={cartItemsByDishId.get(String(dish.id)) || EMPTY_CART_SLICE}
                       />
                     ))}
                   </div>
@@ -5137,10 +5181,10 @@ export default function App() {
                         currencySymbol={getCurrencySymbol(info?.currency_symbol)}
                         filtersVisibility={info?.filters_visibility}
                         modifiersEnabled={isFlagEnabled(info?.modifiers_enabled, true)}
-                        onClick={(clickedDish, initialPortion, modalMode) => openDishCustomizationModal(clickedDish, initialPortion, modalMode)}
+                        onClick={openDishCustomizationModal}
                         onAddToCart={isDirectOrderingActive ? handleAddToCart : undefined}
                         onUpdateCartQuantity={isDirectOrderingActive ? handleUpdateCartQuantity : undefined}
-                        cartItems={cartItems}
+                        dishCartItems={cartItemsByDishId.get(String(dish.id)) || EMPTY_CART_SLICE}
                       />
                     ))}
                   </div>
@@ -5189,7 +5233,6 @@ export default function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                   <span
                     id="tq-floating-cart-badge"
-                    key={cartItems.reduce((acc, i) => acc + i.quantity, 0)}
                     className="tq-qty-pop"
                     style={{ background: '#FFFFFF', color: '#0F172A', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 900, flexShrink: 0 }}
                   >
