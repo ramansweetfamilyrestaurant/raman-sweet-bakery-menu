@@ -929,6 +929,7 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
         const unpreparedCard = findNodes(container, n => hasClass(n, 'orders-mobile-card'))[0];
         const readySyncBtn = findNodes(unpreparedCard, n => n.tagName === 'BUTTON' && n.textContent.includes('Ready') && !n.textContent.includes('Served'))[0];
         assert.ok(readySyncBtn, 'OrdersView renders Ready button on unprepared kitchen order');
+        assert.ok(!unpreparedCard.textContent.includes('Mark Served'), 'Unprepared kitchen card hides Mark Served until Ready is tapped');
         await React.act(async () => {
           readySyncBtn.dispatchEvent({ type: 'click', bubbles: true, target: readySyncBtn });
           await flushMicrotasks();
@@ -946,7 +947,7 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
           await flushMicrotasks();
         });
         const drawerBeforeSync = findNodes(container, n => hasClass(n, 'orders-drawer-panel'))[0]?.textContent || '';
-        assert.ok(drawerBeforeSync.includes('PREPARING') && drawerBeforeSync.includes('Mark Food Ready'), 'Open drawer starts in PREPARING state with Mark Food Ready button');
+        assert.ok(drawerBeforeSync.includes('PREPARING') && drawerBeforeSync.includes('Mark Food Ready') && !drawerBeforeSync.includes('Mark Served'), 'Open drawer starts in PREPARING state with Mark Food Ready button and no premature Mark Served');
         await React.act(async () => {
           activeRoot.render(
             React.createElement(OrdersView, {
@@ -1175,6 +1176,19 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
                   is_settled: 0,
                   created_at: new Date().toISOString(),
                   items: [{ name: 'Tea', price: 100, quantity: 1 }]
+                },
+                {
+                  id: 923,
+                  table_number: '1',
+                  order_type: 'takeaway',
+                  token_display: 'TK-01',
+                  customer_name: 'Unpaid Table Takeaway',
+                  status: 'kitchen',
+                  kitchen_prepared: 0,
+                  is_settled: 0,
+                  round_number: 2,
+                  created_at: new Date().toISOString(),
+                  items: [{ name: 'Noodles', price: 50, quantity: 1 }]
                 }
               ],
               activeSubTab: 'orders',
@@ -1199,6 +1213,8 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
 
         const counterRow = findNodes(container, n => hasClass(n, 'orders-mobile-card')).find(c => c.textContent.includes('TK-99'));
         assert.ok(counterRow && counterRow.textContent.includes('Mark Ready') && !counterRow.textContent.includes('🍳 Ready'), 'Counter:Counter order without space_type shows counter pickup label instead of dine-in Ready');
+        const unpaidTkRow = findNodes(container, n => hasClass(n, 'orders-mobile-card')).find(c => c.textContent.includes('TK-01'));
+        assert.ok(unpaidTkRow && unpaidTkRow.textContent.includes('PREPARING') && !unpaidTkRow.textContent.includes('PREPARING (PAID)'), 'Unpaid takeaway order does not falsely display PREPARING (PAID)');
 
         // Open drawer on order 920 then remove order 920 from orders prop -> drawer must close automatically
         const detailsBtn920 = findNodes(container, n => n.tagName === 'BUTTON' && n.textContent.includes('Details'))[0];
@@ -1340,12 +1356,148 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
     assert.ok(adminDashAudit.includes('!isMarkingPrepared &&') && adminDashAudit.includes('!wasAlreadyInKds'), 'Ready action skips auto KOT re-printing');
     pass('Backend observer-token history protection, non-regressive status guard, atomic presence check, DB index ordering, and AdminDashboard settlement reconciliation verified');
 
+    // 7. Live SSE order stream delivers immediate customer wakeup upon admin Ready action & rejects unauthorized stream attempts
+    const unauthStreamRes = await fetch(`${baseUrl}/api/orders/live-stream?slug=${encodeURIComponent(prevSlug)}&table_number=2&space_type=table&tkn=bad_token`);
+    assert.equal(unauthStreamRes.status, 403, 'Unauthorized SSE stream subscription is rejected with 403');
+
+    const streamOrdIns = await query(`
+      INSERT INTO orders (restaurant_id, table_number, customer_name, items, total_amount, status, kitchen_prepared, sent_to_kds, session_id, round_number, created_at)
+      VALUES ($1, '2', 'SSE Guest', '[{"name":"Tea","price":40,"quantity":1}]', 40, 'kitchen', 0, 1, $2, 1, CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [restoId, `sess_${restoId}_2_sse`]);
+    const sseOrderId = streamOrdIns[0].id;
+    const sseAbort = new AbortController();
+    const sseRes = await fetch(
+      `${baseUrl}/api/orders/live-stream?slug=${encodeURIComponent(prevSlug)}&table_number=2&space_type=table&tkn=${encodeURIComponent(t2Token)}`,
+      { signal: sseAbort.signal }
+    );
+    assert.equal(sseRes.status, 200, 'Authorized Table QR opens SSE order live stream');
+    const sseReader = sseRes.body.getReader();
+    const sseDecoder = new TextDecoder();
+
+    // Trigger Ready update on Admin route while stream is connected
+    const readyPushRes = await fetch(`${baseUrl}/api/admin/orders/${sseOrderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: 'kitchen', kitchen_prepared: 1 })
+    });
+    assert.equal(readyPushRes.status, 200);
+
+    let receivedEventText = '';
+    const deadline = Date.now() + 2500;
+    while (Date.now() < deadline && !receivedEventText.includes('event: order_update')) {
+      const { value, done } = await sseReader.read();
+      if (done) break;
+      receivedEventText += sseDecoder.decode(value, { stream: true });
+    }
+    sseAbort.abort();
+    assert.ok(receivedEventText.includes('event: order_update') && receivedEventText.includes('"kitchen_prepared":1'), 'SSE stream immediately pushes kitchen_prepared=1 event to customer');
+    pass('Real-time SSE order stream authentication and instant kitchen_prepared push verified');
+
+    // 8. Admin settlement stamps terminal_at on all session rounds (including TK-01 takeaway add-on) & returns full consolidated bill to customer track and BillCompletedModal
+    const oldCreatedAt = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    const settledSessionId = `sess_${restoId}_5_bill_e2e`;
+    const cryptoMod = await import('crypto');
+    const tk1Raw = 'tok_round1_e2e_secret';
+    const tk1Hash = cryptoMod.createHash('sha256').update(tk1Raw).digest('hex');
+    const tk2Raw = 'tok_round2_e2e_secret';
+    const tk2Hash = cryptoMod.createHash('sha256').update(tk2Raw).digest('hex');
+
+    const r1Ins = await query(`
+      INSERT INTO orders (restaurant_id, table_number, order_type, customer_name, items, total_amount, subtotal_amount, grand_total_amount, status, sent_to_kds, kitchen_prepared, session_id, round_number, is_settled, tracking_token_hash, created_at)
+      VALUES ($1, '5', 'dine_in', 'Bill Guest', '[{"name":"Papdi Chaat","price":120,"quantity":1}]', 120, 120, 120, 'served', 1, 1, $2, 1, 0, $3, $4)
+      RETURNING id
+    `, [restoId, settledSessionId, tk1Hash, oldCreatedAt]);
+    const billR1Id = r1Ins[0].id;
+
+    const r2Ins = await query(`
+      INSERT INTO orders (restaurant_id, table_number, order_type, token_number, token_display, customer_name, items, total_amount, subtotal_amount, grand_total_amount, status, sent_to_kds, kitchen_prepared, session_id, round_number, parent_order_id, is_settled, tracking_token_hash, created_at)
+      VALUES ($1, '5', 'takeaway', 1, 'TK-01', 'Bill Guest', '[{"name":"Veg Chowmein","price":50,"quantity":1}]', 50, 50, 50, 'kitchen', 1, 0, $2, 2, $3, 0, $4, $5)
+      RETURNING id
+    `, [restoId, settledSessionId, billR1Id, tk2Hash, oldCreatedAt]);
+    const billR2Id = r2Ins[0].id;
+
+    const t5Token = generateHmacQrToken(prevSlug, 'table', '5', prevQrSecret, restoId);
+    const activeBeforeSettleRes = await fetch(`${baseUrl}/api/orders/active-table?slug=${encodeURIComponent(prevSlug)}&table_number=5&space_type=table&tkn=${encodeURIComponent(t5Token)}`);
+    assert.equal(activeBeforeSettleRes.status, 200);
+    const activeBeforeSettleBody = await activeBeforeSettleRes.json();
+    assert.ok(activeBeforeSettleBody && activeBeforeSettleBody.session_observer_token, 'Table 5 observer token issued before settle');
+
+    const settleSessionRes = await fetch(`${baseUrl}/api/admin/orders/${billR1Id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        status: 'completed',
+        settle: { method: 'upi', expected_order_ids: [billR1Id, billR2Id], expected_total: 170 }
+      })
+    });
+    assert.equal(settleSessionRes.status, 200);
+
+    const settledDbRows = await query('SELECT id, is_settled, terminal_at FROM orders WHERE session_id = $1 ORDER BY id ASC', [settledSessionId]);
+    assert.equal(settledDbRows.length, 2);
+    assert.ok(settledDbRows[0].terminal_at && settledDbRows[1].terminal_at, 'Settlement stamps terminal_at on BOTH primary and sibling TK-01 rounds');
+
+    // Tracking Round 2 (even though >2h after created_at and order_type='takeaway') returns 200 with consolidated 2-round bill_summary!
+    const customerR2TrackRes = await fetch(`${baseUrl}/api/orders/track/${billR2Id}?slug=${encodeURIComponent(prevSlug)}`, {
+      headers: { 'X-Order-Tracking-Token': tk2Raw }
+    });
+    assert.equal(customerR2TrackRes.status, 200, 'Recently settled sibling round must NOT fail with 410 tracking_expired');
+    const customerR2TrackBody = await customerR2TrackRes.json();
+    assert.equal(customerR2TrackBody.is_settled, 1);
+    assert.equal(customerR2TrackBody.payment_method, 'upi');
+    assert.ok(customerR2TrackBody.bill_summary, 'Customer track response includes consolidated bill_summary');
+    assert.equal(customerR2TrackBody.bill_summary.round_count, 2);
+    assert.equal(Number(customerR2TrackBody.bill_summary.grand_total_amount), 170);
+
+    // Observer device (Device B) tracking prev_order_id = Round 2 ALSO receives 200 with consolidated bill_summary!
+    const observerAfterSettleRes = await fetch(`${baseUrl}/api/orders/active-table?slug=${encodeURIComponent(prevSlug)}&table_number=5&space_type=table&tkn=${encodeURIComponent(t5Token)}&prev_order_id=${billR2Id}`, {
+      headers: { 'X-Session-Observer-Token': activeBeforeSettleBody.session_observer_token }
+    });
+    assert.equal(observerAfterSettleRes.status, 200);
+    const observerAfterSettleBody = await observerAfterSettleRes.json();
+    assert.ok(observerAfterSettleBody && observerAfterSettleBody.is_settled === 1 && observerAfterSettleBody.bill_summary, `Observer receives consolidated bill_summary after settlement (got: ${JSON.stringify(observerAfterSettleBody)})`);
+    assert.equal(Number(observerAfterSettleBody.bill_summary.grand_total_amount), 170);
+
+    // Verify BillCompletedModal renders full itemized digital receipt for that settled bill payload
+    {
+      const { renderToStaticMarkup } = await import('react-dom/server');
+      const cacheRoot = path.join(ROOT_DIR, 'node_modules/.cache');
+      fs.mkdirSync(cacheRoot, { recursive: true });
+      const billUiDir = fs.mkdtempSync(path.join(cacheRoot, 'bill-modal-test-'));
+      await esbuild.build({
+        entryPoints: [path.join(ROOT_DIR, 'src/components/BillCompletedModal.jsx')],
+        outfile: path.join(billUiDir, 'BillCompletedModal.mjs'),
+        bundle: true,
+        platform: 'node',
+        format: 'esm',
+        jsx: 'automatic',
+        external: ['react', 'react-dom', 'react-dom/client', 'lucide-react']
+      });
+      const { default: BillCompletedModal } = await import(pathToFileURL(path.join(billUiDir, 'BillCompletedModal.mjs')).href);
+      const modalHtml = renderToStaticMarkup(React.createElement(BillCompletedModal, {
+        bill: { ...customerR2TrackBody, spaceLabelSnapshot: 'Table 5' },
+        info: { name: 'Orders KDS Cafe', currency_symbol: '₹' },
+        lang: 'en',
+        spaceLabel: 'Table 5',
+        onClose: () => {}
+      }));
+      assert.ok(modalHtml.includes('Bill Settled'), 'BillCompletedModal renders settled header');
+      assert.ok(modalHtml.includes('Paid via UPI'), 'BillCompletedModal renders payment method');
+      assert.ok(modalHtml.includes('Papdi Chaat') && modalHtml.includes('Veg Chowmein'), 'BillCompletedModal renders items from both rounds');
+      assert.ok(modalHtml.includes('2 Rounds Merged') && modalHtml.includes('170'), 'BillCompletedModal renders merged rounds total ₹170');
+      fs.rmSync(billUiDir, { recursive: true, force: true });
+    }
+    pass('Settlement stamps terminal_at across rounds, prevents premature 410 expiry, and delivers consolidated BillCompletedModal receipt');
+
     console.log(`\nAll ${passed} Orders & KDS audit tests passed.`);
   } catch (err) {
     console.error('Orders & KDS audit test failed:', err);
     process.exitCode = 1;
   } finally {
-    if (server) server.close();
+    if (server) {
+      if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+      server.close();
+    }
     if (typeof closeDbPool === 'function') await closeDbPool();
     try { fs.rmSync(TMP_DIR, { recursive: true, force: true }); } catch { }
     process.exit(process.exitCode || 0);

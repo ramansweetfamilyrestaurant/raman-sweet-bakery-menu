@@ -708,6 +708,86 @@ export async function fetchActiveTableOrder(slug, tableNumber, token = '', space
 
 export const fetchActiveSpaceOrder = fetchActiveTableOrder;
 
+/**
+ * Subscribe to real-time SSE order lifecycle updates using fetch streaming (supports custom tracking headers).
+ * Resolves cleanly when aborted or closed. Non-fatal on environments without ReadableStream support.
+ */
+export async function subscribeOrderLiveStream({
+  slug,
+  orderId = '',
+  tableNumber = '',
+  spaceType = 'table',
+  tableToken = '',
+  trackingToken = '',
+  observerToken = '',
+  signal,
+  onEvent
+} = {}) {
+  if (!slug || (!orderId && (!tableNumber || !tableToken)) || typeof fetch !== 'function') {
+    return { ok: false, status: 0 };
+  }
+  const params = new URLSearchParams();
+  params.set('slug', slug);
+  if (orderId) params.set('order_id', String(orderId));
+  if (tableNumber) params.set('table_number', String(tableNumber));
+  if (spaceType) params.set('space_type', String(spaceType));
+  if (tableToken) params.set('tkn', String(tableToken));
+
+  const headers = { Accept: 'text/event-stream' };
+  if (trackingToken) headers['X-Order-Tracking-Token'] = String(trackingToken).trim();
+  if (observerToken) headers['X-Session-Observer-Token'] = String(observerToken).trim();
+
+  try {
+    const res = await fetch(`${API_BASE}/orders/live-stream?${params.toString()}`, {
+      method: 'GET',
+      headers,
+      signal,
+      cache: 'no-store'
+    });
+    const contentType = res.headers && typeof res.headers.get === 'function'
+      ? String(res.headers.get('content-type') || '').toLowerCase()
+      : '';
+    if (res.ok && contentType && !contentType.includes('text/event-stream')) {
+      return { ok: false, mode: 'poll', status: res.status };
+    }
+    if (!res.ok || !res.body || typeof res.body.getReader !== 'function') {
+      return { ok: false, status: res.status };
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let sepIdx;
+      while ((sepIdx = buffer.indexOf('\n\n')) !== -1) {
+        const block = buffer.slice(0, sepIdx);
+        buffer = buffer.slice(sepIdx + 2);
+        const lines = block.split(/\r?\n/);
+        let eventName = 'message';
+        let dataLine = '';
+        for (const ln of lines) {
+          if (ln.startsWith('event:')) eventName = ln.slice(6).trim();
+          else if (ln.startsWith('data:')) dataLine += ln.slice(5).trim();
+        }
+        if (eventName === 'order_update' && dataLine && typeof onEvent === 'function') {
+          try {
+            onEvent(JSON.parse(dataLine));
+          } catch {}
+        }
+      }
+    }
+    return { ok: true, status: res.status };
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      return { ok: true, aborted: true };
+    }
+    return { ok: false, status: 0 };
+  }
+}
+
 export async function createServiceRequest(data) {
   const res = await fetch(`${API_BASE}/service-requests`, {
     method: 'POST',

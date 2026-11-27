@@ -11,7 +11,7 @@ import BottomDock from './components/BottomDock';
 import Footer from './components/Footer';
 import DishFormModal from './components/Admin/DishFormModal';
 import CategoryFormModal from './components/Admin/CategoryFormModal';
-import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, createDirectOrder, trackOrderStatus, fetchActiveTableOrder, fetchCombos } from './api/client';
+import { fetchRestaurantInfo, fetchCategories, fetchDishes, toggleDishAvailability, deleteDish, createDirectOrder, trackOrderStatus, fetchActiveTableOrder, subscribeOrderLiveStream, fetchCombos } from './api/client';
 import { LayoutList, Grid, BookOpen, X, Sparkles, ShieldAlert, Phone, Plus, Edit3, Trash2, LogOut, Settings, Crown, CheckCircle, MessageSquare, XCircle } from 'lucide-react';
 import ServiceRequestModal from './components/ServiceRequestModal';
 import CustomerReviewModal from './components/CustomerReviewModal';
@@ -944,6 +944,15 @@ export default function App() {
           tableNumber: numForReuse
         });
         if (obsKey) localStorage.removeItem(obsKey);
+        const lastObsKey = buildScopedStorageKey('touchqr_last_observed_order_id', {
+          slug: tenantSlug,
+          spaceType: resolvedType,
+          tableNumber: numForReuse
+        });
+        if (lastObsKey) {
+          localStorage.removeItem(lastObsKey);
+          try { sessionStorage.removeItem(lastObsKey); } catch (e) {}
+        }
       }
       setActiveOrderId(null);
       setActiveOrderTrack(null);
@@ -1089,6 +1098,41 @@ export default function App() {
       }
     };
 
+    const getObservedOrderStorageKey = (spaceType) => {
+      const storageSlug = currentSlug || getActiveStorageTenantSlug();
+      if (!storageSlug || !effectiveTableNum) return null;
+      return buildScopedStorageKey('touchqr_last_observed_order_id', {
+        slug: storageSlug,
+        spaceType: spaceType || 'table',
+        tableNumber: effectiveTableNum
+      });
+    };
+
+    const readStoredObservedOrderId = (spaceType) => {
+      try {
+        const obsOrderKey = getObservedOrderStorageKey(spaceType);
+        if (!obsOrderKey) return '';
+        return (
+          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(obsOrderKey)) ||
+          (typeof localStorage !== 'undefined' && localStorage.getItem(obsOrderKey)) ||
+          ''
+        );
+      } catch (e) {
+        return '';
+      }
+    };
+
+    const persistStoredObservedOrderId = (orderIdVal, spaceType) => {
+      if (!orderIdVal) return;
+      try {
+        const obsOrderKey = getObservedOrderStorageKey(spaceType);
+        if (!obsOrderKey) return;
+        const cleanVal = String(orderIdVal);
+        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(obsOrderKey, cleanVal);
+        if (typeof localStorage !== 'undefined') localStorage.setItem(obsOrderKey, cleanVal);
+      } catch (e) {}
+    };
+
     const persistStoredObserverToken = (tok, orderIds = [], spaceType) => {
       if (!tok) return;
       try {
@@ -1177,7 +1221,7 @@ export default function App() {
         if (effectiveTableNum && !sessionExpired && !isPostBillViewOnly && !isViewOnlyUrl) {
           const effectiveQrToken = currentTableToken || initialSpaceInfo.token || (new URLSearchParams(window.location.search).get('tkn') || '').trim();
           const targetSpaceType = currentSpaceType || initialSpaceInfo.type || 'table';
-          const prevTrackedId = lastActiveTableOrderIdRef.current || activeOrderId || '';
+          const prevTrackedId = lastActiveTableOrderIdRef.current || activeOrderId || readStoredObservedOrderId(targetSpaceType) || '';
           const observerToken = readStoredObserverToken(prevTrackedId, targetSpaceType);
           let trackingToken = '';
           try {
@@ -1214,7 +1258,9 @@ export default function App() {
                 ['completed', 'cancelled', 'rejected'].includes(tdStatus)
               );
               if (!isTdTerminal) {
-                lastActiveTableOrderIdRef.current = String(tableData.latest_order_id || tableData.id);
+                const observedId = String(tableData.latest_order_id || tableData.id);
+                lastActiveTableOrderIdRef.current = observedId;
+                persistStoredObservedOrderId(observedId, targetSpaceType);
               }
               setActiveOrderTrack(tableData);
             } else {
@@ -1223,6 +1269,21 @@ export default function App() {
                 lastActiveTableOrderIdRef.current = null;
                 const staleKey = getOrderStorageKey(effectiveTableNum, targetSpaceType);
                 if (staleKey) localStorage.removeItem(staleKey);
+                const obsOrderKey = getObservedOrderStorageKey(targetSpaceType);
+                if (obsOrderKey) {
+                  try { localStorage.removeItem(obsOrderKey); sessionStorage.removeItem(obsOrderKey); } catch (e) {}
+                }
+                const storageSlug = currentSlug || getActiveStorageTenantSlug();
+                const scopedObsKey = storageSlug
+                  ? buildScopedStorageKey('touchqr_observer_token', {
+                      slug: storageSlug,
+                      spaceType: targetSpaceType || 'table',
+                      tableNumber: effectiveTableNum
+                    })
+                  : null;
+                if (scopedObsKey) {
+                  try { localStorage.removeItem(scopedObsKey); } catch (e) {}
+                }
                 try {
                   localStorage.removeItem(`tq_track_${prevTrackedId}`);
                   sessionStorage.removeItem(`tq_track_${prevTrackedId}`);
@@ -1245,6 +1306,10 @@ export default function App() {
                 if (staleKey) localStorage.removeItem(staleKey);
                 setActiveOrderId(null);
               }
+              const staleObsOrderKey = getObservedOrderStorageKey(targetSpaceType);
+              if (staleObsOrderKey) {
+                try { localStorage.removeItem(staleObsOrderKey); sessionStorage.removeItem(staleObsOrderKey); } catch (e) {}
+              }
               setActiveOrderTrack(null);
             }
           }
@@ -1255,11 +1320,123 @@ export default function App() {
       }
     };
 
-    checkTableStatus();
-    const interval = setInterval(checkTableStatus, 2500);
+    let isChecking = false;
+    let syncQueued = false;
+    const runStatusSync = async () => {
+      if (!isCurrentEffect) return;
+      if (isChecking) {
+        syncQueued = true;
+        return;
+      }
+      isChecking = true;
+      try {
+        await checkTableStatus();
+      } finally {
+        isChecking = false;
+        if (syncQueued && isCurrentEffect) {
+          syncQueued = false;
+          runStatusSync();
+        }
+      }
+    };
+
+    runStatusSync();
+
+    // Fast active-session polling (1s when tab visible) + instant wakeup on SSE push, same-browser BroadcastChannel, and focus
+    const interval = setInterval(() => {
+      if (!isCurrentEffect) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
+      runStatusSync();
+    }, 1000);
+
+    let bcChannel = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bcChannel = new BroadcastChannel('touchqr_live_orders');
+        bcChannel.onmessage = () => {
+          if (isCurrentEffect) runStatusSync();
+        };
+      }
+    } catch {}
+
+    const handleWakeup = () => {
+      if (!isCurrentEffect) return;
+      if (typeof document === 'undefined' || !document.hidden) {
+        runStatusSync();
+      }
+    };
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('focus', handleWakeup);
+    }
+    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+      document.addEventListener('visibilitychange', handleWakeup);
+    }
+
+    // Real-time SSE push stream for cross-device instant updates on Express/persistent hosts
+    let streamAbort = null;
+    let streamReconnectTimer = null;
+    const startLiveStream = async () => {
+      if (!isCurrentEffect || trackingExpiredRef.current || sessionExpired || isPostBillViewOnly || isViewOnlyUrl) return;
+      if (!currentSlug || typeof AbortController === 'undefined') return;
+
+      const streamQrToken = currentTableToken || initialSpaceInfo.token || (typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('tkn') || '').trim() : '');
+      const streamSpaceType = currentSpaceType || initialSpaceInfo.type || 'table';
+      const trackedKey = activeOrderId || lastActiveTableOrderIdRef.current || '';
+      let streamTrackingTok = '';
+      try {
+        if (trackedKey) {
+          streamTrackingTok =
+            (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(`tq_track_${trackedKey}`) : '') ||
+            (typeof localStorage !== 'undefined' ? localStorage.getItem(`tq_track_${trackedKey}`) : '') ||
+            (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tq_active_tracking_token') : '') ||
+            '';
+        }
+      } catch {}
+      const streamObserverTok = readStoredObserverToken(trackedKey, streamSpaceType);
+      const canAuthOrder = Boolean(activeOrderId && (streamTrackingTok || streamObserverTok));
+      const canAuthTable = Boolean(effectiveTableNum && streamQrToken && streamSpaceType !== 'counter');
+      if (!canAuthOrder && !canAuthTable) return;
+
+      streamAbort = new AbortController();
+      const result = await subscribeOrderLiveStream({
+        slug: currentSlug,
+        orderId: canAuthOrder ? activeOrderId : '',
+        tableNumber: effectiveTableNum || '',
+        spaceType: streamSpaceType,
+        tableToken: streamQrToken,
+        trackingToken: streamTrackingTok,
+        observerToken: streamObserverTok,
+        signal: streamAbort.signal,
+        onEvent: () => {
+          if (isCurrentEffect) runStatusSync();
+        }
+      });
+
+      if (!isCurrentEffect || result?.aborted) return;
+      // Only reconnect cleanly if persistent SSE closed naturally (stop if serverless poll-mode or permanent 4xx)
+      if (result?.mode === 'poll' || result?.status === 403 || result?.status === 404 || result?.status === 400) return;
+      streamReconnectTimer = setTimeout(() => {
+        if (isCurrentEffect) startLiveStream();
+      }, 4000);
+    };
+    startLiveStream();
+
     return () => {
       isCurrentEffect = false;
       clearInterval(interval);
+      if (streamReconnectTimer) clearTimeout(streamReconnectTimer);
+      if (streamAbort) {
+        try { streamAbort.abort(); } catch {}
+      }
+      if (bcChannel) {
+        try { bcChannel.close(); } catch {}
+      }
+      if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('focus', handleWakeup);
+      }
+      if (typeof document !== 'undefined' && typeof document.removeEventListener === 'function') {
+        document.removeEventListener('visibilitychange', handleWakeup);
+      }
     };
   }, [activeOrderId, effectiveTableNum, info, sessionExpired, isPostBillViewOnly]);
 
@@ -1438,6 +1615,7 @@ export default function App() {
             tableNumber: targetTable
           });
           if (storageKey) localStorage.setItem(storageKey, String(res.order_id));
+          persistPlacedOrderObserverKeys(storageSlug, targetSpaceType, targetTable, res.order_id, res.session_observer_token);
           const scanKey = buildScopedStorageKey('touchqr_table_scan_time', {
             slug: storageSlug,
             spaceType: targetSpaceType,
@@ -1524,6 +1702,31 @@ export default function App() {
     }
   };
 
+  const persistPlacedOrderObserverKeys = (tenantSlugVal, spaceTypeVal, tableNumVal, orderIdVal, observerTok) => {
+    if (!tenantSlugVal || !orderIdVal || spaceTypeVal === 'counter') return;
+    const obsOrderKey = buildScopedStorageKey('touchqr_last_observed_order_id', {
+      slug: tenantSlugVal,
+      spaceType: spaceTypeVal,
+      tableNumber: tableNumVal
+    });
+    if (obsOrderKey) {
+      try {
+        localStorage.setItem(obsOrderKey, String(orderIdVal));
+        sessionStorage.setItem(obsOrderKey, String(orderIdVal));
+      } catch (e) {}
+    }
+    if (observerTok) {
+      const scopedObsKey = buildScopedStorageKey('touchqr_observer_token', {
+        slug: tenantSlugVal,
+        spaceType: spaceTypeVal,
+        tableNumber: tableNumVal
+      });
+      if (scopedObsKey) {
+        try { localStorage.setItem(scopedObsKey, observerTok); } catch (e) {}
+      }
+    }
+  };
+
   // Dedicated single-shot retry with verified presence token
   const executePendingOrderRetry = async (verifiedToken) => {
     const payload = pendingOrderPayloadRef.current;
@@ -1570,6 +1773,7 @@ export default function App() {
             tableNumber: payload.table_number
           });
           if (storageKey) localStorage.setItem(storageKey, String(res.order_id));
+          persistPlacedOrderObserverKeys(retrySlug, retrySpaceType, payload.table_number, res.order_id, res.session_observer_token);
           const scanKey = buildScopedStorageKey('touchqr_table_scan_time', {
             slug: retrySlug,
             spaceType: retrySpaceType,

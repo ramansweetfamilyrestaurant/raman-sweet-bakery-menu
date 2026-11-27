@@ -756,10 +756,10 @@ export default function OrdersView({
         if (isObj && Number(orderOrStatus.sent_to_kds) === 0) {
           return { label: 'PACKING AT COUNTER', bg: '#F0FDF4', color: '#0F766E', border: '#99F6E4' };
         }
-        return { label: isTakeawayOrToken ? 'PREPARING (PAID)' : 'PREPARING', bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' };
+        return { label: (isTakeawayOrToken && isSettled) ? 'PREPARING (PAID)' : 'PREPARING', bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' };
       case 'kitchen':
       case 'preparing':
-        return { label: isTakeawayOrToken ? 'PREPARING (PAID)' : 'PREPARING', bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' };
+        return { label: (isTakeawayOrToken && isSettled) ? 'PREPARING (PAID)' : 'PREPARING', bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' };
       case 'served':
       case 'ready':
         return isTakeawayOrToken
@@ -1871,7 +1871,7 @@ export default function OrdersView({
                                 );
                                 return (
                                 <>
-                                  {showSyncedKdsReadyBtn && (
+                                  {showSyncedKdsReadyBtn ? (
                                     <button
                                       onClick={() => {
                                         if (!onUpdateStatus) return null;
@@ -1892,23 +1892,24 @@ export default function OrdersView({
                                     >
                                       🍳 Ready
                                     </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
+                                      style={{
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        background: isKitchenPrepDone ? '#0D9488' : '#0284C7',
+                                        color: '#FFFFFF',
+                                        border: 'none',
+                                        fontSize: '0.74rem',
+                                        fontWeight: 800,
+                                        cursor: 'pointer'
+                                      }}
+                                      title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : isKitchenPrepDone ? 'Kitchen marked food ready — mark delivered to table' : 'Mark served to table'}
+                                    >
+                                      {getKitchenAdvanceLabel(order, { compact: true })}
+                                    </button>
                                   )}
-                                  <button
-                                    onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
-                                    style={{
-                                      padding: '6px 12px',
-                                      borderRadius: '8px',
-                                      background: isKitchenPrepDone ? '#0D9488' : '#0284C7',
-                                      color: '#FFFFFF',
-                                      border: 'none',
-                                      fontSize: '0.74rem',
-                                      fontWeight: 800,
-                                      cursor: 'pointer'
-                                    }}
-                                    title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : isKitchenPrepDone ? 'Kitchen marked food ready — mark delivered to table' : 'Mark served to table directly (without waiting for KDS)'}
-                                  >
-                                    {getKitchenAdvanceLabel(order, { compact: true })}
-                                  </button>
                                   <button
                                     onClick={() => handleRejectOrder(order)}
                                     style={{
@@ -2335,7 +2336,7 @@ export default function OrdersView({
                             );
                             return (
                             <>
-                              {showSyncedKdsReadyBtn && (
+                              {showSyncedKdsReadyBtn ? (
                                 <button
                                   onClick={() => {
                                     if (!onUpdateStatus) return null;
@@ -2356,23 +2357,24 @@ export default function OrdersView({
                                 >
                                   🍳 Ready
                                 </button>
+                              ) : (
+                                <button
+                                  onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
+                                  style={{
+                                    padding: '8px 14px',
+                                    borderRadius: '10px',
+                                    background: isKitchenPrepDone ? '#0D9488' : '#0284C7',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    fontSize: '0.78rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer'
+                                  }}
+                                  title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : isKitchenPrepDone ? 'Kitchen marked food ready — mark delivered to table' : 'Mark served to table'}
+                                >
+                                  {getKitchenAdvanceLabel(order, { compact: true })}
+                                </button>
                               )}
-                              <button
-                                onClick={() => onUpdateStatus ? onUpdateStatus(order.id, 'served') : null}
-                                style={{
-                                  padding: '8px 14px',
-                                  borderRadius: '10px',
-                                  background: isKitchenPrepDone ? '#0D9488' : '#0284C7',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer'
-                                }}
-                                title={isCinema ? 'Deliver snacks to guest seat' : isHotel ? 'Deliver food to guest room' : isKitchenPrepDone ? 'Kitchen marked food ready — mark delivered to table' : 'Mark served to table directly (without waiting for KDS)'}
-                              >
-                                {getKitchenAdvanceLabel(order, { compact: true })}
-                              </button>
                               <button
                                 onClick={() => handleRejectOrder(order)}
                                 style={{
@@ -3800,50 +3802,51 @@ export default function OrdersView({
                 );
                 return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {showDrawerKdsReadyBtn && (
-                    <button
-                      onClick={() => {
-                        const targetKitchenStatus = ['accepted', 'preparing', 'kitchen'].includes(selectedOrder.status) ? selectedOrder.status : 'kitchen';
-                        if (onUpdateStatus) onUpdateStatus(selectedOrder.id, targetKitchenStatus, { kitchen_prepared: 1 });
-                        setSelectedOrder(prev => prev ? { ...prev, kitchen_prepared: 1 } : null);
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '12px',
-                        background: '#10B981',
-                        color: '#FFFFFF',
-                        fontSize: '0.86rem',
-                        fontWeight: 900,
-                        border: 'none',
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
-                      }}
-                    >
-                      🍳 Mark Food Ready (Sync with Kitchen KDS)
-                    </button>
-                  )}
                   <div className="orders-drawer-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
-                    <button
-                      onClick={() => {
-                        if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'served');
-                        setSelectedOrder(null);
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '12px',
-                        background: isKitchenPreparedFlag(selectedOrder) ? '#0D9488' : '#0284C7',
-                        color: '#FFFFFF',
-                        fontSize: '0.84rem',
-                        fontWeight: 900,
-                        border: 'none',
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
-                      }}
-                    >
-                      {getKitchenAdvanceLabel(selectedOrder)}
-                    </button>
+                    {showDrawerKdsReadyBtn ? (
+                      <button
+                        onClick={() => {
+                          const targetKitchenStatus = ['accepted', 'preparing', 'kitchen'].includes(selectedOrder.status) ? selectedOrder.status : 'kitchen';
+                          if (onUpdateStatus) onUpdateStatus(selectedOrder.id, targetKitchenStatus, { kitchen_prepared: 1 });
+                          setSelectedOrder(prev => prev ? { ...prev, kitchen_prepared: 1 } : null);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          borderRadius: '12px',
+                          background: '#10B981',
+                          color: '#FFFFFF',
+                          fontSize: '0.86rem',
+                          fontWeight: 900,
+                          border: 'none',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                        }}
+                      >
+                        🍳 Mark Food Ready (Sync with Kitchen KDS)
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (onUpdateStatus) onUpdateStatus(selectedOrder.id, 'served');
+                          setSelectedOrder(null);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          borderRadius: '12px',
+                          background: isKitchenPreparedFlag(selectedOrder) ? '#0D9488' : '#0284C7',
+                          color: '#FFFFFF',
+                          fontSize: '0.84rem',
+                          fontWeight: 900,
+                          border: 'none',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
+                        }}
+                      >
+                        {getKitchenAdvanceLabel(selectedOrder)}
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         handleRejectOrder(selectedOrder);

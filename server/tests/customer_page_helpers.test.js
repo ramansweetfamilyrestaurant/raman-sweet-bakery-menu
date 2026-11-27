@@ -303,7 +303,8 @@ async function runTests() {
     assert.ok(appSrc.includes("import BillCompletedModal from './components/BillCompletedModal';"), 'App.jsx must import BillCompletedModal');
     const billIdx = appSrc.indexOf('if (isBillSettled) {');
     assert.notEqual(billIdx, -1, 'App.jsx must handle isBillSettled branch separately from cancelled/rejected');
-    const billSlice = appSrc.slice(billIdx, billIdx + 3200);
+    const billEndIdx = appSrc.indexOf('if (!isCancelledOrRejected)', billIdx);
+    const billSlice = billEndIdx > billIdx ? appSrc.slice(billIdx, billEndIdx) : appSrc.slice(billIdx, billIdx + 3800);
     assert.ok(billSlice.includes('setBillCompletedModal(billPayload)'), 'Settled bill must open BillCompletedModal');
     assert.ok(billSlice.includes('setShowRunningOrderModal(false)'), 'Settled bill must reset showRunningOrderModal state');
     assert.ok(billSlice.includes('setSessionExpired(false)'), 'Settled bill must clear session without triggering Session Expired banner');

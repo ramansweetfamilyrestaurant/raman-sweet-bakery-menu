@@ -23,6 +23,7 @@ import { isCustomDomainHost } from '../../src/utils/customerHelpers.js';
 export { calculateOfferPrice };
 import { checkExpiredSubscriptions } from '../subscriptionCron.js';
 import { verifyQrToken, normalizeSpaceType, normalizeSpaceNumber, validateSpaceCapacity, generateRestaurantQrSecret } from '../utils/qrSecurity.js';
+import { publishOrderLiveEvent, subscribeRestaurantOrders } from '../utils/orderLiveBus.js';
 import { 
   resolveEffectiveVerificationPolicy, 
   generatePresenceToken, 
@@ -2966,6 +2967,17 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
       executionResolve(responsePayload);
       orderInFlightMutex.delete(idempKey);
 
+      publishOrderLiveEvent(targetId, {
+        orderId: responsePayload.order_id,
+        primaryOrderId: responsePayload.primary_order_id,
+        sessionId: responsePayload.session_id,
+        tableNumber: responsePayload.table_number,
+        status: responsePayload.status,
+        kitchen_prepared: 0,
+        sent_to_kds: 0,
+        is_settled: 0
+      });
+
       res.json(responsePayload);
     } catch (innerErr) {
       orderInFlightMutex.delete(idempKey);
@@ -2996,7 +3008,7 @@ function buildConsolidatedOrderSummary(resto, anchorOrder, billRows) {
   let runningTax = 0;
   let runningGrandTotal = 0;
   let resolvedPaymentMethod = anchorOrder.payment_method || null;
-  let resolvedSettledAt = anchorOrder.terminal_at || anchorOrder.created_at || null;
+  let resolvedSettledAt = anchorOrder.terminal_at || null;
 
   const rounds = billRows.map((row, idx) => {
     const rowItems = parseOrderItemsSafe(row.items);
@@ -3056,7 +3068,7 @@ function buildConsolidatedOrderSummary(resto, anchorOrder, billRows) {
       gstin_number: resto.gstin_number || '',
       currency_symbol: (resto.currency_symbol !== null && resto.currency_symbol !== undefined) ? resto.currency_symbol : '₹',
       payment_method: String(resolvedPaymentMethod || 'cash').toLowerCase(),
-      settled_at: resolvedSettledAt
+      settled_at: resolvedSettledAt || anchorOrder.created_at || null
     }
   };
 }
@@ -3169,9 +3181,11 @@ router.get('/orders/track/:id', async (req, res) => {
     let billSummary = null;
 
     if (!isCancelledOrRejected) {
+      const rawTrackTable = String(order.table_number || '').trim().toLowerCase();
       const isCounterOrder =
-        String(order.order_type || '').toLowerCase() === 'takeaway' ||
-        String(order.table_number || '').trim().toLowerCase() === 'counter';
+        rawTrackTable === 'counter' ||
+        rawTrackTable === 'counter:counter' ||
+        (!order.parent_order_id && !order.session_id && String(order.order_type || '').toLowerCase() === 'takeaway');
 
       let billRows = [order];
       if (!isCounterOrder && order.session_id) {
@@ -3524,6 +3538,140 @@ router.get('/orders/active-table', async (req, res) => {
   } catch (err) {
     console.error('Active table order fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch active table order' });
+  }
+});
+
+// GET Live SSE Stream for Customer Order Status Updates (Authorized via Order Credentials OR Table QR)
+router.get('/orders/live-stream', async (req, res) => {
+  try {
+    const { slug, order_id, table_number, space_type, tkn, token, table_token } = req.query;
+    if (!slug || typeof slug !== 'string' || !slug.trim()) {
+      return res.status(400).json({ error: 'missing_slug' });
+    }
+    const resto = await resolveRestaurant(req, slug);
+    if (!resto) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const targetId = resto.id;
+    let isStaffJwt = false;
+    if (req.headers && req.headers.authorization) {
+      try {
+        const authToken = req.headers.authorization.split(' ')[1];
+        if (authToken && authToken !== 'undefined' && authToken !== 'null') {
+          const decoded = jwt.verify(authToken, JWT_SECRET);
+          if (decoded && (decoded.role === 'superadmin' || Number(decoded.restaurant_id) === Number(targetId))) {
+            isStaffJwt = true;
+          }
+        }
+      } catch {}
+    }
+
+    let scopedOrder = null;
+    let scopedTableKey = '';
+    const orderIdNum = order_id ? parseInt(order_id, 10) : NaN;
+    if (!isNaN(orderIdNum) && orderIdNum > 0) {
+      const ordRows = await query(
+        'SELECT id, session_id, parent_order_id, table_number, tracking_token_hash FROM orders WHERE id = $1 AND restaurant_id = $2',
+        [orderIdNum, targetId]
+      );
+      scopedOrder = ordRows && ordRows[0] ? ordRows[0] : null;
+      if (!scopedOrder) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      if (!isStaffJwt && !verifyHistoricalSessionCredential(req, resto, scopedOrder)) {
+        return res.status(403).json({ error: 'unauthorized_order_stream' });
+      }
+      scopedTableKey = normalizeObserverTableKey(scopedOrder.table_number);
+    }
+
+    const rawTable = String(table_number || '').trim();
+    if (!scopedOrder && rawTable) {
+      const resolvedSpaceType = normalizeSpaceType(space_type || 'table');
+      const resolvedSpaceNum = normalizeSpaceNumber(rawTable);
+      if (resolvedSpaceType === 'counter' || rawTable.toLowerCase() === 'counter') {
+        return res.status(403).json({ error: 'counter_stream_requires_order_token' });
+      }
+      if (!isStaffJwt) {
+        const receivedQrToken = String(tkn || token || table_token || '').trim();
+        const capCheck = await validateSpaceCapacity(resto, resolvedSpaceType, resolvedSpaceNum);
+        const qrResult = receivedQrToken
+          ? verifyQrToken(resto.slug, resolvedSpaceType, resolvedSpaceNum, resto.qr_secret, receivedQrToken, {
+              restaurantId: resto.id,
+              requireHmac: true,
+              rawSpaceNumber: rawTable
+            })
+          : null;
+        if (!capCheck?.valid || !qrResult?.valid) {
+          return res.status(403).json({ error: 'unauthorized_table_stream' });
+        }
+      }
+      scopedTableKey = normalizeObserverTableKey(rawTable);
+    }
+
+    if (!scopedOrder && !scopedTableKey) {
+      return res.status(403).json({ error: 'missing_stream_scope' });
+    }
+
+    // Serverless environments (e.g. Vercel) do not share in-memory EventEmitter state across lambdas;
+    // instruct clients to use fast 1s polling instead of holding long-lived lambda connections.
+    if (process.env.VERCEL) {
+      return res.json({ mode: 'poll' });
+    }
+
+    res.status(200);
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+    res.write('retry: 2000\n\n');
+
+    const matchesScope = (evt) => {
+      if (!evt) return false;
+      if (scopedOrder) {
+        if (Number(evt.order_id) === Number(scopedOrder.id)) return true;
+        if (scopedOrder.session_id && evt.session_id && evt.session_id === scopedOrder.session_id) return true;
+        const rootId = Number(scopedOrder.parent_order_id || scopedOrder.id);
+        if (Number(evt.primary_order_id) === rootId) return true;
+      }
+      if (scopedTableKey && evt.table_number) {
+        return normalizeObserverTableKey(evt.table_number) === scopedTableKey;
+      }
+      return false;
+    };
+
+    const unsubscribe = subscribeRestaurantOrders(targetId, (evt) => {
+      if (res.writableEnded || res.destroyed || !matchesScope(evt)) return;
+      const safePayload = {
+        order_id: evt.order_id,
+        status: evt.status,
+        kitchen_prepared: evt.kitchen_prepared,
+        is_settled: evt.is_settled,
+        ts: evt.ts
+      };
+      res.write(`event: order_update\ndata: ${JSON.stringify(safePayload)}\n\n`);
+      if (typeof res.flush === 'function') res.flush();
+    });
+
+    const keepAliveTimer = setInterval(() => {
+      if (res.writableEnded || res.destroyed) return;
+      res.write(': ping\n\n');
+    }, 18000);
+    if (typeof keepAliveTimer.unref === 'function') keepAliveTimer.unref();
+
+    const cleanup = () => {
+      unsubscribe();
+      clearInterval(keepAliveTimer);
+    };
+
+    req.on('close', cleanup);
+    res.on('close', cleanup);
+  } catch (err) {
+    console.error('Order live-stream error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to open order live stream' });
+    }
   }
 });
 
@@ -3978,6 +4126,22 @@ router.patch('/kitchen/orders/:id/complete', async (req, res) => {
       [orderId, targetId]
     );
 
+    const kdsOrdMeta = await query(
+      'SELECT parent_order_id, session_id, table_number, status, sent_to_kds, is_settled FROM orders WHERE id = $1 AND restaurant_id = $2',
+      [orderId, targetId]
+    );
+    const metaRow = kdsOrdMeta && kdsOrdMeta[0];
+    publishOrderLiveEvent(targetId, {
+      orderId,
+      primaryOrderId: metaRow?.parent_order_id || orderId,
+      sessionId: metaRow?.session_id || null,
+      tableNumber: metaRow?.table_number || null,
+      status: metaRow?.status || 'kitchen',
+      kitchen_prepared: 1,
+      sent_to_kds: metaRow?.sent_to_kds ?? 1,
+      is_settled: metaRow?.is_settled ?? 0
+    });
+
     res.json({ success: true, id: orderId, kitchen_prepared: 1 });
   } catch (err) {
     console.error('Mark kitchen prepared error:', err);
@@ -4037,6 +4201,22 @@ router.patch('/kitchen/orders/:id/recall', async (req, res) => {
     `, [orderId, targetId]);
 
     if (updateResult && updateResult.length > 0) {
+      const recalled = updateResult[0];
+      const recMeta = await query(
+        'SELECT parent_order_id, session_id, table_number FROM orders WHERE id = $1 AND restaurant_id = $2',
+        [orderId, targetId]
+      );
+      const recRow = recMeta && recMeta[0];
+      publishOrderLiveEvent(targetId, {
+        orderId,
+        primaryOrderId: recRow?.parent_order_id || orderId,
+        sessionId: recRow?.session_id || null,
+        tableNumber: recRow?.table_number || null,
+        status: recalled.status,
+        kitchen_prepared: 0,
+        sent_to_kds: recalled.sent_to_kds ?? 1,
+        is_settled: recalled.is_settled ?? 0
+      });
       return res.json({
         success: true,
         id: orderId,

@@ -13,6 +13,7 @@ import { JWT_SECRET } from '../config/jwt.js';
 import { adminLoginRateLimiter, supportTicketCreateRateLimiter, supportTicketReplyRateLimiter } from '../middleware/rateLimiters.js';
 import { generateTicketReference, validateTicketInput, validateReplyInput, VALID_CATEGORIES, VALID_PRIORITIES, VALID_STATUSES } from '../services/supportTicketService.js';
 import { clearRestoResolveCache, clearMenuBundleCache, calculateOrderTax } from './api.js';
+import { publishOrderLiveEvent } from '../utils/orderLiveBus.js';
 import {
   parseSafeDate,
   getFormattedLocalDate,
@@ -3629,8 +3630,9 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       };
 
       if (isSettlementRequested) {
+        const settleTerminalAt = txTerminalAt || new Date().toISOString();
         let settleWhere = 'WHERE restaurant_id = $7 AND (id = $1 OR parent_order_id = $1) AND (is_settled = 0 OR is_settled IS NULL)';
-        const settleParams = [orderId, sqlStatusParam, sqlKdsParam, sqlPrepParam, txTerminalAt, reqPaymentMethod, targetId];
+        const settleParams = [orderId, sqlStatusParam, sqlKdsParam, sqlPrepParam, settleTerminalAt, reqPaymentMethod, targetId];
 
         if (!isTxCounterOrder && txRow.session_id) {
           if (groupLocked !== 'session') {
@@ -3744,7 +3746,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
           SET status = CASE WHEN id = $1 THEN COALESCE($2, status) ELSE status END,
               sent_to_kds = CASE WHEN id = $1 THEN COALESCE($3, sent_to_kds) ELSE sent_to_kds END,
               kitchen_prepared = CASE WHEN id = $1 THEN COALESCE($4, kitchen_prepared) ELSE kitchen_prepared END,
-              terminal_at = CASE WHEN id = $1 THEN $5 ELSE terminal_at END,
+              terminal_at = CASE WHEN id = $1 THEN COALESCE($5, terminal_at) ELSE COALESCE(terminal_at, $5) END,
               is_settled = 1,
               payment_method = $6,
               updated_at = CURRENT_TIMESTAMP
@@ -3849,6 +3851,17 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     const finalSettled = updatedOrderRecord.is_settled || 0;
     const finalPaymentMethod = updatedOrderRecord.payment_method || 'cash';
     const finalTerminalAt = updatedOrderRecord.terminal_at ?? null;
+
+    publishOrderLiveEvent(targetId, {
+      orderId,
+      primaryOrderId: targetOrder.parent_order_id || targetOrder.id,
+      sessionId: targetOrder.session_id || null,
+      tableNumber: targetOrder.table_number || null,
+      status: finalStatus,
+      kitchen_prepared: finalPrep,
+      sent_to_kds: finalKds,
+      is_settled: finalSettled
+    });
 
     res.json({
       success: true,

@@ -1154,6 +1154,16 @@ export default function AdminDashboard({
     restaurantInfo?.auto_print_bill === true
   );
 
+  const broadcastOrderLiveSignal = (orderId, meta = {}) => {
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('touchqr_live_orders');
+        bc.postMessage({ type: 'order_update', order_id: orderId, ...meta, ts: Date.now() });
+        bc.close();
+      }
+    } catch {}
+  };
+
   const handleUpdateStatus = async (orderId, newStatus, extraParams = {}) => {
     const key = String(orderId);
     const { skipAutoKot, silent, ...apiExtraParams } = extraParams || {};
@@ -1167,7 +1177,11 @@ export default function AdminDashboard({
     }
 
     try {
-      await updateOrderStatus(orderId, newStatus, token, apiExtraParams);
+      const statusRes = await updateOrderStatus(orderId, newStatus, token, apiExtraParams);
+      broadcastOrderLiveSignal(orderId, {
+        status: statusRes?.status || newStatus,
+        kitchen_prepared: statusRes?.kitchen_prepared ?? apiExtraParams.kitchen_prepared
+      });
       setTimeout(() => {
         pendingUpdatesRef.current.delete(key);
       }, 3000);
@@ -2070,6 +2084,11 @@ export default function AdminDashboard({
       const confirmedStatus = settleResult.status || 'completed';
       const confirmedSettled = settleResult.is_settled ?? 1;
       const confirmedPaymentMethod = settleResult.payment_method || settleMethod;
+      broadcastOrderLiveSignal(orderId, {
+        status: confirmedStatus,
+        is_settled: confirmedSettled,
+        expected_order_ids: expectedOrderIds
+      });
 
       // 2. Settlement confirmed by backend: preserve sibling lifecycle statuses while applying financial reconciliation
       expectedOrderIds.forEach((settledId) => {
