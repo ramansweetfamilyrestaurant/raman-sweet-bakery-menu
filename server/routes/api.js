@@ -3500,16 +3500,18 @@ router.get('/orders/active-table', async (req, res) => {
               let billRows = [prevOrder];
               const rootId = prevOrder.parent_order_id || prevOrder.id;
               const prevSessionId = String(prevOrder.session_id || '');
-              const siblingRows = await query(
-                `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
-                 FROM orders
-                 WHERE restaurant_id = $1
-                   AND status NOT IN ('rejected', 'cancelled')
-                   AND (id = $2 OR parent_order_id = $2 OR ($3 <> '' AND session_id = $3))
-                 ORDER BY id ASC`,
-                [targetId, rootId, prevSessionId]
-              );
-              if (Array.isArray(siblingRows) && siblingRows.length > 0) billRows = siblingRows;
+              try {
+                const siblingRows = await query(
+                  `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+                   FROM orders
+                   WHERE restaurant_id = $1
+                     AND status NOT IN ('rejected', 'cancelled')
+                     AND (id = $2 OR parent_order_id = $2 OR ($3 <> '' AND session_id = $3))
+                   ORDER BY id ASC`,
+                  [targetId, rootId, prevSessionId]
+                );
+                if (Array.isArray(siblingRows) && siblingRows.length > 0) billRows = siblingRows;
+              } catch (siblingErr) {}
               const { billSummary } = buildConsolidatedOrderSummary(resto, prevOrder, billRows);
               return res.json({
                 id: prevOrder.id,
