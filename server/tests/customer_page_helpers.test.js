@@ -308,6 +308,12 @@ async function runTests() {
     assert.ok(billSlice.includes('setBillCompletedModal(billPayload)'), 'Settled bill must open BillCompletedModal');
     assert.ok(billSlice.includes('setShowRunningOrderModal(false)'), 'Settled bill must reset showRunningOrderModal state');
     assert.ok(billSlice.includes('setSessionExpired(false)'), 'Settled bill must clear session without triggering Session Expired banner');
+    assert.ok(
+      appSrc.includes('COMPLETED_BILL_TTL_MS') &&
+      appSrc.includes('expireCompletedBillIfDue') &&
+      appSrc.includes('handleWakeupExpiry'),
+      'App.jsx must auto-expire in-memory settled e-bill after 2h on timer and tab wakeup'
+    );
     assert.ok(appSrc.includes('bill_summary'), 'api/frontend post-bill integration checks bill_summary');
 
     const modalSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/components/BillCompletedModal.jsx'), 'utf8');

@@ -847,14 +847,22 @@ export default function App() {
   const trackingExpiredRef = useRef(false);
   const restoredTenantOrderRef = useRef(getSlugFromUrl() || '');
   const restoredCompletedBillSlugRef = useRef('');
+  const completedBillSavedAtRef = useRef(null);
   const [restoredOrderSlug, setRestoredOrderSlug] = useState(() => getSlugFromUrl() || '');
+  const COMPLETED_BILL_TTL_MS = 2 * 60 * 60 * 1000;
 
   const getCompletedBillStorageKey = (tenantSlugVal) => {
     const cleanSlug = String(tenantSlugVal || getActiveStorageTenantSlug() || '').trim().toLowerCase();
     return cleanSlug ? `touchqr_last_completed_bill_${cleanSlug}` : null;
   };
 
-  const persistLastCompletedBill = (tenantSlugVal, billPayload, reuseSnapshot = null) => {
+  const persistLastCompletedBill = (tenantSlugVal, billPayload, reuseSnapshot = null, savedAtOverride = null) => {
+    if (!billPayload) {
+      completedBillSavedAtRef.current = null;
+    } else {
+      const savedAtMs = Number(savedAtOverride) || Date.now();
+      completedBillSavedAtRef.current = savedAtMs;
+    }
     const key = getCompletedBillStorageKey(tenantSlugVal);
     if (!key) return;
     try {
@@ -866,11 +874,23 @@ export default function App() {
       const record = JSON.stringify({
         bill: billPayload,
         reuseSnapshot: reuseSnapshot || null,
-        savedAt: Date.now()
+        savedAt: completedBillSavedAtRef.current || Date.now()
       });
       localStorage.setItem(key, record);
       if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(key, record);
     } catch (e) { }
+  };
+
+  const readStoredCompletedBillRecord = (tenantSlugVal) => {
+    const compKey = getCompletedBillStorageKey(tenantSlugVal);
+    if (!compKey) return { compKey: null, parsed: null };
+    try {
+      const rawCompleted = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(compKey)) || localStorage.getItem(compKey);
+      if (!rawCompleted) return { compKey, parsed: null };
+      return { compKey, parsed: JSON.parse(rawCompleted) };
+    } catch (e) {
+      return { compKey, parsed: null };
+    }
   };
 
   // Restore saved order & recent completed receipt once tenant slug resolves (path-slug & custom-domain URLs)
@@ -896,31 +916,87 @@ export default function App() {
     if (restoredCompletedBillSlugRef.current !== tenantSlug) {
       restoredCompletedBillSlugRef.current = tenantSlug;
       if (!restoredActiveOrder && !lastCompletedBill) {
-        try {
-          const compKey = getCompletedBillStorageKey(tenantSlug);
-          const rawCompleted = compKey && ((typeof sessionStorage !== 'undefined' && sessionStorage.getItem(compKey)) || localStorage.getItem(compKey));
-          if (rawCompleted) {
-            const parsedCompleted = JSON.parse(rawCompleted);
-            const ageMs = Date.now() - Number(parsedCompleted?.savedAt || 0);
-            if (parsedCompleted?.bill && Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 2 * 60 * 60 * 1000) {
-              setLastCompletedBill(parsedCompleted.bill);
-              if (parsedCompleted.reuseSnapshot) {
-                setCompletedSpaceSnapshot(parsedCompleted.reuseSnapshot);
-              } else if (isViewOnlyUrl) {
-                setIsPostBillViewOnly(true);
-              }
-            } else if (compKey) {
-              localStorage.removeItem(compKey);
-              if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(compKey);
-            }
+        const { compKey, parsed: parsedCompleted } = readStoredCompletedBillRecord(tenantSlug);
+        const savedAtMs = Number(parsedCompleted?.savedAt || 0);
+        const ageMs = Date.now() - savedAtMs;
+        if (parsedCompleted?.bill && Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= COMPLETED_BILL_TTL_MS) {
+          completedBillSavedAtRef.current = savedAtMs;
+          setLastCompletedBill(parsedCompleted.bill);
+          if (parsedCompleted.reuseSnapshot) {
+            setCompletedSpaceSnapshot(parsedCompleted.reuseSnapshot);
+          } else if (isViewOnlyUrl) {
+            setIsPostBillViewOnly(true);
           }
-        } catch (e) { }
+        } else if (compKey && parsedCompleted) {
+          completedBillSavedAtRef.current = null;
+          try {
+            localStorage.removeItem(compKey);
+            if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(compKey);
+          } catch (e) { }
+        }
       }
     }
     if (restoredOrderSlug !== tenantSlug) {
       setRestoredOrderSlug(tenantSlug);
     }
   }, [info?.slug, sessionExpired]);
+
+  // Live auto-expiry for in-memory completed e-bill (covers open/suspended mobile tabs past 2h without refresh)
+  useEffect(() => {
+    if (!lastCompletedBill && !billCompletedModal) return;
+
+    const getExpiryBaseMs = () => {
+      if (Number.isFinite(completedBillSavedAtRef.current) && completedBillSavedAtRef.current > 0) {
+        return completedBillSavedAtRef.current;
+      }
+      const { parsed } = readStoredCompletedBillRecord(getActiveStorageTenantSlug());
+      const storedSavedAt = Number(parsed?.savedAt || 0);
+      const resolved = Number.isFinite(storedSavedAt) && storedSavedAt > 0 ? storedSavedAt : Date.now();
+      completedBillSavedAtRef.current = resolved;
+      return resolved;
+    };
+
+    const expireCompletedBillIfDue = () => {
+      const savedAtMs = getExpiryBaseMs();
+      const elapsed = Date.now() - savedAtMs;
+      if (Number.isFinite(elapsed) && elapsed >= COMPLETED_BILL_TTL_MS) {
+        completedBillSavedAtRef.current = null;
+        setLastCompletedBill(null);
+        setBillCompletedModal(null);
+        setCompletedSpaceSnapshot(null);
+        setIsPostBillViewOnly(false);
+        persistLastCompletedBill(getActiveStorageTenantSlug(), null);
+        return true;
+      }
+      return false;
+    };
+
+    if (expireCompletedBillIfDue()) return;
+
+    const remainingMs = Math.max(1000, COMPLETED_BILL_TTL_MS - (Date.now() - getExpiryBaseMs()) + 50);
+    const expiryTimer = setTimeout(expireCompletedBillIfDue, Math.min(remainingMs, 2147483647));
+    const handleWakeupExpiry = () => {
+      if (typeof document === 'undefined' || !document.hidden) {
+        expireCompletedBillIfDue();
+      }
+    };
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('focus', handleWakeupExpiry);
+    }
+    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+      document.addEventListener('visibilitychange', handleWakeupExpiry);
+    }
+
+    return () => {
+      clearTimeout(expiryTimer);
+      if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('focus', handleWakeupExpiry);
+      }
+      if (typeof document !== 'undefined' && typeof document.removeEventListener === 'function') {
+        document.removeEventListener('visibilitychange', handleWakeupExpiry);
+      }
+    };
+  }, [lastCompletedBill, billCompletedModal, info?.slug]);
 
   useEffect(() => {
     trackingExpiredRef.current = false;
