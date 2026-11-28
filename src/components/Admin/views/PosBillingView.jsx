@@ -31,6 +31,7 @@ import { isPosItemNonVeg } from '../../../utils/dietHelper.js';
 import { formatOrderLabel, resolveTakeawayToken } from '../../../utils/orderNumberHelper';
 import { resolveComboMeta } from '../../../utils/comboHelper.js';
 import { isFlagEnabled } from '../../../utils/customerHelpers.js';
+import { isAuthoritativePureVeg } from '../../../utils/businessTaxonomy.js';
 
 export default function PosBillingView({
   dishes = [],
@@ -84,22 +85,64 @@ export default function PosBillingView({
     });
   }, [orders]);
 
-  // Total tables list
-  const totalTables = Math.max(1, Number(settingsForm?.total_tables ?? restaurantInfo?.total_tables ?? 20));
-  const tablesList = useMemo(() => Array.from({ length: totalTables }, (_, i) => String(i + 1)), [totalTables]);
+  // Multi-vertical Dine-In Space Options (Tables, Rooms, Cabins, VIP, Cinema Seats)
+  const dineInSpaceOptions = useMemo(() => {
+    const merged = { ...(restaurantInfo || {}), ...(settingsForm || {}) };
+    const options = [];
+    const tableCount = Number(merged.total_tables ?? 0) || 0;
+    const roomCount = Number(merged.total_rooms ?? 0) || 0;
+    const cabinCount = Number(merged.total_cabins ?? 0) || 0;
+    const vipCount = Number(merged.total_vip ?? 0) || 0;
+    const seatCount = Number(merged.total_seats ?? 0) || 0;
+    const rawPrefix = String(merged.table_prefix || 'Table').trim() || 'Table';
+    const tablePrefixLabel = rawPrefix.charAt(0).toUpperCase() + rawPrefix.slice(1);
+    const hasOnlyTables = tableCount > 0 && roomCount === 0 && cabinCount === 0 && vipCount === 0 && seatCount === 0;
 
-  // Master dietary profile resolution
-  const resolvedFoodType = String(settingsForm?.food_type || restaurantInfo?.food_type || settingsForm?.resto_type || restaurantInfo?.resto_type || '').trim().toLowerCase();
-  const isPureVegRestaurant = restaurantInfo?.is_pure_veg === true ||
-    restaurantInfo?.is_pure_veg === 1 ||
-    restaurantInfo?.is_pure_veg === '1' ||
-    restaurantInfo?.is_pure_veg === 'true' ||
-    settingsForm?.is_pure_veg === true ||
-    settingsForm?.is_pure_veg === 1 ||
-    settingsForm?.is_pure_veg === '1' ||
-    settingsForm?.is_pure_veg === 'true' ||
-    ['pure_veg', 'veg', 'vegetarian', 'vegan', 'only_veg'].includes(resolvedFoodType) ||
-    ['bakery_confectionery', 'sweet_shop'].includes(String(restaurantInfo?.business_type || settingsForm?.business_type || '').toLowerCase());
+    for (let i = 1; i <= tableCount; i++) {
+      options.push({
+        value: hasOnlyTables ? String(i) : `${tablePrefixLabel} ${i}`,
+        label: `${tablePrefixLabel} ${i}`
+      });
+    }
+    for (let i = 1; i <= roomCount; i++) {
+      options.push({ value: `Room ${i}`, label: `Room ${i}` });
+    }
+    for (let i = 1; i <= cabinCount; i++) {
+      options.push({ value: `Cabin ${i}`, label: `Cabin ${i}` });
+    }
+    for (let i = 1; i <= vipCount; i++) {
+      options.push({ value: `VIP ${i}`, label: `VIP Lounge ${i}` });
+    }
+    for (let i = 1; i <= seatCount; i++) {
+      options.push({ value: `Seat ${i}`, label: `Seat ${i}` });
+    }
+
+    if (options.length === 0) {
+      for (let i = 1; i <= 20; i++) {
+        options.push({ value: String(i), label: `${tablePrefixLabel} ${i}` });
+      }
+    }
+    return options;
+  }, [restaurantInfo, settingsForm]);
+
+  useEffect(() => {
+    if (dineInSpaceOptions.length > 0 && !dineInSpaceOptions.some(opt => opt.value === tableNumber)) {
+      setTableNumber(dineInSpaceOptions[0].value);
+    }
+  }, [dineInSpaceOptions, tableNumber]);
+
+  const formatSpaceDisplayLabel = (rawSpace) => {
+    const str = String(rawSpace || '').trim();
+    if (!str) return 'Table 1';
+    const matched = dineInSpaceOptions.find(opt => opt.value === str);
+    if (matched?.label) return matched.label;
+    return (/^\d+$/.test(str) || str.length <= 2) ? `Table ${str}` : str;
+  };
+
+  // Master dietary profile resolution (matches DishFormModal & MenuView canonical policy)
+  const mergedDietaryInfo = useMemo(() => ({ ...(restaurantInfo || {}), ...(settingsForm || {}) }), [restaurantInfo, settingsForm]);
+  const resolvedFoodType = String(mergedDietaryInfo?.food_type || mergedDietaryInfo?.resto_type || '').trim().toLowerCase();
+  const isPureVegRestaurant = useMemo(() => isAuthoritativePureVeg(mergedDietaryInfo), [mergedDietaryInfo]);
   const isPureNonVegRestaurant = resolvedFoodType === 'non_veg';
 
   // Reset dietary filter if switching to a pure veg configuration
@@ -165,8 +208,11 @@ export default function PosBillingView({
         if (search.trim()) {
           const q = search.toLowerCase().trim();
           const nameMatch = (dish.name || '').toLowerCase().includes(q);
+          const nameHiMatch = (dish.name_hi || '').toLowerCase().includes(q);
           const descMatch = (dish.description || '').toLowerCase().includes(q);
-          if (!nameMatch && !descMatch) return;
+          const badgeMatch = (dish.badge || '').toLowerCase().includes(q);
+          const catMatch = (dish.category_name || '').toLowerCase().includes(q);
+          if (!nameMatch && !nameHiMatch && !descMatch && !badgeMatch && !catMatch) return;
         }
         list.push(dish);
       });
@@ -313,13 +359,16 @@ export default function PosBillingView({
     return cart.reduce((acc, it) => acc + (it.price * it.quantity), 0);
   }, [cart]);
 
+  const isPlanGstAllowed = restaurantInfo?.gst_invoice_enabled !== false && settingsForm?.gst_invoice_enabled !== false;
   const isGstEnabled = Boolean(
-    restaurantInfo?.gst_enabled === 1 ||
-    restaurantInfo?.gst_enabled === true ||
-    restaurantInfo?.gst_enabled === '1' ||
-    settingsForm?.gst_enabled === 1 ||
-    settingsForm?.gst_enabled === true ||
-    settingsForm?.gst_enabled === '1'
+    isPlanGstAllowed && (
+      restaurantInfo?.gst_enabled === 1 ||
+      restaurantInfo?.gst_enabled === true ||
+      restaurantInfo?.gst_enabled === '1' ||
+      settingsForm?.gst_enabled === 1 ||
+      settingsForm?.gst_enabled === true ||
+      settingsForm?.gst_enabled === '1'
+    )
   );
 
   const cgstAmount = isGstEnabled ? Math.round(subtotal * 0.025 * 100) / 100 : 0;
@@ -368,7 +417,7 @@ export default function PosBillingView({
       payeeName: posPayeeName,
       amount: grandTotal,
       invoiceId: billSessionIdRef.current,
-      spaceLabel: orderType === 'takeaway' ? 'Counter' : `Table ${tableNumber}`
+      spaceLabel: orderType === 'takeaway' ? 'Counter' : formatSpaceDisplayLabel(tableNumber)
     });
 
     if (!uri) {
@@ -933,7 +982,7 @@ export default function PosBillingView({
 
                     <div style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
                       <span>{order.customer_name ? order.customer_name : `${(order.items?.length || 1)} items`}</span>
-                      <span>{currencySymbol}{formatPriceNumber(order.total_amount)}</span>
+                      <span>{curr}{formatPriceNumber(order.total_amount)}</span>
                     </div>
 
                     <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
@@ -1600,10 +1649,10 @@ export default function PosBillingView({
             </button>
           </div>
 
-          {/* If Dine-In selected, Table Selector */}
+          {/* If Dine-In selected, Multi-Vertical Space Selector */}
           {orderType === 'dine_in' && (
             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', background: '#F0FDF4', padding: '8px 12px', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
-              <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#166534', flexShrink: 0, whiteSpace: 'nowrap' }}>Select Table:</span>
+              <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#166534', flexShrink: 0, whiteSpace: 'nowrap' }}>Select Space:</span>
               <select
                 className="pos-compact-select"
                 value={tableNumber}
@@ -1621,8 +1670,8 @@ export default function PosBillingView({
                   outline: 'none'
                 }}
               >
-                {tablesList.map(t => (
-                  <option key={t} value={t}>Table {t}</option>
+                {dineInSpaceOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>
@@ -1718,7 +1767,7 @@ export default function PosBillingView({
                         </span>
                       )}
                       <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                        {currencySymbol}{formatPriceNumber(item.price)} each
+                        {curr}{formatPriceNumber(item.price)} each
                       </span>
                     </div>
                     {item.dish.isCombo && item.dish.comboIncludes && (
@@ -1730,7 +1779,7 @@ export default function PosBillingView({
                       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '3px' }}>
                         {item.modifiers.map((m, mIdx) => (
                           <span key={mIdx} style={{ fontSize: '0.62rem', background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
-                            + {m.name}{Number(m.price) > 0 ? ` (+${currencySymbol}${formatPriceNumber(m.price)})` : ''}
+                            + {m.name}{Number(m.price) > 0 ? ` (+${curr}${formatPriceNumber(m.price)})` : ''}
                           </span>
                         ))}
                       </div>
@@ -1769,7 +1818,7 @@ export default function PosBillingView({
                     </div>
 
                     <strong style={{ fontSize: '0.82rem', color: '#0F172A', minWidth: '52px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {currencySymbol}{formatPriceNumber(item.price * item.quantity)}
+                      {curr}{formatPriceNumber(item.price * item.quantity)}
                     </strong>
 
                     <button
@@ -1813,12 +1862,12 @@ export default function PosBillingView({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748B' }}>
               <span>Items Subtotal:</span>
-              <span>{currencySymbol}{formatPriceNumber(subtotal)}</span>
+              <span>{curr}{formatPriceNumber(subtotal)}</span>
             </div>
             {isGstEnabled && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748B' }}>
                 <span>GST (5% CGST+SGST):</span>
-                <span>{currencySymbol}{formatPriceNumber(taxAmount)}</span>
+                <span>{curr}{formatPriceNumber(taxAmount)}</span>
               </div>
             )}
             <div style={{
@@ -1832,7 +1881,7 @@ export default function PosBillingView({
               color: '#0F172A'
             }}>
               <span>Total Payable:</span>
-              <span style={{ color: '#059669' }}>{currencySymbol}{formatPriceNumber(grandTotal)}</span>
+              <span style={{ color: '#059669' }}>{curr}{formatPriceNumber(grandTotal)}</span>
             </div>
           </div>
 
@@ -1990,7 +2039,7 @@ export default function PosBillingView({
                 ))}
               </div>
 
-              {/* Change Return Alert */}
+              {/* Change Return or Balance Short Alert */}
               {Number(cashTendered) > grandTotal && (
                 <div style={{
                   display: 'flex',
@@ -2005,7 +2054,25 @@ export default function PosBillingView({
                     Change to Return:
                   </span>
                   <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#059669' }}>
-                    {currencySymbol}{formatPriceNumber(Number(cashTendered) - grandTotal)}
+                    {curr}{formatPriceNumber(Number(cashTendered) - grandTotal)}
+                  </span>
+                </div>
+              )}
+              {cashTendered !== '' && Number(cashTendered) > 0 && Number(cashTendered) < grandTotal && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '5px 8px',
+                  borderRadius: '6px',
+                  background: '#FFFBEB',
+                  border: '1px solid #FDE68A'
+                }}>
+                  <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#B45309' }}>
+                    Short by:
+                  </span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#D97706' }}>
+                    {curr}{formatPriceNumber(grandTotal - Number(cashTendered))}
                   </span>
                 </div>
               )}
@@ -2032,7 +2099,7 @@ export default function PosBillingView({
                   style={{ width: '100px', height: '100px', margin: '0 auto', display: 'block', borderRadius: '8px' }}
                 />
                 <span style={{ fontSize: '0.68rem', color: '#15803D', fontWeight: 700, marginTop: '3px', display: 'block' }}>
-                  Amount: {currencySymbol}{formatPriceNumber(grandTotal)}
+                  Amount: {curr}{formatPriceNumber(grandTotal)}
                 </span>
               </div>
             ) : (
@@ -2082,7 +2149,9 @@ export default function PosBillingView({
               <>
                 <Printer size={18} />
                 <span>
-                  {orderType === 'takeaway' ? 'Pay & Generate Token' : `Pay & Punch Table ${tableNumber}`} ({currencySymbol}{formatPriceNumber(grandTotal)})
+                  {orderType === 'takeaway'
+                    ? 'Pay & Generate Token'
+                    : `Pay & Punch ${formatSpaceDisplayLabel(tableNumber)}`} ({curr}{formatPriceNumber(grandTotal)})
                 </span>
               </>
             )}
@@ -2120,7 +2189,7 @@ export default function PosBillingView({
                 {cart.length === 0 ? 'Active Bill (Empty)' : `${cart.reduce((s, it) => s + it.quantity, 0)} Items Added`}
               </div>
               <div style={{ fontSize: '1rem', fontWeight: 950, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                {currencySymbol}{formatPriceNumber(grandTotal)}
+                {curr}{formatPriceNumber(grandTotal)}
               </div>
             </div>
           </div>
@@ -2216,10 +2285,10 @@ export default function PosBillingView({
               {successOrder.token_display ? (
                 <>Token <strong>{successOrder.token_display}</strong></>
               ) : (
-                <><strong>Table {successOrder.order.table_number || '1'}</strong></>
+                <><strong>{formatSpaceDisplayLabel(successOrder.order.table_number || '1')}</strong></>
               )}
               {' • '}
-              Total Paid: <strong style={{ color: '#059669' }}>{currencySymbol}{formatPriceNumber(successOrder.order.total_amount)}</strong> ({successOrder.order.payment_method?.toUpperCase()})
+              Total Paid: <strong style={{ color: '#059669' }}>{curr}{formatPriceNumber(successOrder.order.total_amount)}</strong> ({successOrder.order.payment_method?.toUpperCase()})
             </div>
 
             {/* Change to Return Banner if Cash Tendered > Total */}
@@ -2243,7 +2312,7 @@ export default function PosBillingView({
                   </span>
                 </div>
                 <strong style={{ fontSize: '1.25rem', color: '#065F46', fontWeight: 950 }}>
-                  {currencySymbol}{formatPriceNumber(successOrder.change_to_return)}
+                  {curr}{formatPriceNumber(successOrder.change_to_return)}
                 </strong>
               </div>
             )}

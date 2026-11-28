@@ -430,6 +430,107 @@ async function runTestSuite() {
       assert.strictEqual(Number(data.order.subtotal_amount), 590);
     });
 
+    // TEST 12: Day Closing excludes open/unpaid table orders from cash sales & persists actual offer discounts & stored taxes
+    await testAsync('12. Day Closing excludes unpaid open orders from cash drawer and persists stored tax & discount totals', async () => {
+      // Seed an unpaid open QR table order (is_settled = 0, no payment_method) on the same restaurant today
+      await query(
+        `INSERT INTO orders (restaurant_id, table_number, customer_name, items, total_amount, subtotal_amount, tax_amount, status, is_settled, payment_method, created_at)
+         VALUES ($1, 'Table 9', 'Open Table Guest', '[{"name":"Open Tab Item","quantity":1,"price":900}]', 945, 900, 45, 'preparing', 0, NULL, $2)`,
+        [restoId, new Date().toISOString()]
+      );
+
+      // Seed a settled order with explicit offer discount_amount in items
+      await query(
+        `INSERT INTO orders (restaurant_id, table_number, customer_name, items, total_amount, subtotal_amount, tax_amount, status, is_settled, payment_method, created_at)
+         VALUES ($1, 'Counter', 'Offer Guest', '[{"name":"Promo Thali","quantity":2,"price":150,"regular_price":200,"discount_amount":50,"offer_id":99}]', 315, 300, 15, 'accepted', 1, 'cash', $2)`,
+        [restoId, new Date().toISOString()]
+      );
+
+      const sumRes = await fetch(`${baseUrl}/api/admin/day-closing/summary`, {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      assert.strictEqual(sumRes.status, 200);
+      const sumData = await sumRes.json();
+      assert.strictEqual(sumData.success, true);
+
+      // Unpaid Table 9 (₹945) must NOT inflate total_orders (6 settled from POS tests 3,4,5,6,8,11 + 1 new settled = 7) or cash_sales
+      assert.strictEqual(sumData.summary.total_orders, 7);
+      assert.strictEqual(sumData.summary.unsettled_orders, 1);
+      assert.strictEqual(Number(sumData.summary.unsettled_sales), 945);
+      // Offer discount = 2 * 50 = 100
+      assert.strictEqual(Number(sumData.summary.discount_amount), 100);
+
+      const todayIst = sumData.date;
+      const submitRes = await fetch(`${baseUrl}/api/admin/day-closing/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
+          closing_date: todayIst,
+          shift_name: 'Night Close',
+          actual_cash_counted: sumData.summary.cash_sales
+        })
+      });
+      assert.strictEqual(submitRes.status, 200);
+      const submitData = await submitRes.json();
+      assert.strictEqual(submitData.success, true);
+      assert.strictEqual(Number(submitData.record.discount_amount), 100);
+      assert.strictEqual(Number(submitData.record.cash_discrepancy), 0);
+      assert.strictEqual(Number(submitData.record.total_orders), 7);
+    });
+
+    // TEST 13: Named multi-vertical space (e.g. Booth 1) avoids double "Table Booth 1" prefix & legacy GST fallback works
+    await testAsync('13. Named multi-vertical POS space avoids Table prefix & legacy zero-tax fallback works when GST enabled', async () => {
+      const boothRes = await fetch(`${baseUrl}/api/admin/pos-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
+          order_type: 'dine_in',
+          table_number: 'Booth 1',
+          payment_method: 'upi',
+          items: [{ dish_id: 21, name: 'Paneer Tikka Pizza', price: 250, quantity: 1 }]
+        })
+      });
+      assert.strictEqual(boothRes.status, 200);
+      const boothData = await boothRes.json();
+      assert.strictEqual(boothData.success, true);
+      assert.strictEqual(boothData.order.customer_name, 'Booth 1 Guest');
+      assert.ok(boothData.message.includes('for Booth 1!'), `Expected "for Booth 1!", got "${boothData.message}"`);
+      assert.ok(!boothData.message.includes('Table Booth 1'), 'Must not double-prefix "Table" onto named spaces');
+
+      // Test legacy order (SQL default tax_amount=0, subtotal_amount=0) while restaurant GST is enabled
+      await query('UPDATE restaurants SET gst_enabled = 1 WHERE id = $1', [restoId]);
+      const beforeRes = await fetch(`${baseUrl}/api/admin/day-closing/summary`, {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      assert.strictEqual(beforeRes.status, 200);
+      const beforeData = await beforeRes.json();
+
+      await query(
+        `INSERT INTO orders (restaurant_id, table_number, customer_name, items, total_amount, subtotal_amount, tax_amount, status, is_settled, payment_method, created_at)
+         VALUES ($1, 'Room 201', 'Legacy GST Guest', '[{"name":"Legacy Thali","quantity":1,"price":210}]', 210, 0, 0, 'completed', 1, 'card', $2)`,
+        [restoId, new Date().toISOString()]
+      );
+
+      const sumRes = await fetch(`${baseUrl}/api/admin/day-closing/summary`, {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      assert.strictEqual(sumRes.status, 200);
+      const sumData = await sumRes.json();
+      assert.strictEqual(sumData.success, true);
+      assert.strictEqual(sumData.restaurant.gst_enabled, true);
+      // Legacy ₹210 order (5% inclusive = ₹10) must be added cleanly on top of pre-insert tax total
+      assert.strictEqual(
+        Number(sumData.summary.tax_amount),
+        Math.round((Number(beforeData.summary.tax_amount) + 10) * 100) / 100
+      );
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

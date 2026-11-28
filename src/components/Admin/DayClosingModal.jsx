@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Printer, Send, CheckCircle2, AlertTriangle, Clock, Calendar, RefreshCw, History, DollarSign, Smartphone, CreditCard, ChevronRight } from 'lucide-react';
 import { fetchDayClosingSummary, submitDayClosing, fetchDayClosingHistory } from '../../api/client';
 import { buildDayClosingSlipHtml, buildDayClosingWhatsAppMessage } from '../../utils/billingHelper';
+import { getCurrencySymbol } from '../../utils/currencyHelper';
 
 export default function DayClosingModal({
   isOpen,
@@ -36,7 +37,10 @@ export default function DayClosingModal({
   const [historyList, setHistoryList] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  const currency = restaurantInfo?.currency_symbol || settingsForm?.currency_symbol || '₹';
+  const rawCurr = restaurantInfo?.currency_symbol !== undefined
+    ? restaurantInfo.currency_symbol
+    : settingsForm?.currency_symbol;
+  const currency = getCurrencySymbol(rawCurr);
 
   const loadSummary = async (date) => {
     setLoading(true);
@@ -444,6 +448,27 @@ export default function DayClosingModal({
                 </div>
               ) : (
                 <>
+                  {/* OPEN UNPAID ORDERS NOTICE */}
+                  {Number(summary.unsettled_orders) > 0 && (
+                    <div style={{
+                      background: '#FFFBEB',
+                      border: '1px solid #FDE68A',
+                      borderRadius: '10px',
+                      padding: '8px 12px',
+                      fontSize: '0.74rem',
+                      color: '#B45309',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                      <span>
+                        {summary.unsettled_orders} open/unpaid table order{summary.unsettled_orders === 1 ? '' : 's'} ({currency}{(Number(summary.unsettled_sales) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}) excluded from cash drawer until settled.
+                      </span>
+                    </div>
+                  )}
+
                   {/* KPI HIGHLIGHTS */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
                     <div style={{
@@ -479,7 +504,9 @@ export default function DayClosingModal({
                         {currency}{summary.tax_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#059669', marginTop: '4px', fontWeight: 700 }}>
-                        {restaurantInfo?.gst_enabled ? '5% Food GST Included' : 'GST Disabled (0%)'}
+                        {(data?.restaurant?.gst_enabled ?? restaurantInfo?.gst_enabled) && restaurantInfo?.gst_invoice_enabled !== false && settingsForm?.gst_invoice_enabled !== false
+                          ? '5% Food GST Included'
+                          : 'GST Disabled (0%)'}
                       </div>
                     </div>
                   </div>

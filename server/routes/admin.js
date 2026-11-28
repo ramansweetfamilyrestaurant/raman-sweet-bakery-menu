@@ -3399,7 +3399,10 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
       });
     }
 
-    const isEffectiveGst = Boolean(resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1');
+    const isPlanGstEnabled = planRow
+      ? (planRow.gst_invoice_enabled === undefined || planRow.gst_invoice_enabled === null || planRow.gst_invoice_enabled === 1 || planRow.gst_invoice_enabled === true || planRow.gst_invoice_enabled === '1' || planRow.gst_invoice_enabled === 'true')
+      : true;
+    const isEffectiveGst = Boolean(isPlanGstEnabled && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1'));
     const taxBreakdown = calculateOrderTax(subtotal, isEffectiveGst);
 
     const cleanCustomerPhone = String(customer_phone || '').trim().substring(0, 30);
@@ -3417,9 +3420,10 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
         dbType: getDbType()
       });
 
+      const isNamedSpace = /[a-zA-Z]{2,}/.test(cleanTable);
       const defaultCustomerName = isTakeaway
         ? (nextTokenDisp ? `Takeaway Guest (${nextTokenDisp})` : 'Counter Customer')
-        : `Table Customer (${cleanTable})`;
+        : (isNamedSpace ? `${cleanTable} Guest` : `Table ${cleanTable} Guest`);
       const cleanCustomerName = String(customer_name || defaultCustomerName).trim().substring(0, 100);
 
       const insertRes = await txQuery(`
@@ -3479,13 +3483,14 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
       };
     });
 
+    const cleanTableDisplay = /[a-zA-Z]{2,}/.test(cleanTable) ? cleanTable : `Table ${cleanTable}`;
     res.json({
       success: true,
       order: createdOrder,
       order_number: orderNumber,
       token_display: tokenDisplay,
       token_number: tokenNumber,
-      message: tokenDisplay ? `🎉 Counter Order No: ${orderNumber} created! Token: ${tokenDisplay}` : `🎉 Order No: ${orderNumber} created for Table ${cleanTable}!`
+      message: tokenDisplay ? `🎉 Counter Order No: ${orderNumber} created! Token: ${tokenDisplay}` : `🎉 Order No: ${orderNumber} created for ${cleanTableDisplay}!`
     });
   } catch (err) {
     console.error('POS order creation error:', err);
@@ -6268,6 +6273,208 @@ router.post('/optimize-db', authenticateToken, requireActiveSubscription, async 
 // DAY-END CLOSING & CASHIER SHIFT REPORT API
 // =============================================================================
 
+// Shared Day-End Closing computation helper (excludes unpaid/unsettled orders from cash/sales drawer)
+async function computeDayClosingReport(targetId, qDate = '') {
+  const parseSafeDate = (dateVal) => {
+    if (!dateVal) return null;
+    if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
+    let str = String(dateVal).trim();
+    if (str.includes(' ') && !str.includes('T')) str = str.replace(' ', 'T');
+    if (!str.endsWith('Z') && !str.includes('+') && !str.slice(10).includes('-')) str = str + 'Z';
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const getFormattedLocalDate = (dateObj) => {
+    const d = parseSafeDate(dateObj);
+    if (!d) return '';
+    try {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+    } catch (e) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  };
+
+  const targetDate = qDate ? String(qDate).trim() : getFormattedLocalDate(new Date());
+
+  const restoRows = await query(
+    'SELECT id, name, phone, whatsapp_number, gst_enabled, gstin_number, currency_symbol, service_model, business_type, plan_tier FROM restaurants WHERE id = $1',
+    [targetId]
+  );
+  const resto = restoRows[0] || {};
+  const restoServiceModel = String(resto.service_model || '').toLowerCase();
+  const restoBizType = String(resto.business_type || '').toLowerCase();
+  const isCinema = restoServiceModel === 'cinema' || restoServiceModel === 'seat_service' || restoBizType === 'cinema_theatre' || restoBizType === 'cinema';
+  const isHotel = restoServiceModel === 'hotel' || restoServiceModel === 'in_room_dining' || restoBizType === 'hotel_resort' || restoBizType === 'hotel';
+
+  let planRow = null;
+  try {
+    const pRows = await query('SELECT gst_invoice_enabled FROM saas_plans WHERE LOWER(key) = LOWER($1)', [String(resto.plan_tier || 'pro')]);
+    planRow = (pRows?.rows || pRows)?.[0] || null;
+  } catch (_) { }
+  const isPlanGstEnabled = planRow
+    ? (planRow.gst_invoice_enabled === undefined || planRow.gst_invoice_enabled === null || planRow.gst_invoice_enabled === 1 || planRow.gst_invoice_enabled === true || planRow.gst_invoice_enabled === '1' || planRow.gst_invoice_enabled === 'true')
+    : true;
+
+  const orders = await query(`
+    SELECT id, total_amount, tax_amount, subtotal_amount, gst_rate, status, payment_method, is_settled, items, created_at, table_number, order_type, token_number, token_display
+    FROM orders
+    WHERE restaurant_id = $1 AND status NOT IN ('cancelled', 'rejected')
+    ORDER BY id ASC
+  `, [targetId]);
+
+  const todayOrders = orders.filter(o => getFormattedLocalDate(o.created_at) === targetDate);
+  const isGst = Boolean(isPlanGstEnabled && (resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1'));
+
+  let totalOrders = 0;
+  let grossSales = 0;
+  let cashSales = 0;
+  let upiSales = 0;
+  let cardSales = 0;
+  let otherSales = 0;
+  let taxAmount = 0;
+  let discountAmount = 0;
+  let unsettledOrders = 0;
+  let unsettledSales = 0;
+
+  let dineInOrders = 0;
+  let dineInSales = 0;
+  let takeawayOrders = 0;
+  let takeawaySales = 0;
+  let deliveryOrders = 0;
+  let deliverySales = 0;
+  let roomOrders = 0;
+  let roomSales = 0;
+  let cinemaOrders = 0;
+  let cinemaSales = 0;
+
+  const dishTally = new Map();
+
+  todayOrders.forEach(o => {
+    const amt = Number(o.total_amount) || 0;
+    const method = String(o.payment_method || '').toLowerCase().trim();
+    const statusLower = String(o.status || '').toLowerCase().trim();
+    const isSettled = o.is_settled === 1 || o.is_settled === '1' || o.is_settled === true;
+    const isPaidOrder = isSettled || statusLower === 'completed' || statusLower === 'settled' || Boolean(method);
+
+    if (!isPaidOrder) {
+      unsettledOrders++;
+      unsettledSales += amt;
+      return;
+    }
+
+    totalOrders++;
+    grossSales += amt;
+
+    const storedTax = Number(o.tax_amount);
+    const hasExplicitZeroTaxOrder = Number(o.subtotal_amount) > 0 && Math.abs(Number(o.subtotal_amount) - amt) < 0.01 && storedTax === 0;
+    if (!Number.isNaN(storedTax) && storedTax > 0) {
+      taxAmount += storedTax;
+    } else if (!hasExplicitZeroTaxOrder && isGst && amt > 0) {
+      taxAmount += (amt - (amt / 1.05));
+    }
+
+    const rawTable = String(o.table_number || '').trim().toLowerCase();
+    const oType = String(o.order_type || '').toLowerCase();
+    const isDelivery = oType === 'delivery' || /^delivery/i.test(rawTable);
+    const isTakeaway = oType === 'takeaway' || /^(takeaway|parcel|pickup|counter)/i.test(rawTable) || Boolean(o.token_number || o.token_display);
+    const isCinemaSeat = isCinema
+      ? (!isTakeaway && !isDelivery)
+      : (/^seat/i.test(rawTable) || /^screen/i.test(rawTable) || /^audi/i.test(rawTable) || /^s\d+[- ]/i.test(rawTable));
+    const isHotelRoom = isHotel
+      ? (!isTakeaway && !isDelivery && (!rawTable.includes('table') && !rawTable.includes('buffet')))
+      : (oType === 'room' || /^room/i.test(rawTable));
+
+    if (isDelivery) {
+      deliveryOrders++;
+      deliverySales += amt;
+    } else if (isTakeaway) {
+      takeawayOrders++;
+      takeawaySales += amt;
+    } else if (isCinemaSeat) {
+      cinemaOrders++;
+      cinemaSales += amt;
+    } else if (isHotelRoom) {
+      roomOrders++;
+      roomSales += amt;
+    } else {
+      dineInOrders++;
+      dineInSales += amt;
+    }
+
+    if (method === 'cash') {
+      cashSales += amt;
+    } else if (method === 'upi' || method === 'qr') {
+      upiSales += amt;
+    } else if (method === 'card') {
+      cardSales += amt;
+    } else if (method) {
+      otherSales += amt;
+    } else {
+      cashSales += amt;
+    }
+
+    let items = [];
+    try {
+      items = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
+    } catch (_) {
+      items = [];
+    }
+
+    items.forEach(item => {
+      const name = (item.name || item.dish?.name || 'Item').trim();
+      const qty = Number(item.quantity) || 1;
+      const itemPrice = Number(item.price ?? item.dish?.price ?? 0) * qty;
+      const itemDiscount = Math.max(0, Number(item.discount_amount) || 0) * qty;
+      discountAmount += itemDiscount;
+
+      if (dishTally.has(name)) {
+        const curr = dishTally.get(name);
+        curr.quantity += qty;
+        curr.revenue += itemPrice;
+      } else {
+        dishTally.set(name, { name, quantity: qty, revenue: itemPrice });
+      }
+    });
+  });
+
+  const topItems = Array.from(dishTally.values())
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 5);
+
+  const summary = {
+    total_orders: totalOrders,
+    gross_sales: Math.round(grossSales * 100) / 100,
+    cash_sales: Math.round(cashSales * 100) / 100,
+    upi_sales: Math.round(upiSales * 100) / 100,
+    card_sales: Math.round(cardSales * 100) / 100,
+    other_sales: Math.round(otherSales * 100) / 100,
+    tax_amount: Math.round(taxAmount * 100) / 100,
+    discount_amount: Math.round(discountAmount * 100) / 100,
+    unsettled_orders: unsettledOrders,
+    unsettled_sales: Math.round(unsettledSales * 100) / 100,
+    top_items: topItems,
+    currency_symbol: resto.currency_symbol || '₹',
+    dine_in_orders: dineInOrders,
+    dine_in_sales: Math.round(dineInSales * 100) / 100,
+    takeaway_orders: takeawayOrders,
+    takeaway_sales: Math.round(takeawaySales * 100) / 100,
+    delivery_orders: deliveryOrders,
+    delivery_sales: Math.round(deliverySales * 100) / 100,
+    room_orders: roomOrders,
+    room_sales: Math.round(roomSales * 100) / 100,
+    cinema_orders: cinemaOrders,
+    cinema_sales: Math.round(cinemaSales * 100) / 100,
+    is_cinema: isCinema,
+    is_hotel: isHotel
+  };
+
+  return { targetDate, resto, isCinema, isHotel, isGst, summary };
+}
+
 // GET /api/admin/day-closing/summary
 router.get('/day-closing/summary', authenticateToken, requireActiveSubscription, async (req, res) => {
   try {
@@ -6277,151 +6484,7 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
     }
 
     const { date: qDate } = req.query;
-
-    const parseSafeDate = (dateVal) => {
-      if (!dateVal) return null;
-      if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : dateVal;
-      let str = String(dateVal).trim();
-      if (str.includes(' ') && !str.includes('T')) str = str.replace(' ', 'T');
-      if (!str.endsWith('Z') && !str.includes('+') && !str.slice(10).includes('-')) str = str + 'Z';
-      const d = new Date(str);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
-    const getFormattedLocalDate = (dateObj) => {
-      const d = parseSafeDate(dateObj);
-      if (!d) return '';
-      try {
-        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
-      } catch (e) {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      }
-    };
-
-    const targetDate = qDate ? String(qDate).trim() : getFormattedLocalDate(new Date());
-
-    // 1. Fetch restaurant settings
-    const restoRows = await query('SELECT id, name, phone, whatsapp_number, gst_enabled, gstin_number, currency_symbol, service_model, business_type FROM restaurants WHERE id = $1', [targetId]);
-    const resto = restoRows[0] || {};
-    const restoServiceModel = String(resto.service_model || '').toLowerCase();
-    const restoBizType = String(resto.business_type || '').toLowerCase();
-    const isCinema = restoServiceModel === 'cinema' || restoServiceModel === 'seat_service' || restoBizType === 'cinema_theatre' || restoBizType === 'cinema';
-    const isHotel = restoServiceModel === 'hotel' || restoServiceModel === 'in_room_dining' || restoBizType === 'hotel_resort' || restoBizType === 'hotel';
-
-    // 2. Fetch all valid orders
-    const orders = await query(`
-      SELECT id, total_amount, status, payment_method, is_settled, items, created_at, table_number, order_type, token_number, token_display
-      FROM orders
-      WHERE restaurant_id = $1 AND status NOT IN ('cancelled', 'rejected')
-      ORDER BY id ASC
-    `, [targetId]);
-
-    const todayOrders = orders.filter(o => {
-      const dStr = getFormattedLocalDate(o.created_at);
-      return dStr === targetDate;
-    });
-
-    let totalOrders = todayOrders.length;
-    let grossSales = 0;
-    let cashSales = 0;
-    let upiSales = 0;
-    let cardSales = 0;
-    let otherSales = 0;
-
-    let dineInOrders = 0;
-    let dineInSales = 0;
-    let takeawayOrders = 0;
-    let takeawaySales = 0;
-    let deliveryOrders = 0;
-    let deliverySales = 0;
-    let roomOrders = 0;
-    let roomSales = 0;
-    let cinemaOrders = 0;
-    let cinemaSales = 0;
-
-    const dishTally = new Map();
-
-    todayOrders.forEach(o => {
-      const amt = Number(o.total_amount) || 0;
-      grossSales += amt;
-
-      const rawTable = String(o.table_number || '').trim().toLowerCase();
-      const oType = String(o.order_type || '').toLowerCase();
-      const isDelivery = oType === 'delivery' || /^delivery/i.test(rawTable);
-      const isTakeaway = oType === 'takeaway' || /^(takeaway|parcel|pickup|counter)/i.test(rawTable) || Boolean(o.token_number || o.token_display);
-
-      const isCinemaSeat = isCinema
-        ? (!isTakeaway && !isDelivery)
-        : (/^seat/i.test(rawTable) || /^screen/i.test(rawTable) || /^audi/i.test(rawTable) || /^s\d+[- ]/i.test(rawTable));
-
-      const isHotelRoom = isHotel
-        ? (!isTakeaway && !isDelivery && (!rawTable.includes('table') && !rawTable.includes('buffet')))
-        : (oType === 'room' || /^room/i.test(rawTable));
-
-      if (isDelivery) {
-        deliveryOrders++;
-        deliverySales += amt;
-      } else if (isTakeaway) {
-        takeawayOrders++;
-        takeawaySales += amt;
-      } else if (isCinemaSeat) {
-        cinemaOrders++;
-        cinemaSales += amt;
-      } else if (isHotelRoom) {
-        roomOrders++;
-        roomSales += amt;
-      } else {
-        dineInOrders++;
-        dineInSales += amt;
-      }
-
-      const method = String(o.payment_method || '').toLowerCase().trim();
-      if (method === 'cash') {
-        cashSales += amt;
-      } else if (method === 'upi' || method === 'qr') {
-        upiSales += amt;
-      } else if (method === 'card') {
-        cardSales += amt;
-      } else if (method) {
-        otherSales += amt;
-      } else {
-        cashSales += amt;
-      }
-
-      let items = [];
-      try {
-        items = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
-      } catch (_) {
-        items = [];
-      }
-
-      items.forEach(item => {
-        const name = (item.name || item.dish?.name || 'Item').trim();
-        const qty = Number(item.quantity) || 1;
-        const itemPrice = Number(item.price || item.dish?.price || 0) * qty;
-
-        if (dishTally.has(name)) {
-          const curr = dishTally.get(name);
-          curr.quantity += qty;
-          curr.revenue += itemPrice;
-        } else {
-          dishTally.set(name, { name, quantity: qty, revenue: itemPrice });
-        }
-      });
-    });
-
-    const topItems = Array.from(dishTally.values())
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5);
-
-    const isGst = Boolean(resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1');
-    let taxAmount = 0;
-    if (isGst && grossSales > 0) {
-      taxAmount = Math.round((grossSales - (grossSales / 1.05)) * 100) / 100;
-    }
+    const { targetDate, resto, isCinema, isHotel, isGst, summary } = await computeDayClosingReport(targetId, qDate);
 
     const prevClosingRows = await query(`
       SELECT * FROM day_closings
@@ -6443,32 +6506,10 @@ router.get('/day-closing/summary', authenticateToken, requireActiveSubscription,
         is_hotel: isHotel,
         phone: resto.phone || '',
         whatsapp_number: resto.whatsapp_number || resto.phone || '',
-        gst_enabled: Boolean(resto.gst_enabled),
+        gst_enabled: isGst,
         gstin_number: resto.gstin_number || ''
       },
-      summary: {
-        total_orders: totalOrders,
-        gross_sales: Math.round(grossSales * 100) / 100,
-        cash_sales: Math.round(cashSales * 100) / 100,
-        upi_sales: Math.round(upiSales * 100) / 100,
-        card_sales: Math.round(cardSales * 100) / 100,
-        other_sales: Math.round(otherSales * 100) / 100,
-        tax_amount: taxAmount,
-        top_items: topItems,
-        currency_symbol: resto.currency_symbol || '₹',
-        dine_in_orders: dineInOrders,
-        dine_in_sales: Math.round(dineInSales * 100) / 100,
-        takeaway_orders: takeawayOrders,
-        takeaway_sales: Math.round(takeawaySales * 100) / 100,
-        delivery_orders: deliveryOrders,
-        delivery_sales: Math.round(deliverySales * 100) / 100,
-        room_orders: roomOrders,
-        room_sales: Math.round(roomSales * 100) / 100,
-        cinema_orders: cinemaOrders,
-        cinema_sales: Math.round(cinemaSales * 100) / 100,
-        is_cinema: isCinema,
-        is_hotel: isHotel
-      },
+      summary,
       latest_closing: latestClosing
     });
   } catch (err) {
@@ -6497,114 +6538,10 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
       return res.status(400).json({ error: 'closing_date is required' });
     }
 
-    const getFormattedLocalDate = (dateObj) => {
-      if (!dateObj) return '';
-      let d = dateObj instanceof Date ? dateObj : new Date(dateObj);
-      if (isNaN(d.getTime())) return '';
-      try {
-        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
-      } catch (e) {
-        return d.toISOString().slice(0, 10);
-      }
-    };
-
-    const restoRows = await query('SELECT id, name, gst_enabled, service_model, business_type FROM restaurants WHERE id = $1', [targetId]);
-    const resto = restoRows[0] || {};
-    const serviceModel = String(resto.service_model || '').toLowerCase();
-    const businessType = String(resto.business_type || '').toLowerCase();
-    const isCinema = serviceModel === 'cinema' || businessType === 'cinema_theatre';
-    const isHotel = serviceModel === 'hotel' || businessType === 'hotel_resort';
-
-    const orders = await query(`
-      SELECT id, total_amount, status, payment_method, items, created_at, table_number, order_type, token_number, token_display
-      FROM orders
-      WHERE restaurant_id = $1 AND status NOT IN ('cancelled', 'rejected')
-    `, [targetId]);
-
-    const matchingOrders = orders.filter(o => getFormattedLocalDate(o.created_at) === closing_date);
-
-    let grossSales = 0;
-    let cashSales = 0;
-    let upiSales = 0;
-    let cardSales = 0;
-    let otherSales = 0;
-
-    let dineInOrders = 0;
-    let dineInSales = 0;
-    let takeawayOrders = 0;
-    let takeawaySales = 0;
-    let deliveryOrders = 0;
-    let deliverySales = 0;
-    let roomOrders = 0;
-    let roomSales = 0;
-    let cinemaOrders = 0;
-    let cinemaSales = 0;
-
-    const dishTally = new Map();
-
-    matchingOrders.forEach(o => {
-      const amt = Number(o.total_amount) || 0;
-      grossSales += amt;
-
-      const rawTable = String(o.table_number || '').trim().toLowerCase();
-      const oType = String(o.order_type || '').toLowerCase();
-      const isDelivery = oType === 'delivery' || /^delivery/i.test(rawTable);
-      const isTakeaway = oType === 'takeaway' || /^(takeaway|parcel|pickup|counter)/i.test(rawTable) || Boolean(o.token_number || o.token_display);
-      const isCinemaSeat = isCinema
-        ? (!isTakeaway && !isDelivery)
-        : (/^seat/i.test(rawTable) || /^screen/i.test(rawTable) || /^audi/i.test(rawTable) || /^s\d+[- ]/i.test(rawTable));
-      const isHotelRoom = isHotel
-        ? (!isTakeaway && !isDelivery && (!rawTable.includes('table') && !rawTable.includes('buffet')))
-        : (oType === 'room' || /^room/i.test(rawTable));
-
-      if (isDelivery) {
-        deliveryOrders++;
-        deliverySales += amt;
-      } else if (isTakeaway) {
-        takeawayOrders++;
-        takeawaySales += amt;
-      } else if (isCinemaSeat) {
-        cinemaOrders++;
-        cinemaSales += amt;
-      } else if (isHotelRoom) {
-        roomOrders++;
-        roomSales += amt;
-      } else {
-        dineInOrders++;
-        dineInSales += amt;
-      }
-
-      const method = String(o.payment_method || '').toLowerCase().trim();
-      if (method === 'cash') cashSales += amt;
-      else if (method === 'upi' || method === 'qr') upiSales += amt;
-      else if (method === 'card') cardSales += amt;
-      else if (method) otherSales += amt;
-      else cashSales += amt;
-
-      let items = [];
-      try {
-        items = typeof o.items === 'string' ? JSON.parse(o.items) : (Array.isArray(o.items) ? o.items : []);
-      } catch (_) { }
-      items.forEach(i => {
-        const name = (i.name || i.dish?.name || 'Item').trim();
-        const qty = Number(i.quantity) || 1;
-        const rev = Number(i.price || 0) * qty;
-        if (dishTally.has(name)) {
-          const c = dishTally.get(name);
-          c.quantity += qty;
-          c.revenue += rev;
-        } else {
-          dishTally.set(name, { name, quantity: qty, revenue: rev });
-        }
-      });
-    });
-
-    const isGst = Boolean(resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1');
-    const taxAmount = isGst && grossSales > 0 ? Math.round((grossSales - (grossSales / 1.05)) * 100) / 100 : 0;
-    const topItems = Array.from(dishTally.values()).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+    const { summary } = await computeDayClosingReport(targetId, closing_date);
 
     const countedCash = Number(actual_cash_counted) || 0;
-    const expectedCash = Math.round(cashSales * 100) / 100;
+    const expectedCash = summary.cash_sales;
     const cashDiscrepancy = Math.round((countedCash - expectedCash) * 100) / 100;
     const callerName = closed_by || req.user?.username || 'Staff';
 
@@ -6625,28 +6562,28 @@ router.post('/day-closing/submit', authenticateToken, requireActiveSubscription,
       closing_date,
       shift_name,
       callerName,
-      matchingOrders.length,
-      Math.round(grossSales * 100) / 100,
+      summary.total_orders,
+      summary.gross_sales,
       expectedCash,
-      Math.round(upiSales * 100) / 100,
-      Math.round(cardSales * 100) / 100,
-      Math.round(otherSales * 100) / 100,
-      taxAmount,
-      0,
+      summary.upi_sales,
+      summary.card_sales,
+      summary.other_sales,
+      summary.tax_amount,
+      summary.discount_amount,
       countedCash,
       cashDiscrepancy,
-      Math.round(dineInSales * 100) / 100,
-      dineInOrders,
-      Math.round(takeawaySales * 100) / 100,
-      takeawayOrders,
-      Math.round(deliverySales * 100) / 100,
-      deliveryOrders,
-      Math.round(roomSales * 100) / 100,
-      roomOrders,
-      Math.round(cinemaSales * 100) / 100,
-      cinemaOrders,
+      summary.dine_in_sales,
+      summary.dine_in_orders,
+      summary.takeaway_sales,
+      summary.takeaway_orders,
+      summary.delivery_sales,
+      summary.delivery_orders,
+      summary.room_sales,
+      summary.room_orders,
+      summary.cinema_sales,
+      summary.cinema_orders,
       notes || '',
-      JSON.stringify(topItems)
+      JSON.stringify(summary.top_items)
     ]);
 
     return res.json({
