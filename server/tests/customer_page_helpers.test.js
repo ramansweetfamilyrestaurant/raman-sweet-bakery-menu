@@ -310,9 +310,12 @@ async function runTests() {
     assert.ok(billSlice.includes('setSessionExpired(false)'), 'Settled bill must clear session without triggering Session Expired banner');
     assert.ok(
       appSrc.includes('COMPLETED_BILL_TTL_MS') &&
+      appSrc.includes('completedBillMetaRef') &&
+      appSrc.includes('parseCompletedBillSlot') &&
+      appSrc.includes('scheduleNextExpiry') &&
       appSrc.includes('expireCompletedBillIfDue') &&
       appSrc.includes('handleWakeupExpiry'),
-      'App.jsx must auto-expire in-memory settled e-bill after 2h on timer and tab wakeup'
+      'App.jsx must validate stored bill records, bind receipt tenant+identity, reschedule on backward clock shift, and auto-expire settled e-bill after 2h'
     );
     assert.ok(appSrc.includes('bill_summary'), 'api/frontend post-bill integration checks bill_summary');
 

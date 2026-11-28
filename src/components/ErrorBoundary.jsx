@@ -17,7 +17,9 @@ export default class ErrorBoundary extends React.Component {
       errStr.includes('dynamically imported module') ||
       errStr.includes('Failed to fetch') ||
       errStr.includes('chunk') ||
-      errStr.includes('Importing a module script failed')
+      errStr.includes('Importing a module script failed') ||
+      errStr.includes("reading 'default'") ||
+      errStr.includes('default export')
     ) {
       const alreadyReloaded = sessionStorage.getItem('auto_chunk_reload');
       if (!alreadyReloaded) {
@@ -62,6 +64,7 @@ export default class ErrorBoundary extends React.Component {
               try {
                 sessionStorage.removeItem('auto_chunk_reload');
                 sessionStorage.removeItem('retry-chunk-refresh');
+                sessionStorage.removeItem('last-chunk-reload');
                 if ('caches' in window) {
                   const names = await caches.keys();
                   await Promise.all(names.map((name) => caches.delete(name)));

@@ -40,15 +40,28 @@ import {
 const lazyWithRetry = (componentImport) =>
   lazy(async () => {
     try {
-      return await componentImport();
+      const mod = await componentImport();
+      if (!mod || !mod.default) {
+        throw new Error('Chunk module resolved without default export (stale deploy)');
+      }
+      return mod;
     } catch (error) {
       console.warn('Chunk loading failed, reloading for updated deploy...', error);
-      const lastReload = parseInt(window.sessionStorage.getItem('last-chunk-reload') || '0', 10);
-      const now = Date.now();
-      if (now - lastReload > 5000) {
-        window.sessionStorage.setItem('last-chunk-reload', String(now));
-        window.location.reload();
-      }
+      try {
+        if (typeof window !== 'undefined') {
+          if ('caches' in window && window.caches?.keys) {
+            const names = await window.caches.keys();
+            await Promise.all(names.map((name) => window.caches.delete(name)));
+          }
+          const lastReload = parseInt(window.sessionStorage?.getItem('last-chunk-reload') || '0', 10);
+          const now = Date.now();
+          if (now - lastReload > 8000 && typeof window.location?.reload === 'function') {
+            window.sessionStorage?.setItem('last-chunk-reload', String(now));
+            window.location.reload();
+            return await new Promise((_, reject) => setTimeout(() => reject(error), 3500));
+          }
+        }
+      } catch { }
       throw error;
     }
   });
@@ -847,7 +860,7 @@ export default function App() {
   const trackingExpiredRef = useRef(false);
   const restoredTenantOrderRef = useRef(getSlugFromUrl() || '');
   const restoredCompletedBillSlugRef = useRef('');
-  const completedBillSavedAtRef = useRef(null);
+  const completedBillMetaRef = useRef(null);
   const [restoredOrderSlug, setRestoredOrderSlug] = useState(() => getSlugFromUrl() || '');
   const COMPLETED_BILL_TTL_MS = 2 * 60 * 60 * 1000;
 
@@ -856,41 +869,114 @@ export default function App() {
     return cleanSlug ? `touchqr_last_completed_bill_${cleanSlug}` : null;
   };
 
-  const persistLastCompletedBill = (tenantSlugVal, billPayload, reuseSnapshot = null, savedAtOverride = null) => {
-    if (!billPayload) {
-      completedBillSavedAtRef.current = null;
-    } else {
-      const savedAtMs = Number(savedAtOverride) || Date.now();
-      completedBillSavedAtRef.current = savedAtMs;
+  const getCompletedBillIdentity = (bill) => {
+    if (!bill || typeof bill !== 'object' || Array.isArray(bill)) return '';
+    return String(bill.id || bill.bill_summary?.order_id || bill.order_id || '').trim();
+  };
+
+  const getCompletedBillStorages = () => ([
+    typeof sessionStorage !== 'undefined' ? sessionStorage : null,
+    typeof localStorage !== 'undefined' ? localStorage : null
+  ].filter(Boolean));
+
+  const parseCompletedBillSlot = (rawStr) => {
+    if (rawStr === null || rawStr === undefined) {
+      return { present: false, hasValidShape: false, parsed: null, savedAtMs: NaN };
     }
-    const key = getCompletedBillStorageKey(tenantSlugVal);
+    try {
+      const parsed = JSON.parse(rawStr);
+      const hasValidShape = Boolean(
+        parsed &&
+        typeof parsed === 'object' &&
+        !Array.isArray(parsed) &&
+        parsed.bill &&
+        typeof parsed.bill === 'object' &&
+        !Array.isArray(parsed.bill)
+      );
+      const savedAtMs = hasValidShape ? Number(parsed.savedAt) : NaN;
+      return { present: true, hasValidShape, parsed, savedAtMs };
+    } catch {
+      return { present: true, hasValidShape: false, parsed: null, savedAtMs: NaN };
+    }
+  };
+
+  const persistLastCompletedBill = (tenantSlugVal, billPayload, reuseSnapshot = null, savedAtOverride = null, matchMeta = null) => {
+    const resolvedSlug = String(tenantSlugVal || getActiveStorageTenantSlug() || '').trim().toLowerCase();
+    const key = getCompletedBillStorageKey(resolvedSlug);
+    if (!billPayload) {
+      completedBillMetaRef.current = null;
+      if (!key) return;
+      for (const store of getCompletedBillStorages()) {
+        try {
+          if (!matchMeta) {
+            store.removeItem(key);
+            continue;
+          }
+          const raw = store.getItem(key);
+          const slot = parseCompletedBillSlot(raw);
+          if (!slot.present) continue;
+          const matchesExpiredReceipt = Boolean(
+            slot.hasValidShape &&
+            getCompletedBillIdentity(slot.parsed.bill) === String(matchMeta.orderId || '') &&
+            Number(slot.savedAtMs) === Number(matchMeta.savedAt)
+          );
+          if (!slot.hasValidShape || matchesExpiredReceipt) {
+            store.removeItem(key);
+          }
+        } catch (e) { }
+      }
+      return;
+    }
+
+    const savedAtMs = Number(savedAtOverride) || Date.now();
+    completedBillMetaRef.current = {
+      tenantSlug: resolvedSlug,
+      savedAt: savedAtMs,
+      orderId: getCompletedBillIdentity(billPayload)
+    };
     if (!key) return;
     try {
-      if (!billPayload) {
-        localStorage.removeItem(key);
-        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(key);
-        return;
-      }
       const record = JSON.stringify({
         bill: billPayload,
         reuseSnapshot: reuseSnapshot || null,
-        savedAt: completedBillSavedAtRef.current || Date.now()
+        savedAt: savedAtMs
       });
-      localStorage.setItem(key, record);
-      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(key, record);
+      for (const store of getCompletedBillStorages()) {
+        store.setItem(key, record);
+      }
     } catch (e) { }
   };
 
-  const readStoredCompletedBillRecord = (tenantSlugVal) => {
-    const compKey = getCompletedBillStorageKey(tenantSlugVal);
-    if (!compKey) return { compKey: null, parsed: null };
-    try {
-      const rawCompleted = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(compKey)) || localStorage.getItem(compKey);
-      if (!rawCompleted) return { compKey, parsed: null };
-      return { compKey, parsed: JSON.parse(rawCompleted) };
-    } catch (e) {
-      return { compKey, parsed: null };
+  const readStoredCompletedBillRecord = (tenantSlugVal, { pruneInvalidOrExpired = false } = {}) => {
+    const cleanSlug = String(tenantSlugVal || getActiveStorageTenantSlug() || '').trim().toLowerCase();
+    const compKey = getCompletedBillStorageKey(cleanSlug);
+    if (!compKey) return { compKey: null, tenantSlug: '', parsed: null, savedAtMs: NaN };
+
+    let chosen = null;
+    for (const store of getCompletedBillStorages()) {
+      try {
+        const slot = parseCompletedBillSlot(store.getItem(compKey));
+        if (!slot.present) continue;
+        const ageMs = Number.isFinite(slot.savedAtMs) && slot.savedAtMs > 0 ? (Date.now() - slot.savedAtMs) : NaN;
+        const isRecent = Boolean(slot.hasValidShape && Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= COMPLETED_BILL_TTL_MS);
+        if (!slot.hasValidShape || (pruneInvalidOrExpired && !isRecent)) {
+          store.removeItem(compKey);
+          continue;
+        }
+        if (!chosen && (!pruneInvalidOrExpired || isRecent)) {
+          chosen = slot;
+        }
+      } catch (e) {
+        try { store.removeItem(compKey); } catch { }
+      }
     }
+
+    return {
+      compKey,
+      tenantSlug: cleanSlug,
+      parsed: chosen?.parsed || null,
+      savedAtMs: chosen ? chosen.savedAtMs : NaN
+    };
   };
 
   // Restore saved order & recent completed receipt once tenant slug resolves (path-slug & custom-domain URLs)
@@ -916,23 +1002,19 @@ export default function App() {
     if (restoredCompletedBillSlugRef.current !== tenantSlug) {
       restoredCompletedBillSlugRef.current = tenantSlug;
       if (!restoredActiveOrder && !lastCompletedBill) {
-        const { compKey, parsed: parsedCompleted } = readStoredCompletedBillRecord(tenantSlug);
-        const savedAtMs = Number(parsedCompleted?.savedAt || 0);
-        const ageMs = Date.now() - savedAtMs;
-        if (parsedCompleted?.bill && Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= COMPLETED_BILL_TTL_MS) {
-          completedBillSavedAtRef.current = savedAtMs;
+        const { tenantSlug: ownerSlug, parsed: parsedCompleted, savedAtMs } = readStoredCompletedBillRecord(tenantSlug, { pruneInvalidOrExpired: true });
+        if (parsedCompleted?.bill) {
+          completedBillMetaRef.current = {
+            tenantSlug: ownerSlug,
+            savedAt: savedAtMs,
+            orderId: getCompletedBillIdentity(parsedCompleted.bill)
+          };
           setLastCompletedBill(parsedCompleted.bill);
           if (parsedCompleted.reuseSnapshot) {
             setCompletedSpaceSnapshot(parsedCompleted.reuseSnapshot);
           } else if (isViewOnlyUrl) {
             setIsPostBillViewOnly(true);
           }
-        } else if (compKey && parsedCompleted) {
-          completedBillSavedAtRef.current = null;
-          try {
-            localStorage.removeItem(compKey);
-            if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(compKey);
-          } catch (e) { }
         }
       }
     }
@@ -943,38 +1025,67 @@ export default function App() {
 
   // Live auto-expiry for in-memory completed e-bill (covers open/suspended mobile tabs past 2h without refresh)
   useEffect(() => {
-    if (!lastCompletedBill && !billCompletedModal) return;
+    const activeBill = lastCompletedBill || billCompletedModal;
+    if (!activeBill) return;
 
-    const getExpiryBaseMs = () => {
-      if (Number.isFinite(completedBillSavedAtRef.current) && completedBillSavedAtRef.current > 0) {
-        return completedBillSavedAtRef.current;
+    let isEffectActive = true;
+    let expiryTimer = null;
+
+    const resolveActiveBillMeta = () => {
+      const currentMeta = completedBillMetaRef.current;
+      const activeBillOrderId = getCompletedBillIdentity(activeBill);
+      if (
+        currentMeta &&
+        Number.isFinite(currentMeta.savedAt) &&
+        currentMeta.savedAt > 0 &&
+        (!activeBillOrderId || !currentMeta.orderId || currentMeta.orderId === activeBillOrderId)
+      ) {
+        return currentMeta;
       }
-      const { parsed } = readStoredCompletedBillRecord(getActiveStorageTenantSlug());
-      const storedSavedAt = Number(parsed?.savedAt || 0);
-      const resolved = Number.isFinite(storedSavedAt) && storedSavedAt > 0 ? storedSavedAt : Date.now();
-      completedBillSavedAtRef.current = resolved;
-      return resolved;
+      const fallbackSlug = String(currentMeta?.tenantSlug || getActiveStorageTenantSlug() || '').trim().toLowerCase();
+      const { parsed, savedAtMs } = readStoredCompletedBillRecord(fallbackSlug);
+      const resolvedMeta = {
+        tenantSlug: fallbackSlug,
+        savedAt: Number.isFinite(savedAtMs) && savedAtMs > 0 ? savedAtMs : Date.now(),
+        orderId: activeBillOrderId || getCompletedBillIdentity(parsed?.bill)
+      };
+      completedBillMetaRef.current = resolvedMeta;
+      return resolvedMeta;
+    };
+
+    const scheduleNextExpiry = (delayMs) => {
+      if (!isEffectActive) return;
+      if (expiryTimer) clearTimeout(expiryTimer);
+      expiryTimer = setTimeout(() => {
+        if (isEffectActive) expireCompletedBillIfDue();
+      }, Math.min(Math.max(1000, delayMs), 2147483647));
     };
 
     const expireCompletedBillIfDue = () => {
-      const savedAtMs = getExpiryBaseMs();
-      const elapsed = Date.now() - savedAtMs;
+      if (!isEffectActive) return true;
+      const meta = resolveActiveBillMeta();
+      const elapsed = Date.now() - meta.savedAt;
       if (Number.isFinite(elapsed) && elapsed >= COMPLETED_BILL_TTL_MS) {
-        completedBillSavedAtRef.current = null;
+        completedBillMetaRef.current = null;
         setLastCompletedBill(null);
         setBillCompletedModal(null);
         setCompletedSpaceSnapshot(null);
         setIsPostBillViewOnly(false);
-        persistLastCompletedBill(getActiveStorageTenantSlug(), null);
+        persistLastCompletedBill(meta.tenantSlug, null, null, null, {
+          orderId: meta.orderId,
+          savedAt: meta.savedAt
+        });
         return true;
       }
+      const nextRemainingMs = Number.isFinite(elapsed)
+        ? (COMPLETED_BILL_TTL_MS - elapsed + 50)
+        : COMPLETED_BILL_TTL_MS;
+      scheduleNextExpiry(nextRemainingMs);
       return false;
     };
 
     if (expireCompletedBillIfDue()) return;
 
-    const remainingMs = Math.max(1000, COMPLETED_BILL_TTL_MS - (Date.now() - getExpiryBaseMs()) + 50);
-    const expiryTimer = setTimeout(expireCompletedBillIfDue, Math.min(remainingMs, 2147483647));
     const handleWakeupExpiry = () => {
       if (typeof document === 'undefined' || !document.hidden) {
         expireCompletedBillIfDue();
@@ -988,7 +1099,8 @@ export default function App() {
     }
 
     return () => {
-      clearTimeout(expiryTimer);
+      isEffectActive = false;
+      if (expiryTimer) clearTimeout(expiryTimer);
       if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
         window.removeEventListener('focus', handleWakeupExpiry);
       }
