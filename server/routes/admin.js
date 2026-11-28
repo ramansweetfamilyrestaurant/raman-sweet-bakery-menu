@@ -3276,6 +3276,16 @@ router.get('/orders/stream', authenticateToken, requireActiveSubscription, (req,
 
   writeSse('ready', { restaurant_id: targetId, ts: Date.now() });
 
+  // Serverless environments (Vercel) close long-lived streams on function timeout with ERR_CONNECTION_RESET
+  // and do not share in-memory EventEmitter state across lambdas; signal clean polling fallback instead.
+  if (process.env.VERCEL) {
+    writeSse('serverless_mode', { polling: true, ts: Date.now() });
+    if (!res.writableEnded && !res.destroyed) {
+      res.end();
+    }
+    return;
+  }
+
   const unsubscribe = subscribeRestaurantOrders(targetId, (evt) => {
     if (!evt) return;
     writeSse('order_update', evt);

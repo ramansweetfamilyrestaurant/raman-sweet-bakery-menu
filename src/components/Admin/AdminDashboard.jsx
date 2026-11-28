@@ -3001,6 +3001,7 @@ export default function AdminDashboard({
     let serviceReqTimerId = null;
     let streamReconnectTimer = null;
     let hasLiveStream = false;
+    let disableStreamReconnect = false;
     const streamAbort = typeof AbortController !== 'undefined' ? new AbortController() : null;
 
     const triggerImmediateSync = () => {
@@ -3052,18 +3053,22 @@ export default function AdminDashboard({
           const frames = buffer.split('\n\n');
           buffer = frames.pop() || '';
           for (const frame of frames) {
-            if (frame.includes('event: order_update')) {
+            if (frame.includes('event: serverless_mode')) {
+              disableStreamReconnect = true;
+              hasLiveStream = false;
+            } else if (frame.includes('event: order_update')) {
               triggerImmediateSync();
             }
           }
+          if (disableStreamReconnect) break;
         }
       } catch (_) {
         // Silent fallback to sequential polling
       } finally {
         hasLiveStream = false;
-        if (!cancelled) {
+        if (!cancelled && !disableStreamReconnect) {
           streamReconnectTimer = setTimeout(() => {
-            if (!cancelled) void connectOrderStream();
+            if (!cancelled && !disableStreamReconnect) void connectOrderStream();
           }, 3000);
         }
       }
