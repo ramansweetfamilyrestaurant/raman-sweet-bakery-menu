@@ -1,10 +1,7 @@
-import { createRequire } from 'node:module';
+import * as webpush from 'web-push';
 import dns from 'node:dns/promises';
 import net from 'node:net';
 import { query } from '../db.js';
-
-const require = createRequire(import.meta.url);
-const webpush = require('web-push');
 
 let cachedVapidKeys = null;
 let vapidInitPromise = null;
