@@ -3,6 +3,7 @@ import { X, Check, Star, Printer, Share2, Receipt } from 'lucide-react';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
 import { resolveImageUrl } from '../utils/imageHelper';
 import { triggerHaptic } from '../utils/haptics';
+import { formatOrderBillNumber, resolveBusinessOrderNumber, resolveTakeawayToken } from '../utils/orderNumberHelper';
 
 function escapeHtml(str) {
   return String(str ?? '')
@@ -103,7 +104,9 @@ export default function BillCompletedModal({
       })
     : '';
 
-  const tokenCode = bill.token_display || (bill.token_number ? `TK-${String(bill.token_number).padStart(2, '0')}` : '');
+  const tokenCode = resolveTakeawayToken(bill);
+  const billNumberText = formatOrderBillNumber(bill, gstEnabled);
+  const plainOrderNum = resolveBusinessOrderNumber(bill);
   const cleanSpaceLabel = spaceLabel || (bill.table_number && String(bill.table_number).toLowerCase() !== 'counter' ? bill.table_number : '');
   const displaySpace = tokenCode
     ? (cleanSpaceLabel && !cleanSpaceLabel.toLowerCase().includes('counter') && !cleanSpaceLabel.includes(tokenCode)
@@ -118,6 +121,7 @@ export default function BillCompletedModal({
   const buildPlainTextReceipt = () => {
     const lines = [
       `${restoName}`,
+      billNumberText ? `${gstEnabled ? 'Invoice No' : 'Bill No'}: ${billNumberText}` : '',
       displaySpace ? `Space: ${displaySpace}` : '',
       formattedTime ? `Date: ${formattedTime}` : '',
       `${formatPaymentMethodLabel(paymentMethod, false)}`,
@@ -243,7 +247,7 @@ export default function BillCompletedModal({
 <body>
   <div class="box">
     <h1>${escapeHtml(restoName)}</h1>
-    <div class="sub">${displaySpace ? escapeHtml(displaySpace) + ' • ' : ''}${escapeHtml(formattedTime)}</div>
+    <div class="sub">${billNumberText ? `${gstEnabled ? 'Invoice No:' : 'Bill No:'} ${escapeHtml(billNumberText)} • ` : ''}${displaySpace ? escapeHtml(displaySpace) + ' • ' : ''}${escapeHtml(formattedTime)}</div>
     <div class="center"><span class="pill">✓ ${escapeHtml(formatPaymentMethodLabel(paymentMethod, false))}</span></div>
     <div class="divider"></div>
     ${itemsHtml}
@@ -398,9 +402,14 @@ export default function BillCompletedModal({
               marginBottom: '8px',
               borderBottom: '1px dashed var(--border-light, #CBD5E1)'
             }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-dark, #0F172A)' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-dark, #0F172A)', flexWrap: 'wrap' }}>
                 <Receipt size={15} />
                 {isHi ? 'डिजिटल बिल रसीद' : 'Digital Bill Summary'}
+                {(billNumberText || plainOrderNum) && (
+                  <span style={{ fontSize: '0.72rem', fontWeight: 900, padding: '1px 7px', borderRadius: '9999px', background: 'rgba(15, 23, 42, 0.08)', color: 'var(--text-dark, #0F172A)' }}>
+                    {gstEnabled ? `${isHi ? 'इनवॉइस नं.' : 'Invoice No:'} ${billNumberText}` : `${isHi ? 'बिल नं.' : 'Bill No:'} ${billNumberText || plainOrderNum}`}
+                  </span>
+                )}
               </span>
               {rounds.length > 1 && (
                 <span style={{

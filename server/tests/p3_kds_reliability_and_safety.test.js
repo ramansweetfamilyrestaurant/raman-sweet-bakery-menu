@@ -172,7 +172,7 @@ async function run() {
     assert.strictEqual(res.isConflict, false);
     assert.strictEqual(res.isForbidden, false);
     assert.strictEqual(res.isNotFound, false);
-    assert.ok(res.message.includes('Order #42 successfully restored'));
+    assert.ok(res.message.includes('Order No: 42 successfully restored'));
     record('RECALL_SUCCESS_PARSER', 'PASS', 'HTTP 200 returns success: true and friendly confirmation');
   } catch (err) {
     record('RECALL_SUCCESS_PARSER', 'FAIL', err.message);
@@ -183,7 +183,7 @@ async function run() {
     const res = parseRecallErrorResponse(409, { error: 'ORDER_SETTLED', message: 'Order is settled and cannot be recalled' }, 101);
     assert.strictEqual(res.success, false);
     assert.strictEqual(res.isConflict, true);
-    assert.ok(res.message.includes('Order #101 cannot be recalled'));
+    assert.ok(res.message.includes('Order No: 101 cannot be recalled'));
     assert.ok(!res.message.includes('undefined'));
     record('RECALL_409_CONFLICT_PARSER', 'PASS', 'HTTP 409 reports settled/terminal state accurately');
   } catch (err) {
@@ -211,7 +211,7 @@ async function run() {
     const res = parseRecallErrorResponse(404, {}, 999);
     assert.strictEqual(res.success, false);
     assert.strictEqual(res.isNotFound, true);
-    assert.ok(res.message.includes('Order #999 could not be found'));
+    assert.ok(res.message.includes('Order No: 999 could not be found'));
     record('RECALL_404_NOT_FOUND_PARSER', 'PASS', 'HTTP 404 reports order not found clearly');
   } catch (err) {
     record('RECALL_404_NOT_FOUND_PARSER', 'FAIL', err.message);
@@ -859,7 +859,7 @@ async function run() {
 
     const parsed1 = parseRecallErrorResponse(recallRes1.status, recallData1, orderId1);
     assert.strictEqual(parsed1.success, true);
-    assert.ok(parsed1.message.includes(`Order #${orderId1} successfully restored`));
+    assert.ok(parsed1.message.includes(`Order No: ${orderId1} successfully restored`));
     record('INTEGRATION_RECALL_SUCCESS_200', 'PASS', 'Recall of active completed order succeeds with 200 and matches frontend parser');
 
     // 2. Create order 2: settled -> Recall should return HTTP 409 Conflict

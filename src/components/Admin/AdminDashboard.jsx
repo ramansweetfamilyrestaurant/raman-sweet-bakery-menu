@@ -8,6 +8,7 @@ import { resolveTenantCapabilities } from '../../utils/planCapabilities';
 import { soundManager, unlockNotificationSound, playKitchenSiren, stopKitchenSiren, playPresenceAlert, stopPresenceAlert, playWaiterAlert, stopWaiterAlert, subscribeAudioState, isNotificationSoundReady } from '../../utils/soundManager';
 import { ensureAdminPushSubscription, registerTouchQrServiceWorker, removeAdminPushSubscription, requestScreenWakeLock } from '../../utils/pushNotifications';
 import { getCurrencySymbol, formatPriceNumber } from '../../utils/currencyHelper';
+import { formatOrderLabel, formatOrderBillNumber, resolveBusinessOrderNumber, resolveTakeawayToken } from '../../utils/orderNumberHelper';
 import { resolveTheme } from '../../constants/themes';
 import DishFormModal from './DishFormModal';
 import CategoryFormModal from './CategoryFormModal';
@@ -439,7 +440,7 @@ export default function AdminDashboard({
         upiId,
         payeeName,
         amount: billData.grandTotal,
-        invoiceId: billOrderModal.id,
+        invoiceId: resolveBusinessOrderNumber(billOrderModal),
         spaceLabel: billData.spaceLabel
       });
       if (uri) {
@@ -474,7 +475,7 @@ export default function AdminDashboard({
     const upiId = restaurantInfo?.upi_id || settingsForm?.upi_id;
     const payeeName = restaurantInfo?.upi_payee_name || settingsForm?.upi_payee_name || restaurantInfo?.name || settingsForm?.name;
     const currentQrSnapshotKey = getModalQrSnapshotKey(billOrderModal, billData, upiId, payeeName);
-    const settleLocationLabel = billData.spaceLabel || formatOrderLocation(billOrderModal, restaurantInfo || settingsForm) || `Order #${billOrderModal.id}`;
+    const settleLocationLabel = billData.spaceLabel || formatOrderLocation(billOrderModal, restaurantInfo || settingsForm) || formatOrderLabel(billOrderModal);
     const modalTaxTotal = Number(billData.cgst || 0) + Number(billData.sgst || 0);
     const modalServiceCharge = Number(billData.serviceChargeAmount || 0);
     return {
@@ -1130,7 +1131,7 @@ export default function AdminDashboard({
         }).join(', ');
 
         return [
-          `#${order.id}`,
+          formatOrderLabel(order),
           date,
           time,
           String(order.table_number || '1'),
@@ -1388,7 +1389,7 @@ export default function AdminDashboard({
           }
         }
         const targetOrder = orders.find(o => String(o.id) === key);
-        const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || `Order ${orderId}`;
+        const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || formatOrderLabel(targetOrder);
         showToast(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`, 5000);
       } else if (newStatus === 'served' || newStatus === 'completed') {
         if (!extraParams.silent) {
@@ -1399,7 +1400,7 @@ export default function AdminDashboard({
           }
         }
         const targetOrder = orders.find(o => String(o.id) === key);
-        const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || `Order ${orderId}`;
+        const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || formatOrderLabel(targetOrder);
         const msg = newStatus === 'served' ? `✓ ${tblNum} Marked Ready / Served!` : `💳 ${tblNum} Served & Bill Completed!`;
         showToast(msg, 4000);
       }
@@ -1451,9 +1452,9 @@ export default function AdminDashboard({
         text += "      *** [ REPRINT ] ***       \n";
       }
       text += "================================" + "\n";
-      text += `KOT No: ${order.id}\n`;
+      text += `KOT No: ${resolveBusinessOrderNumber(order)}\n`;
       if (order.token_display || order.token_number) {
-        text += `*** TOKEN: ${order.token_display || order.token_number} [TAKEAWAY] ***\n`;
+        text += `*** TOKEN: ${resolveTakeawayToken(order)} [TAKEAWAY] ***\n`;
       }
       text += `Time: ${new Date(order.created_at || Date.now()).toLocaleTimeString('en-IN')}\n`;
       text += `Location: ${formatOrderLocation(order, restoInfo)}\n`;
@@ -1489,11 +1490,13 @@ export default function AdminDashboard({
       const cleanAddress = formatCleanAddress(restoInfo?.address);
 
       const isTakeaway = Boolean(order.token_display || order.token_number || order.order_type === 'takeaway' || order.order_type === 'counter');
-      const cleanToken = order.token_display || (order.token_number ? `TK-${String(order.token_number).padStart(2, '0')}` : null);
+      const cleanToken = resolveTakeawayToken(order) || null;
       const rawCust = (order.customer_name || '').trim();
       const isAutoName = !rawCust || /^(Takeaway Guest|Counter Customer|Valued Guest|Walk-in Guest)/i.test(rawCust) || (cleanToken && rawCust.includes(cleanToken));
       const customerDisplayName = isAutoName ? (isTakeaway ? 'Walk-in Guest' : 'Dine-in Guest') : rawCust;
       const isUnsettledSlip = paymentMode === 'CHECK_SLIP' || (!order.is_settled && paymentMode !== 'CASH' && paymentMode !== 'CARD' && paymentMode !== 'UPI');
+      const rawBillAnchor = sessionOrders[0] || order;
+      const rawBillNumberText = formatOrderBillNumber(rawBillAnchor, isGst);
 
       text += "================================" + "\n";
       text += `   ${(restoInfo?.name || 'TOUCHQR OUTLET').toUpperCase()}\n`;
@@ -1509,7 +1512,7 @@ export default function AdminDashboard({
       if (cleanToken) {
         text += `*** TOKEN: ${cleanToken} [TAKEAWAY] ***\n`;
       }
-      text += `${isGst ? 'Invoice No:' : 'Bill No:'} ${cleanToken ? cleanToken : order.id}\n`;
+      text += `${isGst ? 'Invoice No:' : 'Bill No:'} ${rawBillNumberText}\n`;
       text += `Date: ${new Date(order.created_at || Date.now()).toLocaleString('en-IN')}\n`;
       if (!isAutoName) {
         text += `Customer: ${customerDisplayName}\n`;
@@ -1726,7 +1729,7 @@ export default function AdminDashboard({
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>KOT ${order.id}</title>
+          <title>KOT ${escapeThermalHtml(resolveBusinessOrderNumber(order))}</title>
           <style>
             * {
               box-sizing: border-box;
@@ -1798,7 +1801,7 @@ export default function AdminDashboard({
         ? `<div style="font-size:${selectedWidth === '58mm' ? '18px' : '22px'};font-weight:900;border:2px dashed #000;padding:5px;margin:5px 0;background:#000;color:#FFF;letter-spacing:1px;border-radius:4px;word-break:break-word;">TOKEN ${escapeThermalHtml(order.token_display || order.token_number)}</div>`
         : ''
       }
-            <div style="font-size:12px;font-weight:900;margin-top:2px;">KOT #${escapeThermalHtml(order.id)}</div>
+            <div style="font-size:12px;font-weight:900;margin-top:2px;">KOT No: ${escapeThermalHtml(resolveBusinessOrderNumber(order))}</div>
             ${isRoundAddon
         ? `<div class="round-badge">🔄 ROUND ${escapeThermalHtml(order.round_number)} (ADD-ON ORDER)</div>`
         : `<div style="font-weight:900;font-size:12px;margin-top:2px;">ROUND 1 (NEW ORDER)</div>`
@@ -1860,7 +1863,7 @@ export default function AdminDashboard({
     const cleanAddress = formatCleanAddress(restaurantInfo?.address || settingsForm?.address);
 
     const isTakeaway = Boolean(order.token_display || order.token_number || order.order_type === 'takeaway' || order.order_type === 'counter');
-    const cleanToken = order.token_display || (order.token_number ? `TK-${String(order.token_number).padStart(2, '0')}` : null);
+    const cleanToken = resolveTakeawayToken(order) || null;
     const rawCust = (order.customer_name || '').trim();
     const isAutoName = !rawCust || /^(Takeaway Guest|Counter Customer|Valued Guest|Walk-in Guest)/i.test(rawCust) || (cleanToken && rawCust.includes(cleanToken));
     const customerDisplayName = isAutoName ? (isTakeaway ? 'Walk-in Guest' : 'Dine-in Guest') : rawCust;
@@ -1868,9 +1871,8 @@ export default function AdminDashboard({
     const isUnsettledSlip = paymentMode === 'CHECK_SLIP' || (!order.is_settled && paymentMode !== 'CASH' && paymentMode !== 'CARD' && paymentMode !== 'UPI');
     const cleanPaymentMode = paymentMode === 'CHECK_SLIP' ? 'UNPAID' : paymentMode.toUpperCase();
 
-    const billNumberDisplay = cleanToken
-      ? cleanToken
-      : (order.table_number ? `Table ${order.table_number}` : `#${order.id}`);
+    const billAnchorOrder = sessionOrders[0] || order;
+    const billNumberDisplay = formatOrderBillNumber(billAnchorOrder, isGst);
 
     let totalItemCount = 0;
     let itemsHtml = '';
@@ -1881,7 +1883,7 @@ export default function AdminDashboard({
         itemsHtml += `
           <tr style="background:#F1F5F9;">
             <td colspan="2" style="padding:4px 6px;font-weight:900;font-size:11px;color:#334155;border-top:1px solid #000;">
-              ROUND ${ord.round_number || (oIdx + 1)} • KOT ${ord.id}
+              ROUND ${ord.round_number || (oIdx + 1)} • KOT No: ${escapeThermalHtml(resolveBusinessOrderNumber(ord))}
             </td>
           </tr>
         `;
@@ -1912,7 +1914,7 @@ export default function AdminDashboard({
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>Customer Bill ${cleanToken || order.id}</title>
+          <title>Customer Bill ${escapeThermalHtml(cleanToken || billNumberDisplay)}</title>
           <style>
             * {
               box-sizing: border-box;
@@ -1981,7 +1983,7 @@ export default function AdminDashboard({
       }
             ${isTakeaway ? `<div><strong>Order Type:</strong> Takeaway / Counter</div>` : `<div><strong>Table / Space:</strong> ${escapeThermalHtml(resolvedSpace)}</div>`}
             <div><strong>Date:</strong> ${escapeThermalHtml(formatDateTimeString(order.created_at || Date.now()))}</div>
-            <div><strong>${isGst ? 'Invoice No:' : 'Bill No:'}</strong> ${isGst ? `INV-${escapeThermalHtml(cleanToken ? cleanToken.replace(/^TK-?/i, '') : order.id)}` : escapeThermalHtml(billNumberDisplay)}</div>
+            <div><strong>${isGst ? 'Invoice No:' : 'Bill No:'}</strong> ${escapeThermalHtml(billNumberDisplay)}</div>
             ${!isAutoName ? `<div><strong>Customer:</strong> ${escapeThermalHtml(customerDisplayName)}</div>` : ''}
             ${totalRoundsCount > 1 ? `<div style="font-weight:bold;color:#0F766E;">Consolidated Bill: ${totalRoundsCount} Rounds</div>` : ''}
           </div>
@@ -2183,7 +2185,7 @@ export default function AdminDashboard({
           upiId,
           payeeName,
           amount: billData.grandTotal,
-          invoiceId: order.id,
+          invoiceId: resolveBusinessOrderNumber(order),
           spaceLabel: billData.spaceLabel
         });
         if (upiUri) {
@@ -2322,7 +2324,7 @@ export default function AdminDashboard({
         console.warn('[SOUND] Completion sound error:', soundErr);
       }
       const targetOrder = orders.find(o => String(o.id) === key) || order;
-      const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || `Order ${orderId}`;
+      const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || formatOrderLabel(targetOrder);
       setToastMessage(`💳 ${tblNum} Payment Settled & Order Completed!`);
       setTimeout(() => setToastMessage(''), 4000);
 
@@ -2375,7 +2377,7 @@ export default function AdminDashboard({
           upiId,
           payeeName,
           amount: billData.grandTotal,
-          invoiceId: order.id,
+          invoiceId: resolveBusinessOrderNumber(order),
           spaceLabel: billData.spaceLabel
         });
         if (upiUri) {
@@ -2661,7 +2663,7 @@ export default function AdminDashboard({
     });
 
     if (activeOrderOnSpace) {
-      alert(`⚠️ Cannot delete ${spaceInfo.singular} ${targetNum}!\n\nActive Order #${activeOrderOnSpace.id} is currently in progress (${(activeOrderOnSpace.status || 'ACTIVE').toUpperCase()}).\nPlease settle the bill or complete/cancel the order before removing this space.`);
+      alert(`⚠️ Cannot delete ${spaceInfo.singular} ${targetNum}!\n\nActive ${formatOrderLabel(activeOrderOnSpace)} is currently in progress (${(activeOrderOnSpace.status || 'ACTIVE').toUpperCase()}).\nPlease settle the bill or complete/cancel the order before removing this space.`);
       return false;
     }
 

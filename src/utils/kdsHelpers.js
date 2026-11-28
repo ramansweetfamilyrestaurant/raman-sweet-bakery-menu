@@ -101,7 +101,7 @@ export function resolveKdsSlug({ slug = '', pathname = '', search = '' } = {}) {
  * @returns {Object} { success, message, isConflict, isForbidden, isNotFound }
  */
 export function parseRecallErrorResponse(status, data = {}, orderId = '') {
-  const displayId = orderId ? `#${orderId}` : '';
+  const displayId = orderId ? `No: ${orderId}` : '';
 
   if (status >= 200 && status < 300) {
     return {

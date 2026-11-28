@@ -35,6 +35,7 @@ import {
   isCustomerSpaceValid,
   buildScopedStorageKey
 } from './utils/customerHelpers';
+import { formatOrderLabel, resolveBusinessOrderNumber } from './utils/orderNumberHelper';
 import { clearBrowserCachesSafe, tryReserveChunkReload } from './utils/chunkRecovery';
 
 // Robust Lazy Loading with automatic retry on new production deploys
@@ -1753,6 +1754,7 @@ export default function App() {
       }
       const newRoundEntry = {
         id: res.order_id,
+        order_number: res.order_number || res.order_id,
         round_number: res.round_number || (prevRounds.length + 1),
         status: res.status || 'pending',
         kitchen_prepared: 0,
@@ -1794,6 +1796,7 @@ export default function App() {
     }
     return {
       id: primaryId,
+      order_number: res.order_number || res.order_id,
       latest_order_id: res.order_id,
       session_id: res.session_id || null,
       table_number: res.table_number || fallbackMeta.tableNumber,
@@ -4072,6 +4075,11 @@ export default function App() {
                           ? `${lang === 'hi' ? 'टोकन' : 'Token'} ${activeOrderTrack.token_display || `TK-${String(activeOrderTrack.token_number).padStart(2, '0')}`}`
                           : formatCustomerLocation(activeOrderTrack.table_number)}
                       </span>
+                      {formatOrderLabel(activeOrderTrack, lang) && (
+                        <span style={{ fontSize: '0.68rem', background: 'rgba(255,255,255,0.18)', padding: '1px 7px', borderRadius: '9999px', fontWeight: 900 }}>
+                          {formatOrderLabel(activeOrderTrack, lang)}
+                        </span>
+                      )}
                       {activeOrderTrack.round_number && Number(activeOrderTrack.round_number) > 1 && (
                         <span style={{ fontSize: '0.68rem', background: 'rgba(255,255,255,0.16)', padding: '1px 7px', borderRadius: '9999px', fontWeight: 800 }}>
                           {lang === 'hi' ? `राउंड ${activeOrderTrack.round_number}` : `Round ${activeOrderTrack.round_number}`}
@@ -4224,6 +4232,11 @@ export default function App() {
                             ? `${lang === 'hi' ? 'टोकन' : 'Token'} ${activeOrderTrack.token_display || `TK-${String(activeOrderTrack.token_number).padStart(2, '0')}`}`
                             : formatCustomerLocation(activeOrderTrack.table_number)}
                         </span>
+                        {formatOrderLabel(activeOrderTrack, lang) && (
+                          <span style={{ background: '#ECFDF5', color: '#065F46', padding: '1px 7px', borderRadius: '9999px', fontSize: '0.70rem', fontWeight: 900 }}>
+                            {formatOrderLabel(activeOrderTrack, lang)}
+                          </span>
+                        )}
                         {activeOrderTrack.round_number && Number(activeOrderTrack.round_number) > 1 && (
                           <span style={{ background: '#EFF6FF', color: '#1D4ED8', padding: '1px 7px', borderRadius: '9999px', fontSize: '0.70rem', fontWeight: 800 }}>
                             {lang === 'hi' ? `राउंड ${activeOrderTrack.round_number}` : `Round ${activeOrderTrack.round_number}`}
@@ -6847,10 +6860,20 @@ export default function App() {
                     <div style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.86)' }}>
                       {lang === 'hi' ? 'पार्सल लेने के लिए यह टोकन काउंटर पर दिखाएं' : 'Show this token at the counter to collect your order'}
                     </div>
+                    {resolveBusinessOrderNumber(orderSuccessModal) && (
+                      <div style={{ fontSize: '0.74rem', color: '#FDE68A', fontWeight: 900, marginTop: '4px' }}>
+                        {formatOrderLabel(orderSuccessModal, lang)}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div style={{ fontSize: '1.12rem', fontWeight: 900, color: '#4ADE80', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span>{formatCustomerLocation(orderSuccessModal.table_number)}</span>
+                    {resolveBusinessOrderNumber(orderSuccessModal) && (
+                      <span style={{ fontSize: '0.74rem', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.18)', color: '#FFFFFF', fontWeight: 900 }}>
+                        {formatOrderLabel(orderSuccessModal, lang)}
+                      </span>
+                    )}
                     {isAddonRound && (
                       <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.16)', color: '#FDE68A' }}>
                         {lang === 'hi' ? `राउंड ${roundNum}` : `Round ${roundNum}`}

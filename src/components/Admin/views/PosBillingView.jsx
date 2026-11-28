@@ -28,6 +28,7 @@ import { buildUpiPaymentUri, calculateBillDetails, getValidDishModifiers } from 
 import { resolveImageUrl, getDishImageUrl, getComboImageUrl } from '../../../utils/imageHelper';
 import { formatPriceNumber, getCurrencySymbol } from '../../../utils/currencyHelper.js';
 import { isPosItemNonVeg } from '../../../utils/dietHelper.js';
+import { formatOrderLabel, resolveTakeawayToken } from '../../../utils/orderNumberHelper';
 
 export default function PosBillingView({
   dishes = [],
@@ -870,7 +871,9 @@ export default function PosBillingView({
             <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
               {activeTokensQueue.map(order => {
                 const isReady = order.status === 'served' || order.status === 'ready' || order.kitchen_prepared === 1 || order.kitchen_prepared === '1' || order.kitchen_prepared === true;
-                const tokenText = order.token_display || (order.token_number ? `TK-${String(order.token_number).padStart(2, '0')}` : `#${order.id}`);
+                const resolvedToken = resolveTakeawayToken(order);
+                const orderLabel = formatOrderLabel(order);
+                const tokenText = resolvedToken ? `${resolvedToken} (${orderLabel})` : orderLabel;
 
                 return (
                   <div
@@ -2182,6 +2185,9 @@ export default function PosBillingView({
             )}
 
             <div style={{ fontSize: '0.84rem', color: '#334155', marginBottom: '16px', fontWeight: 600 }}>
+              {formatOrderLabel(successOrder.order) && (
+                <><strong>{formatOrderLabel(successOrder.order)}</strong>{' • '}</>
+              )}
               {successOrder.token_display ? (
                 <>Token <strong>{successOrder.token_display}</strong></>
               ) : (

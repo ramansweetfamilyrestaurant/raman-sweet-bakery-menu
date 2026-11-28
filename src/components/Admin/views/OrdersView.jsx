@@ -32,6 +32,7 @@ import {
 import KdsDisplayView from './KdsDisplayView';
 import PlanLockedCard from '../components/PlanLockedCard';
 import { resolveBusinessProfile, getBusinessTerminology } from '../../../utils/businessTaxonomy';
+import { formatOrderLabel, resolveTakeawayToken } from '../../../utils/orderNumberHelper';
 import { fetchCinemaScreens, fetchCinemaSeats } from '../../../api/client';
 import { triggerBillAction, safeParseModifiers, safeParseItems, calculateBillDetails } from '../../../utils/billingHelper';
 
@@ -1733,7 +1734,7 @@ const OrdersView = React.memo(function OrdersView({
                           {/* Order # & Source */}
                           <td style={{ padding: '14px 18px', fontWeight: 800, color: '#0F172A' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              {order.token_display ? (
+                              {(order.token_display || order.token_number) && (
                                 <span style={{
                                   padding: '2px 7px',
                                   borderRadius: '6px',
@@ -1743,11 +1744,10 @@ const OrdersView = React.memo(function OrdersView({
                                   fontSize: '0.74rem',
                                   fontWeight: 900
                                 }}>
-                                  {order.token_display}
+                                  {resolveTakeawayToken(order)}
                                 </span>
-                              ) : (
-                                <span>#{order.id}</span>
                               )}
+                              <span>{formatOrderLabel(order)}</span>
                               {isAddonRound ? (
                                 <span style={{
                                   padding: '2px 6px',
@@ -2185,7 +2185,7 @@ const OrdersView = React.memo(function OrdersView({
                       {/* Top Bar: Order ID + Round Badge + Status Badge */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-                          {order.token_display ? (
+                          {(order.token_display || order.token_number) && (
                             <span style={{
                               padding: '2px 7px',
                               borderRadius: '6px',
@@ -2195,11 +2195,10 @@ const OrdersView = React.memo(function OrdersView({
                               fontSize: '0.76rem',
                               fontWeight: 900
                             }}>
-                              {order.token_display}
+                              {resolveTakeawayToken(order)}
                             </span>
-                          ) : (
-                            <strong style={{ fontSize: '0.92rem', color: '#0F172A' }}>#{order.id}</strong>
                           )}
+                          <strong style={{ fontSize: '0.92rem', color: '#0F172A' }}>{formatOrderLabel(order)}</strong>
                           {isAddonRound ? (
                             <span style={{
                               padding: '2px 6px',
@@ -4174,8 +4173,8 @@ const OrdersView = React.memo(function OrdersView({
           >
             <h3 style={{ margin: '0 0 6px', fontSize: '1.1rem', fontWeight: 900, color: '#DC2626' }}>
               {(rejectOrderModal.status === 'kitchen' || rejectOrderModal.status === 'preparing' || rejectOrderModal.status === 'accepted')
-                ? `Cancel Order #${rejectOrderModal.id}?`
-                : `Reject Order #${rejectOrderModal.id}?`}
+                ? `Cancel ${formatOrderLabel(rejectOrderModal)}?`
+                : `Reject ${formatOrderLabel(rejectOrderModal)}?`}
             </h3>
             <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#64748B', lineHeight: 1.45 }}>
               Select a reason for <strong>{formatCleanTableLabel(rejectOrderModal.table_number, rejectOrderModal.space_type, rejectOrderModal.token_display, rejectOrderModal)}</strong>. The customer tracker will show this reason.

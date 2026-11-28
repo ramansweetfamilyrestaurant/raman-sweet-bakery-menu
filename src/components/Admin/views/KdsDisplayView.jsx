@@ -28,6 +28,7 @@ import {
 import { playKdsChime } from '../../../utils/soundManager';
 import { filterActiveKitchenOrders } from '../../../utils/kdsQueueFilter';
 import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
+import { resolveBusinessOrderNumber, resolveTakeawayToken } from '../../../utils/orderNumberHelper';
 
 export default function KdsDisplayView({
   orders = [],
@@ -706,6 +707,20 @@ export default function KdsDisplayView({
                       }}>
                         {formatKdsLocation(order.table_number, order.space_type, restaurantInfo?.business_type === 'hotel_resort' ? 'room' : restaurantInfo?.table_prefix)}
                       </div>
+                      {resolveBusinessOrderNumber(order) && (
+                        <span style={{
+                          background: 'rgba(148, 163, 184, 0.16)',
+                          border: '1px solid rgba(148, 163, 184, 0.35)',
+                          color: '#E2E8F0',
+                          padding: '1px 7px',
+                          borderRadius: '5px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          whiteSpace: 'nowrap'
+                        }}>
+                          KOT No: {resolveBusinessOrderNumber(order)}
+                        </span>
+                      )}
                       {(order.token_display || order.token_number) && (
                         <span style={{
                           background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.35) 100%)',
@@ -718,7 +733,7 @@ export default function KdsDisplayView({
                           letterSpacing: '0.5px',
                           whiteSpace: 'nowrap'
                         }}>
-                          TOKEN {order.token_display || order.token_number}
+                          TOKEN {resolveTakeawayToken(order)}
                         </span>
                       )}
                       {isMultiRound && (

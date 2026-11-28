@@ -931,10 +931,13 @@ async function createTables(options = {}) {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_type VARCHAR(20) DEFAULT 'dine_in';`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_number INT DEFAULT NULL;`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_display VARCHAR(50) DEFAULT NULL;`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_number INT DEFAULT NULL;`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_session ON orders(restaurant_id, session_id);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_parent ON orders(restaurant_id, parent_order_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_resto_number ON orders(restaurant_id, order_number);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_idemp ON orders (restaurant_id, idempotency_key);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash);`,
+      `ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS order_seq_counter INT DEFAULT 0;`,
       `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS dine_in_sales DECIMAL(10, 2) DEFAULT 0.00;`,
       `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS dine_in_orders INT DEFAULT 0;`,
       `ALTER TABLE day_closings ADD COLUMN IF NOT EXISTS takeaway_sales DECIMAL(10, 2) DEFAULT 0.00;`,
@@ -1068,6 +1071,49 @@ async function createTables(options = {}) {
 
     for (const alt of pgAlters) {
       try { await pgPool.query(alt); } catch (e) { console.warn('Postgres alter query notice:', e.message); }
+    }
+
+    // Backfill per-business sequential order_number for any historical orders (fast no-op when already migrated)
+    try {
+      const pendingBackfill = await pgPool.query(
+        'SELECT 1 FROM orders WHERE restaurant_id IS NOT NULL AND order_number IS NULL LIMIT 1'
+      );
+      if (pendingBackfill.rows && pendingBackfill.rows.length > 0) {
+        await pgPool.query(`
+          WITH base_per_resto AS (
+            SELECT restaurant_id, COALESCE(MAX(order_number), 0) AS base_seq
+            FROM orders
+            WHERE restaurant_id IS NOT NULL
+            GROUP BY restaurant_id
+          ),
+          ranked AS (
+            SELECT o.id, o.restaurant_id,
+              ROW_NUMBER() OVER (PARTITION BY o.restaurant_id ORDER BY o.id ASC) AS seq,
+              COALESCE(b.base_seq, 0) AS base_seq
+            FROM orders o
+            LEFT JOIN base_per_resto b ON b.restaurant_id = o.restaurant_id
+            WHERE o.restaurant_id IS NOT NULL AND o.order_number IS NULL
+          )
+          UPDATE orders
+          SET order_number = ranked.base_seq + ranked.seq
+          FROM ranked
+          WHERE orders.id = ranked.id;
+        `);
+      }
+      await pgPool.query(`
+        UPDATE restaurants
+        SET order_seq_counter = sub.max_num
+        FROM (
+          SELECT restaurant_id, MAX(order_number) AS max_num
+          FROM orders
+          WHERE restaurant_id IS NOT NULL AND order_number IS NOT NULL
+          GROUP BY restaurant_id
+        ) sub
+        WHERE restaurants.id = sub.restaurant_id
+          AND COALESCE(restaurants.order_seq_counter, 0) < sub.max_num;
+      `);
+    } catch (e) {
+      console.warn('Postgres order_number backfill notice:', e.message);
     }
 
     // Safe payment uniqueness migration & partial unique index (versioned migration)
@@ -1760,13 +1806,47 @@ async function createTables(options = {}) {
       if (!orderCols.some(c => c.name === 'order_type')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN order_type TEXT DEFAULT 'dine_in'");
       if (!orderCols.some(c => c.name === 'token_number')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN token_number INTEGER DEFAULT NULL");
       if (!orderCols.some(c => c.name === 'token_display')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN token_display TEXT DEFAULT NULL");
+      if (!orderCols.some(c => c.name === 'order_number')) sqliteDb.exec("ALTER TABLE orders ADD COLUMN order_number INTEGER DEFAULT NULL");
       if (!orderCols.some(c => c.name === 'updated_at')) {
         sqliteDb.exec("ALTER TABLE orders ADD COLUMN updated_at TEXT DEFAULT NULL");
         sqliteDb.exec("UPDATE orders SET updated_at = created_at WHERE updated_at IS NULL");
       }
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_session ON orders(restaurant_id, session_id)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_parent ON orders(restaurant_id, parent_order_id)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_resto_number ON orders(restaurant_id, order_number)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_orders_tracking_hash ON orders (restaurant_id, tracking_token_hash)");
+      if (!restoCols.some(c => c.name === 'order_seq_counter')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN order_seq_counter INTEGER DEFAULT 0");
+
+      try {
+        const backfillSqliteOrderNumbers = sqliteDb.transaction(() => {
+          const missingRows = sqliteDb.prepare(
+            'SELECT id, restaurant_id FROM orders WHERE restaurant_id IS NOT NULL AND order_number IS NULL ORDER BY id ASC'
+          ).all();
+          if (!missingRows || missingRows.length === 0) return;
+
+          const maxPerResto = new Map();
+          const maxRows = sqliteDb.prepare(
+            'SELECT restaurant_id, COALESCE(MAX(order_number), 0) AS max_num FROM orders WHERE restaurant_id IS NOT NULL GROUP BY restaurant_id'
+          ).all();
+          for (const mr of maxRows) {
+            maxPerResto.set(Number(mr.restaurant_id), Number(mr.max_num) || 0);
+          }
+          const updateOrderStmt = sqliteDb.prepare('UPDATE orders SET order_number = ? WHERE id = ?');
+          const updateRestoSeqStmt = sqliteDb.prepare('UPDATE restaurants SET order_seq_counter = MAX(COALESCE(order_seq_counter, 0), ?) WHERE id = ?');
+          for (const row of missingRows) {
+            const rid = Number(row.restaurant_id);
+            const nextNum = (maxPerResto.get(rid) || 0) + 1;
+            maxPerResto.set(rid, nextNum);
+            updateOrderStmt.run(nextNum, row.id);
+          }
+          for (const [rid, maxNum] of maxPerResto.entries()) {
+            updateRestoSeqStmt.run(maxNum, rid);
+          }
+        });
+        backfillSqliteOrderNumbers();
+      } catch (backfillErr) {
+        console.warn('SQLite order_number backfill notice:', backfillErr.message);
+      }
 
       if (!restoCols.some(c => c.name === 'counter_ordering_enabled')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN counter_ordering_enabled INTEGER DEFAULT NULL");
       if (!restoCols.some(c => c.name === 'upi_id')) sqliteDb.exec("ALTER TABLE restaurants ADD COLUMN upi_id TEXT DEFAULT NULL");

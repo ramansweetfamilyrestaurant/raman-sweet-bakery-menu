@@ -24,6 +24,7 @@ export { calculateOfferPrice };
 import { checkExpiredSubscriptions } from '../subscriptionCron.js';
 import { verifyQrToken, normalizeSpaceType, normalizeSpaceNumber, validateSpaceCapacity, generateRestaurantQrSecret } from '../utils/qrSecurity.js';
 import { publishOrderLiveEvent, subscribeRestaurantOrders } from '../utils/orderLiveBus.js';
+import { allocateRestaurantOrderNumbers } from '../utils/orderNumbering.js';
 import { sendRestaurantPushNotification } from '../services/pushService.js';
 import { 
   resolveEffectiveVerificationPolicy, 
@@ -2666,7 +2667,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         if (customIdempKey) {
           const storedKey = `${customerBinding}:${String(customIdempKey).trim()}`.substring(0, 100);
           const existingByKey = await txQuery(`
-            SELECT id, session_id, round_number, parent_order_id, status, total_amount, distance_meters 
+            SELECT id, order_number, session_id, round_number, parent_order_id, status, total_amount, distance_meters, order_type, token_number, token_display
             FROM orders 
             WHERE restaurant_id = $1 AND idempotency_key = $2 
             ORDER BY id DESC LIMIT 1
@@ -2675,6 +2676,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           if (existingByKey && existingByKey.length > 0) {
             const ex = existingByKey[0];
             const isAddon = (Number(ex.round_number) || 1) > 1;
+            const exOrderNum = ex.order_number || ex.id;
             const obsTok = resolvedSpaceType !== 'counter'
               ? signSessionObserverToken(resto, ex.session_id || `sess_${targetId}_${cleanTable}_${ex.parent_order_id || ex.id}`, cleanTable)
               : '';
@@ -2682,6 +2684,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
               _isNewOrder: false,
               success: true,
               order_id: ex.id,
+              order_number: exOrderNum,
               primary_order_id: ex.parent_order_id || ex.id,
               session_id: ex.session_id,
               ...(obsTok ? { session_observer_token: obsTok } : {}),
@@ -2689,13 +2692,16 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
               is_addon: isAddon,
               status: ex.status,
               table_number: cleanTable,
+              order_type: ex.order_type || effectiveOrderType,
+              token_number: ex.token_number || null,
+              token_display: ex.token_display || null,
               total_amount: Number(ex.total_amount),
               distance_meters: ex.distance_meters,
               message: isAddon
-                ? `🎉 Round ${ex.round_number} (Add-on Order #${ex.id}) placed for Table #${cleanTable}!`
+                ? `🎉 Round ${ex.round_number} (Add-on Order No: ${exOrderNum}) placed for Table ${cleanTable}!`
                 : (resolvedSpaceType === 'counter'
-                    ? `🎉 Counter Order #${ex.id} placed successfully!`
-                    : `🎉 Order #${ex.id} placed successfully for Table #${cleanTable}!`)
+                    ? `🎉 Counter Order No: ${exOrderNum} placed successfully!`
+                    : `🎉 Order No: ${exOrderNum} placed successfully for Table ${cleanTable}!`)
             };
           }
         }
@@ -2704,7 +2710,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         if (resolvedSpaceType !== 'counter') {
           const threeSecAgo = new Date(Date.now() - 3000).toISOString();
           const recentOrder = await txQuery(`
-            SELECT id, total_amount, created_at, session_id, round_number, parent_order_id, status, distance_meters
+            SELECT id, order_number, total_amount, created_at, session_id, round_number, parent_order_id, status, distance_meters, order_type, token_number, token_display
             FROM orders
             WHERE restaurant_id = $1 AND table_number = $2 AND created_at >= $3
             ORDER BY id DESC LIMIT 1
@@ -2714,6 +2720,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             const prev = recentOrder[0];
             if (Number(prev.total_amount) === serverVerifiedTotal) {
               const isAddon = (Number(prev.round_number) || 1) > 1;
+              const prevOrderNum = prev.order_number || prev.id;
               const obsTok = resolvedSpaceType !== 'counter'
                 ? signSessionObserverToken(resto, prev.session_id || `sess_${targetId}_${cleanTable}_${prev.parent_order_id || prev.id}`, cleanTable)
                 : '';
@@ -2721,6 +2728,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
                 _isNewOrder: false,
                 success: true,
                 order_id: prev.id,
+                order_number: prevOrderNum,
                 primary_order_id: prev.parent_order_id || prev.id,
                 session_id: prev.session_id,
                 ...(obsTok ? { session_observer_token: obsTok } : {}),
@@ -2728,11 +2736,14 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
                 is_addon: isAddon,
                 status: prev.status || 'pending',
                 table_number: cleanTable,
+                order_type: prev.order_type || effectiveOrderType,
+                token_number: prev.token_number || null,
+                token_display: prev.token_display || null,
                 total_amount: Number(prev.total_amount),
                 distance_meters: prev.distance_meters,
                 message: isAddon
-                  ? `🎉 Round ${prev.round_number} (Add-on Order #${prev.id}) placed for Table #${cleanTable}!`
-                  : `🎉 Order #${prev.id} placed successfully for Table #${cleanTable}!`
+                  ? `🎉 Round ${prev.round_number} (Add-on Order No: ${prevOrderNum}) placed for Table ${cleanTable}!`
+                  : `🎉 Order No: ${prevOrderNum} placed successfully for Table ${cleanTable}!`
               };
             }
           }
@@ -2785,30 +2796,11 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         const isTakeawayOrder = resolvedSpaceType === 'counter' || rawOrderType === 'takeaway' || rawOrderType === 'parcel' || String(cleanTable).toUpperCase() === 'COUNTER';
         const effectiveOrderType = isTakeawayOrder ? 'takeaway' : 'dine_in';
 
-        // 🎟️ Daily Sequential Takeaway Token Generation
-        let tokenNumber = null;
-        let tokenDisplay = null;
-        if (isTakeawayOrder) {
-          const todayStart = new Date();
-          todayStart.setHours(0, 0, 0, 0);
-          const todayIso = todayStart.toISOString();
-
-          try {
-            const tokenRows = await query(`
-              SELECT MAX(token_number) as max_token
-              FROM orders
-              WHERE restaurant_id = $1 AND created_at >= $2
-            `, [targetId, todayIso]);
-
-            const maxToken = tokenRows && tokenRows[0] && tokenRows[0].max_token ? Number(tokenRows[0].max_token) : 0;
-            tokenNumber = maxToken + 1;
-            tokenDisplay = `TK-${String(tokenNumber).padStart(2, '0')}`;
-          } catch (tErr) {
-            console.warn('Failed to calculate next token_number:', tErr.message);
-            tokenNumber = 1;
-            tokenDisplay = 'TK-01';
-          }
-        }
+        // 🎟️ Atomic Per-Business Sequential Order Number + IST Midnight Daily Takeaway Token
+        const { orderNumber, tokenNumber, tokenDisplay } = await allocateRestaurantOrderNumbers(txQuery, targetId, {
+          isTakeaway: isTakeawayOrder,
+          dbType: getDbType()
+        });
 
         let sessionId = null;
         let roundNumber = 1;
@@ -2868,6 +2860,9 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
 
         let result = null;
         try {
+          if (getDbType() === 'postgres') {
+            await txQuery('SAVEPOINT order_insert_sp');
+          }
           result = await txQuery(`
             INSERT INTO orders (
               restaurant_id, table_number, customer_name, customer_phone, items, 
@@ -2876,8 +2871,8 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
               customer_latitude, customer_longitude, customer_accuracy, distance_meters,
               session_id, round_number, parent_order_id, is_settled, idempotency_key,
               notes, tracking_token_hash,
-              order_type, token_number, token_display
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29) RETURNING id
+              order_type, token_number, token_display, order_number
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30) RETURNING id
           `, [
             targetId,
             cleanTable,
@@ -2907,9 +2902,20 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             trackingTokenHash,
             effectiveOrderType,
             tokenNumber,
-            tokenDisplay
+            tokenDisplay,
+            orderNumber
           ]);
+          if (getDbType() === 'postgres') {
+            await txQuery('RELEASE SAVEPOINT order_insert_sp');
+          }
         } catch (insertErr) {
+          if (insertErr && (insertErr.code === '40P01' || insertErr.code === '40001')) {
+            throw insertErr;
+          }
+          if (getDbType() === 'postgres') {
+            try { await txQuery('ROLLBACK TO SAVEPOINT order_insert_sp'); } catch (e) {}
+            try { await txQuery('RELEASE SAVEPOINT order_insert_sp'); } catch (e) {}
+          }
           const isSchemaMissing = Boolean(
             (insertErr.code === '42703' && (String(insertErr.message).toLowerCase().includes('notes') || String(insertErr.message).toLowerCase().includes('tracking_token_hash'))) ||
             String(insertErr.message).toLowerCase().includes('column "notes"') ||
@@ -2945,6 +2951,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           try { await txQuery("ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_type VARCHAR(20) DEFAULT 'dine_in'"); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_number INT DEFAULT NULL'); } catch (e) {}
           try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS token_display VARCHAR(50) DEFAULT NULL'); } catch (e) {}
+          try { await txQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_number INT DEFAULT NULL'); } catch (e) {}
 
           result = await txQuery(`
             INSERT INTO orders (
@@ -2953,8 +2960,8 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
               status, sent_to_kds, created_at,
               session_id, round_number, parent_order_id, is_settled, idempotency_key,
               notes, tracking_token_hash,
-              order_type, token_number, token_display
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25) RETURNING id
+              order_type, token_number, token_display, order_number
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26) RETURNING id
           `, [
             targetId,
             cleanTable,
@@ -2980,7 +2987,8 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
             trackingTokenHash,
             effectiveOrderType,
             tokenNumber,
-            tokenDisplay
+            tokenDisplay,
+            orderNumber
           ]);
         }
 
@@ -2993,6 +3001,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           _isNewOrder: true,
           success: true,
           order_id: orderId,
+          order_number: orderNumber,
           primary_order_id: parentOrderId || orderId,
           session_id: sessionId,
           ...(sessionObserverToken ? { session_observer_token: sessionObserverToken } : {}),
@@ -3014,12 +3023,12 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           distance_meters: distanceMetersValue,
           notes: cleanNotes,
           message: isTakeawayOrder
-            ? `🎉 Takeaway Order placed! Your Pickup Token is ${tokenDisplay}!`
+            ? `🎉 Takeaway Order No: ${orderNumber} placed! Your Pickup Token is ${tokenDisplay}!`
             : (isAddonOrder
-                ? `🎉 Round ${roundNumber} (Add-on Order) placed for Table #${cleanTable}!`
+                ? `🎉 Round ${roundNumber} (Add-on Order No: ${orderNumber}) placed for Table ${cleanTable}!`
                 : (resolvedSpaceType === 'counter'
-                    ? `🎉 Counter Order placed! Your Pickup Token is ${tokenDisplay}!`
-                    : `🎉 Order placed successfully for Table #${cleanTable}!`))
+                    ? `🎉 Counter Order No: ${orderNumber} placed! Your Pickup Token is ${tokenDisplay}!`
+                    : `🎉 Order No: ${orderNumber} placed successfully for Table ${cleanTable}!`))
         };
       });
 
@@ -3043,8 +3052,9 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
 
       if (isNewlyInsertedOrder) {
         const pushCurrency = String(resto?.currency_symbol || '₹').trim() || '₹';
+        const pushOrderNum = publicResponsePayload.order_number || publicResponsePayload.order_id;
         sendRestaurantPushNotification(targetId, {
-          title: `🛎️ New Order #${publicResponsePayload.order_id}!`,
+          title: `🛎️ New Order No: ${pushOrderNum}!`,
           body: `${publicResponsePayload.token_display || publicResponsePayload.table_number || 'Table'} • ${items.length} item(s) • ${pushCurrency}${Math.round(Number(publicResponsePayload.grand_total_amount || publicResponsePayload.total_amount || 0))}`,
           tag: `order-${publicResponsePayload.order_id}`,
           type: 'new_order',
@@ -3109,6 +3119,7 @@ function buildConsolidatedOrderSummary(resto, anchorOrder, billRows) {
 
     return {
       id: row.id,
+      order_number: row.order_number || row.id,
       round_number: Number(row.round_number) || (idx + 1),
       status: row.status,
       kitchen_prepared: Number(row.kitchen_prepared) || 0,
@@ -3124,6 +3135,8 @@ function buildConsolidatedOrderSummary(resto, anchorOrder, billRows) {
 
   const sharedSummary = {
     order_id: anchorOrder.id,
+    order_number: anchorOrder.order_number || anchorOrder.id,
+    primary_order_number: billRows[0]?.order_number || anchorOrder.order_number || anchorOrder.id,
     session_id: anchorOrder.session_id || null,
     round_count: rounds.length,
     rounds,
@@ -3176,12 +3189,12 @@ router.get('/orders/track/:id', async (req, res) => {
     let orders;
     try {
       orders = await query(
-        'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display, is_settled, payment_method, rejection_reason FROM orders WHERE id = $1 AND restaurant_id = $2',
+        'SELECT id, order_number, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display, is_settled, payment_method, rejection_reason FROM orders WHERE id = $1 AND restaurant_id = $2',
         [orderId, targetId]
       );
     } catch (trackColErr) {
       orders = await query(
-        'SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display, is_settled, payment_method, NULL AS rejection_reason FROM orders WHERE id = $1 AND restaurant_id = $2',
+        'SELECT id, order_number, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, tracking_token_hash, order_type, token_number, token_display, is_settled, payment_method, NULL AS rejection_reason FROM orders WHERE id = $1 AND restaurant_id = $2',
         [orderId, targetId]
       );
     }
@@ -3309,7 +3322,7 @@ router.get('/orders/track/:id', async (req, res) => {
         const orderSessionKey = String(order.session_id || '');
         try {
           const siblingRows = await query(
-            `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+            `SELECT id, order_number, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
              FROM orders
              WHERE restaurant_id = $1
                AND status NOT IN ('rejected', 'cancelled')
@@ -3453,7 +3466,7 @@ router.get('/orders/active-table', async (req, res) => {
     let orders = [];
     try {
       orders = await query(`
-        SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, order_type, token_number, token_display
+        SELECT id, order_number, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, order_type, token_number, token_display
         FROM orders
         WHERE restaurant_id = $1 AND (table_number = $2 OR table_number = $3 OR table_number = $4) 
           AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served') 
@@ -3462,7 +3475,7 @@ router.get('/orders/active-table', async (req, res) => {
       `, [targetId, rawTable, queryTable, queryAlt]);
     } catch (e) {
       orders = await query(`
-        SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, order_type, token_number, token_display
+        SELECT id, order_number, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, created_at, order_type, token_number, token_display
         FROM orders
         WHERE restaurant_id = $1 AND (table_number = $2 OR table_number = $3 OR table_number = $4) 
           AND status IN ('pending', 'preparing', 'kitchen', 'accepted', 'served')
@@ -3478,14 +3491,14 @@ router.get('/orders/active-table', async (req, res) => {
           let prevRows;
           try {
             prevRows = await query(
-              `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method, rejection_reason, tracking_token_hash
+              `SELECT id, order_number, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method, rejection_reason, tracking_token_hash
                FROM orders
                WHERE id = $1 AND restaurant_id = $2 AND (table_number = $3 OR table_number = $4 OR table_number = $5)`,
               [prevOrderIdNum, targetId, rawTable, queryTable, queryAlt]
             );
           } catch (prevColErr) {
             prevRows = await query(
-              `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method, NULL AS rejection_reason, tracking_token_hash
+              `SELECT id, order_number, session_id, round_number, parent_order_id, table_number, customer_name, status, kitchen_prepared, sent_to_kds, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method, NULL AS rejection_reason, tracking_token_hash
                FROM orders
                WHERE id = $1 AND restaurant_id = $2 AND (table_number = $3 OR table_number = $4 OR table_number = $5)`,
               [prevOrderIdNum, targetId, rawTable, queryTable, queryAlt]
@@ -3519,6 +3532,7 @@ router.get('/orders/active-table', async (req, res) => {
             if (withinTerminalWindow && isPrevCancelled) {
               return res.json({
                 id: prevOrder.id,
+                order_number: prevOrder.order_number || prevOrder.id,
                 table_number: prevOrder.table_number,
                 space_type: resolvedSpaceType,
                 status: prevStatus,
@@ -3532,7 +3546,7 @@ router.get('/orders/active-table', async (req, res) => {
               const prevSessionId = String(prevOrder.session_id || '');
               try {
                 const siblingRows = await query(
-                  `SELECT id, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
+                  `SELECT id, order_number, session_id, round_number, parent_order_id, table_number, customer_name, status, total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate, items, notes, created_at, terminal_at, order_type, token_number, token_display, is_settled, payment_method
                    FROM orders
                    WHERE restaurant_id = $1
                      AND status NOT IN ('rejected', 'cancelled')
@@ -3545,6 +3559,7 @@ router.get('/orders/active-table', async (req, res) => {
               const { billSummary } = buildConsolidatedOrderSummary(resto, prevOrder, billRows);
               return res.json({
                 id: prevOrder.id,
+                order_number: prevOrder.order_number || prevOrder.id,
                 table_number: prevOrder.table_number,
                 space_type: resolvedSpaceType,
                 customer_name: prevOrder.customer_name,
@@ -3604,6 +3619,7 @@ router.get('/orders/active-table', async (req, res) => {
 
       return {
         id: o.id,
+        order_number: o.order_number || o.id,
         round_number: Number(o.round_number) || 1,
         status: o.status,
         kitchen_prepared: o.kitchen_prepared,
@@ -3637,7 +3653,9 @@ router.get('/orders/active-table', async (req, res) => {
 
     res.json({
       id: primaryOrder.id,
+      order_number: primaryOrder.order_number || primaryOrder.id,
       latest_order_id: latestOrder.id,
+      latest_order_number: latestOrder.order_number || latestOrder.id,
       session_id: activeSessionId,
       ...(sessionObserverToken ? { session_observer_token: sessionObserverToken } : {}),
       table_number: primaryOrder.table_number,
@@ -4132,7 +4150,7 @@ router.get('/kitchen/orders', async (req, res) => {
     // Excludes: 'pending', 'completed', 'cancelled', 'rejected', prepared (1), and settled (1)
     // Treats NULL in kitchen_prepared and is_settled as 0 (unprepared & unsettled)
     const orders = await query(`
-      SELECT id, session_id, round_number, parent_order_id, table_number,
+      SELECT id, order_number, session_id, round_number, parent_order_id, table_number,
              customer_name, items, status, sent_to_kds, kitchen_prepared, is_settled, notes, created_at,
              order_type, token_number, token_display
       FROM orders
@@ -4158,6 +4176,7 @@ router.get('/kitchen/orders', async (req, res) => {
       }
       return {
         id: o.id,
+        order_number: o.order_number || o.id,
         session_id: o.session_id,
         round_number: o.round_number,
         parent_order_id: o.parent_order_id,

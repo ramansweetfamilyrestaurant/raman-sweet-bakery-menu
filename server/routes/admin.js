@@ -14,6 +14,7 @@ import { adminLoginRateLimiter, supportTicketCreateRateLimiter, supportTicketRep
 import { generateTicketReference, validateTicketInput, validateReplyInput, VALID_CATEGORIES, VALID_PRIORITIES, VALID_STATUSES } from '../services/supportTicketService.js';
 import { clearRestoResolveCache, clearMenuBundleCache, calculateOrderTax } from './api.js';
 import { publishOrderLiveEvent, subscribeRestaurantOrders } from '../utils/orderLiveBus.js';
+import { allocateRestaurantOrderNumbers } from '../utils/orderNumbering.js';
 import { getVapidPublicKey, savePushSubscription, deletePushSubscription, sendRestaurantPushNotification } from '../services/pushService.js';
 import {
   parseSafeDate,
@@ -3122,31 +3123,7 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
     const cleanTable = isTakeaway ? 'Counter' : String(table_number).trim();
     const effectiveOrderType = isTakeaway ? 'takeaway' : 'dine_in';
 
-    // 2. Daily Sequential Token Generation for Takeaway/Counter
-    let tokenNumber = null;
-    let tokenDisplay = null;
-    if (isTakeaway) {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayIso = todayStart.toISOString();
-
-      try {
-        const tokenQueryRes = await query(`
-          SELECT MAX(token_number) as max_token
-          FROM orders
-          WHERE restaurant_id = $1 AND created_at >= $2
-        `, [targetId, todayIso]);
-        const tRows = tokenQueryRes.rows || tokenQueryRes;
-        const maxToken = tRows && tRows[0] && tRows[0].max_token ? Number(tRows[0].max_token) : 0;
-        tokenNumber = maxToken + 1;
-        tokenDisplay = `TK-${String(tokenNumber).padStart(2, '0')}`;
-      } catch (tErr) {
-        tokenNumber = 1;
-        tokenDisplay = 'TK-01';
-      }
-    }
-
-    // 3. Format & sanitize items and compute subtotal
+    // 2. Format & sanitize items and compute subtotal
     let subtotal = 0;
     const formattedItems = items.map((it, idx) => {
       const qty = Math.max(1, parseInt(it.quantity || 1, 10));
@@ -3179,10 +3156,6 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
     const isEffectiveGst = Boolean(resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1');
     const taxBreakdown = calculateOrderTax(subtotal, isEffectiveGst);
 
-    const defaultCustomerName = isTakeaway
-      ? (tokenDisplay ? `Takeaway Guest (${tokenDisplay})` : 'Counter Customer')
-      : `Table Customer (${cleanTable})`;
-    const cleanCustomerName = String(customer_name || defaultCustomerName).trim().substring(0, 100);
     const cleanCustomerPhone = String(customer_phone || '').trim().substring(0, 30);
     const cleanPaymentMethod = ['cash', 'upi', 'card'].includes(String(payment_method).toLowerCase()) ? String(payment_method).toLowerCase() : 'cash';
     const cleanNotes = String(notes || '').trim().substring(0, 500);
@@ -3191,62 +3164,82 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
       ? `sess_${targetId}_counter_${Date.now()}`
       : `sess_${targetId}_${cleanTable}_${Date.now()}`;
 
-    // 4. Insert POS Order directly as accepted & settled
-    const insertRes = await query(`
-      INSERT INTO orders (
-        restaurant_id, table_number, customer_name, customer_phone, items,
-        total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate,
-        status, sent_to_kds, created_at, session_id, round_number, is_settled,
-        payment_method, notes, order_type, token_number, token_display
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
-      RETURNING *
-    `, [
-      targetId,
-      cleanTable,
-      cleanCustomerName,
-      cleanCustomerPhone,
-      JSON.stringify(formattedItems),
-      taxBreakdown.grand_total,
-      taxBreakdown.subtotal,
-      taxBreakdown.cgst,
-      taxBreakdown.sgst,
-      taxBreakdown.tax_total,
-      taxBreakdown.grand_total,
-      taxBreakdown.gst_rate,
-      'accepted',
-      1,
-      createdAt,
-      sessionId,
-      1,
-      1,
-      cleanPaymentMethod,
-      cleanNotes,
-      effectiveOrderType,
-      tokenNumber,
-      tokenDisplay
-    ]);
+    // 3 & 4. Atomically allocate per-business order_number + IST daily takeaway token & insert POS order
+    const { createdOrder, orderNumber, tokenNumber, tokenDisplay } = await withTransaction(async (txQuery) => {
+      const { orderNumber: nextOrderNum, tokenNumber: nextTokenNum, tokenDisplay: nextTokenDisp } = await allocateRestaurantOrderNumbers(txQuery, targetId, {
+        isTakeaway,
+        dbType: getDbType()
+      });
 
-    const insRows = insertRes.rows || insertRes;
-    let createdOrder = (Array.isArray(insRows) && insRows.length > 0) ? insRows[0] : null;
-    if (!createdOrder) {
-      const lastId = insertRes.lastInsertRowid || insertRes.id;
-      if (lastId) {
-        const fetched = await query('SELECT * FROM orders WHERE id = $1', [lastId]);
-        const fRows = fetched.rows || fetched;
-        createdOrder = fRows[0];
+      const defaultCustomerName = isTakeaway
+        ? (nextTokenDisp ? `Takeaway Guest (${nextTokenDisp})` : 'Counter Customer')
+        : `Table Customer (${cleanTable})`;
+      const cleanCustomerName = String(customer_name || defaultCustomerName).trim().substring(0, 100);
+
+      const insertRes = await txQuery(`
+        INSERT INTO orders (
+          restaurant_id, table_number, customer_name, customer_phone, items,
+          total_amount, subtotal_amount, cgst_amount, sgst_amount, tax_amount, grand_total_amount, gst_rate,
+          status, sent_to_kds, created_at, session_id, round_number, is_settled,
+          payment_method, notes, order_type, token_number, token_display, order_number
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+        RETURNING *
+      `, [
+        targetId,
+        cleanTable,
+        cleanCustomerName,
+        cleanCustomerPhone,
+        JSON.stringify(formattedItems),
+        taxBreakdown.grand_total,
+        taxBreakdown.subtotal,
+        taxBreakdown.cgst,
+        taxBreakdown.sgst,
+        taxBreakdown.tax_total,
+        taxBreakdown.grand_total,
+        taxBreakdown.gst_rate,
+        'accepted',
+        1,
+        createdAt,
+        sessionId,
+        1,
+        1,
+        cleanPaymentMethod,
+        cleanNotes,
+        effectiveOrderType,
+        nextTokenNum,
+        nextTokenDisp,
+        nextOrderNum
+      ]);
+
+      const insRows = insertRes.rows || insertRes;
+      let orderRow = (Array.isArray(insRows) && insRows.length > 0) ? insRows[0] : null;
+      if (!orderRow) {
+        const lastId = insertRes.lastInsertRowid || insertRes.id;
+        if (lastId) {
+          const fetched = await txQuery('SELECT * FROM orders WHERE id = $1', [lastId]);
+          const fRows = fetched.rows || fetched;
+          orderRow = fRows[0];
+        }
       }
-    }
-
-    if (createdOrder) {
-      createdOrder.items = formattedItems;
-    }
+      if (orderRow) {
+        orderRow.items = formattedItems;
+        if (!orderRow.order_number) orderRow.order_number = nextOrderNum;
+      }
+      return {
+        createdOrder: orderRow,
+        orderNumber: nextOrderNum,
+        tokenNumber: nextTokenNum,
+        tokenDisplay: nextTokenDisp
+      };
+    });
 
     res.json({
       success: true,
       order: createdOrder,
+      order_number: orderNumber,
       token_display: tokenDisplay,
       token_number: tokenNumber,
-      message: tokenDisplay ? `🎉 Counter Order created! Token: ${tokenDisplay}` : `🎉 Order created for Table ${cleanTable}!`
+      message: tokenDisplay ? `🎉 Counter Order No: ${orderNumber} created! Token: ${tokenDisplay}` : `🎉 Order No: ${orderNumber} created for Table ${cleanTable}!`
     });
   } catch (err) {
     console.error('POS order creation error:', err);
@@ -3372,7 +3365,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
 
     // 1. Fetch target order strictly bound to authenticated restaurant
     const existing = await query(`
-      SELECT id, session_id, parent_order_id, table_number, status, sent_to_kds,
+      SELECT id, order_number, session_id, parent_order_id, table_number, status, sent_to_kds,
              kitchen_prepared, is_settled, payment_method, terminal_at
       FROM orders
       WHERE id = $1 AND restaurant_id = $2
@@ -3411,7 +3404,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     if (normalizedNewStatus && isCurrentTerminal && !isTargetTerminal) {
       return res.status(400).json({
         error: 'order_already_terminal',
-        message: `Order #${orderId} is already in terminal state '${currentStatus}' and cannot be reopened.`
+        message: `Order No: ${targetOrder.order_number || orderId} is already in terminal state '${currentStatus}' and cannot be reopened.`
       });
     }
 
@@ -3595,7 +3588,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       const wasTxRoutedToKds = Number(txRow.sent_to_kds) === 1;
 
       if (normalizedNewStatus && isTxCurrentTerminal && !isTxTargetTerminal) {
-        const reopenErr = new Error(`Order #${orderId} is already in terminal state '${txCurrentStatus}' and cannot be reopened.`);
+        const reopenErr = new Error(`Order No: ${targetOrder.order_number || orderId} is already in terminal state '${txCurrentStatus}' and cannot be reopened.`);
         reopenErr.httpStatus = 400;
         reopenErr.code = 'order_already_terminal';
         throw reopenErr;
@@ -3659,7 +3652,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
         const hasExplicitFlagChange = sqlKdsParam !== null || sqlPrepParam !== null;
 
         if (hasStatusChange && isRecordTerminal && !isTxTargetTerminal) {
-          const reopenErr = new Error(`Order #${orderId} is already in terminal state '${currentRecordStatus}' and cannot be reopened.`);
+          const reopenErr = new Error(`Order No: ${targetOrder.order_number || orderId} is already in terminal state '${currentRecordStatus}' and cannot be reopened.`);
           reopenErr.httpStatus = 400;
           reopenErr.code = 'order_already_terminal';
           throw reopenErr;
@@ -3923,9 +3916,10 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     });
 
     if (finalPrep === 1 && txPrevPrepared !== 1) {
+      const displayNum = targetOrder.order_number || orderId;
       sendRestaurantPushNotification(targetId, {
         title: '🍳 Food Prepared in Kitchen!',
-        body: `Order #${orderId} (${targetOrder.table_number || 'Table'}) is ready to serve.`,
+        body: `Order No: ${displayNum} (${targetOrder.table_number || 'Table'}) is ready to serve.`,
         tag: `food-prepared-${orderId}`,
         type: 'food_prepared',
         orderId,
@@ -3936,6 +3930,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     res.json({
       success: true,
       id: orderId,
+      order_number: targetOrder.order_number || orderId,
       status: finalStatus,
       sent_to_kds: finalKds,
       kitchen_prepared: finalPrep,
@@ -5137,7 +5132,7 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
 
     const { orders, summaries } = await withTransaction(async (txQuery) => {
       const ordRows = await txQuery(
-        "SELECT id, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
+        "SELECT id, order_number, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
         [targetId]
       );
       const sumRows = await txQuery(
@@ -5219,7 +5214,7 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
 
       csvRows.push([
         'LIVE_ORDER',
-        `#${o.id}`,
+        `Order No: ${o.order_number || o.id}`,
         dStr,
         timeStr,
         1,
@@ -5402,7 +5397,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     let catalogQueryFailed = false;
     const { orders, summaries, catalogDishes } = await withTransaction(async (txQuery) => {
       const ordRows = await txQuery(
-        "SELECT id, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
+        "SELECT id, order_number, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
         [targetId]
       );
       const sumRows = await txQuery(
@@ -5575,7 +5570,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
 
       reportRows.push({
         record_type: 'LIVE_ORDER',
-        id: `#${o.id}`,
+        id: `Order No: ${o.order_number || o.id}`,
         date: dStr,
         time: timeStr,
         order_count: 1,

@@ -33,6 +33,7 @@ import {
   isNotificationSoundReady,
   subscribeAudioState
 } from '../../../utils/soundManager';
+import { resolveBusinessOrderNumber, resolveTakeawayToken } from '../../../utils/orderNumberHelper';
 import { filterActiveKitchenOrders } from '../../../utils/kdsQueueFilter';
 import {
   resolveKdsSlug,
@@ -1045,7 +1046,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
       }
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || `Failed to mark order #${orderId} prepared`);
+        throw new Error(errData.message || `Failed to mark Order No: ${resolveBusinessOrderNumber(targetOrderSnapshot || orderObj) || orderId} prepared`);
       }
 
       // Apply grid removal & 10-entry history cap only after PATCH succeeds
@@ -1081,7 +1082,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
       setRecallNotice({
         type: 'error',
         message: completeTimedOut
-          ? `Ready request for Order #${orderId} timed out. Reconciling queue state...`
+          ? `Ready request for Order No: ${resolveBusinessOrderNumber(targetOrderSnapshot || orderObj) || orderId} timed out. Reconciling queue state...`
           : (e?.message || 'Failed to mark order prepared. Order remains in queue.')
       });
       fetchOrders({ force: true });
@@ -1156,7 +1157,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
       if (!isMountedRef.current || reqGen !== actionGenRef.current) {
         return;
       }
-      const parsed = parseRecallErrorResponse(res.status, data, order.id);
+      const parsed = parseRecallErrorResponse(res.status, data, resolveBusinessOrderNumber(order));
 
       if (parsed.success) {
         optimisticRecallsRef.current.delete(order.id);
@@ -1205,8 +1206,8 @@ export default function StandaloneKdsPage({ slug = '' }) {
       setRecallNotice({
         type: 'error',
         message: recallTimedOut
-          ? `Recall request for Order #${order.id} timed out. Reconciling queue state...`
-          : parseRecallErrorResponse(0, {}, order.id).message
+          ? `Recall request for Order No: ${resolveBusinessOrderNumber(order)} timed out. Reconciling queue state...`
+          : parseRecallErrorResponse(0, {}, resolveBusinessOrderNumber(order)).message
       });
       fetchOrders({ force: true });
     } finally {
@@ -2207,6 +2208,20 @@ export default function StandaloneKdsPage({ slug = '' }) {
                       <div style={{ fontSize: '1rem', fontWeight: 600, color: '#FFFFFF', letterSpacing: '-0.01em', lineHeight: 1.2, overflowWrap: 'anywhere' }}>
                         {formatKdsLocation(order.table_number, order.space_type, restaurantMeta?.business_type === 'hotel_resort' ? 'room' : restaurantMeta?.table_prefix)}
                       </div>
+                      {resolveBusinessOrderNumber(order) && (
+                        <span style={{
+                          background: 'rgba(148, 163, 184, 0.16)',
+                          border: '1px solid rgba(148, 163, 184, 0.35)',
+                          color: '#E2E8F0',
+                          padding: '1px 7px',
+                          borderRadius: '5px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          whiteSpace: 'nowrap'
+                        }}>
+                          KOT No: {resolveBusinessOrderNumber(order)}
+                        </span>
+                      )}
                       {(order.token_display || order.token_number) && (
                         <span style={{
                           background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.35) 100%)',
@@ -2219,7 +2234,7 @@ export default function StandaloneKdsPage({ slug = '' }) {
                           letterSpacing: '0.5px',
                           whiteSpace: 'nowrap'
                         }}>
-                          TOKEN {order.token_display || order.token_number}
+                          TOKEN {resolveTakeawayToken(order)}
                         </span>
                       )}
                       {isMultiRound && (
