@@ -13,17 +13,48 @@ export function parseComboItems(rawItems) {
   return [];
 }
 
+export function buildDishNameMap(dishMapOrList) {
+  const nameMap = new Map();
+  if (!dishMapOrList) return nameMap;
+  const iter = dishMapOrList instanceof Map ? dishMapOrList.values() : dishMapOrList;
+  for (const d of iter) {
+    if (!d || typeof d !== 'object' || !d.name) continue;
+    const key = String(d.name).trim().toLowerCase();
+    if (key && !nameMap.has(key)) {
+      nameMap.set(key, d);
+    }
+  }
+  return nameMap;
+}
+
+export function findMatchingDishForComboItem(item, dishMap = null, dishNameMap = null) {
+  if (!item || typeof item !== 'object') return null;
+  if (dishMap && item.dish_id !== undefined && item.dish_id !== null && String(item.dish_id).trim() !== '') {
+    const byId = dishMap.get(String(item.dish_id));
+    if (byId) return byId;
+  }
+  const rawName = String(item.dish_name || item.name || item.title || '').trim().toLowerCase();
+  if (rawName) {
+    if (dishNameMap && dishNameMap.has(rawName)) return dishNameMap.get(rawName);
+    if (dishMap) {
+      for (const d of dishMap.values()) {
+        if (d?.name && String(d.name).trim().toLowerCase() === rawName) return d;
+      }
+    }
+  }
+  return null;
+}
+
 export function formatComboIncludesText(rawItems, dishMap = null) {
   const items = parseComboItems(rawItems);
   if (items.length === 0) return '';
+  const dishNameMap = buildDishNameMap(dishMap);
 
   return items
     .map(item => {
       if (typeof item === 'string') return item.trim();
       if (!item || typeof item !== 'object') return '';
-      const matchedDish = (dishMap && item.dish_id !== undefined && item.dish_id !== null)
-        ? dishMap.get(String(item.dish_id))
-        : null;
+      const matchedDish = findMatchingDishForComboItem(item, dishMap, dishNameMap);
       const dishName = String(matchedDish?.name || item.dish_name || item.name || item.title || '').trim();
       if (!dishName) return '';
       const qty = Math.max(1, Number(item.qty ?? item.quantity ?? 1) || 1);
@@ -45,13 +76,12 @@ export function resolveComboDietType(combo, dishMap = null) {
   }
 
   const items = parseComboItems(combo?.items);
+  const dishNameMap = buildDishNameMap(dishMap);
   let hasEgg = false;
 
   for (const item of items) {
     if (!item || typeof item !== 'object') continue;
-    const dish = (dishMap && item.dish_id !== undefined && item.dish_id !== null)
-      ? dishMap.get(String(item.dish_id))
-      : null;
+    const dish = findMatchingDishForComboItem(item, dishMap, dishNameMap);
 
     const typeStr = String(dish?.type || item.type || '').trim().toLowerCase();
     const foodTypeStr = String(dish?.food_type || item.food_type || '').trim().toLowerCase();
@@ -84,9 +114,14 @@ export function resolveComboDietType(combo, dishMap = null) {
 
 /**
  * Resolves live included dish names, original total value, availability & diet type for a combo.
+ * When the server has already set an explicit boolean `combo.has_unavailable_items`,
+ * that authoritative server value is preserved (e.g. customer menu where hidden categories omit dishes).
  */
 export function resolveComboMeta(combo, dishMap = null) {
   const rawItems = parseComboItems(combo?.items);
+  const dishNameMap = buildDishNameMap(dishMap);
+  const hasExplicitServerFlag = typeof combo?.has_unavailable_items === 'boolean';
+
   const unavailableNames = Array.isArray(combo?.unavailable_item_names)
     ? [...combo.unavailable_item_names]
     : [];
@@ -94,17 +129,12 @@ export function resolveComboMeta(combo, dishMap = null) {
 
   const syncedItems = rawItems.map(item => {
     if (!item || typeof item !== 'object') return item;
-    const dish = (dishMap && item.dish_id !== undefined && item.dish_id !== null)
-      ? dishMap.get(String(item.dish_id))
-      : null;
+    const dish = findMatchingDishForComboItem(item, dishMap, dishNameMap);
 
-    const hasDishRef = item.dish_id !== undefined && item.dish_id !== null && String(item.dish_id).trim() !== '';
-    if (hasDishCatalog && hasDishRef) {
-      if (!dish || !isFlagEnabled(dish.available, true)) {
-        const label = String(dish?.name || item.dish_name || item.name || 'Item').trim();
-        if (label && !unavailableNames.includes(label)) {
-          unavailableNames.push(label);
-        }
+    if (!hasExplicitServerFlag && hasDishCatalog && dish && !isFlagEnabled(dish.available, true)) {
+      const label = String(dish.name || item.dish_name || item.name || 'Item').trim();
+      if (label && !unavailableNames.includes(label)) {
+        unavailableNames.push(label);
       }
     }
 
@@ -128,7 +158,9 @@ export function resolveComboMeta(combo, dishMap = null) {
   }, 0);
 
   const includesText = formatComboIncludesText(syncedItems, dishMap);
-  const hasUnavailableItems = Boolean(combo?.has_unavailable_items) || unavailableNames.length > 0;
+  const hasUnavailableItems = hasExplicitServerFlag
+    ? combo.has_unavailable_items
+    : unavailableNames.length > 0;
   const comboSelfAvailable = isFlagEnabled(combo?.available, true) && isFlagEnabled(combo?.is_available, true);
   const isOrderable = comboSelfAvailable && !hasUnavailableItems;
   const dietType = resolveComboDietType({ ...combo, items: syncedItems }, dishMap);

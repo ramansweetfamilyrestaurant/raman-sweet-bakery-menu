@@ -1,5 +1,5 @@
 /**
- * Shared Combo / Thali Backend Helpers
+ * Shared Combo Backend Helpers
  * Centralizes combo item parsing, component availability validation,
  * live dish synchronization, dietary classification, and kitchen includes formatting.
  */
@@ -27,17 +27,48 @@ export function isFlagEnabled(val, fallback = true) {
   return Boolean(val);
 }
 
+export function buildDishNameMap(dishMapOrList) {
+  const nameMap = new Map();
+  if (!dishMapOrList) return nameMap;
+  const iter = dishMapOrList instanceof Map ? dishMapOrList.values() : dishMapOrList;
+  for (const d of iter) {
+    if (!d || typeof d !== 'object' || !d.name) continue;
+    const key = String(d.name).trim().toLowerCase();
+    if (key && !nameMap.has(key)) {
+      nameMap.set(key, d);
+    }
+  }
+  return nameMap;
+}
+
+export function findMatchingDishForComboItem(item, dishMap = null, dishNameMap = null) {
+  if (!item || typeof item !== 'object') return null;
+  if (dishMap && item.dish_id !== undefined && item.dish_id !== null && String(item.dish_id).trim() !== '') {
+    const byId = dishMap.get(String(item.dish_id));
+    if (byId) return byId;
+  }
+  const rawName = String(item.dish_name || item.name || item.title || '').trim().toLowerCase();
+  if (rawName) {
+    if (dishNameMap && dishNameMap.has(rawName)) return dishNameMap.get(rawName);
+    if (dishMap) {
+      for (const d of dishMap.values()) {
+        if (d?.name && String(d.name).trim().toLowerCase() === rawName) return d;
+      }
+    }
+  }
+  return null;
+}
+
 export function formatComboIncludesText(rawItems, dishMap = null) {
   const items = parseComboItems(rawItems);
   if (items.length === 0) return '';
+  const dishNameMap = buildDishNameMap(dishMap);
 
   return items
     .map(item => {
       if (typeof item === 'string') return item.trim();
       if (!item || typeof item !== 'object') return '';
-      const matchedDish = (dishMap && item.dish_id !== undefined && item.dish_id !== null)
-        ? dishMap.get(String(item.dish_id))
-        : null;
+      const matchedDish = findMatchingDishForComboItem(item, dishMap, dishNameMap);
       const dishName = String(matchedDish?.name || item.dish_name || item.name || item.title || '').trim();
       if (!dishName) return '';
       const qty = Math.max(1, Number(item.qty ?? item.quantity ?? 1) || 1);
@@ -50,20 +81,20 @@ export function formatComboIncludesText(rawItems, dishMap = null) {
 
 export function inspectComboComponentAvailability(combo, dishMap) {
   const items = parseComboItems(combo?.items);
-  if (items.length === 0) {
+  if (items.length === 0 || !dishMap || dishMap.size === 0) {
     return { allAvailable: true, unavailableNames: [] };
   }
 
+  const dishNameMap = buildDishNameMap(dishMap);
   const unavailableNames = [];
+
   for (const item of items) {
     if (!item || typeof item !== 'object') continue;
-    const rawDishId = item.dish_id;
-    if (rawDishId === undefined || rawDishId === null || String(rawDishId).trim() === '') continue;
-
-    const dish = dishMap ? dishMap.get(String(rawDishId)) : null;
-    const label = String(dish?.name || item.dish_name || item.name || `Item #${rawDishId}`).trim();
-    if (!dish || !isFlagEnabled(dish.available, true)) {
-      if (!unavailableNames.includes(label)) {
+    const matchedDish = findMatchingDishForComboItem(item, dishMap, dishNameMap);
+    // Only mark unavailable when the linked dish exists in the menu and is explicitly marked Sold Out
+    if (matchedDish && !isFlagEnabled(matchedDish.available, true)) {
+      const label = String(matchedDish.name || item.dish_name || item.name || 'Item').trim();
+      if (label && !unavailableNames.includes(label)) {
         unavailableNames.push(label);
       }
     }
@@ -82,13 +113,12 @@ const NONVEG_KEYWORDS = [
 
 export function resolveComboDietType(combo, dishMap = null) {
   const items = parseComboItems(combo?.items);
+  const dishNameMap = buildDishNameMap(dishMap);
   let hasEgg = false;
 
   for (const item of items) {
     if (!item || typeof item !== 'object') continue;
-    const dish = (dishMap && item.dish_id !== undefined && item.dish_id !== null)
-      ? dishMap.get(String(item.dish_id))
-      : null;
+    const dish = findMatchingDishForComboItem(item, dishMap, dishNameMap);
 
     const typeStr = String(dish?.type || item.type || '').trim().toLowerCase();
     const foodTypeStr = String(dish?.food_type || item.food_type || '').trim().toLowerCase();
@@ -121,14 +151,13 @@ export function resolveComboDietType(combo, dishMap = null) {
 
 export function enrichCombosWithLiveDishes(combos = [], allDishes = []) {
   const dishMap = new Map((allDishes || []).map(d => [String(d.id), d]));
+  const dishNameMap = buildDishNameMap(dishMap);
 
   return (combos || []).map(combo => {
     const rawItems = parseComboItems(combo?.items);
     const syncedItems = rawItems.map(item => {
       if (!item || typeof item !== 'object') return item;
-      const dish = (item.dish_id !== undefined && item.dish_id !== null)
-        ? dishMap.get(String(item.dish_id))
-        : null;
+      const dish = findMatchingDishForComboItem(item, dishMap, dishNameMap);
       if (!dish) return item;
 
       const isHalf = String(item.portion || '').trim().toLowerCase() === 'half';
@@ -138,6 +167,7 @@ export function enrichCombosWithLiveDishes(combos = [], allDishes = []) {
 
       return {
         ...item,
+        dish_id: dish.id ?? item.dish_id,
         dish_name: dish.name || item.dish_name || item.name,
         original_price: liveUnitPrice
       };

@@ -322,6 +322,53 @@ async function run() {
       assert.doesNotThrow(() => getComboTerminology(null));
     });
 
+    await check('regression: hidden category, shifted dish_id, or stale seed ID never marks In-Stock combo Sold Out', async () => {
+      // 1. Server explicitly says has_unavailable_items=false even when client dishes list omits hidden category dish
+      const partialClientDishMap = new Map([
+        [String(vegDishId), { id: vegDishId, name: 'Paneer Butter Masala', price: 240, available: 1 }]
+      ]);
+      const comboWithHiddenCatItem = {
+        id: 99,
+        name: 'Hidden Category Combo',
+        price: 299,
+        available: 1,
+        has_unavailable_items: false,
+        unavailable_item_names: [],
+        items: [
+          { dish_id: vegDishId, dish_name: 'Paneer Butter Masala', qty: 1, original_price: 240 },
+          { dish_id: 99991, dish_name: 'Secret Hidden Category Drink', qty: 1, original_price: 80 }
+        ]
+      };
+      const feHiddenMeta = resolveComboMeta(comboWithHiddenCatItem, partialClientDishMap);
+      assert.strictEqual(feHiddenMeta.hasUnavailableItems, false);
+      assert.strictEqual(feHiddenMeta.isOrderable, true);
+
+      // 2. Shifted dish_id matches by normalized dish_name and stays In Stock
+      const shiftedCombo = {
+        id: 100,
+        name: 'Shifted ID Combo',
+        price: 249,
+        available: 1,
+        items: [
+          { dish_id: 88888, dish_name: 'Paneer Butter Masala', qty: 1, original_price: 200 },
+          { dish_id: 88889, dish_name: 'Butter Naan', qty: 2, original_price: 40 }
+        ]
+      };
+      const fullDishMap = new Map([
+        [String(vegDishId), { id: vegDishId, name: 'Paneer Butter Masala', price: 240, available: 1 }],
+        [String(breadDishId), { id: breadDishId, name: 'Butter Naan', price: 50, available: 1 }]
+      ]);
+      const shiftedMeta = resolveComboMeta(shiftedCombo, fullDishMap);
+      assert.strictEqual(shiftedMeta.isOrderable, true);
+      assert.strictEqual(shiftedMeta.originalTotal, 340);
+
+      // 3. Stale unlinked seed ID does not falsely block In-Stock combo
+      const staleBeCheck = inspectComboComponentAvailability({
+        items: [{ dish_id: 77777, dish_name: 'Legacy Seed Item', qty: 1 }]
+      }, fullDishMap);
+      assert.strictEqual(staleBeCheck.allAvailable, true);
+    });
+
     await check('POS order sets type=combo and includes from DB and rejects combo with sold-out dish', async () => {
       const blockedPos = await requestJson(server, 'POST', '/api/admin/pos-order', adminToken, {
         order_type: 'takeaway',

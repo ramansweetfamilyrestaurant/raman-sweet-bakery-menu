@@ -4,6 +4,7 @@ import { uploadImage } from '../../api/client';
 import { getBusinessTerminology, getComboTerminology } from '../../utils/businessTaxonomy';
 import { getCurrencySymbol } from '../../utils/currencyHelper';
 import { isFlagEnabled } from '../../utils/customerHelpers';
+import { findMatchingDishForComboItem } from '../../utils/comboHelper';
 
 export default function ComboFormModal({ combo, dishes, token, onSave, onClose, restaurantInfo = {} }) {
   const isEdit = !!combo;
@@ -79,7 +80,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
   };
 
   const originalTotal = selectedItems.reduce((sum, si) => {
-    const liveDish = si?.dish_id !== undefined && si?.dish_id !== null ? dishMap.get(String(si.dish_id)) : null;
+    const liveDish = findMatchingDishForComboItem(si, dishMap);
     const isHalf = String(si?.portion || '').toLowerCase() === 'half';
     const livePrice = liveDish ? ((isHalf && liveDish.price_half) ? Number(liveDish.price_half) : Number(liveDish.price || 0)) : (Number(si?.original_price) || 0);
     return sum + (livePrice * (Number(si?.qty) || 1));
@@ -123,12 +124,13 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
     setSaving(true);
     try {
       const syncedSelectedItems = selectedItems.map(si => {
-        const liveDish = si?.dish_id !== undefined && si?.dish_id !== null ? dishMap.get(String(si.dish_id)) : null;
+        const liveDish = findMatchingDishForComboItem(si, dishMap);
         if (!liveDish) return si;
         const isHalf = String(si.portion || '').toLowerCase() === 'half';
         const liveOrigPrice = (isHalf && liveDish.price_half) ? Number(liveDish.price_half) : Number(liveDish.price || si.original_price || 0);
         return {
           ...si,
+          dish_id: liveDish.id ?? si.dish_id,
           dish_name: liveDish.name || si.dish_name,
           original_price: liveOrigPrice
         };
@@ -591,7 +593,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
               {selectedItems.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '135px', overflowY: 'auto' }}>
                   {selectedItems.map((si, idx) => {
-                    const liveDish = si?.dish_id !== undefined && si?.dish_id !== null ? dishMap.get(String(si.dish_id)) : null;
+                    const liveDish = findMatchingDishForComboItem(si, dishMap);
                     const isDishMissing = si?.dish_id !== undefined && si?.dish_id !== null && !liveDish;
                     const isDishSoldOut = Boolean(liveDish && !isFlagEnabled(liveDish.available, true));
                     const isHalf = String(si.portion || '').toLowerCase() === 'half';

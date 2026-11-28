@@ -896,17 +896,19 @@ router.get('/menu-bundle', async (req, res) => {
       query('SELECT * FROM saas_plans WHERE key = $1 OR LOWER(key) = $1', [planTierKey]).catch(() => [])
     ]);
 
+    let usingBuiltinDemo = false;
     if (resto.slug === 'touchqr-demo' && (!categories || categories.length === 0)) {
       categories = [...BUILTIN_DEMO_MENU.categories];
       rawDishes = [...BUILTIN_DEMO_MENU.dishes];
       rawCombos = [...BUILTIN_DEMO_MENU.combos];
+      usingBuiltinDemo = true;
     }
 
     // Sync combo component prices, availability & dietary classification against all dishes
     if (Array.isArray(rawCombos) && rawCombos.length > 0) {
-      const allComboRefDishes = resto.slug === 'touchqr-demo'
+      const allComboRefDishes = usingBuiltinDemo
         ? rawDishes
-        : await query('SELECT id, name, price, price_half, type, available FROM dishes WHERE restaurant_id = $1', [targetId]).catch(() => rawDishes);
+        : await query('SELECT id, name, price, price_half, type, available FROM dishes WHERE restaurant_id = $1', [targetId]).catch(() => []);
       rawCombos = enrichCombosWithLiveDishes(rawCombos, allComboRefDishes);
     }
 

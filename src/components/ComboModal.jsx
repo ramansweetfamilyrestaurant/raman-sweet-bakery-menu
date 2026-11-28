@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { X, Plus, Minus, Sparkles, CheckCircle2, Utensils, Tag, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { getComboImageUrl, getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
-import { resolveComboMeta } from '../utils/comboHelper';
+import { resolveComboMeta, findMatchingDishForComboItem } from '../utils/comboHelper';
 import { isFlagEnabled } from '../utils/customerHelpers';
 import { getComboTerminology } from '../utils/businessTaxonomy';
 
@@ -322,7 +322,7 @@ export default function ComboModal({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {comboItems.map((item, idx) => {
-                const matchedDish = dishMap.get(String(item.dish_id));
+                const matchedDish = findMatchingDishForComboItem(item, dishMap);
                 const itemImg = matchedDish?.image ? getDishImageUrl(matchedDish.image) : null;
                 const itemText = `${item.dish_name || ''} ${matchedDish?.name || ''} ${matchedDish?.category || ''}`.toLowerCase();
                 const matchedType = String(matchedDish?.type || matchedDish?.food_type || '').toLowerCase();
@@ -330,10 +330,15 @@ export default function ComboModal({
                   matchedDish?.is_non_veg || matchedDish?.is_veg === 0 || matchedDish?.is_veg === false ||
                   itemText.includes('chicken') || itemText.includes('mutton') || itemText.includes('fish') || itemText.includes('egg');
                 const isItemVeg = isPureVegResto || !itemIsNonVeg;
+                const normalizedUnavailableSet = new Set(
+                  (Array.isArray(comboMeta.unavailableNames) ? comboMeta.unavailableNames : [])
+                    .map(n => String(n || '').trim().toLowerCase())
+                    .filter(Boolean)
+                );
+                const itemLabelNorm = String(item.dish_name || matchedDish?.name || '').trim().toLowerCase();
                 const isItemUnavailable = Boolean(
-                  item.dish_id !== undefined && item.dish_id !== null && String(item.dish_id).trim() !== '' &&
-                  ((dishes.length > 0 && (!matchedDish || !isFlagEnabled(matchedDish.available, true))) ||
-                    (Array.isArray(combo.unavailable_item_names) && combo.unavailable_item_names.includes(item.dish_name)))
+                  (itemLabelNorm && normalizedUnavailableSet.has(itemLabelNorm)) ||
+                  (typeof combo?.has_unavailable_items !== 'boolean' && matchedDish && !isFlagEnabled(matchedDish.available, true))
                 );
 
                 return (
