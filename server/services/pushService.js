@@ -199,8 +199,7 @@ export async function savePushSubscription(restaurantId, adminId, subscription, 
       revokedEndpoints.delete(key);
     }
 
-    await query(
-      `INSERT INTO push_subscriptions (restaurant_id, admin_id, endpoint, p256dh, auth, user_agent, updated_at)
+    const upsertSql = `INSERT INTO push_subscriptions (restaurant_id, admin_id, endpoint, p256dh, auth, user_agent, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
        ON CONFLICT (restaurant_id, endpoint)
        DO UPDATE SET
@@ -208,9 +207,32 @@ export async function savePushSubscription(restaurantId, adminId, subscription, 
          p256dh = EXCLUDED.p256dh,
          auth = EXCLUDED.auth,
          user_agent = EXCLUDED.user_agent,
-         updated_at = CURRENT_TIMESTAMP`,
-      [rid, adminId || null, endpoint, p256dh, auth, ua]
-    );
+         updated_at = CURRENT_TIMESTAMP`;
+    const upsertParams = [rid, adminId || null, endpoint, p256dh, auth, ua];
+    try {
+      await query(upsertSql, upsertParams);
+    } catch (dbErr) {
+      const msg = String(dbErr?.message || '').toLowerCase();
+      if (dbErr?.code === '42P01' || (msg.includes('push_subscriptions') && (msg.includes('does not exist') || msg.includes('no such table')))) {
+        await query(`
+          CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id SERIAL PRIMARY KEY,
+            restaurant_id INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+            admin_id INT,
+            endpoint TEXT NOT NULL,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
+            user_agent TEXT DEFAULT '',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT uq_push_sub_resto_endpoint UNIQUE (restaurant_id, endpoint)
+          )
+        `);
+        await query(upsertSql, upsertParams);
+      } else {
+        throw dbErr;
+      }
+    }
     return { success: true };
   });
 }
