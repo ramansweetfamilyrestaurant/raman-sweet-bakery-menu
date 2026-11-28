@@ -19,8 +19,9 @@ import {
   Clock,
   Package
 } from 'lucide-react';
-import { getDishImageUrl } from '../../../utils/imageHelper';
+import { getDishImageUrl, getComboImageUrl } from '../../../utils/imageHelper';
 import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
+import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
 
 /**
  * generateSparklinePath
@@ -131,10 +132,12 @@ export default function AnalyticsView({
   currencySymbol = '₹',
   categories = [],
   dishes = [],
+  combos = [],
   orders = [],
   restaurantInfo = {},
   onViewOrders
 }) {
+  const curr = getCurrencySymbol(currencySymbol);
   const terminology = getBusinessTerminology(restaurantInfo || {});
   const itemPlural = terminology.itemPlural || 'Items';
   const itemSingular = terminology.itemSingular || 'Item';
@@ -152,8 +155,14 @@ export default function AnalyticsView({
   const topTablesScannedToday = Array.isArray(analyticsData?.top_tables_scanned_today) ? analyticsData.top_tables_scanned_today : [];
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [topItemsSortBy, setTopItemsSortBy] = useState('quantity'); // 'quantity' | 'revenue'
   const [chartHoverIndex, setChartHoverIndex] = useState(null);
   const [refreshCountdown, setRefreshCountdown] = useState(10);
+
+  const openTopItemsTab = (sortMode = 'quantity') => {
+    setTopItemsSortBy(sortMode);
+    setActiveTab('top_items');
+  };
 
   const payloadPeriod = analyticsData?.selected_period || 'all';
   const requestedPeriod = selectedFilterPeriod || payloadPeriod;
@@ -269,12 +278,12 @@ export default function AnalyticsView({
     const mid1 = Math.round(maxSales / 3);
     const bot = 0;
     return [
-      { label: formatCompactCurrency(top, currencySymbol), y: 10 },
-      { label: formatCompactCurrency(mid2, currencySymbol), y: 60 },
-      { label: formatCompactCurrency(mid1, currencySymbol), y: 110 },
-      { label: formatCompactCurrency(bot, currencySymbol), y: 160 }
+      { label: formatCompactCurrency(top, curr), y: 10 },
+      { label: formatCompactCurrency(mid2, curr), y: 60 },
+      { label: formatCompactCurrency(mid1, curr), y: 110 },
+      { label: formatCompactCurrency(bot, curr), y: 160 }
     ];
-  }, [maxSales, currencySymbol]);
+  }, [maxSales, curr]);
 
   const chartPoints = useMemo(() => {
     const chartWidth = 740;
@@ -301,10 +310,10 @@ export default function AnalyticsView({
         y: roundedY,
         xPercent: (roundedX / chartWidth) * 100,
         yPercent: (roundedY / chartHeight) * 100,
-        valueFormatted: `${currencySymbol}${salesVal.toLocaleString('en-IN')}`
+        valueFormatted: `${curr}${formatPriceNumber(salesVal)}`
       };
     });
-  }, [rawChartData, maxSales, currencySymbol]);
+  }, [rawChartData, maxSales, curr]);
 
   // Build smooth bezier curves
   const linePath = useMemo(() => {
@@ -392,6 +401,25 @@ export default function AnalyticsView({
     return generateSparklineAreaPath(aovSparklinePath, 100, 24);
   }, [aovSparklinePath]);
 
+  const resolveAnalyticsThumb = (td) => {
+    const rawId = td?.dish_id !== undefined && td?.dish_id !== null ? String(td.dish_id).trim() : '';
+    const isComboItem = Boolean(td?.is_combo) || rawId.startsWith('combo:') || rawId.startsWith('combo_');
+    const normName = String(td?.name || '').toLowerCase().trim();
+    if (isComboItem) {
+      const cleanComboId = rawId.replace(/^combo[:_]/i, '').trim();
+      const matchedCombo = (Array.isArray(combos) ? combos : []).find(c =>
+        (cleanComboId && String(c.id) === cleanComboId) ||
+        (c.name && c.name.toLowerCase().trim() === normName)
+      );
+      return getComboImageUrl(matchedCombo?.image || matchedCombo?.image_url);
+    }
+    const matchedDish = (Array.isArray(dishes) ? dishes : []).find(d =>
+      (rawId && String(d.id) === rawId) ||
+      (d.name && d.name.toLowerCase().trim() === normName)
+    );
+    return getDishImageUrl(matchedDish?.image || matchedDish?.image_url);
+  };
+
   // 3. Dynamic Top Dishes by Revenue (Top Selling Items)
   const topDishesByRevenue = useMemo(() => {
     const raw = Array.isArray(analyticsData?.top_dishes_by_revenue)
@@ -400,20 +428,15 @@ export default function AnalyticsView({
     return [...raw]
       .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0))
       .slice(0, 5)
-      .map((td, idx) => {
-        const matched = dishes.find(d => 
-          String(d.id) === String(td.dish_id) || 
-          (d.name && d.name.toLowerCase() === (td.name || '').toLowerCase())
-        );
-        return {
-          rank: idx + 1,
-          name: td.name || 'Dish',
-          qty: Number(td.quantity || 0),
-          sales: Number(td.revenue || 0),
-          img: getDishImageUrl(matched?.image)
-        };
-      });
-  }, [analyticsData?.top_dishes_by_revenue, analyticsData?.top_dishes, dishes]);
+      .map((td, idx) => ({
+        rank: idx + 1,
+        name: td.name || 'Dish',
+        qty: Number(td.quantity || 0),
+        sales: Number(td.revenue || 0),
+        img: resolveAnalyticsThumb(td),
+        isCombo: Boolean(td?.is_combo || String(td?.dish_id || '').startsWith('combo'))
+      }));
+  }, [analyticsData?.top_dishes_by_revenue, analyticsData?.top_dishes, dishes, combos]);
 
   // Top Dishes sorted strictly by Quantity Sold (Top 5 for overview)
   const topDishesByQuantity = useMemo(() => {
@@ -423,42 +446,38 @@ export default function AnalyticsView({
     return [...raw]
       .sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))
       .slice(0, 5)
-      .map((td, idx) => {
-        const matched = dishes.find(d => 
-          String(d.id) === String(td.dish_id) || 
-          (d.name && d.name.toLowerCase() === (td.name || '').toLowerCase())
-        );
-        return {
-          rank: idx + 1,
-          name: td.name || 'Dish',
-          qty: Number(td.quantity || 0),
-          sales: Number(td.revenue || 0),
-          img: getDishImageUrl(matched?.image)
-        };
-      });
-  }, [analyticsData?.top_dishes_by_quantity, analyticsData?.top_dishes, dishes]);
+      .map((td, idx) => ({
+        rank: idx + 1,
+        name: td.name || 'Dish',
+        qty: Number(td.quantity || 0),
+        sales: Number(td.revenue || 0),
+        img: resolveAnalyticsThumb(td),
+        isCombo: Boolean(td?.is_combo || String(td?.dish_id || '').startsWith('combo'))
+      }));
+  }, [analyticsData?.top_dishes_by_quantity, analyticsData?.top_dishes, dishes, combos]);
 
-  // Full Top Dishes List for Dishes drilldown tab
+  // Full Top Dishes List for Dishes drilldown tab (supports By Quantity or By Revenue)
   const topDishesList = useMemo(() => {
-    const raw = Array.isArray(analyticsData?.top_dishes_by_quantity)
-      ? analyticsData.top_dishes_by_quantity
-      : (Array.isArray(analyticsData?.top_dishes) ? analyticsData.top_dishes : []);
+    const raw = topItemsSortBy === 'revenue'
+      ? (Array.isArray(analyticsData?.top_dishes_by_revenue)
+        ? analyticsData.top_dishes_by_revenue
+        : (Array.isArray(analyticsData?.top_dishes) ? analyticsData.top_dishes : []))
+      : (Array.isArray(analyticsData?.top_dishes_by_quantity)
+        ? analyticsData.top_dishes_by_quantity
+        : (Array.isArray(analyticsData?.top_dishes) ? analyticsData.top_dishes : []));
     return [...raw]
-      .sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))
-      .map((td, idx) => {
-        const matched = dishes.find(d => 
-          String(d.id) === String(td.dish_id) || 
-          (d.name && d.name.toLowerCase() === (td.name || '').toLowerCase())
-        );
-        return {
-          rank: idx + 1,
-          name: td.name || 'Dish',
-          qty: Number(td.quantity || 0),
-          sales: Number(td.revenue || 0),
-          img: getDishImageUrl(matched?.image)
-        };
-      });
-  }, [analyticsData?.top_dishes_by_quantity, analyticsData?.top_dishes, dishes]);
+      .sort((a, b) => topItemsSortBy === 'revenue'
+        ? (Number(b.revenue || 0) - Number(a.revenue || 0) || Number(b.quantity || 0) - Number(a.quantity || 0))
+        : (Number(b.quantity || 0) - Number(a.quantity || 0) || Number(b.revenue || 0) - Number(a.revenue || 0)))
+      .map((td, idx) => ({
+        rank: idx + 1,
+        name: td.name || 'Dish',
+        qty: Number(td.quantity || 0),
+        sales: Number(td.revenue || 0),
+        img: resolveAnalyticsThumb(td),
+        isCombo: Boolean(td?.is_combo || String(td?.dish_id || '').startsWith('combo'))
+      }));
+  }, [analyticsData?.top_dishes_by_quantity, analyticsData?.top_dishes_by_revenue, analyticsData?.top_dishes, dishes, combos, topItemsSortBy]);
 
   // 4. Dynamic Category Breakdown (Direct from backend 100% complete dataset)
   const categoriesList = useMemo(() => {
@@ -507,11 +526,12 @@ export default function AnalyticsView({
     return { totalAmt, slices };
   }, [analyticsData?.period_payment_methods, analyticsData?.payment_methods]);
 
-  // 6. Recent Live Orders (Authoritative slice from analytics payload or live state)
+  // 6. Recent Live Orders (Authoritative slice from analytics payload; only falls back if backend omitted field)
   const recentOrdersList = useMemo(() => {
-    const rawList = Array.isArray(analyticsData?.recent_orders) && analyticsData.recent_orders.length > 0
+    const hasBackendRecent = Array.isArray(analyticsData?.recent_orders);
+    const rawList = hasBackendRecent
       ? analyticsData.recent_orders
-      : (Array.isArray(orders) ? orders : []);
+      : (Array.isArray(orders) ? orders.filter(o => !['cancelled', 'rejected'].includes(String(o?.status || '').toLowerCase())) : []);
 
     if (rawList.length === 0) return [];
     const formatOrderSpace = (order) => {
@@ -556,12 +576,12 @@ export default function AnalyticsView({
 
       return {
         id: o.id,
-        orderNumber: `#ORD-${String(o.id).padStart(4, '0')}`,
+        orderNumber: `#ORD-${String(o.order_number || o.id).padStart(4, '0')}`,
         table: formatOrderSpace(o),
         dateTime: `${dateStr} ${timeStr}`,
         items: itemsCount,
         amount: Number(o.total_amount || 0),
-        payment: String(o.payment_method || 'UPI').toUpperCase(),
+        payment: o.payment_method ? String(o.payment_method).toUpperCase() : 'UNPAID',
         status: o.status || 'completed'
       };
     });
@@ -1404,7 +1424,7 @@ export default function AnalyticsView({
                 </span>
 
                 <div className="analytics-kpi-val" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                  {currencySymbol}{totalSales.toLocaleString('en-IN')}
+                  {curr}{formatPriceNumber(totalSales)}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', marginBottom: '6px' }}>
@@ -1520,7 +1540,7 @@ export default function AnalyticsView({
                 </span>
 
                 <div className="analytics-kpi-val" style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                  {currencySymbol}{aov.toLocaleString('en-IN')}
+                  {curr}{formatPriceNumber(aov)}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', marginBottom: '6px' }}>
@@ -1687,7 +1707,7 @@ export default function AnalyticsView({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                     <span style={{ fontSize: '1.40rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
-                      {currencySymbol}{totalSales.toLocaleString('en-IN')}
+                      {curr}{formatPriceNumber(totalSales)}
                     </span>
                     <span style={{ fontSize: '0.70rem', color: '#16A34A', fontWeight: 800 }}>
                       • Live Data
@@ -1697,10 +1717,10 @@ export default function AnalyticsView({
                   {/* Summary Metric Chips */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <div style={{ background: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '7px', padding: '3px 8px', fontSize: '0.68rem', color: '#C2410C', fontWeight: 700 }}>
-                      Peak: {currencySymbol}{Math.max(...rawChartData.map(d => Number(d.sales || 0)), 0).toLocaleString('en-IN')}
+                      Peak: {curr}{formatPriceNumber(Math.max(...rawChartData.map(d => Number(d.sales || 0)), 0))}
                     </div>
                     <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '7px', padding: '3px 8px', fontSize: '0.68rem', color: '#475569', fontWeight: 700 }}>
-                      {rawChartData.length} {payloadPeriod === 'all' ? 'Months' : 'Days'} Tracked
+                      {rawChartData.length} {payloadPeriod === 'all' ? 'Months' : payloadPeriod === '6m' ? 'Intervals' : 'Days'} Tracked
                     </div>
                   </div>
                 </div>
@@ -1758,7 +1778,7 @@ export default function AnalyticsView({
                         width: '85%'
                       }}>
                         <div style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0F172A', lineHeight: 1.1 }}>
-                          {currencySymbol}{paymentAnalytics.totalAmt.toLocaleString('en-IN')}
+                          {curr}{formatPriceNumber(paymentAnalytics.totalAmt)}
                         </div>
                         <span style={{ fontSize: '0.58rem', color: '#64748B', fontWeight: 600 }}>Total Sales</span>
                       </div>
@@ -1774,7 +1794,7 @@ export default function AnalyticsView({
                               <span style={{ color: '#0F172A', fontWeight: 700 }}>{item.name}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ color: '#64748B', fontSize: '0.66rem' }}>{currencySymbol}{item.amount.toLocaleString('en-IN')}</span>
+                              <span style={{ color: '#64748B', fontSize: '0.66rem' }}>{curr}{formatPriceNumber(item.amount)}</span>
                               <strong style={{ color: '#0F172A', fontSize: '0.74rem' }}>{item.percent}%</strong>
                             </div>
                           </div>
@@ -1789,7 +1809,9 @@ export default function AnalyticsView({
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F1F5F9', paddingTop: '10px', marginTop: '4px' }}>
-                <span style={{ fontSize: '0.66rem', color: '#94A3B8' }}>Last updated: Just now</span>
+                <span style={{ fontSize: '0.66rem', color: '#94A3B8' }}>
+                  {lastUpdatedTimeLabel ? `Last synced: ${lastUpdatedTimeLabel}` : 'Waiting for sync'}
+                </span>
                 <RefreshCw size={11} color="#94A3B8" />
               </div>
             </div>
@@ -1806,7 +1828,7 @@ export default function AnalyticsView({
                   Top Selling Items (By Revenue)
                 </h3>
                 <button
-                  onClick={() => setActiveTab('top_items')}
+                  onClick={() => openTopItemsTab('revenue')}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -1858,7 +1880,7 @@ export default function AnalyticsView({
                             src={item.img}
                             alt={item.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = item.isCombo ? '/images/default-combo.webp?v=3' : '/images/default-dish.webp'; }}
                           />
                         </div>
                         <div style={{ minWidth: 0 }}>
@@ -1869,7 +1891,7 @@ export default function AnalyticsView({
                         </div>
                       </div>
                       <strong style={{ fontSize: '0.76rem', color: '#0F172A', flexShrink: 0 }}>
-                        {currencySymbol}{item.sales.toLocaleString('en-IN')}
+                        {curr}{formatPriceNumber(item.sales)}
                       </strong>
                     </div>
                   ))
@@ -1882,7 +1904,7 @@ export default function AnalyticsView({
 
               <div style={{ marginTop: 'auto', paddingTop: '14px' }}>
                 <button
-                  onClick={() => setActiveTab('top_items')}
+                  onClick={() => openTopItemsTab('revenue')}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -1948,7 +1970,7 @@ export default function AnalyticsView({
                         </strong>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                        <span style={{ color: '#64748B', fontSize: '0.66rem' }}>{currencySymbol}{cat.amount.toLocaleString('en-IN')}</span>
+                        <span style={{ color: '#64748B', fontSize: '0.66rem' }}>{curr}{formatPriceNumber(cat.amount)}</span>
                         <strong style={{ color: '#0F172A', fontSize: '0.74rem' }}>{cat.percentage}%</strong>
                       </div>
                     </div>
@@ -1996,7 +2018,7 @@ export default function AnalyticsView({
                   Top {itemPlural} (By Quantity)
                 </h3>
                 <button
-                  onClick={() => setActiveTab('top_items')}
+                  onClick={() => openTopItemsTab('quantity')}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -2048,7 +2070,7 @@ export default function AnalyticsView({
                             src={item.img}
                             alt={item.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = item.isCombo ? '/images/default-combo.webp?v=3' : '/images/default-dish.webp'; }}
                           />
                         </div>
                         <strong style={{ fontSize: '0.76rem', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -2077,7 +2099,7 @@ export default function AnalyticsView({
 
               <div style={{ marginTop: 'auto', paddingTop: '14px' }}>
                 <button
-                  onClick={() => setActiveTab('top_items')}
+                  onClick={() => openTopItemsTab('quantity')}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -2362,7 +2384,7 @@ export default function AnalyticsView({
                 <thead>
                   <tr style={{ borderBottom: '1px solid #F1F5F9', color: '#94A3B8', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase' }}>
                     <th style={{ padding: '8px 10px' }}>Order ID</th>
-                    <th style={{ padding: '8px 10px' }}>Table</th>
+                    <th style={{ padding: '8px 10px' }}>{spaceSingular}</th>
                     <th style={{ padding: '8px 10px' }}>Date &amp; Time</th>
                     <th style={{ padding: '8px 10px' }}>Items</th>
                     <th style={{ padding: '8px 10px' }}>Amount</th>
@@ -2379,7 +2401,7 @@ export default function AnalyticsView({
                         <td style={{ padding: '10px', color: '#64748B', fontWeight: 600 }}>{order.table}</td>
                         <td style={{ padding: '10px', color: '#64748B' }}>{order.dateTime}</td>
                         <td style={{ padding: '10px', fontWeight: 600 }}>{order.items}</td>
-                        <td style={{ padding: '10px', fontWeight: 800 }}>{currencySymbol}{order.amount.toLocaleString('en-IN')}</td>
+                        <td style={{ padding: '10px', fontWeight: 800 }}>{curr}{formatPriceNumber(order.amount)}</td>
                         <td style={{ padding: '10px', fontWeight: 600, color: '#64748B' }}>{order.payment}</td>
                         <td style={{ padding: '10px' }}>
                           {(() => {
@@ -2482,7 +2504,7 @@ export default function AnalyticsView({
                             {order.items} items • {order.payment}
                           </span>
                           <strong style={{ fontSize: '0.84rem', color: '#0F172A', flexShrink: 0 }}>
-                            {currencySymbol}{order.amount.toLocaleString('en-IN')}
+                            {curr}{formatPriceNumber(order.amount)}
                           </strong>
                         </div>
                         <span style={{ fontSize: '0.68rem', color: '#64748B', lineHeight: 1.3 }}>
@@ -2530,7 +2552,7 @@ export default function AnalyticsView({
             <div className="analytics-card">
               <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Total Period Revenue</span>
               <div className="analytics-kpi-val" style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
-                {currencySymbol}{totalSales.toLocaleString('en-IN')}
+                {curr}{formatPriceNumber(totalSales)}
               </div>
               <span style={{ fontSize: '0.68rem', color: '#16A34A', fontWeight: 800, display: 'block', marginTop: '4px' }}>
                 • Active in {activeDateRangeLabel}
@@ -2550,7 +2572,7 @@ export default function AnalyticsView({
             <div className="analytics-card">
               <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Average Order Value</span>
               <div className="analytics-kpi-val" style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0F172A', marginTop: '4px' }}>
-                {currencySymbol}{aov.toLocaleString('en-IN')}
+                {curr}{formatPriceNumber(aov)}
               </div>
               <span style={{ fontSize: '0.68rem', color: '#9333EA', fontWeight: 800, display: 'block', marginTop: '4px' }}>
                 Per Customer Ticket
@@ -2587,7 +2609,7 @@ export default function AnalyticsView({
       {activeTab === 'top_items' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="analytics-card" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
               <div>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
                   {itemSingular} Sales &amp; Velocity Ranking
@@ -2595,6 +2617,42 @@ export default function AnalyticsView({
                 <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
                   Authoritative ranking of {itemPlural.toLowerCase()} sold in {activeDateRangeLabel}
                 </span>
+              </div>
+              <div style={{ display: 'inline-flex', background: '#F1F5F9', padding: '3px', borderRadius: '9px', gap: '3px' }}>
+                <button
+                  type="button"
+                  onClick={() => setTopItemsSortBy('quantity')}
+                  style={{
+                    border: 'none',
+                    borderRadius: '7px',
+                    padding: '5px 10px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: topItemsSortBy === 'quantity' ? '#FFFFFF' : 'transparent',
+                    color: topItemsSortBy === 'quantity' ? '#0F172A' : '#64748B',
+                    boxShadow: topItemsSortBy === 'quantity' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
+                  }}
+                >
+                  By Quantity
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTopItemsSortBy('revenue')}
+                  style={{
+                    border: 'none',
+                    borderRadius: '7px',
+                    padding: '5px 10px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: topItemsSortBy === 'revenue' ? '#FFFFFF' : 'transparent',
+                    color: topItemsSortBy === 'revenue' ? '#0F172A' : '#64748B',
+                    boxShadow: topItemsSortBy === 'revenue' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
+                  }}
+                >
+                  By Revenue
+                </button>
               </div>
             </div>
 
@@ -2635,7 +2693,7 @@ export default function AnalyticsView({
                                 src={item.img}
                                 alt={item.name}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = item.isCombo ? '/images/default-combo.webp?v=3' : '/images/default-dish.webp'; }}
                               />
                             </div>
                             <strong style={{ fontSize: '0.80rem' }}>{item.name}</strong>
@@ -2645,7 +2703,7 @@ export default function AnalyticsView({
                           {item.qty} units
                         </td>
                         <td style={{ padding: '10px', textAlign: 'right', fontWeight: 900, color: '#0F172A' }}>
-                          {currencySymbol}{item.sales.toLocaleString('en-IN')}
+                          {curr}{formatPriceNumber(item.sales)}
                         </td>
                       </tr>
                     ))
@@ -2699,7 +2757,7 @@ export default function AnalyticsView({
                           src={item.img}
                           alt={item.name}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { e.currentTarget.src = '/images/default-dish.webp'; }}
+                          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = item.isCombo ? '/images/default-combo.webp?v=3' : '/images/default-dish.webp'; }}
                         />
                       </div>
                       <div style={{ minWidth: 0 }}>
@@ -2710,7 +2768,7 @@ export default function AnalyticsView({
                       </div>
                     </div>
                     <strong style={{ fontSize: '0.82rem', color: '#0F172A', flexShrink: 0 }}>
-                      {currencySymbol}{item.sales.toLocaleString('en-IN')}
+                      {curr}{formatPriceNumber(item.sales)}
                     </strong>
                   </div>
                 ))
@@ -2751,7 +2809,7 @@ export default function AnalyticsView({
                         <strong style={{ color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</strong>
                       </div>
                       <div style={{ flexShrink: 0 }}>
-                        <strong style={{ color: '#0F172A' }}>{currencySymbol}{cat.amount.toLocaleString('en-IN')}</strong>
+                        <strong style={{ color: '#0F172A' }}>{curr}{formatPriceNumber(cat.amount)}</strong>
                         <span style={{ color: '#64748B', marginLeft: '6px', fontSize: '0.72rem' }}>({cat.percentage}%)</span>
                       </div>
                     </div>
@@ -2795,7 +2853,7 @@ export default function AnalyticsView({
                     <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 700 }}>{item.name}</span>
                   </div>
                   <div className="analytics-kpi-val" style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A' }}>
-                    {currencySymbol}{item.amount.toLocaleString('en-IN')}
+                    {curr}{formatPriceNumber(item.amount)}
                   </div>
                   <span style={{ fontSize: '0.72rem', color: item.color, fontWeight: 800, marginTop: '2px', display: 'block' }}>
                     {item.percent}% of total sales

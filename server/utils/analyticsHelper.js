@@ -209,6 +209,34 @@ export function sanitizeAttachmentFilename(name) {
   return String(name || 'Sales_Report').replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
+export function roundMoney(val) {
+  return Math.round((Number(val) || 0) * 100) / 100;
+}
+
+export function normalizeAnalyticsCurrencySymbol(symbol) {
+  if (symbol === undefined || symbol === null) return '₹';
+  const str = String(symbol).trim();
+  const lower = str.toLowerCase();
+  if (lower === 'none' || lower === 'hidden') return '';
+  if (!str) return '₹';
+  if (str === '₹ INR' || str === 'INR' || str === '₹') return '₹';
+  if (str === '$ USD' || str === 'USD' || str === '$') return '$';
+  if (str === '€ EUR' || str === 'EUR' || str === '€') return '€';
+  if (str === '£ GBP' || str === 'GBP' || str === '£') return '£';
+  if (str === 'AED') return 'AED ';
+  return str;
+}
+
+export function resolveAnalyticsCurrencyCode(symbol) {
+  const sym = normalizeAnalyticsCurrencySymbol(symbol).trim();
+  if (!sym) return '';
+  if (sym === '₹') return 'INR';
+  if (sym === '$') return 'USD';
+  if (sym === '€') return 'EUR';
+  if (sym === '£') return 'GBP';
+  return sym;
+}
+
 export function resolvePlanAnalyticsExport(isComplimentary, saasPlanRow) {
   if (isComplimentary) {
     return true;

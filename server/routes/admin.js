@@ -38,8 +38,12 @@ import {
   resolvePlanAnalyticsExport,
   extractRawDishId,
   extractRawDishName,
+  isComboOrderItem,
   parseJsonItems,
-  scanCompactDishRefsFromJson
+  scanCompactDishRefsFromJson,
+  roundMoney,
+  normalizeAnalyticsCurrencySymbol,
+  resolveAnalyticsCurrencyCode
 } from '../utils/analyticsHelper.js';
 import { normalizeVerificationMode } from '../utils/presenceVerification.js';
 import {
@@ -4600,7 +4604,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     // Query active non-cancelled orders for tenant
     const orders = await query(
-      "SELECT id, total_amount, status, payment_method, items, created_at, table_number, order_type, session_id, customer_name FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
+      "SELECT id, order_number, total_amount, status, payment_method, items, created_at, table_number, order_type, session_id, customer_name FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id DESC",
       [targetId]
     );
 
@@ -4639,15 +4643,16 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
          WHERE restaurant_id = $1 AND datetime(created_at) >= $2 AND datetime(created_at) < $3
          GROUP BY ist_date, ist_hour, space_type, table_number`;
 
-    const [tenantCategories, tenantDishes, scanAggRows, restoRow, tenantCinemaSeats, cinemaConfigMeta] = await Promise.all([
+    const [tenantCategories, tenantDishes, tenantCombos, scanAggRows, restoRow, tenantCinemaSeats, cinemaConfigMeta] = await Promise.all([
       query('SELECT id, name FROM categories WHERE restaurant_id = $1 ORDER BY sort_order ASC, id ASC', [targetId]),
       query('SELECT id, name, category_id FROM dishes WHERE restaurant_id = $1', [targetId]),
+      query('SELECT id, name FROM combos WHERE restaurant_id = $1', [targetId]).catch(() => []),
       query(scanAggSql, [targetId, sevenDaysStartUtcSql, todayEndUtcSql]).catch((err) => {
         scanQueryFailed = true;
         console.warn('QR scan events aggregation query error:', err.message);
         return null;
       }),
-      query('SELECT scan_count, total_tables, total_rooms, total_screens, total_seats, service_model, business_type FROM restaurants WHERE id = $1', [targetId]).catch((err) => {
+      query('SELECT scan_count, total_tables, total_rooms, total_cabins, total_vip, total_screens, total_seats, table_prefix, service_model, business_type FROM restaurants WHERE id = $1', [targetId]).catch((err) => {
         restoConfigFailed = true;
         console.warn('Restaurant heatmap config query error:', err.message);
         return null;
@@ -4724,6 +4729,8 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
     const dishIdToCategory = {};
     const dishNameToCategory = {};
+    const comboIdMap = {};
+    const comboNameMap = {};
     const categoryInfoMap = {};
 
     (tenantCategories || []).forEach(c => {
@@ -4734,11 +4741,19 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       const catObj = categoryInfoMap[d.category_id];
       const catInfo = {
         category_id: d.category_id || null,
-        category_name: catObj?.name || 'General'
+        category_name: catObj?.name || 'General',
+        canonical_name: d.name || ''
       };
-      dishIdToCategory[d.id] = catInfo;
+      dishIdToCategory[String(d.id)] = catInfo;
       if (d.name) {
-        dishNameToCategory[d.name.toLowerCase()] = catInfo;
+        dishNameToCategory[d.name.toLowerCase().trim()] = catInfo;
+      }
+    });
+
+    (tenantCombos || []).forEach(c => {
+      comboIdMap[String(c.id)] = { id: c.id, name: c.name || 'Combo' };
+      if (c.name) {
+        comboNameMap[String(c.name).toLowerCase().trim()] = { id: c.id, name: c.name };
       }
     });
 
@@ -4806,7 +4821,9 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       if (spaceType === 'cabin') return `🛋️ Cabin ${num}`;
       if (spaceType === 'vip') return `👑 VIP ${num}`;
       if (spaceType === 'counter') return `⚡ Counter ${num}`;
-      return `🍽️ Table ${num}`;
+      const rawPrefix = String(restoData.table_prefix || 'Table').trim() || 'Table';
+      const prefixLabel = rawPrefix.charAt(0).toUpperCase() + rawPrefix.slice(1);
+      return `🍽️ ${prefixLabel} ${num}`;
     };
 
     const topTablesScannedToday = Object.values(tableScansMap)
@@ -4846,6 +4863,38 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const allTimePaymentMethods = { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 }, other: { count: 0, amount: 0 } };
     const periodPaymentMethods = { upi: { count: 0, amount: 0 }, cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 }, other: { count: 0, amount: 0 } };
     const tableOrdersTodayMap = {};
+    const periodOrdersList = [];
+
+    const resolveAnalyticsItemIdentity = (item, fallbackName = 'Unknown Dish') => {
+      const rawName = extractRawDishName(item);
+      const rawDishId = extractRawDishId(item);
+      const isCombo = isComboOrderItem(item) || (typeof rawDishId === 'string' && rawDishId.startsWith('combo:'));
+      if (isCombo) {
+        const cleanComboId = rawDishId ? String(rawDishId).replace(/^combo:/i, '').trim() : '';
+        const matchedCombo = cleanComboId ? comboIdMap[cleanComboId] : comboNameMap[rawName.toLowerCase()];
+        const effectiveComboId = cleanComboId || (matchedCombo ? String(matchedCombo.id) : null);
+        const comboDisplayName = rawName || matchedCombo?.name || fallbackName;
+        const dishKey = effectiveComboId ? `combo:${effectiveComboId}` : `combo_name:${comboDisplayName.toLowerCase()}`;
+        return {
+          dishKey,
+          dishId: effectiveComboId ? `combo:${effectiveComboId}` : null,
+          dishName: comboDisplayName,
+          isCombo: true,
+          catInfo: { category_id: 'combos', category_name: 'Combos' }
+        };
+      }
+      const cleanId = (rawDishId !== null && rawDishId !== undefined && String(rawDishId).trim() !== '') ? String(rawDishId).trim() : null;
+      const dishCat = cleanId ? dishIdToCategory[cleanId] : dishNameToCategory[rawName.toLowerCase()];
+      const displayName = rawName || dishCat?.canonical_name || fallbackName;
+      const dishKey = cleanId ? `dish:${cleanId}` : `name:${displayName.toLowerCase()}`;
+      return {
+        dishKey,
+        dishId: cleanId,
+        dishName: displayName,
+        isCombo: false,
+        catInfo: dishCat || { category_id: null, category_name: 'General' }
+      };
+    };
 
     // 1. Process Live Orders
     orders.forEach(o => {
@@ -4900,6 +4949,7 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         periodOrdersCount += 1;
         periodPaymentMethods[pCategory].count += 1;
         periodPaymentMethods[pCategory].amount += amt;
+        periodOrdersList.push(o);
       }
 
       // Monthly aggregation for All Time
@@ -4920,20 +4970,18 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
       const itemsList = parseJsonItems(o.items);
 
       itemsList.forEach(item => {
-        const dishName = item.name || item.title || item.dish_name || 'Unknown Dish';
         const qty = Number(item.quantity || item.qty || 1);
         const price = Number(item.price) || 0;
         const lineTotal = price * qty;
-        const dishId = extractRawDishId(item);
+        const { dishKey, dishId, dishName, isCombo, catInfo } = resolveAnalyticsItemIdentity(item, 'Unknown Dish');
 
-        if (!allTimeDishSalesMap[dishName]) {
-          allTimeDishSalesMap[dishName] = { dish_id: dishId, name: dishName, quantity: 0, revenue: 0 };
+        if (!allTimeDishSalesMap[dishKey]) {
+          allTimeDishSalesMap[dishKey] = { dish_id: dishId, name: dishName, is_combo: isCombo, quantity: 0, revenue: 0 };
         }
-        allTimeDishSalesMap[dishName].quantity += qty;
-        allTimeDishSalesMap[dishName].revenue += lineTotal;
+        allTimeDishSalesMap[dishKey].quantity += qty;
+        allTimeDishSalesMap[dishKey].revenue += lineTotal;
 
         // Complete 100% Category Sales Accumulation
-        const catInfo = (dishId && dishIdToCategory[dishId]) || dishNameToCategory[dishName.toLowerCase()] || { category_id: null, category_name: 'General' };
         const cKey = catInfo.category_name;
 
         if (!allTimeCatSalesMap[cKey]) {
@@ -4943,11 +4991,11 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
         allTimeCatSalesMap[cKey].count += qty;
 
         if (inPeriod) {
-          if (!periodDishSalesMap[dishName]) {
-            periodDishSalesMap[dishName] = { dish_id: dishId, name: dishName, quantity: 0, revenue: 0 };
+          if (!periodDishSalesMap[dishKey]) {
+            periodDishSalesMap[dishKey] = { dish_id: dishId, name: dishName, is_combo: isCombo, quantity: 0, revenue: 0 };
           }
-          periodDishSalesMap[dishName].quantity += qty;
-          periodDishSalesMap[dishName].revenue += lineTotal;
+          periodDishSalesMap[dishKey].quantity += qty;
+          periodDishSalesMap[dishKey].revenue += lineTotal;
 
           if (!periodCatSalesMap[cKey]) {
             periodCatSalesMap[cKey] = { category_id: catInfo.category_id, name: cKey, amount: 0, count: 0 };
@@ -5040,19 +5088,17 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
 
       if (Array.isArray(itemsList)) {
         itemsList.forEach(td => {
-          const dName = td.name || 'Dish';
           const dQty = Number(td.quantity ?? td.qty ?? td.count ?? 1);
           const dRev = Number(td.revenue || 0);
-          const dishId = extractRawDishId(td);
+          const { dishKey, dishId, dishName, isCombo, catInfo } = resolveAnalyticsItemIdentity(td, 'Dish');
 
-          if (!allTimeDishSalesMap[dName]) {
-            allTimeDishSalesMap[dName] = { dish_id: dishId, name: dName, quantity: 0, revenue: 0 };
+          if (!allTimeDishSalesMap[dishKey]) {
+            allTimeDishSalesMap[dishKey] = { dish_id: dishId, name: dishName, is_combo: isCombo, quantity: 0, revenue: 0 };
           }
-          allTimeDishSalesMap[dName].quantity += dQty;
-          allTimeDishSalesMap[dName].revenue += dRev;
+          allTimeDishSalesMap[dishKey].quantity += dQty;
+          allTimeDishSalesMap[dishKey].revenue += dRev;
 
           // Complete 100% Category Sales Accumulation for rollups
-          const catInfo = (dishId && dishIdToCategory[dishId]) || dishNameToCategory[dName.toLowerCase()] || { category_id: null, category_name: 'General' };
           const cKey = catInfo.category_name;
 
           if (!allTimeCatSalesMap[cKey]) {
@@ -5062,11 +5108,11 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
           allTimeCatSalesMap[cKey].count += dQty;
 
           if (inPeriod) {
-            if (!periodDishSalesMap[dName]) {
-              periodDishSalesMap[dName] = { dish_id: dishId, name: dName, quantity: 0, revenue: 0 };
+            if (!periodDishSalesMap[dishKey]) {
+              periodDishSalesMap[dishKey] = { dish_id: dishId, name: dishName, is_combo: isCombo, quantity: 0, revenue: 0 };
             }
-            periodDishSalesMap[dName].quantity += dQty;
-            periodDishSalesMap[dName].revenue += dRev;
+            periodDishSalesMap[dishKey].quantity += dQty;
+            periodDishSalesMap[dishKey].revenue += dRev;
 
             if (!periodCatSalesMap[cKey]) {
               periodCatSalesMap[cKey] = { category_id: catInfo.category_id, name: cKey, amount: 0, count: 0 };
@@ -5085,12 +5131,15 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
     const activeDishMap = selectedPeriod === 'all' ? allTimeDishSalesMap : periodDishSalesMap;
     const distinctDishesCount = Object.keys(activeDishMap).length;
     const totalItemsSold = Object.values(activeDishMap).reduce((sum, d) => sum + Number(d.quantity || 0), 0);
+    const mapDishEntry = (d) => ({ ...d, revenue: roundMoney(d.revenue) });
     const topDishesByQuantity = Object.values(activeDishMap)
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 10);
+      .sort((a, b) => b.quantity - a.quantity || b.revenue - a.revenue)
+      .slice(0, 50)
+      .map(mapDishEntry);
     const topDishesByRevenue = Object.values(activeDishMap)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10);
+      .sort((a, b) => b.revenue - a.revenue || b.quantity - a.quantity)
+      .slice(0, 50)
+      .map(mapDishEntry);
     const topDishes = topDishesByRevenue;
 
     // Complete Category Distribution across 100% of sold items in selected period
@@ -5235,31 +5284,27 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
           }
         }
       }
-    } else {
-      const configuredCap = Math.max(
-        0,
-        (isHotelModel ? Number(restoData.total_rooms ?? 0) : Number(restoData.total_tables ?? 0)) || 0
-      );
+    } else if (isHotelModel) {
+      const configuredCap = Math.max(0, Number(restoData.total_rooms ?? 0) || 0);
       totalHeatmapSpaces = configuredCap;
 
       for (let i = 1; i <= configuredCap; i++) {
-        const rawSpaceLabel = isHotelModel ? `Room ${i}` : `Table ${i}`;
+        const rawSpaceLabel = `Room ${i}`;
         const sNum = normalizeSpaceNumber(rawSpaceLabel);
-        const spaceTypeKey = inferOrderSpaceType({ table_number: rawSpaceLabel });
+        const spaceTypeKey = 'room';
         const sKey = `${spaceTypeKey}:${sNum}`;
         const scanEntry = tableScansMap[sKey] || null;
         const sCount = scanEntry ? scanEntry.count : 0;
         if (sCount > 0) activeSpacesCount++;
         else dormantSpacesCount++;
 
-        if (i <= 50) {
+        if (spaceHeatmap.length < 50) {
           const oCount = tableOrdersTodayMap[sKey] || 0;
           const cRate = sCount > 0 ? Math.min(100, Math.round((oCount / sCount) * 100)) : 0;
-          const sLabel = isHotelModel ? `Room ${sNum}` : `Table ${sNum}`;
           const status = sCount >= 5 ? 'hot' : sCount >= 1 ? 'active' : 'dormant';
           spaceHeatmap.push({
             space_number: sNum,
-            label: sLabel,
+            label: `Room ${sNum}`,
             space_type: spaceTypeKey,
             scans_today: sCount,
             orders_today: oCount,
@@ -5268,20 +5313,65 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
           });
         }
       }
+    } else {
+      const rawPrefix = String(restoData.table_prefix || 'Table').trim() || 'Table';
+      const prefixLabel = rawPrefix.charAt(0).toUpperCase() + rawPrefix.slice(1);
+      const multiSpaceConfigs = [
+        { count: Math.max(0, Number(restoData.total_tables ?? 0) || 0), spaceType: 'table', labelPrefix: prefixLabel, codePrefix: '' },
+        { count: Math.max(0, Number(restoData.total_cabins ?? 0) || 0), spaceType: 'cabin', labelPrefix: 'Cabin', codePrefix: 'Cabin ' },
+        { count: Math.max(0, Number(restoData.total_vip ?? 0) || 0), spaceType: 'vip', labelPrefix: 'VIP', codePrefix: 'VIP ' },
+        { count: Math.max(0, Number(restoData.total_seats ?? 0) || 0), spaceType: 'cinema_seat', labelPrefix: 'Seat', codePrefix: 'Seat ' }
+      ];
+
+      for (const cfg of multiSpaceConfigs) {
+        totalHeatmapSpaces += cfg.count;
+        for (let i = 1; i <= cfg.count; i++) {
+          const sNum = normalizeSpaceNumber(String(i));
+          const sKey = `${cfg.spaceType}:${sNum}`;
+          const scanEntry = tableScansMap[sKey] || null;
+          const sCount = scanEntry ? scanEntry.count : 0;
+          if (sCount > 0) activeSpacesCount++;
+          else dormantSpacesCount++;
+
+          if (spaceHeatmap.length < 50) {
+            const oCount = tableOrdersTodayMap[sKey] || 0;
+            const cRate = sCount > 0 ? Math.min(100, Math.round((oCount / sCount) * 100)) : 0;
+            const status = sCount >= 5 ? 'hot' : sCount >= 1 ? 'active' : 'dormant';
+            spaceHeatmap.push({
+              space_number: `${cfg.codePrefix}${sNum}`,
+              label: `${cfg.labelPrefix} ${sNum}`,
+              space_type: cfg.spaceType,
+              scans_today: sCount,
+              orders_today: oCount,
+              conversion_rate: cRate,
+              status
+            });
+          }
+        }
+      }
     }
 
     const standeeHealthScore = totalHeatmapSpaces > 0 ? Math.round((activeSpacesCount / totalHeatmapSpaces) * 100) : 0;
 
+    const roundPmMap = (pmMap) => ({
+      upi: { count: pmMap.upi.count, amount: roundMoney(pmMap.upi.amount) },
+      cash: { count: pmMap.cash.count, amount: roundMoney(pmMap.cash.amount) },
+      card: { count: pmMap.card.count, amount: roundMoney(pmMap.card.amount) },
+      other: { count: pmMap.other.count, amount: roundMoney(pmMap.other.amount) }
+    });
+    const effectivePaymentMethods = roundPmMap(selectedPeriod === 'all' ? allTimePaymentMethods : periodPaymentMethods);
+    const recentOrdersSource = selectedPeriod === 'all' ? orders : periodOrdersList;
+
     res.json({
-      period_sales: periodSales,
+      period_sales: roundMoney(periodSales),
       period_orders: periodOrdersCount,
       period_aov: periodAov,
-      period_payment_methods: selectedPeriod === 'all' ? allTimePaymentMethods : periodPaymentMethods,
+      period_payment_methods: effectivePaymentMethods,
       category_sales: categorySales,
       distinct_dishes_count: distinctDishesCount,
       total_items_sold: totalItemsSold,
-      today_sales: todaySales,
-      today_revenue: todaySales,
+      today_sales: roundMoney(todaySales),
+      today_revenue: roundMoney(todaySales),
       today_orders: todayOrders,
       today_scans: todayScans,
       yesterday_scans: yesterdayScans,
@@ -5301,27 +5391,28 @@ router.get('/analytics', authenticateToken, requireActiveSubscription, async (re
           health_score: standeeHealthScore
         },
       peak_scan_hour: peakScanHour,
-      weekly_sales: weeklySales,
-      days_7_revenue: weeklySales,
-      monthly_sales: monthlySales,
-      days_30_revenue: monthlySales,
-      total_sales: totalSales,
-      total_revenue: totalSales,
+      weekly_sales: roundMoney(weeklySales),
+      days_7_revenue: roundMoney(weeklySales),
+      monthly_sales: roundMoney(monthlySales),
+      days_30_revenue: roundMoney(monthlySales),
+      total_sales: roundMoney(totalSales),
+      total_revenue: roundMoney(totalSales),
       total_orders: totalOrdersCount,
       average_order_value: averageOrderValue,
       growth_percentage: growthPercentage,
-      payment_methods: selectedPeriod === 'all' ? allTimePaymentMethods : periodPaymentMethods,
+      payment_methods: effectivePaymentMethods,
       available_months: availableMonths,
       selected_period: selectedPeriod,
       top_dishes: topDishes,
       top_dishes_by_revenue: topDishesByRevenue,
       top_dishes_by_quantity: topDishesByQuantity,
-      recent_orders: orders.slice(0, 5).map(o => ({
+      recent_orders: recentOrdersSource.slice(0, 5).map(o => ({
         id: o.id,
+        order_number: o.order_number || null,
         table_number: o.table_number || null,
         space_type: o.table_number ? inferOrderSpaceType(o) : null,
-        total_amount: Number(o.total_amount) || 0,
-        payment_method: o.payment_method || 'cash',
+        total_amount: roundMoney(o.total_amount),
+        payment_method: o.payment_method || null,
         status: o.status || 'completed',
         items: o.items,
         created_at: o.created_at
@@ -5361,9 +5452,11 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
     }
 
     // Check SaaS plan entitlement for analytics_export_enabled (with subscription row parity)
-    const restoRows = await query('SELECT plan_tier, plan_price, plan_expires_at, name, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
+    const restoRows = await query('SELECT plan_tier, plan_price, plan_expires_at, name, currency_symbol, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
     const currentResto = restoRows[0] || {};
     const exportEnabled = await resolveAdminExportEntitlement(targetId, currentResto);
+    const csvCurrCode = resolveAnalyticsCurrencyCode(currentResto.currency_symbol);
+    const csvCurrSuffix = csvCurrCode ? ` (${csvCurrCode})` : '';
 
     if (!exportEnabled) {
       return res.status(403).json({
@@ -5405,11 +5498,11 @@ router.get('/analytics/export/csv', authenticateToken, requireActiveSubscription
       'Items Count',
       'Items Detail',
       'Payment Method',
-      'Cash Amount (INR)',
-      'UPI Amount (INR)',
-      'Card Amount (INR)',
-      'Other Amount (INR)',
-      'Amount (INR)',
+      `Cash Amount${csvCurrSuffix}`,
+      `UPI Amount${csvCurrSuffix}`,
+      `Card Amount${csvCurrSuffix}`,
+      `Other Amount${csvCurrSuffix}`,
+      `Amount${csvCurrSuffix}`,
       'Status'
     ];
 
@@ -5609,9 +5702,11 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     const restoRows = await query('SELECT plan_tier, plan_price, plan_expires_at, name, currency_symbol, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
     const currentResto = restoRows[0] || {};
     const restoName = currentResto.name || 'Restaurant';
-    const currencySym = (currentResto.currency_symbol !== null && currentResto.currency_symbol !== undefined) ? currentResto.currency_symbol : '₹';
-    const safeCurrency = String(currencySym).replace(/"/g, '""');
-    const excelCurrencyFmt = `"${safeCurrency}"#,##0.00`;
+    const rawCurr = normalizeAnalyticsCurrencySymbol(currentResto.currency_symbol).trim();
+    const xlsxCurrSuffix = rawCurr ? ` (${rawCurr})` : '';
+    const rawNumPrefix = normalizeAnalyticsCurrencySymbol(currentResto.currency_symbol);
+    const safeCurrency = String(rawNumPrefix).replace(/"/g, '""');
+    const excelCurrencyFmt = rawNumPrefix ? `"${safeCurrency}"#,##0.00` : '#,##0.00';
 
     const exportEnabled = await resolveAdminExportEntitlement(targetId, currentResto);
 
@@ -5995,11 +6090,11 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       'Items Count',
       'Items Detail',
       'Payment Method',
-      `Cash Amount (${currencySym})`,
-      `UPI Amount (${currencySym})`,
-      `Card Amount (${currencySym})`,
-      `Other Amount (${currencySym})`,
-      `Amount (${currencySym})`,
+      `Cash Amount${xlsxCurrSuffix}`,
+      `UPI Amount${xlsxCurrSuffix}`,
+      `Card Amount${xlsxCurrSuffix}`,
+      `Other Amount${xlsxCurrSuffix}`,
+      `Amount${xlsxCurrSuffix}`,
       'Status'
     ]);
 
@@ -6119,7 +6214,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0284C7' } };
     });
 
-    const kpi1 = sheet2.addRow([`Total Revenue (${currencySym})`, grandTotalRevenue, 'Gross sales for selected period', '']);
+    const kpi1 = sheet2.addRow([`Total Revenue${xlsxCurrSuffix}`, grandTotalRevenue, 'Gross sales for selected period', '']);
     kpi1.getCell(2).numFmt = excelCurrencyFmt;
     kpi1.getCell(2).font = { bold: true };
 
@@ -6138,7 +6233,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     sheet2.addRow([]); // Spacer
 
     // Section 2: Payment Collection Breakdown
-    const payHeader = sheet2.addRow(['PAYMENT METHOD', `AMOUNT (${currencySym})`, 'SHARE (%)', '']);
+    const payHeader = sheet2.addRow(['PAYMENT METHOD', `AMOUNT${xlsxCurrSuffix}`, 'SHARE (%)', '']);
     payHeader.eachCell((cell) => {
       cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF059669' } };
@@ -6161,7 +6256,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     sheet2.addRow([]); // Spacer
 
     // Section 3: Daily Sales Trend
-    const trendHeader = sheet2.addRow(['DATE (IST)', 'ORDERS COUNT', `REVENUE (${currencySym})`, '']);
+    const trendHeader = sheet2.addRow(['DATE (IST)', 'ORDERS COUNT', `REVENUE${xlsxCurrSuffix}`, '']);
     trendHeader.eachCell((cell) => {
       cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
@@ -6178,7 +6273,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     sheet2.addRow([]); // Spacer
 
     // Section 4: Top Selling Dishes Preview
-    const topDishesHeader = sheet2.addRow(['RANK', 'DISH NAME', 'QUANTITY SOLD', `REVENUE (${currencySym})`]);
+    const topDishesHeader = sheet2.addRow(['RANK', 'DISH NAME', 'QUANTITY SOLD', `REVENUE${xlsxCurrSuffix}`]);
     topDishesHeader.eachCell((cell) => {
       cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD97706' } };
@@ -6217,7 +6312,7 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
 
     sheet3.addRow([]); // Blank Row 4
 
-    const itemHeader = sheet3.addRow(['Rank', 'Dish ID', 'Dish Name', 'Quantity Sold', `Revenue (${currencySym})`]);
+    const itemHeader = sheet3.addRow(['Rank', 'Dish ID', 'Dish Name', 'Quantity Sold', `Revenue${xlsxCurrSuffix}`]);
     itemHeader.eachCell((cell) => {
       cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };

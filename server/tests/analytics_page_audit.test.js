@@ -1901,6 +1901,105 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
       pass('Concurrent compaction isolation and retry-safe deep item cloning verified');
     }
 
+    // 10h. Period-filtered recent_orders, Combo category bucketing, multi-vertical heatmap (cabins/vip/prefix), normalized currency & CSV/XLSX headers
+    {
+      const mvIns = await query(`
+        INSERT INTO restaurants (name, slug, business_type, service_model, plan_tier, plan_price, active, currency_symbol, total_tables, total_cabins, total_vip, total_seats, table_prefix, trial_ends_at, plan_expires_at)
+        VALUES ($1, $2, 'restaurant', 'dine_in', 'pro', 999, 1, 'none', 2, 2, 1, 2, 'Booth', '2030-01-01T00:00:00Z', '2030-01-01T00:00:00Z') RETURNING id
+      `, ['MultiVertical Lounge', `mv-lounge-${ts}`]);
+      const mvId = mvIns[0].id;
+      const mvToken = jwt.sign({ id: 218, restaurant_id: mvId, username: 'mv_admin', role: 'restaurant_admin' }, JWT_SECRET);
+
+      await query(`INSERT INTO combos (id, restaurant_id, name, price, items) VALUES (7001, $1, 'Lounge Feast Combo', 499, '[]')`, [mvId]);
+      await query(`
+        INSERT INTO orders (restaurant_id, order_number, total_amount, status, payment_method, table_number, items, created_at)
+        VALUES
+          ($1, 108, 499, 'completed', 'upi', 'Cabin 1', '[{"dish_id":"combo_7001","type":"combo","name":"Lounge Feast Combo","price":499,"quantity":1}]', '2026-07-10T12:00:00Z')
+      `, [mvId]);
+
+      const todayEmptyRes = await fetch(`${baseUrl}/api/admin/analytics?period=today`, {
+        headers: { Authorization: `Bearer ${mvToken}` }
+      });
+      assert.equal(todayEmptyRes.status, 200);
+      const todayEmpty = await todayEmptyRes.json();
+      assert.equal(todayEmpty.period_orders, 0);
+      assert.deepEqual(todayEmpty.recent_orders, [], 'Period-filtered analytics with 0 orders returns empty recent_orders');
+      assert.equal(todayEmpty.space_heatmap.length, 7, 'Heatmap covers Tables(2) + Cabins(2) + VIP(1) + Seats(2)');
+      assert.ok(todayEmpty.space_heatmap.some(s => s.label === 'Booth 1' && s.space_type === 'table'));
+      assert.ok(todayEmpty.space_heatmap.some(s => s.label === 'Cabin 1' && s.space_type === 'cabin'));
+      assert.ok(todayEmpty.space_heatmap.some(s => s.label === 'VIP 1' && s.space_type === 'vip'));
+      assert.ok(todayEmpty.space_heatmap.some(s => s.label === 'Seat 1' && s.space_type === 'cinema_seat'));
+
+      const julRes = await fetch(`${baseUrl}/api/admin/analytics?period=month:2026-07`, {
+        headers: { Authorization: `Bearer ${mvToken}` }
+      });
+      const julBody = await julRes.json();
+      assert.equal(julBody.recent_orders.length, 1);
+      assert.equal(julBody.recent_orders[0].order_number, 108);
+      assert.equal(julBody.category_sales[0]?.name, 'Combos', 'Combo sales map to "Combos" category rather than "General"');
+
+      // CSV USD currency header check + XLSX "none" currency clean numFmt check
+      const mvXlsxRes = await fetch(`${baseUrl}/api/admin/analytics/export/xlsx?period=month:2026-07`, {
+        headers: { Authorization: `Bearer ${mvToken}` }
+      });
+      assert.equal(mvXlsxRes.status, 200);
+      const mvWb = new ExcelJS.Workbook();
+      await mvWb.xlsx.load(Buffer.from(await mvXlsxRes.arrayBuffer()));
+      const mvSalesSheet = mvWb.getWorksheet('Sales Report');
+      const amtCellFmt = mvSalesSheet.getRow(7).getCell(16).numFmt;
+      assert.equal(amtCellFmt, '#,##0.00', 'XLSX hides currency prefix cleanly when currency_symbol is "none"');
+      assert.equal(mvSalesSheet.getRow(6).getCell(16).value, 'Amount', 'XLSX header omits redundant currency suffix when currency_symbol is "none"');
+
+      await query("UPDATE restaurants SET currency_symbol = '$ USD' WHERE id = $1", [mvId]);
+      const mvCsvUsdRes = await fetch(`${baseUrl}/api/admin/analytics/export/csv?period=month:2026-07`, {
+        headers: { Authorization: `Bearer ${mvToken}` }
+      });
+      const mvCsvText = await mvCsvUsdRes.text();
+      assert.ok(mvCsvText.includes('Cash Amount (USD)'), 'CSV header reflects tenant USD currency');
+
+      // AnalyticsView UI guarantees: empty period recent_orders does not fall back to cancelled orders prop, currency 'none' omitted, UNPAID shown
+      const { default: AnalyticsViewUi } = await import(pathToFileURL(path.join(compiledDir, 'AnalyticsView.mjs')).href);
+      const htmlFilteredEmpty = renderToStaticMarkup(
+        React.createElement(AnalyticsViewUi, {
+          analyticsData: {
+            selected_period: 'today',
+            period_sales: 0,
+            total_sales: 0,
+            period_orders: 0,
+            total_orders: 0,
+            last_updated: '2026-06-15T10:00:00Z',
+            recent_orders: []
+          },
+          orders: [
+            { id: 999, table_number: '1', total_amount: 555, status: 'cancelled', items: [] }
+          ],
+          currencySymbol: 'none'
+        })
+      );
+      assert.ok(!htmlFilteredEmpty.includes('none0'), 'Currency "none" must not render literal "none" before amounts');
+      assert.ok(!htmlFilteredEmpty.includes('#ORD-0999'), 'Empty period recent_orders must not leak unfiltered cancelled orders prop');
+      assert.ok(!htmlFilteredEmpty.includes('Last updated: Just now'), 'Payment footer uses sync timestamp instead of hardcoded "Just now"');
+
+      const htmlUnpaidOrder = renderToStaticMarkup(
+        React.createElement(AnalyticsViewUi, {
+          analyticsData: {
+            selected_period: 'all',
+            period_sales: 320,
+            total_sales: 320,
+            period_orders: 1,
+            total_orders: 1,
+            recent_orders: [
+              { id: 77, order_number: 15, table_number: 'Cabin 2', space_type: 'cabin', total_amount: 320, payment_method: null, status: 'preparing', created_at: '2026-06-15T10:00:00Z', items: [{ name: 'Tea', quantity: 1 }] }
+            ]
+          },
+          currencySymbol: 'INR'
+        })
+      );
+      assert.ok(htmlUnpaidOrder.includes('#ORD-0015') && htmlUnpaidOrder.includes('UNPAID') && htmlUnpaidOrder.includes('₹320'), 'Uses order_number, displays UNPAID when payment missing, and resolves INR to ₹');
+
+      pass('Period recent_orders, Combo categories, multi-vertical heatmap, normalized currency UI & CSV/XLSX headers verified');
+    }
+
     console.log(`\nAll ${passed} Analytics Page audit tests passed.`);
   } catch (err) {
     console.error('Analytics Page audit test failed:', err);

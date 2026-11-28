@@ -23,7 +23,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export async function registerTouchQrServiceWorker() {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
     return null;
   }
   try {
@@ -36,7 +36,7 @@ export async function registerTouchQrServiceWorker() {
 }
 
 export async function ensureAdminPushSubscription(token) {
-  if (typeof window === 'undefined' || !token) return false;
+  if (typeof window === 'undefined' || typeof navigator === 'undefined' || !token) return false;
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     return false;
   }
@@ -132,7 +132,7 @@ export async function removeAdminPushSubscription(token) {
     try { await pendingSave; } catch (_) { }
   }
 
-  if (!('serviceWorker' in navigator)) return false;
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return false;
 
   try {
     const registration = await navigator.serviceWorker.getRegistration('/');

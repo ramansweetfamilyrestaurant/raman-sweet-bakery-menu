@@ -4888,6 +4888,7 @@ export default function AdminDashboard({
                   currencySymbol={settingsForm.currency_symbol !== undefined && settingsForm.currency_symbol !== null ? settingsForm.currency_symbol : '₹'}
                   categories={safeCategories}
                   dishes={safeDishes}
+                  combos={combos}
                   orders={orders}
                   restaurantInfo={mergedRestaurantInfo}
                   onViewOrders={() => setActiveTab('orders')}
