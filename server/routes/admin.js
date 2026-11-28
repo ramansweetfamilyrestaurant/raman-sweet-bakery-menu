@@ -7535,13 +7535,13 @@ router.post('/push/subscribe', authenticateToken, async (req, res) => {
   try {
     const restaurantId = req.user?.restaurant_id || req.user?.restaurantId;
     const adminId = req.user?.id || null;
-    const { subscription } = req.body || {};
+    const { subscription, client_ts } = req.body || {};
     if (!restaurantId || !subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
       return res.status(400).json({ error: 'Valid push subscription is required' });
     }
     const ua = req.headers['user-agent'] || '';
-    await savePushSubscription(restaurantId, adminId, subscription, ua);
-    res.json({ success: true });
+    const result = await savePushSubscription(restaurantId, adminId, subscription, ua, client_ts);
+    res.json(result);
   } catch (err) {
     console.error('Push subscribe error:', err.message);
     res.status(500).json({ error: 'Failed to save push subscription' });
@@ -7551,11 +7551,11 @@ router.post('/push/subscribe', authenticateToken, async (req, res) => {
 router.post('/push/unsubscribe', authenticateToken, async (req, res) => {
   try {
     const restaurantId = req.user?.restaurant_id || req.user?.restaurantId;
-    const { endpoint } = req.body || {};
+    const { endpoint, client_ts } = req.body || {};
     if (!restaurantId || !endpoint) {
       return res.status(400).json({ error: 'Endpoint is required' });
     }
-    await deletePushSubscription(restaurantId, endpoint);
+    await deletePushSubscription(restaurantId, endpoint, client_ts);
     res.json({ success: true });
   } catch (err) {
     console.error('Push unsubscribe error:', err.message);

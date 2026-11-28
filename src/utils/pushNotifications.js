@@ -3,6 +3,13 @@
 const tokenGenerationMap = new Map();
 const activeSubscribeControllers = new Map();
 const inFlightSubscribeSaves = new Map();
+let lastPushOpTs = 0;
+
+function nextPushOpTimestamp() {
+  const now = Date.now();
+  lastPushOpTs = now > lastPushOpTs ? now : lastPushOpTs + 1;
+  return lastPushOpTs;
+}
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -38,6 +45,7 @@ export async function ensureAdminPushSubscription(token) {
   }
 
   const gen = tokenGenerationMap.get(token) || 0;
+  const subscribeOpTs = nextPushOpTimestamp();
   const prevController = activeSubscribeControllers.get(token);
   if (prevController) {
     try { prevController.abort(); } catch (_) { }
@@ -82,7 +90,7 @@ export async function ensureAdminPushSubscription(token) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ subscription: subJson }),
+      body: JSON.stringify({ subscription: subJson, client_ts: subscribeOpTs }),
       signal: controller.signal
     });
     inFlightSubscribeSaves.set(token, savePromise);
@@ -109,6 +117,7 @@ export async function ensureAdminPushSubscription(token) {
 export async function removeAdminPushSubscription(token) {
   if (typeof window === 'undefined' || !token) return false;
 
+  const unsubscribeOpTs = nextPushOpTimestamp();
   // Invalidate any in-flight ensureAdminPushSubscription for this token immediately
   tokenGenerationMap.set(token, (tokenGenerationMap.get(token) || 0) + 1);
   const controller = activeSubscribeControllers.get(token);
@@ -136,7 +145,7 @@ export async function removeAdminPushSubscription(token) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ endpoint: subscription.endpoint }),
+      body: JSON.stringify({ endpoint: subscription.endpoint, client_ts: unsubscribeOpTs }),
       keepalive: true
     });
     return Boolean(res?.ok);

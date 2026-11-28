@@ -8,6 +8,28 @@ const webpush = require('web-push');
 
 let cachedVapidKeys = null;
 let vapidInitPromise = null;
+const endpointQueues = new Map();
+const revokedEndpoints = new Map();
+
+function enqueueEndpointOp(key, fn) {
+  const prev = endpointQueues.get(key) || Promise.resolve();
+  const next = prev.catch(() => {}).then(fn);
+  endpointQueues.set(key, next);
+  next.finally(() => {
+    if (endpointQueues.get(key) === next) {
+      endpointQueues.delete(key);
+    }
+  });
+  return next;
+}
+
+function pruneRevokedEndpoints() {
+  if (revokedEndpoints.size <= 500) return;
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  for (const [k, v] of revokedEndpoints.entries()) {
+    if ((v?.serverTs || 0) < cutoff) revokedEndpoints.delete(k);
+  }
+}
 
 const ALLOWED_PUSH_HOST_SUFFIXES = [
   'fcm.googleapis.com',
@@ -142,37 +164,65 @@ export async function getVapidPublicKey() {
   return keys.publicKey;
 }
 
-export async function savePushSubscription(restaurantId, adminId, subscription, userAgent = '') {
+export async function savePushSubscription(restaurantId, adminId, subscription, userAgent = '', clientTs = null) {
   const rid = Number(restaurantId);
   if (!rid || !subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
     throw new Error('Invalid push subscription payload');
   }
 
+  const startedAt = Date.now();
+  const parsedClientTs = Number(clientTs) || 0;
   const endpoint = await validatePushEndpoint(subscription.endpoint);
   const p256dh = String(subscription.keys.p256dh).trim();
   const auth = String(subscription.keys.auth).trim();
   const ua = String(userAgent || '').slice(0, 240);
+  const key = `${rid}::${endpoint}`;
 
-  await query(
-    `INSERT INTO push_subscriptions (restaurant_id, admin_id, endpoint, p256dh, auth, user_agent, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-     ON CONFLICT (restaurant_id, endpoint)
-     DO UPDATE SET
-       admin_id = EXCLUDED.admin_id,
-       p256dh = EXCLUDED.p256dh,
-       auth = EXCLUDED.auth,
-       user_agent = EXCLUDED.user_agent,
-       updated_at = CURRENT_TIMESTAMP`,
-    [rid, adminId || null, endpoint, p256dh, auth, ua]
-  );
-  return { success: true };
+  return enqueueEndpointOp(key, async () => {
+    const revoked = revokedEndpoints.get(key);
+    if (revoked) {
+      const isOlderClientOp = parsedClientTs > 0 && revoked.clientTs > 0 && parsedClientTs < revoked.clientTs;
+      const isRevokedDuringCall = revoked.serverTs >= startedAt;
+      if (isOlderClientOp || isRevokedDuringCall) {
+        return { success: false, stale: true };
+      }
+      revokedEndpoints.delete(key);
+    }
+
+    await query(
+      `INSERT INTO push_subscriptions (restaurant_id, admin_id, endpoint, p256dh, auth, user_agent, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+       ON CONFLICT (restaurant_id, endpoint)
+       DO UPDATE SET
+         admin_id = EXCLUDED.admin_id,
+         p256dh = EXCLUDED.p256dh,
+         auth = EXCLUDED.auth,
+         user_agent = EXCLUDED.user_agent,
+         updated_at = CURRENT_TIMESTAMP`,
+      [rid, adminId || null, endpoint, p256dh, auth, ua]
+    );
+    return { success: true };
+  });
 }
 
-export async function deletePushSubscription(restaurantId, endpoint) {
+export async function deletePushSubscription(restaurantId, endpoint, clientTs = null) {
   const rid = Number(restaurantId);
   if (!rid || !endpoint) return { success: true };
-  await query('DELETE FROM push_subscriptions WHERE restaurant_id = $1 AND endpoint = $2', [rid, String(endpoint).trim()]);
-  return { success: true };
+  const cleanEndpoint = String(endpoint).trim();
+  const key = `${rid}::${cleanEndpoint}`;
+  const serverTs = Date.now();
+  const parsedClientTs = Number(clientTs) || 0;
+  const prev = revokedEndpoints.get(key);
+  revokedEndpoints.set(key, {
+    serverTs: Math.max(serverTs, prev?.serverTs || 0),
+    clientTs: Math.max(parsedClientTs, prev?.clientTs || 0)
+  });
+  pruneRevokedEndpoints();
+
+  return enqueueEndpointOp(key, async () => {
+    await query('DELETE FROM push_subscriptions WHERE restaurant_id = $1 AND endpoint = $2', [rid, cleanEndpoint]);
+    return { success: true };
+  });
 }
 
 /**
