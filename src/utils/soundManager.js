@@ -196,7 +196,7 @@ class NotificationSoundService {
         this.activeSirenOscillators.push(osc2);
       });
 
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) {
         try {
           navigator.vibrate([400, 200, 400, 200, 600]);
         } catch (e) {}
@@ -335,7 +335,7 @@ class NotificationSoundService {
       }
     }, 1200);
 
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) {
       try {
         navigator.vibrate([400, 150, 400, 150, 400]);
       } catch (e) {}

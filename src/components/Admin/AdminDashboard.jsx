@@ -563,8 +563,10 @@ export default function AdminDashboard({
       setIsAudioReady(ready);
     });
 
-    // 🔊 3. Attempt silent audio unlock on mount (succeeds if browser has autoplay permission)
-    unlockNotificationSound().catch(() => { });
+    // 🔊 3. Attempt silent audio unlock on mount only if user activation already occurred
+    if (typeof navigator === 'undefined' || !navigator.userActivation || navigator.userActivation.hasBeenActive) {
+      unlockNotificationSound().catch(() => { });
+    }
 
     // 🔊 4. Unlock notification audio on first user gesture (skip if already running)
     const handleUserGestureUnlock = () => {
@@ -775,7 +777,7 @@ export default function AdminDashboard({
           notif.close();
         };
       }
-      if ('vibrate' in navigator) {
+      if ('vibrate' in navigator && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) {
         navigator.vibrate([300, 100, 300]);
       }
     } catch (e) {
@@ -799,7 +801,7 @@ export default function AdminDashboard({
           notif.close();
         };
       }
-      if ('vibrate' in navigator) {
+      if ('vibrate' in navigator && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) {
         navigator.vibrate([400, 150, 400, 150, 400]);
       }
     } catch (e) {
@@ -823,7 +825,7 @@ export default function AdminDashboard({
           notif.close();
         };
       }
-      if ('vibrate' in navigator) {
+      if ('vibrate' in navigator && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) {
         navigator.vibrate([300, 100, 300, 100, 300]);
       }
     } catch (e) {
@@ -847,7 +849,7 @@ export default function AdminDashboard({
           notif.close();
         };
       }
-      if ('vibrate' in navigator) {
+      if ('vibrate' in navigator && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) {
         navigator.vibrate([200, 100, 200, 100, 400]);
       }
     } catch (e) {
