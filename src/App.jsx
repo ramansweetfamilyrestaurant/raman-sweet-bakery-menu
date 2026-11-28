@@ -1699,6 +1699,36 @@ export default function App() {
       ...(presenceTokenRef.current ? { presence_token: presenceTokenRef.current } : {})
     };
 
+    // Instant 0ms pre-flight trigger: open PresenceVerificationModal immediately without waiting
+    // for a wasted POST /api/orders 403 round-trip when presenceToken is not yet obtained.
+    if (!presenceTokenRef.current && info && isDirectOrderingActive) {
+      pendingOrderPayloadRef.current = {
+        slug,
+        table_number: targetTable,
+        space_type: targetSpaceType,
+        order_type: effectiveOrderType,
+        table_token: effectiveQrToken,
+        customer_name: customerNameInput || (targetSpaceType === 'room' ? 'Room Guest' : (targetSpaceType === 'cinema_seat' || targetSpaceType === 'cinema') ? 'Seat Guest' : targetSpaceType === 'counter' ? 'Counter Customer' : 'Guest'),
+        customer_phone: customerPhoneInput || '',
+        items: itemsPayload,
+        total_amount: grandTotal,
+        idempotency_key: attemptIdempKey,
+        ...(trimmedNotes ? { notes: trimmedNotes } : {})
+      };
+      const hasConfiguredGps = Boolean(info?.location_initialized && info?.latitude && info?.longitude);
+      setPresencePolicy({
+        mode: hasConfiguredGps ? 'GPS_WITH_STAFF_FALLBACK' : 'QR_ONLY',
+        allowed_methods: hasConfiguredGps ? ['GPS', 'STAFF'] : ['QR', 'STAFF', 'GPS'],
+        staff_fallback_allowed: true,
+        staff_timeout_seconds: Number(info?.staff_verification_timeout_seconds) || 120
+      });
+      setPresenceModalOpen(true);
+      setOrderConfirmed(false);
+      setPlacingOrder(false);
+      isPlacingOrderRef.current = false;
+      return;
+    }
+
     try {
       const minAnimDelay = new Promise(resolve => setTimeout(resolve, 2150));
       const res = await createDirectOrder(orderPayload);
