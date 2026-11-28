@@ -31,22 +31,24 @@ import {
 } from 'lucide-react';
 import { fetchAdminOrders } from '../../../api/client';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
-import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
 import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
-import { formatOrderLocation } from '../../../utils/billingHelper';
-import PlanLockedCard from '../components/PlanLockedCard';
+import {
+  parseOrderDateSafe,
+  getISTDateKey,
+  filterOrdersByTimeframe,
+  parseOrderItemsSafe,
+  formatGuestOrderLocation,
+  buildGuestRecordsAndMetrics
+} from '../../../utils/customerInsightsHelper';
 
 export default function CustomersView({
   restaurantInfo = {},
   settingsForm = {},
   orders = [],
   token,
-  capabilities,
-  onUpgrade,
   onNavigate,
   currencySymbol = '₹'
 }) {
-  const resolvedCaps = capabilities || resolveTenantCapabilities(restaurantInfo, settingsForm);
   const terms = getBusinessTerminology(restaurantInfo || settingsForm);
   const sym = getCurrencySymbol(settingsForm?.currency_symbol !== undefined ? settingsForm.currency_symbol : (restaurantInfo?.currency_symbol || currencySymbol));
   
@@ -57,7 +59,7 @@ export default function CustomersView({
     90
   );
 
-  // Live Orders State
+  // Live Orders State (merges retained fetch history + newer live orders)
   const [rawOrders, setRawOrders] = useState(Array.isArray(orders) && orders.length > 0 ? orders : []);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,9 +70,28 @@ export default function CustomersView({
   const [timeframeFilter, setTimeframeFilter] = useState('all'); // 'all' | 'today' | '7d' | '30d'
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Guest Detail Drawer / Modal State
-  const [selectedGuest, setSelectedGuest] = useState(null);
+  // Guest Detail Drawer / Modal State (tracked by ID so drawer refreshes cleanly)
+  const [selectedGuestId, setSelectedGuestId] = useState(null);
   const [copiedPhone, setCopiedPhone] = useState(false);
+
+  // Merge live incoming orders from parent dashboard cleanly without dropping historical records
+  useEffect(() => {
+    if (!Array.isArray(orders) || orders.length === 0) return;
+    setRawOrders(prev => {
+      if (!Array.isArray(prev) || prev.length === 0) return orders;
+      const byId = new Map(prev.map(o => [String(o.id), o]));
+      let changed = false;
+      orders.forEach(o => {
+        const key = String(o.id);
+        const existing = byId.get(key);
+        if (!existing || existing.status !== o.status || existing.is_settled !== o.is_settled || existing.payment_method !== o.payment_method || existing.total_amount !== o.total_amount || existing.items !== o.items) {
+          byId.set(key, o);
+          changed = true;
+        }
+      });
+      return changed ? Array.from(byId.values()) : prev;
+    });
+  }, [orders]);
 
   // Load all retained orders for tenant
   const loadOrders = useCallback(async (isManualRefresh = false) => {
@@ -94,223 +115,40 @@ export default function CustomersView({
   }, [token]);
 
   useEffect(() => {
+    setSelectedGuestId(null);
     loadOrders();
   }, [loadOrders]);
 
   // Copy phone handler
-  const handleCopyPhone = (phoneNumber) => {
+  const handleCopyPhone = async (phoneNumber) => {
     if (!phoneNumber) return;
-    navigator.clipboard.writeText(phoneNumber);
-    setCopiedPhone(true);
-    setTimeout(() => setCopiedPhone(false), 2000);
-  };
-
-  // Safe item parser helper
-  const parseItems = (items) => {
-    if (!items) return [];
-    if (Array.isArray(items)) return items;
-    if (typeof items === 'string') {
-      try { return JSON.parse(items); } catch { return []; }
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(phoneNumber);
+        setCopiedPhone(true);
+        setTimeout(() => setCopiedPhone(false), 2000);
+      }
+    } catch (_) {
+      // Clipboard API unavailable in restricted context
     }
-    return [];
   };
 
-  // Date parsing helper
-  const parseSafeDate = (d) => {
-    if (!d) return new Date();
-    if (d instanceof Date) return isNaN(d.getTime()) ? new Date() : d;
-    const str = String(d).trim().replace(' ', 'T');
-    const parsed = new Date(str);
-    return isNaN(parsed.getTime()) ? new Date() : parsed;
-  };
+  // Filter orders by timeframe (IST-consistent)
+  const filteredTimeframeOrders = useMemo(
+    () => filterOrdersByTimeframe(rawOrders, timeframeFilter),
+    [rawOrders, timeframeFilter]
+  );
 
-  // Filter orders by timeframe
-  const filteredTimeframeOrders = useMemo(() => {
-    if (!Array.isArray(rawOrders)) return [];
-    
-    // Ignore cancelled or rejected orders
-    const validOrders = rawOrders.filter(o => o.status !== 'cancelled' && o.status !== 'rejected');
-    if (timeframeFilter === 'all') return validOrders;
+  // Aggregate orders into factual guest sessions + summary metrics
+  const { guestRecords, metrics } = useMemo(
+    () => buildGuestRecordsAndMetrics(filteredTimeframeOrders, restaurantInfo),
+    [filteredTimeframeOrders, restaurantInfo]
+  );
 
-    const now = new Date();
-    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const sevenDaysAgo = now.getTime() - (7 * 24 * 60 * 60 * 1000);
-    const thirtyDaysAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
-
-    return validOrders.filter(o => {
-      const orderTime = parseSafeDate(o.created_at).getTime();
-      if (timeframeFilter === 'today') return orderTime >= todayMidnight;
-      if (timeframeFilter === '7d') return orderTime >= sevenDaysAgo;
-      if (timeframeFilter === '30d') return orderTime >= thirtyDaysAgo;
-      return true;
-    });
-  }, [rawOrders, timeframeFilter]);
-
-  // Aggregate orders into factual guest sessions (No fake DB, purely derived from real orders)
-  const guestRecords = useMemo(() => {
-    const map = new Map();
-
-    filteredTimeframeOrders.forEach(o => {
-      const name = (o.customer_name || '').trim();
-      const phone = (o.customer_phone || '').trim();
-      const sessionId = (o.session_id || '').trim();
-      const tableNum = (o.table_number || 'Dine-In').trim();
-      const amount = Number(o.total_amount || o.grand_total_amount || 0);
-      const createdAt = parseSafeDate(o.created_at);
-
-      // Determine order source canonically (channel, not payment method)
-      const orderTypeStr = String(o.order_type || o.source || '').toLowerCase();
-      const isWhatsApp = orderTypeStr.includes('whatsapp');
-      const isQR = Boolean(sessionId) || orderTypeStr.includes('qr') || (tableNum && tableNum !== 'Counter' && tableNum !== 'Takeaway');
-      const source = isWhatsApp ? 'WhatsApp' : (isQR ? 'QR' : 'Direct / POS');
-
-      // Identification logic:
-      // If customer provided a phone number, group by phone (reliable unique guest in retention window).
-      // Else if customer provided a non-empty name, group by name.
-      // Else if session_id is available, group by session_id.
-      // Otherwise group by order ID.
-      let groupKey = '';
-      let isIdentified = false;
-      let displayName = '';
-
-      if (phone && phone.length >= 6) {
-        groupKey = `phone_${phone.replace(/\D/g, '')}`;
-        isIdentified = true;
-        displayName = name || `Guest (${phone.slice(-4)})`;
-      } else if (name && name.length >= 2 && !name.toLowerCase().includes('guest') && !name.toLowerCase().includes('table')) {
-        groupKey = `name_${name.toLowerCase()}`;
-        isIdentified = true;
-        displayName = name;
-      } else if (sessionId) {
-        groupKey = `sess_${sessionId}`;
-        isIdentified = false;
-        // Clean short hash for anonymous guest
-        const shortHash = sessionId.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase();
-        displayName = `Guest #${shortHash || o.id}`;
-      } else {
-        groupKey = `order_${o.id}`;
-        isIdentified = false;
-        displayName = `Guest #${String(o.id).slice(-4)}`;
-      }
-
-      if (!map.has(groupKey)) {
-        map.set(groupKey, {
-          id: groupKey,
-          isIdentified,
-          displayName,
-          customerName: name || null,
-          customerPhone: phone || null,
-          primaryTable: tableNum,
-          sources: new Set([source]),
-          ordersCount: 0,
-          totalSpend: 0,
-          firstActivity: createdAt,
-          lastActivity: createdAt,
-          orders: [],
-          itemsMap: {}
-        });
-      }
-
-      const rec = map.get(groupKey);
-      rec.ordersCount += 1;
-      rec.totalSpend += amount;
-      rec.sources.add(source);
-      if (createdAt > rec.lastActivity) rec.lastActivity = createdAt;
-      if (createdAt < rec.firstActivity) rec.firstActivity = createdAt;
-      rec.orders.push(o);
-
-      // Track items ordered
-      const items = parseItems(o.items);
-      items.forEach(it => {
-        const iName = it.name || it.dish_name || 'Item';
-        const qty = Number(it.quantity || it.qty || 1);
-        rec.itemsMap[iName] = (rec.itemsMap[iName] || 0) + qty;
-      });
-    });
-
-    // Convert map to sorted array (most recent activity first)
-    const list = Array.from(map.values()).map(r => {
-      // Sort guest's orders newest to oldest
-      r.orders.sort((a, b) => parseSafeDate(b.created_at) - parseSafeDate(a.created_at));
-      r.sourcesList = Array.from(r.sources);
-      r.primarySource = r.sourcesList[0] || 'QR';
-      return r;
-    });
-
-    return list.sort((a, b) => b.lastActivity - a.lastActivity);
-  }, [filteredTimeframeOrders]);
-
-  // Summary Metrics calculations (Reliable Factual Data Only)
-  const metrics = useMemo(() => {
-    const totalGuests = guestRecords.length;
-    const identifiedGuests = guestRecords.filter(g => g.isIdentified).length;
-    const anonymousGuests = totalGuests - identifiedGuests;
-    const qrGuestsCount = guestRecords.filter(g => g.sources.has('QR')).length;
-    const waGuestsCount = guestRecords.filter(g => g.sources.has('WhatsApp')).length;
-    
-    const totalOrders = filteredTimeframeOrders.length;
-    const totalRevenue = filteredTimeframeOrders.reduce((sum, o) => sum + Number(o.total_amount || o.grand_total_amount || 0), 0);
-    const avgSpendPerGuest = totalGuests > 0 ? Math.round(totalRevenue / totalGuests) : 0;
-    const avgSpendPerOrder = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
-
-    // Sources breakdown by order volume
-    let qrCount = 0;
-    let waCount = 0;
-    let directCount = 0;
-
-    filteredTimeframeOrders.forEach(o => {
-      const orderTypeStr = String(o.order_type || o.source || '').toLowerCase();
-      const isWhatsApp = orderTypeStr.includes('whatsapp');
-      const isQR = Boolean(o.session_id) || orderTypeStr.includes('qr') || (o.table_number && o.table_number !== 'Counter' && o.table_number !== 'Takeaway');
-      if (isWhatsApp) waCount++;
-      else if (isQR) qrCount++;
-      else directCount++;
-    });
-
-    // Returning guests (Guests with > 1 order in retained data)
-    const returningCount = guestRecords.filter(g => g.ordersCount > 1).length;
-    const singleOrderCount = totalGuests - returningCount;
-    const returningRate = totalGuests > 0 ? Math.round((returningCount / totalGuests) * 100) : 0;
-
-    // Top purchased items across all retained orders
-    const overallItemsMap = {};
-    filteredTimeframeOrders.forEach(o => {
-      const items = parseItems(o.items);
-      items.forEach(it => {
-        const name = it.name || it.dish_name || 'Dish';
-        const qty = Number(it.quantity || it.qty || 1);
-        const price = Number(it.price || 0);
-        if (!overallItemsMap[name]) {
-          overallItemsMap[name] = { name, quantity: 0, revenue: 0 };
-        }
-        overallItemsMap[name].quantity += qty;
-        overallItemsMap[name].revenue += price * qty;
-      });
-    });
-
-    const topItems = Object.values(overallItemsMap)
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5);
-
-    return {
-      totalGuests,
-      identifiedGuests,
-      anonymousGuests,
-      qrGuestsCount,
-      waGuestsCount,
-      totalOrders,
-      totalRevenue,
-      avgSpendPerGuest,
-      avgSpendPerOrder,
-      qrCount,
-      waCount,
-      directCount,
-      returningCount,
-      singleOrderCount,
-      returningRate,
-      topItems
-    };
-  }, [guestRecords, filteredTimeframeOrders]);
+  const selectedGuest = useMemo(
+    () => (selectedGuestId ? guestRecords.find(g => g.id === selectedGuestId) || null : null),
+    [guestRecords, selectedGuestId]
+  );
 
   // Filtered and Searched Guest Records
   const displayedGuests = useMemo(() => {
@@ -321,13 +159,18 @@ export default function CustomersView({
       if (sourceFilter === 'qr' && !g.sources.has('QR')) return false;
       if (sourceFilter === 'whatsapp' && !g.sources.has('WhatsApp')) return false;
 
-      // Search query (Searches name, phone, table, or order numbers)
+      // Search query (Searches name, phone, location, order ID, order number, or token)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const matchesName = g.displayName.toLowerCase().includes(q) || (g.customerName && g.customerName.toLowerCase().includes(q));
-        const matchesPhone = g.customerPhone && g.customerPhone.includes(q);
-        const matchesTable = g.primaryTable && g.primaryTable.toLowerCase().includes(q);
-        const matchesOrder = g.orders.some(o => String(o.id).includes(q));
+        const matchesPhone = g.customerPhone && g.customerPhone.toLowerCase().includes(q);
+        const matchesTable = (g.primaryTable && g.primaryTable.toLowerCase().includes(q)) ||
+          (g.primaryLocation && g.primaryLocation.toLowerCase().includes(q));
+        const matchesOrder = g.orders.some(o =>
+          String(o.id).includes(q) ||
+          (o.order_number !== undefined && o.order_number !== null && String(o.order_number).includes(q)) ||
+          (o.token_display && String(o.token_display).toLowerCase().includes(q))
+        );
         if (!matchesName && !matchesPhone && !matchesTable && !matchesOrder) {
           return false;
         }
@@ -337,21 +180,24 @@ export default function CustomersView({
     });
   }, [guestRecords, sourceFilter, searchQuery]);
 
-  // Format date helper (e.g. "Today, 3:45 PM" or "28 Aug 2026")
+  // Format date helper in IST (e.g. "Today, 3:45 PM" or "Yesterday, 8:10 PM")
   const formatActivityTime = (dateObj) => {
     if (!dateObj) return 'Recently';
-    const now = new Date();
-    const d = parseSafeDate(dateObj);
-    const isToday = d.toDateString() === now.toDateString();
-    
-    const yesterday = new Date();
-    yesterday.setDate(now.getDate() - 1);
-    const isYesterday = d.toDateString() === yesterday.toDateString();
+    const d = parseOrderDateSafe(dateObj);
+    const nowMs = Date.now();
+    const dateKey = getISTDateKey(d, nowMs);
+    const todayKey = getISTDateKey(new Date(nowMs), nowMs);
+    const yesterdayKey = getISTDateKey(new Date(nowMs - 86400000), nowMs);
 
-    const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-    if (isToday) return `Today, ${timeStr}`;
-    if (isYesterday) return `Yesterday, ${timeStr}`;
-    return `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${timeStr}`;
+    const timeStr = d.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata'
+    });
+    if (dateKey === todayKey) return `Today, ${timeStr}`;
+    if (dateKey === yesterdayKey) return `Yesterday, ${timeStr}`;
+    return `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}, ${timeStr}`;
   };
 
   return (
@@ -577,6 +423,42 @@ export default function CustomersView({
           🔒 Zero Permanent Tracking
         </span>
       </div>
+
+      {/* Fetch Error / Loading Feedback */}
+      {errorMsg && (
+        <div style={{
+          background: '#FEF2F2',
+          border: '1px solid #FECACA',
+          borderRadius: '12px',
+          padding: '10px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
+          flexWrap: 'wrap',
+          color: '#B91C1C',
+          fontSize: '0.76rem',
+          fontWeight: 700
+        }}>
+          <span>⚠️ {errorMsg}</span>
+          <button
+            type="button"
+            onClick={() => loadOrders(true)}
+            style={{
+              padding: '4px 10px',
+              borderRadius: '6px',
+              border: '1px solid #FCA5A5',
+              background: '#FFFFFF',
+              color: '#B91C1C',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* =========================================================================
           2. TOP SUMMARY METRICS
@@ -865,7 +747,7 @@ export default function CustomersView({
                 Recent Guest Activity
               </h2>
               <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                Showing {displayedGuests.length} active guests
+                {loading && rawOrders.length === 0 ? 'Loading guest activity...' : `Showing ${displayedGuests.length} active guests`}
               </span>
             </div>
             {timeframeFilter !== 'all' && (
@@ -954,7 +836,7 @@ export default function CustomersView({
                     return (
                       <tr
                         key={guest.id}
-                        onClick={() => setSelectedGuest(guest)}
+                        onClick={() => setSelectedGuestId(guest.id)}
                         className="guest-row-item"
                         style={{
                           borderBottom: '1px solid #F1F5F9',
@@ -999,7 +881,7 @@ export default function CustomersView({
                                 )}
                               </div>
                               <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block', marginTop: '1px' }}>
-                                {guest.customerPhone ? guest.customerPhone : `Table ${guest.primaryTable}`}
+                                {guest.customerPhone ? guest.customerPhone : guest.primaryLocation}
                               </span>
                             </div>
                           </div>
@@ -1064,7 +946,7 @@ export default function CustomersView({
                         <td style={{ padding: '12px 18px', textAlign: 'right' }}>
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); setSelectedGuest(guest); }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedGuestId(guest.id); }}
                             style={{
                               padding: '5px 10px',
                               borderRadius: '8px',
@@ -1112,7 +994,7 @@ export default function CustomersView({
               displayedGuests.map((guest) => (
                 <div
                   key={guest.id}
-                  onClick={() => setSelectedGuest(guest)}
+                  onClick={() => setSelectedGuestId(guest.id)}
                   style={{
                     background: '#FFFFFF',
                     borderRadius: '12px',
@@ -1148,7 +1030,7 @@ export default function CustomersView({
                           {guest.displayName}
                         </div>
                         <span style={{ fontSize: '0.66rem', color: '#64748B' }}>
-                          {guest.customerPhone || `Table ${guest.primaryTable}`}
+                          {guest.customerPhone || guest.primaryLocation}
                         </span>
                       </div>
                     </div>
@@ -1206,7 +1088,7 @@ export default function CustomersView({
                   {/* Bottom: View Details Action */}
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); setSelectedGuest(guest); }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedGuestId(guest.id); }}
                     style={{
                       width: '100%',
                       minHeight: '44px',
@@ -1339,7 +1221,7 @@ export default function CustomersView({
               {metrics.directCount > 0 && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: '3px' }}>
-                    <span style={{ fontWeight: 700, color: '#0F172A' }}>🧾 Direct / Counter</span>
+                    <span style={{ fontWeight: 700, color: '#0F172A' }}>🧾 Direct / POS</span>
                     <span style={{ fontWeight: 800, color: '#64748B' }}>
                       {metrics.directCount} ({Math.round((metrics.directCount / metrics.totalOrders) * 100)}%)
                     </span>
@@ -1476,7 +1358,7 @@ export default function CustomersView({
       {selectedGuest && (
         <div
           className="guest-details-sheet-backdrop"
-          onClick={() => setSelectedGuest(null)}
+          onClick={() => setSelectedGuestId(null)}
           style={{
             position: 'fixed',
             top: 0,
@@ -1525,7 +1407,7 @@ export default function CustomersView({
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedGuest(null)}
+                onClick={() => setSelectedGuestId(null)}
                 style={{
                   width: '32px',
                   height: '32px',
@@ -1645,9 +1527,10 @@ export default function CustomersView({
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {selectedGuest.orders.map((ord, idx) => {
-                    const items = parseItems(ord.items);
-                    const ordTime = parseSafeDate(ord.created_at);
+                    const items = parseOrderItemsSafe(ord.items);
+                    const ordTime = parseOrderDateSafe(ord.created_at);
                     const ordTotal = Number(ord.total_amount || ord.grand_total_amount || 0);
+                    const ordLocationLabel = formatGuestOrderLocation(ord, restaurantInfo);
 
                     return (
                       <div
@@ -1664,7 +1547,7 @@ export default function CustomersView({
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                             <strong style={{ fontSize: '0.82rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              {ord.token_display ? `Token ${ord.token_display}` : (ord.table_number ? `Table ${ord.table_number}` : 'Order')}
+                              {ordLocationLabel}
                             </strong>
                             <span style={{
                               fontSize: '0.64rem',
@@ -1684,7 +1567,7 @@ export default function CustomersView({
 
                         {/* Order Meta: Location + Time */}
                         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', fontSize: '0.68rem', color: '#64748B', marginBottom: '8px' }}>
-                          <span>📍 {formatOrderLocation(ord, restaurantInfo)}</span>
+                          <span>📍 {ordLocationLabel}</span>
                           <span>•</span>
                           <span>🕒 {formatActivityTime(ordTime)}</span>
                         </div>
@@ -1740,7 +1623,7 @@ export default function CustomersView({
             }}>
               <button
                 type="button"
-                onClick={() => setSelectedGuest(null)}
+                onClick={() => setSelectedGuestId(null)}
                 style={{
                   padding: '8px 20px',
                   borderRadius: '10px',
