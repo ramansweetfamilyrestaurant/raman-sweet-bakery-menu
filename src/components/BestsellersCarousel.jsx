@@ -105,13 +105,35 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, onAddTo
                   borderRadius: 'var(--radius-pill)',
                   fontSize: '0.68rem',
                   fontWeight: 800,
-                  maxWidth: 'calc(100% - 20px)',
+                  maxWidth: (dish.offer_badge || dish.offer?.offer_badge) ? '52%' : 'calc(100% - 20px)',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
                 }}>
                   {dish.badge || '🔥 Bestseller'}
                 </div>
+
+                {(dish.offer_badge || dish.offer?.offer_badge) && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+                    color: '#B45309',
+                    border: '1px solid #F59E0B',
+                    padding: '3px 8px',
+                    borderRadius: 'var(--radius-pill)',
+                    fontSize: '0.64rem',
+                    fontWeight: 900,
+                    maxWidth: '42%',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.18)'
+                  }}>
+                    🔥 {dish.offer_badge || dish.offer?.offer_badge}
+                  </div>
+                )}
               </div>
 
               {/* Content */}
@@ -137,7 +159,7 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, onAddTo
                   gap: '6px',
                   marginTop: '8px'
                 }}>
-                  {dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) < Number(dish.price) ? (
+                  {dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) >= 0 && Number(dish.offer_price) < Number(dish.price) ? (
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
                       <span style={{
                         fontFamily: 'var(--font-heading)',
@@ -233,20 +255,7 @@ export default function BestsellersCarousel({ dishes = [], onSelectDish, onAddTo
                         + Add
                       </button>
                     );
-                  })() : (dish.offer_badge || dish.offer?.offer_badge) && (
-                    <span style={{
-                      fontSize: '0.60rem',
-                      fontWeight: 800,
-                      color: '#B45309',
-                      background: '#FEF3C7',
-                      border: '1px solid #F59E0B',
-                      padding: '2px 6px',
-                      borderRadius: 'var(--radius-pill)',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      🔥 {dish.offer_badge || dish.offer?.offer_badge}
-                    </span>
-                  )}
+                  })() : null}
                 </div>
               </div>
             </div>

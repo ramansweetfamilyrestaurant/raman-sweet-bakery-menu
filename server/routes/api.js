@@ -658,14 +658,19 @@ export function resolveActiveOfferMaps(rawOffers = [], rawOfferItems = [], now =
 export function resolveBestOfferForPrice(offersOrList, basePrice, sym = '₹') {
   if (!offersOrList) return null;
   const list = Array.isArray(offersOrList) ? offersOrList : [offersOrList];
+  let bestOffer = null;
   for (const offer of list) {
     const offerData = calculateOfferPrice(basePrice, offer, sym);
-    if (offerData) return offerData;
+    if (!offerData) continue;
+    // Choose lowest customer price (highest discount), keeping list order (newest offer id) on ties
+    if (!bestOffer || offerData.offer_price < bestOffer.offer_price) {
+      bestOffer = offerData;
+    }
   }
-  return null;
+  return bestOffer;
 }
 
-async function fetchActiveOffersSnapshot(restaurantId) {
+export async function fetchActiveOffersSnapshot(restaurantId) {
   const rows = await query(
     `SELECT
        o.id AS o_id,
@@ -1492,7 +1497,7 @@ router.get('/dishes', async (req, res) => {
     sql += ` ORDER BY d.id DESC`;
 
     const dishes = await query(sql, params);
-    if (!admin_view && targetId) {
+    if (targetId) {
       const restoObj = await query('SELECT currency_symbol FROM restaurants WHERE id = $1', [targetId]).catch(() => []);
       const sym = restoObj[0]?.currency_symbol || '₹';
       const { enrichedDishes } = await enrichItemsWithActiveOffers(targetId, dishes, [], sym);
@@ -2602,6 +2607,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         regular_price: baseRegularPrice,
         discount_amount: appliedDiscount,
         offer_id: appliedOfferId,
+        ...(offerPricing?.offer_badge ? { offer_badge: offerPricing.offer_badge } : {}),
         quantity: qty,
         ...(isCombo ? { type: 'combo', includes: comboIncludesText || item.includes || dbItem.description || '' } : {})
       });

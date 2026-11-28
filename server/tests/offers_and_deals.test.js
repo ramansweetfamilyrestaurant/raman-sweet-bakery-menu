@@ -433,7 +433,7 @@ async function run() {
       assert.strictEqual(exactEndRes.validOffersMap.size, 0);
       assert.strictEqual(exactEndRes.nextTransitionAt, futureStart.getTime());
 
-      // Fallback helper check
+      // Fallback helper check + best-discount-wins over newest-ID when multiple offers overlap
       const best = resolveBestOfferForPrice(
         [
           { id: 2, type: 'special_price', value: 150 },
@@ -443,6 +443,65 @@ async function run() {
       );
       assert.strictEqual(best.offer_id, 1);
       assert.strictEqual(best.offer_price, 72);
+
+      const bestSavingsWins = resolveBestOfferForPrice(
+        [
+          { id: 9, name: 'Small Newer', type: 'percentage', value: 10 }, // 100 -> 90
+          { id: 5, name: 'Big Older', type: 'percentage', value: 25 }    // 100 -> 75
+        ],
+        100
+      );
+      assert.strictEqual(bestSavingsWins.offer_id, 5);
+      assert.strictEqual(bestSavingsWins.offer_price, 75);
+
+      const tieBreakNewest = resolveBestOfferForPrice(
+        [
+          { id: 9, name: 'Newer Equal', type: 'flat', value: 20 },       // 100 -> 80
+          { id: 5, name: 'Older Equal', type: 'percentage', value: 20 }  // 100 -> 80
+        ],
+        100
+      );
+      assert.strictEqual(tieBreakNewest.offer_id, 9);
+      assert.strictEqual(tieBreakNewest.offer_price, 80);
+
+      // Admin POS parity: admin dishes & combos endpoints must also return active offer enrichment
+      const adminDishesRes = await requestJson(server, 'GET', '/api/dishes?admin_view=true', adminToken);
+      assert.strictEqual(adminDishesRes.status, 200);
+      const adminDish1 = adminDishesRes.body.find(d => d.id === dishId);
+      assert.ok(adminDish1);
+      assert.strictEqual(adminDish1.offer_price, 145);
+      assert.ok(adminDish1.offer_badge);
+
+      const adminCombosRes = await requestJson(server, 'GET', '/api/admin/combos', adminToken);
+      assert.strictEqual(adminCombosRes.status, 200);
+      const adminCombo1 = adminCombosRes.body.find(c => c.id === comboId);
+      assert.ok(adminCombo1);
+      assert.strictEqual(adminCombo1.offer_price, 200);
+
+      // POS checkout must enforce active offers on Full dishes & Combos (not Half), even if client sent un-discounted price
+      const posRes = await requestJson(server, 'POST', '/api/admin/pos-order', adminToken, {
+        order_type: 'takeaway',
+        payment_method: 'cash',
+        items: [
+          { dish_id: dishId, name: 'Paneer Tikka', price: 260, quantity: 1, variant: 'full' },
+          { dish_id: dishId, name: 'Paneer Tikka (Half)', price: 140, quantity: 1, variant: 'half' },
+          { dish_id: `combo_${comboId}`, type: 'combo', name: '[Combo] Tikka Meal Combo', price: 350, quantity: 1 },
+          { id: 'custom-water', name: 'Packaged Water', price: 30, quantity: 1 }
+        ]
+      });
+      assert.strictEqual(posRes.status, 200, `Expected 200 POS order, got ${posRes.status}: ${posRes.text}`);
+      const posItems = posRes.body.order.items;
+      assert.strictEqual(posItems[0].price, 145);
+      assert.strictEqual(posItems[0].regular_price, 260);
+      assert.strictEqual(posItems[0].discount_amount, 115);
+      assert.strictEqual(posItems[1].price, 140);
+      assert.strictEqual(posItems[1].discount_amount, 0);
+      assert.strictEqual(posItems[1].offer_id, null);
+      assert.strictEqual(posItems[2].price, 200);
+      assert.strictEqual(posItems[2].regular_price, 350);
+      assert.strictEqual(posItems[2].discount_amount, 150);
+      assert.strictEqual(posItems[3].price, 30);
+      assert.strictEqual(Number(posRes.body.order.subtotal_amount), 145 + 140 + 200 + 30);
 
       // Distinct tenant owning actual `-menu` suffix slug must not receive base slug's cached bundle or steal scan_count
       const splitBaseSlug = `split-base-${Date.now()}`;

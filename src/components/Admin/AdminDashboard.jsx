@@ -4966,6 +4966,7 @@ export default function AdminDashboard({
                   categories={categories}
                   token={token}
                   capabilities={tenantCaps}
+                  onOffersUpdated={() => loadData(true)}
                   onUpgrade={() => {
                     setActiveTab('billing');
                   }}

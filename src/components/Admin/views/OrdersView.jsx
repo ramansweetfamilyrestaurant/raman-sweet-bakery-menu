@@ -3612,7 +3612,7 @@ const OrdersView = React.memo(function OrdersView({
                     const itemQty = Number(item.quantity || item.qty || 1);
                     const itemPrice = Number(item.price || 0);
                     const itemRegularPrice = Number(item.regular_price || 0);
-                    const hasOffer = itemRegularPrice > itemPrice && itemPrice > 0;
+                    const hasOffer = itemRegularPrice > itemPrice && itemPrice >= 0;
 
                     return (
                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>

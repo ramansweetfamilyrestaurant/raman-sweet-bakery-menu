@@ -414,7 +414,7 @@ const DishCard = React.memo(function DishCard({ dish, onClick, onAddToCart, onUp
               {displayName}
             </h3>
 
-            {dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) < Number(dish.price) ? (
+            {dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) >= 0 && Number(dish.offer_price) < Number(dish.price) ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', flexShrink: 0 }}>
                 <span style={{
                   fontSize: '0.96rem',
@@ -479,7 +479,7 @@ const DishCard = React.memo(function DishCard({ dish, onClick, onAddToCart, onUp
             fontWeight: 700,
             color: 'var(--primary-emerald)'
           }}>
-            {hasHalfPrice ? `${lang === 'hi' ? 'हाफ' : 'Half'} ${symbol}${formatPriceNumber(dish.price_half)} | ${lang === 'hi' ? 'फुल' : 'Full'} ${symbol}${formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}` : (dish.portion && !dish.portion.toLowerCase().includes('portion') ? dish.portion : '')}
+            {hasHalfPrice ? `${lang === 'hi' ? 'हाफ' : 'Half'} ${symbol}${formatPriceNumber(dish.price_half)} | ${lang === 'hi' ? 'फुल' : 'Full'} ${symbol}${formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) >= 0 && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}` : (dish.portion && !dish.portion.toLowerCase().includes('portion') ? dish.portion : '')}
           </span>
 
           <span style={{

@@ -32,6 +32,7 @@ const MenuCardItem = React.memo(function MenuCardItem({ dish, lang, onClick, onA
 
   const fullPriceNum = Math.round(Number(dish.price));
   const halfPriceNum = hasHalfPrice ? Math.round(Number(dish.price_half)) : null;
+  const hasValidFullOffer = dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) >= 0 && Number(dish.offer_price) < Number(dish.price);
   const activePortion = hasHalfPrice ? portionMode : 'full';
   const effectiveCartItems = dishCartItems ?? cartItems;
   const matchedCartItem = (!hasModifiers && Array.isArray(effectiveCartItems))
@@ -308,25 +309,60 @@ const MenuCardItem = React.memo(function MenuCardItem({ dish, lang, onClick, onA
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         {/* Clean Bold Price Left of Image */}
         {hasHalfPrice ? (
-          <div 
-            style={{
-              fontSize: '0.94rem',
-              fontWeight: 900,
-              color: 'var(--theme-price-color, var(--text-dark))',
-              whiteSpace: 'nowrap',
-              lineHeight: 1.2,
-              cursor: 'pointer',
-              paddingRight: '2px'
-            }}
-            onClick={() => {
-              triggerHaptic('light');
-              onClick(dish);
-            }}
-          >
-            {symbol}{formatPriceNumber(portionMode === 'half' ? halfPriceNum : fullPriceNum)}
-          </div>
+          portionMode === 'full' && hasValidFullOffer ? (
+            <div 
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                cursor: 'pointer',
+                paddingRight: '2px'
+              }}
+              onClick={() => {
+                triggerHaptic('light');
+                onClick(dish);
+              }}
+            >
+              <div style={{
+                fontSize: '0.94rem',
+                fontWeight: 900,
+                color: 'var(--theme-price-color, var(--primary-emerald, #059669))',
+                lineHeight: 1.15,
+                whiteSpace: 'nowrap'
+              }}>
+                {symbol}{formatPriceNumber(dish.offer_price)}
+              </div>
+              <span style={{
+                fontSize: '0.68rem',
+                color: '#94A3B8',
+                textDecoration: 'line-through',
+                fontWeight: 600,
+                lineHeight: 1.1
+              }}>
+                {symbol}{formatPriceNumber(fullPriceNum)}
+              </span>
+            </div>
+          ) : (
+            <div 
+              style={{
+                fontSize: '0.94rem',
+                fontWeight: 900,
+                color: 'var(--theme-price-color, var(--text-dark))',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.2,
+                cursor: 'pointer',
+                paddingRight: '2px'
+              }}
+              onClick={() => {
+                triggerHaptic('light');
+                onClick(dish);
+              }}
+            >
+              {symbol}{formatPriceNumber(portionMode === 'half' ? halfPriceNum : fullPriceNum)}
+            </div>
+          )
         ) : (
-          dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) < Number(dish.price) ? (
+          hasValidFullOffer ? (
             <div 
               style={{
                 display: 'flex',

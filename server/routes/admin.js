@@ -12,7 +12,15 @@ import { isAuthoritativeComplimentaryTenant } from '../services/subscriptionStat
 import { JWT_SECRET } from '../config/jwt.js';
 import { adminLoginRateLimiter, supportTicketCreateRateLimiter, supportTicketReplyRateLimiter } from '../middleware/rateLimiters.js';
 import { generateTicketReference, validateTicketInput, validateReplyInput, VALID_CATEGORIES, VALID_PRIORITIES, VALID_STATUSES } from '../services/supportTicketService.js';
-import { clearRestoResolveCache, clearMenuBundleCache, calculateOrderTax } from './api.js';
+import {
+  clearRestoResolveCache,
+  clearMenuBundleCache,
+  calculateOrderTax,
+  enrichItemsWithActiveOffers,
+  fetchActiveOffersSnapshot,
+  resolveActiveOfferMaps,
+  resolveBestOfferForPrice
+} from './api.js';
 import { publishOrderLiveEvent, subscribeRestaurantOrders } from '../utils/orderLiveBus.js';
 import { allocateRestaurantOrderNumbers } from '../utils/orderNumbering.js';
 import { getVapidPublicKey, savePushSubscription, deletePushSubscription, sendRestaurantPushNotification } from '../services/pushService.js';
@@ -3129,32 +3137,33 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
     const cleanTable = isTakeaway ? 'Counter' : String(table_number).trim();
     const effectiveOrderType = isTakeaway ? 'takeaway' : 'dine_in';
 
-    // 2. Format & sanitize items, verify DB combo availability & kitchen includes, and compute subtotal
-    const hasAnyComboItem = items.some(it =>
-      it && (
-        String(it.dish_id || it.id || '').startsWith('combo_') ||
-        String(it.type || '').toLowerCase() === 'combo' ||
-        String(it.variant || '').toLowerCase() === 'combo'
-      )
+    // 2. Format & sanitize items, verify DB catalog availability + active offers + kitchen includes, and compute subtotal
+    const [dbDishes, dbCombos, offerSnapshot] = await Promise.all([
+      query('SELECT id, name, price, price_half, portion_half_label, available, modifiers FROM dishes WHERE restaurant_id = $1', [targetId]).catch(() => []),
+      query('SELECT id, name, price, available, description, items FROM combos WHERE restaurant_id = $1', [targetId]).catch(() => []),
+      fetchActiveOffersSnapshot(targetId).catch(() => ({ rawOffers: [], rawOfferItems: [] }))
+    ]);
+    const posDishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));
+    const posComboMap = new Map((dbCombos || []).map(c => [String(c.id), c]));
+    const { dishOffersMap, comboOffersMap } = resolveActiveOfferMaps(
+      offerSnapshot?.rawOffers || [],
+      offerSnapshot?.rawOfferItems || [],
+      new Date()
     );
-    let posComboMap = null;
-    let posDishMap = null;
-    if (hasAnyComboItem) {
-      const [dbCombos, dbDishes] = await Promise.all([
-        query('SELECT id, name, price, available, description, items FROM combos WHERE restaurant_id = $1', [targetId]).catch(() => []),
-        query('SELECT id, name, available FROM dishes WHERE restaurant_id = $1', [targetId]).catch(() => [])
-      ]);
-      posComboMap = new Map((dbCombos || []).map(c => [String(c.id), c]));
-      posDishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));
-    }
+    const restoCurrencySym = resto.currency_symbol || '₹';
 
     let subtotal = 0;
     const formattedItems = [];
     for (let idx = 0; idx < items.length; idx++) {
       const it = items[idx] || {};
       const qty = Math.max(1, parseInt(it.quantity || 1, 10));
-      const price = Math.max(0, parseFloat(it.price || 0));
-      const sanitizedModifiers = Array.isArray(it.modifiers)
+      let price = Math.max(0, parseFloat(it.price || 0));
+      let regularPrice = price;
+      let discountAmount = 0;
+      let appliedOfferId = null;
+      let appliedOfferBadge = null;
+
+      let sanitizedModifiers = Array.isArray(it.modifiers)
         ? it.modifiers
           .filter(m => m && (typeof m === 'string' || String(m.name || '').trim() !== ''))
           .map(m => ({
@@ -3164,11 +3173,11 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
         : [];
       const itemName = String(it.name || 'Custom Item').trim();
       const alreadyHasPortionInName = /\((half|full)\)$/i.test(itemName);
-      const rawRefId = String(it.dish_id || it.id || '');
+      const rawRefId = String(it.dish_id || it.id || '').trim();
       const isComboItem = rawRefId.startsWith('combo_') || String(it.type || '').toLowerCase() === 'combo' || String(it.variant || '').toLowerCase() === 'combo';
       let comboIncludes = String(it.includes || '').trim();
 
-      if (isComboItem && posComboMap) {
+      if (isComboItem) {
         const cleanComboId = rawRefId.replace(/^combo_/, '').trim();
         const dbCombo = posComboMap.get(cleanComboId);
         if (dbCombo) {
@@ -3191,6 +3200,63 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
           } else if (!comboIncludes && dbCombo.description) {
             comboIncludes = String(dbCombo.description).trim();
           }
+          const baseRegularPrice = Number(dbCombo.price) || 0;
+          const candidateOffers = comboOffersMap.get(dbCombo.id);
+          const offerPricing = candidateOffers ? resolveBestOfferForPrice(candidateOffers, baseRegularPrice, restoCurrencySym) : null;
+          regularPrice = baseRegularPrice;
+          price = offerPricing ? offerPricing.offer_price : baseRegularPrice;
+          discountAmount = offerPricing ? offerPricing.discount_amount : 0;
+          appliedOfferId = offerPricing ? offerPricing.offer_id : null;
+          appliedOfferBadge = offerPricing ? offerPricing.offer_badge : null;
+        }
+      } else if (rawRefId) {
+        const dbDish = posDishMap.get(rawRefId);
+        if (dbDish) {
+          if (!isFlagEnabled(dbDish.available, true)) {
+            return res.status(400).json({
+              error: 'dish_unavailable',
+              message: `"${dbDish.name}" is currently sold out / unavailable.`
+            });
+          }
+          const hasHalfPrice = dbDish.price_half !== null && dbDish.price_half !== undefined && Number(dbDish.price_half) > 0;
+          const rawVariant = String(it.variant || '').toLowerCase().trim();
+          const rawPortion = String(it.portion || '').toLowerCase().trim();
+          const dbHalfLabel = String(dbDish.portion_half_label || '').toLowerCase().trim();
+          const isHalfPortion = hasHalfPrice && (
+            rawVariant === 'half' ||
+            rawPortion === 'half' ||
+            rawPortion.includes('half') ||
+            rawPortion.includes('हाफ') ||
+            (dbHalfLabel && rawPortion === dbHalfLabel)
+          );
+          const baseRegularPrice = isHalfPortion ? Number(dbDish.price_half) : (Number(dbDish.price) || 0);
+          const candidateOffers = !isHalfPortion ? dishOffersMap.get(dbDish.id) : null;
+          const offerPricing = candidateOffers ? resolveBestOfferForPrice(candidateOffers, baseRegularPrice, restoCurrencySym) : null;
+
+          let rawDbMods = [];
+          try {
+            rawDbMods = typeof dbDish.modifiers === 'string' ? JSON.parse(dbDish.modifiers) : (dbDish.modifiers || []);
+          } catch (_) {
+            rawDbMods = [];
+          }
+          let modifierExtraPrice = 0;
+          if (sanitizedModifiers.length > 0 && Array.isArray(rawDbMods)) {
+            sanitizedModifiers = sanitizedModifiers.map(mod => {
+              const matchedMod = rawDbMods.find(m => m && m.name && m.name.toLowerCase().trim() === mod.name.toLowerCase().trim());
+              const authoritativeModPrice = (matchedMod && !isNaN(Number(matchedMod.price))) ? Math.max(0, Number(matchedMod.price)) : mod.price;
+              modifierExtraPrice += authoritativeModPrice;
+              return { name: matchedMod?.name || mod.name, price: authoritativeModPrice };
+            });
+          } else {
+            modifierExtraPrice = sanitizedModifiers.reduce((acc, m) => acc + (Number(m.price) || 0), 0);
+          }
+
+          regularPrice = Math.round((baseRegularPrice + modifierExtraPrice) * 100) / 100;
+          const effectiveBase = offerPricing ? offerPricing.offer_price : baseRegularPrice;
+          price = Math.round((effectiveBase + modifierExtraPrice) * 100) / 100;
+          discountAmount = offerPricing ? offerPricing.discount_amount : 0;
+          appliedOfferId = offerPricing ? offerPricing.offer_id : null;
+          appliedOfferBadge = offerPricing ? offerPricing.offer_badge : null;
         }
       }
 
@@ -3200,6 +3266,10 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
         dish_id: it.dish_id || it.id || null,
         name: itemName,
         price,
+        regular_price: regularPrice,
+        discount_amount: discountAmount,
+        offer_id: appliedOfferId,
+        ...(appliedOfferBadge ? { offer_badge: appliedOfferBadge } : {}),
         quantity: qty,
         variant: it.variant || null,
         portion: it.portion || ((it.variant === 'half' && !alreadyHasPortionInName) ? 'Half' : ''),
@@ -6504,8 +6574,13 @@ router.get('/combos', authenticateToken, async (req, res) => {
     if (!targetId) {
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
-    const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 ORDER BY sort_order ASC, id DESC', [targetId]);
-    res.json(combos);
+    const [combos, restoRows] = await Promise.all([
+      query('SELECT * FROM combos WHERE restaurant_id = $1 ORDER BY sort_order ASC, id DESC', [targetId]),
+      query('SELECT currency_symbol FROM restaurants WHERE id = $1', [targetId]).catch(() => [])
+    ]);
+    const sym = restoRows?.[0]?.currency_symbol || '₹';
+    const { enrichedCombos } = await enrichItemsWithActiveOffers(targetId, [], combos || [], sym);
+    res.json(enrichedCombos);
   } catch (err) {
     console.error('Fetch combos error:', err);
     res.status(500).json({ error: 'Failed to fetch combos' });

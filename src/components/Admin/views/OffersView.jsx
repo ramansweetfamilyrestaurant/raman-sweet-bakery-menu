@@ -58,7 +58,8 @@ export default function OffersView({
   dishes = [],
   combos = [],
   categories = [],
-  token
+  token,
+  onOffersUpdated
 }) {
   const currencySym = getCurrencySymbol(settingsForm?.currency_symbol !== undefined ? settingsForm.currency_symbol : restaurantInfo?.currency_symbol);
   const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || {}), [restaurantInfo]);
@@ -141,17 +142,30 @@ export default function OffersView({
   }).length, [offersList]);
 
   const totalDiscountedItemsCount = useMemo(() => {
+    const dishMap = new Map((dishes || []).map(d => [Number(d.id), d]));
+    const comboMap = new Map((combos || []).map(c => [Number(c.id), c]));
+    const isItemEnabled = (item) => item && item.available !== false && item.available !== 0 && item.available !== '0' && item.available !== 'false';
     const dishSet = new Set();
     offersList.forEach(off => {
       if (getOfferStatus(off) === 'active' && Array.isArray(off.items)) {
         off.items.forEach(i => {
-          if (i.dish_id) dishSet.add(`dish_${i.dish_id}`);
-          if (i.combo_id) dishSet.add(`combo_${i.combo_id}`);
+          if (i.dish_id) {
+            const d = dishMap.get(Number(i.dish_id));
+            if (isItemEnabled(d) && calculateOfferPrice(d.price, off, currencySym)) {
+              dishSet.add(`dish_${i.dish_id}`);
+            }
+          }
+          if (i.combo_id) {
+            const c = comboMap.get(Number(i.combo_id));
+            if (isItemEnabled(c) && calculateOfferPrice(c.price, off, currencySym)) {
+              dishSet.add(`combo_${i.combo_id}`);
+            }
+          }
         });
       }
     });
     return dishSet.size;
-  }, [offersList]);
+  }, [offersList, dishes, combos, currencySym]);
 
   // Filtered Offers List
   const filteredOffers = useMemo(() => {
@@ -392,6 +406,7 @@ export default function OffersView({
 
       setShowModal(false);
       await loadOffers();
+      if (typeof onOffersUpdated === 'function') onOffersUpdated();
       setTimeout(() => setSuccessToast(''), 4000);
     } catch (err) {
       alert(err.message || 'Failed to save offer');
@@ -407,6 +422,7 @@ export default function OffersView({
       const newStatus = !isOfferActiveFlag(offer.active);
       await toggleAdminOffer(offer.id, newStatus, token);
       setOffersList(prev => prev.map(o => o.id === offer.id ? { ...o, active: newStatus ? 1 : 0 } : o));
+      if (typeof onOffersUpdated === 'function') onOffersUpdated();
       setSuccessToast(`✓ Offer "${offer.name}" ${newStatus ? 'resumed' : 'paused'}.`);
       setTimeout(() => setSuccessToast(''), 3000);
     } catch (err) {
@@ -420,6 +436,7 @@ export default function OffersView({
       await deleteAdminOffer(id, token);
       setOffersList(prev => prev.filter(o => o.id !== id));
       setDeleteConfirmId(null);
+      if (typeof onOffersUpdated === 'function') onOffersUpdated();
       setSuccessToast('✓ Offer deleted successfully.');
       setTimeout(() => setSuccessToast(''), 3000);
     } catch (err) {
@@ -1597,6 +1614,10 @@ export default function OffersView({
                       ) : (
                         filteredDishesForSelection.map(d => {
                           const isChecked = selectedDishIds.some(id => Number(id) === Number(d.id));
+                          const isSoldOut = d.available === false || d.available === 0 || d.available === '0' || d.available === 'false';
+                          const hasHalf = d.price_half !== null && d.price_half !== undefined && Number(d.price_half) > 0;
+                          const specialVal = Number(formValue);
+                          const isSpecialIneligible = formType === 'special_price' && Number.isFinite(specialVal) && specialVal > 0 && Number(d.price) <= specialVal;
                           return (
                             <label
                               key={d.id}
@@ -1607,22 +1628,40 @@ export default function OffersView({
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
+                                gap: '8px',
                                 cursor: 'pointer',
                                 marginBottom: '2px'
                               }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={() => toggleDishSelection(d.id)}
-                                  style={{ width: '16px', height: '16px', accentColor: '#064E3B', cursor: 'pointer' }}
+                                  style={{ width: '16px', height: '16px', accentColor: '#064E3B', cursor: 'pointer', flexShrink: 0 }}
                                 />
-                                <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>
-                                  {d.name}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+                                  <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>
+                                    {d.name}
+                                  </span>
+                                  {isSoldOut && (
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '1px 5px', borderRadius: '4px', background: '#FEE2E2', color: '#B91C1C' }}>
+                                      Sold Out
+                                    </span>
+                                  )}
+                                  {hasHalf && (
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '4px', background: '#F1F5F9', color: '#475569' }}>
+                                      Full only
+                                    </span>
+                                  )}
+                                  {isSpecialIneligible && (
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '4px', background: '#FEF3C7', color: '#B45309' }}>
+                                      Regular price lower
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#064E3B' }}>
+                              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#064E3B', flexShrink: 0 }}>
                                 {currencySym}{formatPriceNumber(d.price)}
                               </span>
                             </label>
@@ -1637,6 +1676,9 @@ export default function OffersView({
                       ) : (
                         filteredCombosForSelection.map(c => {
                           const isChecked = selectedComboIds.some(id => Number(id) === Number(c.id));
+                          const isSoldOut = c.available === false || c.available === 0 || c.available === '0' || c.available === 'false';
+                          const specialVal = Number(formValue);
+                          const isSpecialIneligible = formType === 'special_price' && Number.isFinite(specialVal) && specialVal > 0 && Number(c.price) <= specialVal;
                           return (
                             <label
                               key={`combo-${c.id}`}
@@ -1647,22 +1689,35 @@ export default function OffersView({
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
+                                gap: '8px',
                                 cursor: 'pointer',
                                 marginBottom: '2px'
                               }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={() => toggleComboSelection(c.id)}
-                                  style={{ width: '16px', height: '16px', accentColor: '#064E3B', cursor: 'pointer' }}
+                                  style={{ width: '16px', height: '16px', accentColor: '#064E3B', cursor: 'pointer', flexShrink: 0 }}
                                 />
-                                <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>
-                                  {c.name}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+                                  <span style={{ fontSize: '0.80rem', fontWeight: 800, color: '#0F172A' }}>
+                                    {c.name}
+                                  </span>
+                                  {isSoldOut && (
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '1px 5px', borderRadius: '4px', background: '#FEE2E2', color: '#B91C1C' }}>
+                                      Sold Out
+                                    </span>
+                                  )}
+                                  {isSpecialIneligible && (
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '4px', background: '#FEF3C7', color: '#B45309' }}>
+                                      Regular price lower
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#064E3B' }}>
+                              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#064E3B', flexShrink: 0 }}>
                                 {currencySym}{formatPriceNumber(c.price)}
                               </span>
                             </label>
@@ -1787,50 +1842,74 @@ export default function OffersView({
                     </span>
 
                     {(selectedDishIds.length > 0 || selectedComboIds.length > 0) && (() => {
-                      const sampleDish = selectedDishIds.length > 0
-                        ? (dishes || []).find(d => Number(d.id) === Number(selectedDishIds[0]))
-                        : (combos || []).find(c => Number(c.id) === Number(selectedComboIds[0]));
-                      const resolvedSample = sampleDish || { name: 'Featured Item', price: 220 };
-                      const calc = previewCalculation(resolvedSample.price);
+                      const chosenItems = [
+                        ...(dishes || []).filter(d => selectedDishIds.some(id => Number(id) === Number(d.id))).map(d => ({ ...d, _kind: 'dish' })),
+                        ...(combos || []).filter(c => selectedComboIds.some(id => Number(id) === Number(c.id))).map(c => ({ ...c, _kind: 'combo' }))
+                      ];
+                      const previewEntries = (chosenItems.length > 0 ? chosenItems : [{ id: 0, name: 'Featured Item', price: 220, _kind: 'dish' }]).map(item => ({
+                        item,
+                        calc: previewCalculation(item.price)
+                      }));
+                      const eligibleCount = previewEntries.filter(e => e.calc.eligible).length;
+                      const skippedCount = previewEntries.length - eligibleCount;
+
                       return (
-                        <div style={{
-                          padding: '14px',
-                          borderRadius: '12px',
-                          background: '#FFFFFF',
-                          border: calc.eligible ? '1.5px solid #FDE68A' : '1px solid #E2E8F0',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}>
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                              <strong style={{ fontSize: '0.86rem', color: '#0F172A' }}>{resolvedSample.name}</strong>
-                              {calc.eligible && calc.badge && (
-                                <span style={{ padding: '1px 6px', borderRadius: '4px', background: '#FEF3C7', color: '#D97706', fontSize: '0.66rem', fontWeight: 900 }}>
-                                  🔥 {calc.badge}
-                                </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {previewEntries.length > 1 && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.70rem', fontWeight: 800, color: '#475569', background: '#FAF8F5', padding: '6px 10px', borderRadius: '8px', border: '1px solid #EAE5DF' }}>
+                              <span>✓ {eligibleCount} item{eligibleCount === 1 ? '' : 's'} eligible for discount</span>
+                              {skippedCount > 0 && (
+                                <span style={{ color: '#B45309' }}>⚠ {skippedCount} at regular price</span>
                               )}
                             </div>
-                            <span style={{ fontSize: '0.70rem', color: calc.eligible ? '#059669' : '#64748B', fontWeight: 700 }}>
-                              {calc.eligible
-                                ? '✓ Available on Full Portion & Combos'
-                                : (calc.ineligibleReason === 'special_price'
-                                    ? 'Regular price applies (Special price is not lower than this item)'
-                                    : 'Regular price applies')}
-                            </span>
-                          </div>
-
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.94rem', fontWeight: 900, color: '#064E3B' }}>
-                              {currencySym}{formatPriceNumber(calc.discounted)}
-                            </div>
-                            {calc.eligible && calc.saved > 0 && (
-                              <div style={{ fontSize: '0.72rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                                {currencySym}{formatPriceNumber(calc.original)}
+                          )}
+                          {previewEntries.slice(0, 3).map(({ item, calc }) => (
+                            <div key={`${item._kind}-${item.id}`} style={{
+                              padding: '12px 14px',
+                              borderRadius: '12px',
+                              background: '#FFFFFF',
+                              border: calc.eligible ? '1.5px solid #FDE68A' : '1px solid #E2E8F0',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              gap: '10px'
+                            }}>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '2px' }}>
+                                  <strong style={{ fontSize: '0.84rem', color: '#0F172A' }}>{item.name}</strong>
+                                  {calc.eligible && calc.badge && (
+                                    <span style={{ padding: '1px 6px', borderRadius: '4px', background: '#FEF3C7', color: '#D97706', fontSize: '0.66rem', fontWeight: 900 }}>
+                                      🔥 {calc.badge}
+                                    </span>
+                                  )}
+                                </div>
+                                <span style={{ fontSize: '0.70rem', color: calc.eligible ? '#059669' : '#64748B', fontWeight: 700 }}>
+                                  {calc.eligible
+                                    ? '✓ Available on Full Portion & Combos'
+                                    : (calc.ineligibleReason === 'special_price'
+                                        ? 'Regular price applies (Special price is not lower than this item)'
+                                        : 'Regular price applies')}
+                                </span>
                               </div>
-                            )}
-                          </div>
+
+                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ fontSize: '0.94rem', fontWeight: 900, color: '#064E3B' }}>
+                                  {currencySym}{formatPriceNumber(calc.discounted)}
+                                </div>
+                                {calc.eligible && calc.saved > 0 && (
+                                  <div style={{ fontSize: '0.72rem', color: '#94A3B8', textDecoration: 'line-through' }}>
+                                    {currencySym}{formatPriceNumber(calc.original)}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                          {previewEntries.length > 3 && (
+                            <span style={{ fontSize: '0.68rem', color: '#64748B', textAlign: 'center' }}>
+                              + {previewEntries.length - 3} more selected item{previewEntries.length - 3 === 1 ? '' : 's'}
+                            </span>
+                          )}
                         </div>
                       );
                     })()}

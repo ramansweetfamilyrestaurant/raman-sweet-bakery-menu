@@ -595,7 +595,7 @@ export default function App() {
 
     const regularBasePrice = roundOfferCurrency(isHalf ? (Number(dish.price_half) || 0) : (Number(dish.price) || 0));
     let effectiveBasePrice = regularBasePrice;
-    if ((dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '') && Number(dish.offer_price) < Number(dish.price) && !isHalf) {
+    if ((dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '') && Number(dish.offer_price) >= 0 && Number(dish.offer_price) < Number(dish.price) && !isHalf) {
       effectiveBasePrice = roundOfferCurrency(Number(dish.offer_price) || 0);
     }
 
@@ -770,10 +770,13 @@ export default function App() {
       ? `👋 Hello *${info.name}*!\nI would like to place an order from ${locationText}:\n\n`
       : `👋 Hello *${info.name}*!\nI would like to place an order:\n\n`;
     let grandTotal = 0;
+    let totalOfferSavings = 0;
     const sym = getCurrencySymbol(info?.currency_symbol);
     cartItems.forEach(item => {
       const itemPrice = item.price * item.quantity;
       grandTotal += itemPrice;
+      const itemSavings = (Number(item.discount_amount) || 0) * (Number(item.quantity) || 1);
+      if (itemSavings > 0) totalOfferSavings += itemSavings;
       const portionText = item.portion ? ` (${item.portion})` : '';
       const modText = (item.modifiers && Array.isArray(item.modifiers) && item.modifiers.length > 0)
         ? `\n   ↳ Add-ons: ${item.modifiers.map(m => `+${m.name} (+${sym}${m.price})`).join(', ')}`
@@ -781,8 +784,14 @@ export default function App() {
       const comboText = (item.isCombo && item.comboIncludes)
         ? `\n   ↳ Included: ${item.comboIncludes}`
         : '';
-      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${formatPriceNumber(itemPrice)}${comboText}${modText}\n`;
+      const savingsText = item.regular_price && item.regular_price > item.price
+        ? ` _(Reg: ${sym}${formatPriceNumber(item.regular_price * item.quantity)})_`
+        : '';
+      msg += `• ${item.quantity}x *${item.dish.name}${portionText}* - ${sym}${formatPriceNumber(itemPrice)}${savingsText}${comboText}${modText}\n`;
     });
+    if (totalOfferSavings > 0) {
+      msg += `\n🎉 *Offer Savings:* -${sym}${formatPriceNumber(totalOfferSavings)}`;
+    }
     const isGst = isFlagEnabled(info?.gst_enabled, false);
     if (isGst) {
       const cgst = Math.round(grandTotal * 0.025 * 100) / 100;
@@ -1993,7 +2002,12 @@ export default function App() {
       if (res?.order_id && lastActiveTableOrderIdRef.current !== String(res.order_id)) {
         return;
       }
-      setOrderSuccessModal(res);
+      const serverSub = Number(res?.subtotal_amount);
+      const hasPriceDrift = Number.isFinite(serverSub) && Math.abs(serverSub - grandTotal) >= 0.5;
+      if (hasPriceDrift) {
+        loadMenuData(slug, true);
+      }
+      setOrderSuccessModal(hasPriceDrift ? { ...res, _priceAdjustedFrom: grandTotal } : res);
       setCartItems(prev => subtractSubmittedItems(prev, itemsPayload));
       setOrderNotesInput('');
       setShowCartDrawer(false);
@@ -2166,7 +2180,13 @@ export default function App() {
       if (res?.order_id && lastActiveTableOrderIdRef.current !== String(res.order_id)) {
         return;
       }
-      setOrderSuccessModal(res);
+      const cartSub = payload.items.reduce((sum, it) => sum + ((Number(it.price) || 0) * (Number(it.quantity) || 1)), 0);
+      const serverSub = Number(res?.subtotal_amount);
+      const hasPriceDrift = Number.isFinite(serverSub) && Math.abs(serverSub - cartSub) >= 0.5;
+      if (hasPriceDrift) {
+        loadMenuData(payload?.slug || '', true);
+      }
+      setOrderSuccessModal(hasPriceDrift ? { ...res, _priceAdjustedFrom: cartSub } : res);
       setCartItems(prev => subtractSubmittedItems(prev, payload.items));
       setOrderNotesInput('');
       setShowCartDrawer(false);
@@ -3037,7 +3057,7 @@ export default function App() {
     const offerDishes = (dishes || []).filter(d => {
       if (!isFlagEnabled(d.available, true)) return false;
       const basePrice = Number(d.regular_price ?? d.price ?? d.portion_full_price ?? 0);
-      return d.offer_price !== undefined && d.offer_price !== null && d.offer_price !== '' && Number(d.offer_price) < basePrice;
+      return d.offer_price !== undefined && d.offer_price !== null && d.offer_price !== '' && Number(d.offer_price) >= 0 && Number(d.offer_price) < basePrice;
     });
     const offerCombos = (combos || []).filter(c => {
       const meta = parsedCombosMetaMap.get(c.id);
@@ -6912,6 +6932,24 @@ export default function App() {
                   </strong>
                 </div>
               </div>
+
+              {orderSuccessModal._priceAdjustedFrom !== undefined && orderSuccessModal.subtotal_amount !== undefined && (
+                <div style={{
+                  margin: '0 0 12px 0',
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  background: 'rgba(254, 243, 199, 0.16)',
+                  border: '1px solid rgba(253, 224, 71, 0.45)',
+                  color: '#FDE68A',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  lineHeight: 1.4
+                }}>
+                  {lang === 'hi'
+                    ? `नोट: ताज़ा ऑफर/मेनू दर के अनुसार सबटोटल ${getCurrencySymbol(info?.currency_symbol)}${formatPriceNumber(orderSuccessModal.subtotal_amount)} पर अपडेट किया गया है।`
+                    : `Note: Live menu/offer rates updated at checkout. Verified subtotal is ${getCurrencySymbol(info?.currency_symbol)}${formatPriceNumber(orderSuccessModal.subtotal_amount)}.`}
+                </div>
+              )}
 
               <p style={{
                 fontSize: '0.84rem',

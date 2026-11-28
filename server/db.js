@@ -859,6 +859,10 @@ async function createTables(options = {}) {
       `CREATE INDEX IF NOT EXISTS idx_categories_resto_sort ON categories(restaurant_id, sort_order ASC, id ASC);`,
       `CREATE INDEX IF NOT EXISTS idx_dishes_resto_available ON dishes(restaurant_id, available);`,
       `CREATE INDEX IF NOT EXISTS idx_combos_resto_sort ON combos(restaurant_id, sort_order ASC, id ASC);`,
+      `CREATE INDEX IF NOT EXISTS idx_offers_resto_active ON offers(restaurant_id, active);`,
+      `CREATE INDEX IF NOT EXISTS idx_offer_items_offer ON offer_items(offer_id, restaurant_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_offer_items_dish ON offer_items(restaurant_id, dish_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_offer_items_combo ON offer_items(restaurant_id, combo_id);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_created ON orders(restaurant_id, created_at DESC);`,
       `CREATE INDEX IF NOT EXISTS idx_orders_resto_status ON orders(restaurant_id, status);`,
       `CREATE INDEX IF NOT EXISTS idx_service_req_resto ON service_requests(restaurant_id, status, created_at DESC);`,
@@ -2143,6 +2147,10 @@ async function createTables(options = {}) {
           FOREIGN KEY (combo_id) REFERENCES combos (id) ON DELETE CASCADE
         );
       `);
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_offers_resto_active ON offers(restaurant_id, active)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_offer_items_offer ON offer_items(offer_id, restaurant_id)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_offer_items_dish ON offer_items(restaurant_id, dish_id)");
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_offer_items_combo ON offer_items(restaurant_id, combo_id)");
     } catch (err) {
       console.warn('SQLite offers migration info:', err.message);
     }

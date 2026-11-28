@@ -127,11 +127,11 @@ export default function PhysicalMenuItem({ dish, onClick }) {
                 color: selectedPortion === 'full' ? 'var(--theme-btn-text, #FFFFFF)' : 'var(--primary-emerald)'
               }}
             >
-              Full {formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}
+              Full {formatPriceNumber(dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) >= 0 && Number(dish.offer_price) < Number(dish.price) ? dish.offer_price : dish.price)}
             </button>
           </div>
         ) : (
-          dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) < Number(dish.price) ? (
+          dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) >= 0 && Number(dish.offer_price) < Number(dish.price) ? (
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexShrink: 0 }} onClick={() => onClick(dish)}>
               <span style={{
                 fontFamily: 'var(--font-heading)',

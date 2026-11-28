@@ -47,7 +47,7 @@ export default function DishModal({ dish, onClose, onAddToCart, currencySymbol =
   };
 
   const regularBasePrice = (selectedPortion === 'half' && hasHalfPrice) ? Number(dish.price_half) : Number(dish.price);
-  const hasValidFullOffer = dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) < Number(dish.price);
+  const hasValidFullOffer = dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) >= 0 && Number(dish.offer_price) < Number(dish.price);
   let basePrice = regularBasePrice;
   if (hasValidFullOffer && selectedPortion !== 'half') {
     basePrice = Number(dish.offer_price);

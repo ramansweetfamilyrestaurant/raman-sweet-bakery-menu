@@ -1310,13 +1310,13 @@ export default function PosBillingView({
                             <span style={{ fontSize: '0.62rem', background: '#FEE2E2', color: '#B91C1C', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
                               🔴 Sold Out
                             </span>
+                          ) : hasFullOffer ? (
+                            <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#D97706', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                              🔥 {dish.offer_badge || 'Special'}
+                            </span>
                           ) : dish.isCombo ? (
                             <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
                               🎁 COMBO
-                            </span>
-                          ) : hasFullOffer ? (
-                            <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#D97706', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
-                              🔥 Special
                             </span>
                           ) : (dish.available === 0 && (
                             <span style={{ fontSize: '0.62rem', background: '#FEE2E2', color: '#B91C1C', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
