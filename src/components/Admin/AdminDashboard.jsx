@@ -4909,7 +4909,7 @@ export default function AdminDashboard({
                   onDeleteCategory={handleDeleteCategory}
                   onOpenAddCategory={() => setCatModalData('new')}
                   onOpenEditCategory={(cat) => setCatModalData(cat)}
-                  onOpenAddCombo={() => setComboModalData('new')}
+                  onOpenAddCombo={handleOpenCreateCombo}
                   onOpenEditCombo={(combo) => setComboModalData(combo)}
                   onDeleteCombo={handleDeleteCombo}
                   onToggleComboAvailability={handleToggleComboAvailability}
@@ -5216,7 +5216,7 @@ export default function AdminDashboard({
             }}>
               <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#FFD700', marginBottom: '6px' }}>👑 Upgrade your SaaS Plan to unlock:</div>
               <div style={{ fontSize: '0.78rem', color: '#D1D5DB', lineHeight: 1.5 }}>
-                • <strong>Pro Plan:</strong> Up to 10 Combos & Thalis<br />
+                • <strong>Pro Plan:</strong> Up to 10 Combo Deals<br />
                 • <strong>Enterprise Plan:</strong> Unlimited Combos & Direct Table Ordering
               </div>
             </div>
@@ -5873,14 +5873,14 @@ export default function AdminDashboard({
                 </ul>
               </div>
 
-              {/* Guide 2: Thali & Combo Deals */}
+              {/* Guide 2: Combo Deals Builder */}
               <div style={{ background: '#1F2937', borderRadius: '16px', padding: '16px', border: '1px solid #374151' }}>
                 <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#FFD700', marginBottom: '6px' }}>
-                  🍱 2. Thali & Combo Builder (थाली और कॉम्बो कैसे बनाएं)
+                  🍱 2. Combo Deals Builder (कॉम्बो डील्स कैसे बनाएं)
                 </div>
                 <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.82rem', color: '#D1D5DB', lineHeight: 1.6 }}>
-                  <li>Go to <strong>Menu Tab ➔ Combo Deals ➔ "+ Add Combo Deal"</strong>.</li>
-                  <li>Enter Combo Title (e.g. Executive Thali), set discounted price, and select included dishes (e.g. Paneer + 2 Roti + Rice).</li>
+                  <li>Go to <strong>Menu Tab ➔ Combos ➔ "+ Add Combo"</strong>.</li>
+                  <li>Enter Combo Name, set discounted price, and select included items to bundle together.</li>
                 </ul>
               </div>
 

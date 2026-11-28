@@ -38,6 +38,13 @@ import {
   calculateEffectiveGpsTolerance,
   hasRestaurantConfiguredGps
 } from '../utils/presenceVerification.js';
+import {
+  parseComboItems,
+  isFlagEnabled,
+  formatComboIncludesText,
+  inspectComboComponentAvailability,
+  enrichCombosWithLiveDishes
+} from '../utils/comboHelper.js';
 import { 
   resolveBusinessProfile, 
   resolveBannerBadge,
@@ -426,8 +433,35 @@ const BUILTIN_DEMO_MENU = {
     { id: -110, restaurant_id: -999, category_id: -5, category_name: "Craft Mocktails & Shakes", name: "Dark Chocolate Brownie Thick Shake", price: 210, is_veg: 1, must_try: 1, description: "Decadent fudge brownie blended with Belgian chocolate gelato and cocoa dust.", available: 1 }
   ],
   combos: [
-    { id: -201, restaurant_id: -999, name: "Royal Duo Feast Platter", price: 899, original_price: 1299, available: 1, description: "Complete feast with Truffle Paneer Tikka, Margherita Pizza, Fettuccine Alfredo & 2 Mocktails." },
-    { id: -202, restaurant_id: -999, name: "🍿 Multiplex Cinema Duo", price: 549, original_price: 740, available: 1, description: "The ultimate movie interval combo: Jumbo Popcorn + Cheesy Nachos + 2 Drinks." }
+    {
+      id: -201,
+      restaurant_id: -999,
+      name: "Royal Duo Feast Platter",
+      price: 899,
+      available: 1,
+      badge: "Bestseller",
+      description: "Complete feast with Truffle Paneer Tikka, Margherita Pizza, Fettuccine Alfredo & 2 Mocktails.",
+      items: [
+        { dish_id: -101, dish_name: "Truffle Paneer Tikka", qty: 1, portion: "full", original_price: 340 },
+        { dish_id: -103, dish_name: "Wood-Fired Classic Margherita", qty: 1, portion: "full", original_price: 340 },
+        { dish_id: -104, dish_name: "Handcrafted Fettuccine Alfredo", qty: 1, portion: "full", original_price: 380 },
+        { dish_id: -109, dish_name: "Electric Blue Lagoon Mocktail", qty: 2, portion: "full", original_price: 180 }
+      ]
+    },
+    {
+      id: -202,
+      restaurant_id: -999,
+      name: "🍿 Multiplex Cinema Duo",
+      price: 549,
+      available: 1,
+      badge: "Value Deal",
+      description: "The ultimate movie interval combo: Jumbo Popcorn + Cheesy Nachos + 2 Drinks.",
+      items: [
+        { dish_id: -107, dish_name: "🍿 Jumbo Caramel Crunch Popcorn Bucket", qty: 1, portion: "full", original_price: 220 },
+        { dish_id: -108, dish_name: "🎬 Gourmet Cheesy Loaded Nachos", qty: 1, portion: "full", original_price: 260 },
+        { dish_id: -109, dish_name: "Electric Blue Lagoon Mocktail", qty: 2, portion: "full", original_price: 180 }
+      ]
+    }
   ]
 };
 
@@ -858,7 +892,7 @@ router.get('/menu-bundle', async (req, res) => {
         WHERE d.restaurant_id = $1 AND (d.available IS NOT FALSE) AND (c.active IS NOT FALSE OR c.id IS NULL)
         ORDER BY d.id ASC
       `, [targetId]),
-      query("SELECT * FROM combos WHERE restaurant_id = $1 AND (available IS NOT FALSE) ORDER BY sort_order ASC, id ASC", [targetId]),
+      query("SELECT * FROM combos WHERE restaurant_id = $1 AND (available IS NOT FALSE) ORDER BY sort_order ASC, id DESC", [targetId]),
       query('SELECT * FROM saas_plans WHERE key = $1 OR LOWER(key) = $1', [planTierKey]).catch(() => [])
     ]);
 
@@ -866,6 +900,14 @@ router.get('/menu-bundle', async (req, res) => {
       categories = [...BUILTIN_DEMO_MENU.categories];
       rawDishes = [...BUILTIN_DEMO_MENU.dishes];
       rawCombos = [...BUILTIN_DEMO_MENU.combos];
+    }
+
+    // Sync combo component prices, availability & dietary classification against all dishes
+    if (Array.isArray(rawCombos) && rawCombos.length > 0) {
+      const allComboRefDishes = resto.slug === 'touchqr-demo'
+        ? rawDishes
+        : await query('SELECT id, name, price, price_half, type, available FROM dishes WHERE restaurant_id = $1', [targetId]).catch(() => rawDishes);
+      rawCombos = enrichCombosWithLiveDishes(rawCombos, allComboRefDishes);
     }
 
     // Enrich dishes and combos with active promotions
@@ -1467,7 +1509,11 @@ router.get('/combos', async (req, res) => {
     const slug = req.query.slug;
     const resto = await resolveRestaurant(req, slug);
     if (!resto) return res.json([]);
-    const combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 AND (available = true OR available IS NOT FALSE) ORDER BY sort_order ASC, id DESC', [resto.id]);
+    let combos = await query('SELECT * FROM combos WHERE restaurant_id = $1 AND (available = true OR available IS NOT FALSE) ORDER BY sort_order ASC, id DESC', [resto.id]);
+    if (Array.isArray(combos) && combos.length > 0) {
+      const allDishes = await query('SELECT id, name, price, price_half, type, available FROM dishes WHERE restaurant_id = $1', [resto.id]).catch(() => []);
+      combos = enrichCombosWithLiveDishes(combos, allDishes);
+    }
     const sym = resto.currency_symbol || '₹';
     const { enrichedCombos } = await enrichItemsWithActiveOffers(resto.id, [], combos, sym);
     res.json(enrichedCombos);
@@ -2388,7 +2434,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
     // Step 10: Check cart + price + availability on SERVER (Server is the SOLE price authority)
     const [dbDishes, dbCombos, offerSnapshot] = await Promise.all([
       query('SELECT id, name, price, price_half, portion_half_label, available, modifiers FROM dishes WHERE restaurant_id = $1', [targetId]),
-      query('SELECT id, name, price, available, description FROM combos WHERE restaurant_id = $1', [targetId]),
+      query('SELECT id, name, price, available, description, items FROM combos WHERE restaurant_id = $1', [targetId]),
       fetchActiveOffersSnapshot(targetId)
     ]);
 
@@ -2452,12 +2498,23 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         });
       }
 
-      // Invariant: Reject sold out / unavailable items
-      if (dbItem.available === false || dbItem.available === 0 || dbItem.available === '0' || dbItem.available === 'false') {
+      // Invariant: Reject sold out / unavailable items (and combos containing sold-out or deleted dishes)
+      if (!isFlagEnabled(dbItem.available, true)) {
         return res.status(400).json({
           error: 'dish_unavailable',
           message: `"${dbItem.name}" is currently sold out / unavailable.`
         });
+      }
+      let comboIncludesText = '';
+      if (isCombo) {
+        const componentStatus = inspectComboComponentAvailability(dbItem, dishMap);
+        if (!componentStatus.allAvailable) {
+          return res.status(400).json({
+            error: 'dish_unavailable',
+            message: `"${dbItem.name}" is currently unavailable because ${componentStatus.unavailableNames.join(', ')} is sold out or removed.`
+          });
+        }
+        comboIncludesText = formatComboIncludesText(parseComboItems(dbItem.items), dishMap);
       }
 
       // Invariant 1, 3, 4: Server determines price exclusively from database record & active offer
@@ -2544,7 +2601,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         discount_amount: appliedDiscount,
         offer_id: appliedOfferId,
         quantity: qty,
-        ...(isCombo ? { type: 'combo', includes: dbItem.description || item.includes || '' } : {})
+        ...(isCombo ? { type: 'combo', includes: comboIncludesText || item.includes || dbItem.description || '' } : {})
       });
     }
 

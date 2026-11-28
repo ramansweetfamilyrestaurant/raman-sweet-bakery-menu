@@ -1508,7 +1508,7 @@ export default function BillingView({
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                             <Check size={14} color="#059669" strokeWidth={2.5} />
-                            <span><strong>{plan.max_combos === 9999 ? 'Unlimited' : plan.max_combos}</strong> Combos & Thali Deals</span>
+                            <span><strong>{plan.max_combos === 9999 ? 'Unlimited' : plan.max_combos}</strong> Combo Deals</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#334155' }}>
                             {plan.whatsapp_ordering_enabled ? <Check size={14} color="#059669" strokeWidth={2.5} /> : <Lock size={13} color="#94A3B8" />}

@@ -42,7 +42,9 @@ import { resolveImageUrl, getDishImageUrl, getCategoryImageUrl, getComboImageUrl
 import { formatQuota } from '../../../utils/planCapabilities';
 import { getCurrencySymbol, formatPriceNumber } from '../../../utils/currencyHelper';
 import { createDish } from '../../../api/client';
-import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
+import { getBusinessTerminology, getComboTerminology } from '../../../utils/businessTaxonomy';
+import { resolveComboMeta } from '../../../utils/comboHelper';
+import { isFlagEnabled } from '../../../utils/customerHelpers';
 
 export default function MenuView({
   token = '',
@@ -107,10 +109,12 @@ export default function MenuView({
 
   const categoryScrollRef = useRef(null);
   const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || {}), [restaurantInfo]);
+  const comboTerms = useMemo(() => getComboTerminology(restaurantInfo || {}), [restaurantInfo]);
 
   const safeDishes = Array.isArray(dishes) ? dishes : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
   const safeCombos = Array.isArray(combos) ? combos : [];
+  const adminDishMap = useMemo(() => new Map(safeDishes.map(d => [String(d.id), d])), [safeDishes]);
   const activeCategoryObj = safeCategories.find(c => String(c.id) === String(selectedCatFilter));
 
   const dishQuota = formatQuota(safeDishes.length, maxDishes);
@@ -262,12 +266,14 @@ export default function MenuView({
   const filteredCombos = useMemo(() => {
     const q = (search || '').toLowerCase().trim();
     if (!q) return safeCombos;
-    return safeCombos.filter(c => 
-      (c.name || '').toLowerCase().includes(q) || 
-      (c.description || '').toLowerCase().includes(q) ||
-      (c.badge || '').toLowerCase().includes(q)
-    );
-  }, [safeCombos, search]);
+    return safeCombos.filter(c => {
+      const meta = resolveComboMeta(c, adminDishMap);
+      return (c.name || '').toLowerCase().includes(q) ||
+        (c.description || '').toLowerCase().includes(q) ||
+        (c.badge || '').toLowerCase().includes(q) ||
+        (meta.itemsSummaryText || '').toLowerCase().includes(q);
+    });
+  }, [safeCombos, adminDishMap, search]);
 
   // Pagination calculation
   const totalItems = filteredDishes.length;
@@ -3083,12 +3089,12 @@ export default function MenuView({
                 fontSize: '1.4rem',
                 flexShrink: 0
               }}>
-                🍱
+                {comboTerms.icon}
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                    Value Meal Combos
+                    {comboTerms.adminTitle}
                   </h3>
                   <span style={{
                     background: '#9333EA',
@@ -3102,7 +3108,7 @@ export default function MenuView({
                   </span>
                 </div>
                 <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
-                  Multi-dish bundles to boost Average Order Value & customer savings.
+                  {comboTerms.adminSubtitle}
                 </span>
               </div>
             </div>
@@ -3161,17 +3167,14 @@ export default function MenuView({
               gap: '16px'
             }}>
               {filteredCombos.map(combo => {
-                let parsedItems = [];
-                try {
-                  parsedItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (Array.isArray(combo.items) ? combo.items : []);
-                } catch {
-                  parsedItems = [];
-                }
-                const originalTotal = parsedItems.reduce((sum, item) => sum + (Number(item.original_price || item.price || 0) * Number(item.qty || 1)), 0);
+                const comboMeta = resolveComboMeta(combo, adminDishMap);
+                const parsedItems = comboMeta.comboItems;
+                const originalTotal = comboMeta.originalTotal;
                 const comboPrice = Number(combo.price) || 0;
                 const hasSavings = originalTotal > comboPrice;
                 const savingsAmount = hasSavings ? originalTotal - comboPrice : 0;
-                const isAvailable = combo.available !== 0 && combo.available !== false && combo.is_available !== false;
+                const isAvailable = isFlagEnabled(combo.available, true) && isFlagEnabled(combo.is_available, true);
+                const hasUnavailableComponent = comboMeta.hasUnavailableItems;
                 const comboImg = combo.image || combo.image_url;
 
                 return (
@@ -3249,16 +3252,20 @@ export default function MenuView({
                         ) : <span />}
 
                         <span style={{
-                          background: isAvailable ? 'rgba(220, 252, 231, 0.95)' : 'rgba(254, 226, 226, 0.95)',
-                          color: isAvailable ? '#15803D' : '#DC2626',
-                          border: `1px solid ${isAvailable ? '#BBF7D0' : '#FECACA'}`,
+                          background: !isAvailable
+                            ? 'rgba(254, 226, 226, 0.95)'
+                            : hasUnavailableComponent
+                              ? 'rgba(254, 243, 199, 0.95)'
+                              : 'rgba(220, 252, 231, 0.95)',
+                          color: !isAvailable ? '#DC2626' : hasUnavailableComponent ? '#B45309' : '#15803D',
+                          border: `1px solid ${!isAvailable ? '#FECACA' : hasUnavailableComponent ? '#FCD34D' : '#BBF7D0'}`,
                           fontSize: '0.62rem',
                           fontWeight: 800,
                           padding: '2px 7px',
                           borderRadius: '6px',
                           backdropFilter: 'blur(4px)'
                         }}>
-                          {isAvailable ? 'In Stock' : 'Sold Out'}
+                          {!isAvailable ? 'Sold Out' : hasUnavailableComponent ? '⚠️ Item Sold Out' : 'In Stock'}
                         </span>
                       </div>
                     </div>

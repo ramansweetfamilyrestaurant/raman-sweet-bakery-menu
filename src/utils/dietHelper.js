@@ -9,6 +9,15 @@
  */
 export function isPosItemNonVeg(item) {
   if (!item) return false;
+  // 0. Pre-resolved dietary type (e.g. combos enriched from backend/dishes)
+  const resolvedDiet = String(item.diet_type || '').trim().toLowerCase();
+  if (resolvedDiet === 'nonveg' || resolvedDiet === 'non_veg' || resolvedDiet === 'egg') {
+    return true;
+  }
+  if (resolvedDiet === 'veg') {
+    return false;
+  }
+
   const typeStr = String(item.type || '').trim().toLowerCase();
   const foodTypeStr = String(item.food_type || '').trim().toLowerCase();
 
@@ -56,7 +65,10 @@ export function isPosItemNonVeg(item) {
     textToCheck.includes('pork') ||
     textToCheck.includes('beef') ||
     textToCheck.includes('bacon') ||
-    textToCheck.includes('seafood')
+    textToCheck.includes('seafood') ||
+    textToCheck.includes('keema') ||
+    textToCheck.includes('lamb') ||
+    textToCheck.includes('अंडा')
   ) {
     return true;
   }

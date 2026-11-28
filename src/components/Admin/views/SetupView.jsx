@@ -12584,8 +12584,8 @@ export default function SetupView({
           {/* Filter 3 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
             <div>
-              <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🍱 "Combos & Thalis" Navigation Pill</strong>
-              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Displays dedicated combos and thalis category pill</span>
+              <strong style={{ fontSize: '0.84rem', color: '#1E293B', display: 'block' }}>🍱 "Combos" Navigation Pill & Section</strong>
+              <span style={{ fontSize: '0.70rem', color: '#64748B' }}>Displays dedicated Combo Deals section & category pill</span>
             </div>
             <input
               type="checkbox"

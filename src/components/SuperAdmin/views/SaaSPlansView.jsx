@@ -691,7 +691,7 @@ export default function SaaSPlansView({ token, restaurants = [], initialPlans = 
         { key: 'max_vip', label: '👑 Max VIP Lounges Limit (Quota)', placeholder: '2' },
         { key: 'max_dishes', label: '🍲 Max Food Menu Items / Dishes', placeholder: '9999' },
         { key: 'max_categories', label: '📑 Max Menu Categories', placeholder: '9999' },
-        { key: 'max_combos', label: '🍱 Max Thali & Combo Deals Quota', placeholder: '10' },
+        { key: 'max_combos', label: '🍱 Max Combo Deals Quota', placeholder: '10' },
         { key: 'max_staff_accounts', label: '👨‍🍳 Max Waiter / Captain Staff Accounts', placeholder: '5' },
         { key: 'order_retention_days', label: '📅 Order History Retention (Days)', placeholder: '365' }
       );

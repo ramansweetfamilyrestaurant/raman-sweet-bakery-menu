@@ -1817,8 +1817,9 @@ const OrdersView = React.memo(function OrdersView({
                             <div style={{ fontSize: '0.72rem', color: '#64748B', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {items.map(i => {
                                 const mods = safeParseModifiers(i.modifiers);
+                                const incTxt = (i.includes || i.comboIncludes) ? ` [${i.includes || i.comboIncludes}]` : '';
                                 const modTxt = mods.length > 0 ? ` [+ ${mods.map(m => m.name || m).join(', ')}]` : '';
-                                return `${i.quantity || 1}x ${i.name}${i.portion ? ` (${i.portion})` : ''}${modTxt}`;
+                                return `${i.quantity || 1}x ${i.name}${i.portion ? ` (${i.portion})` : ''}${incTxt}${modTxt}`;
                               }).join(', ')}
                             </div>
                             {getOrderNotes(order) && (
@@ -2292,6 +2293,11 @@ const OrdersView = React.memo(function OrdersView({
                                     </span>
                                   )}
                                 </div>
+                                {(it.includes || it.comboIncludes) && (
+                                  <div style={{ fontSize: '0.68rem', color: '#047857', marginTop: '2px', lineHeight: 1.3, overflowWrap: 'anywhere', fontStyle: 'italic' }}>
+                                    📦 {it.includes || it.comboIncludes}
+                                  </div>
+                                )}
                                 {mods.length > 0 && (
                                   <div style={{ fontSize: '0.68rem', color: '#64748B', marginTop: '2px', lineHeight: 1.3, overflowWrap: 'anywhere' }}>
                                     + {mods.map(m => `${m.name || m}${Number(m.price) > 0 ? ` (+${currencySymbol}${m.price})` : ''}`).join(', ')}
@@ -3624,6 +3630,11 @@ const OrdersView = React.memo(function OrdersView({
                               </span>
                             )}
                           </div>
+                          {(item.includes || item.comboIncludes) && (
+                            <div style={{ fontSize: '0.70rem', color: '#047857', marginTop: '2px', overflowWrap: 'anywhere', fontStyle: 'italic' }}>
+                              📦 {item.includes || item.comboIncludes}
+                            </div>
+                          )}
                           {(() => {
                             const drawerMods = safeParseModifiers(item.modifiers);
                             return drawerMods.length > 0 ? (

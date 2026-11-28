@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Minus, Trash2, Search, Upload, ShoppingBag, ArrowUpDown, Sparkles, AlertCircle, Utensils, Check } from 'lucide-react';
 import { uploadImage } from '../../api/client';
-import { getBusinessTerminology } from '../../utils/businessTaxonomy';
+import { getBusinessTerminology, getComboTerminology } from '../../utils/businessTaxonomy';
+import { getCurrencySymbol } from '../../utils/currencyHelper';
+import { isFlagEnabled } from '../../utils/customerHelpers';
 
 export default function ComboFormModal({ combo, dishes, token, onSave, onClose, restaurantInfo = {} }) {
   const isEdit = !!combo;
   const terminology = useMemo(() => getBusinessTerminology(restaurantInfo || {}), [restaurantInfo]);
+  const comboTerms = useMemo(() => getComboTerminology(restaurantInfo || {}), [restaurantInfo]);
+  const curr = useMemo(() => getCurrencySymbol(restaurantInfo?.currency_symbol), [restaurantInfo?.currency_symbol]);
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'dishes'
 
   const [name, setName] = useState('');
@@ -35,9 +39,11 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
     }
   }, [combo, isEdit]);
 
+  const dishMap = useMemo(() => new Map((dishes || []).map(d => [String(d.id), d])), [dishes]);
+
   const availableDishes = (dishes || []).filter(d => {
     const matchesSearch = !dishSearch || d.name.toLowerCase().includes(dishSearch.toLowerCase());
-    return matchesSearch && d.available !== 0 && d.available !== false;
+    return matchesSearch && isFlagEnabled(d.available, true);
   });
 
   const handleAddDish = (dish, portion = 'full') => {
@@ -72,7 +78,12 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
     }));
   };
 
-  const originalTotal = selectedItems.reduce((sum, si) => sum + ((Number(si.original_price) || 0) * (si.qty || 1)), 0);
+  const originalTotal = selectedItems.reduce((sum, si) => {
+    const liveDish = si?.dish_id !== undefined && si?.dish_id !== null ? dishMap.get(String(si.dish_id)) : null;
+    const isHalf = String(si?.portion || '').toLowerCase() === 'half';
+    const livePrice = liveDish ? ((isHalf && liveDish.price_half) ? Number(liveDish.price_half) : Number(liveDish.price || 0)) : (Number(si?.original_price) || 0);
+    return sum + (livePrice * (Number(si?.qty) || 1));
+  }, 0);
   const savings = (price !== '' && price !== null) ? originalTotal - Number(price) : 0;
 
   const handleImageUpload = async (e) => {
@@ -95,7 +106,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
     setError('');
     if (!name.trim()) {
       setActiveTab('info');
-      setError('Combo / Thali name is required');
+      setError('Combo / Bundle name is required');
       return;
     }
     if (price === '' || price === null || Number(price) < 0) {
@@ -105,20 +116,32 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
     }
     if (selectedItems.length < 2) {
       setActiveTab('dishes');
-      setError('Add at least 2 dishes to create a combo thali');
+      setError(`Add at least 2 ${terminology.dishPlural?.toLowerCase() || 'items'} to create a combo`);
       return;
     }
 
     setSaving(true);
     try {
+      const syncedSelectedItems = selectedItems.map(si => {
+        const liveDish = si?.dish_id !== undefined && si?.dish_id !== null ? dishMap.get(String(si.dish_id)) : null;
+        if (!liveDish) return si;
+        const isHalf = String(si.portion || '').toLowerCase() === 'half';
+        const liveOrigPrice = (isHalf && liveDish.price_half) ? Number(liveDish.price_half) : Number(liveDish.price || si.original_price || 0);
+        return {
+          ...si,
+          dish_name: liveDish.name || si.dish_name,
+          original_price: liveOrigPrice
+        };
+      });
+
       await onSave({
         name: name.trim(),
         description: description.trim(),
         price: Number(price),
         image,
-        items: selectedItems,
+        items: syncedSelectedItems,
         badge,
-        sort_order: Number(sortOrder)
+        sort_order: Number(sortOrder) || 0
       });
     } catch (err) {
       setError(err.message || 'Save failed');
@@ -323,7 +346,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  placeholder="e.g. Value Combo Deal, Family Bundle Pack"
+                  placeholder={comboTerms.namePlaceholder}
                   style={{
                     width: '100%',
                     padding: '8px 11px',
@@ -344,7 +367,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
                 <div style={{ minWidth: 0 }}>
                   <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                    Combo Price (₹) *
+                    Combo Price ({curr}) *
                   </label>
                   <input
                     type="number"
@@ -389,6 +412,30 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
                     {badgeOptions.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
                   </select>
                 </div>
+                <div style={{ minWidth: 0 }}>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={sortOrder}
+                    onChange={e => setSortOrder(e.target.value)}
+                    placeholder="0"
+                    style={{
+                      width: '100%',
+                      padding: '8px 11px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #CBD5E1',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      color: '#0F172A',
+                      lineHeight: 1.35
+                    }}
+                  />
+                </div>
               </div>
 
               {/* Live Savings Banner */}
@@ -403,10 +450,10 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
                   alignItems: 'center'
                 }}>
                   <span style={{ color: '#64748B', fontSize: '0.72rem', fontWeight: 600 }}>
-                    Items Total: <span style={{ textDecoration: 'line-through', color: '#EF4444', fontWeight: 700 }}>₹{originalTotal}</span>
+                    Items Total: <span style={{ textDecoration: 'line-through', color: '#EF4444', fontWeight: 700 }}>{curr}{originalTotal}</span>
                   </span>
                   <span style={{ color: savings > 0 ? '#15803D' : '#D97706', fontWeight: 750, fontSize: '0.76rem' }}>
-                    {savings > 0 ? `🎉 Save ₹${savings}!` : savings < 0 ? '⚠️ Costs more' : '➡️ Same price'}
+                    {savings > 0 ? `🎉 Save ${curr}${savings}!` : savings < 0 ? '⚠️ Costs more' : '➡️ Same price'}
                   </span>
                 </div>
               )}
@@ -419,7 +466,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
                 <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  placeholder="e.g. Complete meal with 2 Butter Naan, Paneer Gravy, Dal Fry, Jeera Rice & Gulab Jamun."
+                  placeholder={comboTerms.descPlaceholder}
                   rows={2}
                   style={{
                     width: '100%',
@@ -543,20 +590,35 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
 
               {selectedItems.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '135px', overflowY: 'auto' }}>
-                  {selectedItems.map((si, idx) => (
+                  {selectedItems.map((si, idx) => {
+                    const liveDish = si?.dish_id !== undefined && si?.dish_id !== null ? dishMap.get(String(si.dish_id)) : null;
+                    const isDishMissing = si?.dish_id !== undefined && si?.dish_id !== null && !liveDish;
+                    const isDishSoldOut = Boolean(liveDish && !isFlagEnabled(liveDish.available, true));
+                    const isHalf = String(si.portion || '').toLowerCase() === 'half';
+                    const livePrice = liveDish ? ((isHalf && liveDish.price_half) ? Number(liveDish.price_half) : Number(liveDish.price || 0)) : Number(si.original_price || 0);
+                    return (
                     <div key={`${si.dish_id}-${si.portion}-${idx}`} style={{
-                      background: '#F8FAFC',
+                      background: (isDishMissing || isDishSoldOut) ? '#FEF2F2' : '#F8FAFC',
                       borderRadius: '7px',
                       padding: '5px 8px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      border: '1px solid #CBD5E1'
+                      border: (isDishMissing || isDishSoldOut) ? '1px solid #FCA5A5' : '1px solid #CBD5E1'
                     }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{si.dish_name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                          <span style={{ color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {liveDish?.name || si.dish_name}
+                          </span>
+                          {(isDishMissing || isDishSoldOut) && (
+                            <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#B91C1C', background: '#FEE2E2', padding: '1px 5px', borderRadius: '4px' }}>
+                              {isDishMissing ? 'Deleted' : 'Sold Out'}
+                            </span>
+                          )}
+                        </div>
                         <span style={{ color: '#64748B', fontSize: '0.68rem' }}>
-                          {si.portion === 'half' ? 'Half' : 'Full'} • ₹{si.original_price}
+                          {si.portion === 'half' ? 'Half' : 'Full'} • {curr}{livePrice}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
@@ -578,7 +640,8 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
                         }}><Trash2 size={10} /></button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div style={{ padding: '10px', background: '#F8FAFC', borderRadius: '7px', textAlign: 'center', fontSize: '0.72rem', color: '#64748B', border: '1px dashed #CBD5E1' }}>
@@ -633,7 +696,7 @@ export default function ComboFormModal({ combo, dishes, token, onSave, onClose, 
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ color: '#0F172A', fontSize: '0.75rem', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dish.name}</span>
-                      <span style={{ color: '#64748B', fontSize: '0.67rem' }}>₹{dish.price}{dish.price_half ? ` / ₹${dish.price_half} Half` : ''}</span>
+                      <span style={{ color: '#64748B', fontSize: '0.67rem' }}>{curr}{dish.price}{dish.price_half ? ` / ${curr}${dish.price_half} Half` : ''}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                       <button type="button" onClick={() => handleAddDish(dish, 'full')} style={{

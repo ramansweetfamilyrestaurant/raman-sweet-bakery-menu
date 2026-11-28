@@ -588,6 +588,43 @@ export function getBusinessTerminology(restaurant = {}) {
   };
 }
 
+/**
+ * Uniform Combo / Combo Deals terminology across all businesses (Option 1):
+ * - Section headings & detail headers use "Combo Deals" / "Special Combo Deal"
+ * - Compact chips, nav pills, filter tabs & add buttons use "Combos" / "ADD COMBO TO CART"
+ *
+ * @param {object} [restaurant={}]
+ * @returns {object} Combo labels in English & Hindi
+ */
+export function getComboTerminology(restaurant = {}) {
+  void restaurant;
+  return {
+    icon: '🍱',
+    sectionEn: 'Combo Deals',
+    sectionHi: 'कॉम्बो डील्स',
+    navEn: 'Combos',
+    navHi: 'कॉम्बो',
+    quickFilterEn: '🍱 Combos',
+    quickFilterHi: '🍱 कॉम्बो',
+    tagEn: 'Special Combo Deal',
+    tagHi: 'स्पेशल कॉम्बो डील',
+    includedEn: (count) => `What's Included (${count} Items)`,
+    includedHi: (count) => `कॉम्बो में शामिल (${count} आइटम)`,
+    freshEn: '100% Freshly prepared combo deal.',
+    freshHi: '100% ताज़ा और स्वादिष्ट कॉम्बो डील।',
+    unavailableEn: 'Currently unavailable — an included item is sold out.',
+    unavailableHi: 'यह कॉम्बो अभी उपलब्ध नहीं है क्योंकि इसका एक आइटम समाप्त हो चुका है।',
+    addBtnEn: 'ADD COMBO TO CART',
+    addBtnHi: 'कॉम्बो कार्ट में जोड़ें',
+    fallbackCardEn: 'Special combo deal',
+    fallbackCardHi: 'स्पेशल कॉम्बो डील',
+    adminTitle: 'Combo Deals',
+    adminSubtitle: 'Bundle popular items together to boost average order value & customer savings.',
+    namePlaceholder: 'e.g. Value Combo Deal, Duo Pack',
+    descPlaceholder: 'e.g. Complete combo deal with popular items & drinks.'
+  };
+}
+
 export default {
   BUSINESS_TYPES,
   FOOD_TYPES,
@@ -610,5 +647,6 @@ export default {
   resolveBannerBadge,
   getAvailableSpaceTypesForBusiness,
   getSpaceConfig,
-  getBusinessTerminology
+  getBusinessTerminology,
+  getComboTerminology
 };

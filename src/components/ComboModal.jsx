@@ -2,6 +2,9 @@ import React, { useEffect } from 'react';
 import { X, Plus, Minus, Sparkles, CheckCircle2, Utensils, Tag, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { getComboImageUrl, getDishImageUrl } from '../utils/imageHelper';
 import { getCurrencySymbol, formatPriceNumber } from '../utils/currencyHelper';
+import { resolveComboMeta } from '../utils/comboHelper';
+import { isFlagEnabled } from '../utils/customerHelpers';
+import { getComboTerminology } from '../utils/businessTaxonomy';
 
 export default function ComboModal({ 
   combo, 
@@ -15,6 +18,7 @@ export default function ComboModal({
   canOrder = false, 
   currencySymbol = '₹',
   lang = 'en',
+  businessType,
   restoType,
   foodType,
   isPureVeg: isPureVegProp
@@ -37,21 +41,18 @@ export default function ComboModal({
 
   const symbol = getCurrencySymbol(currencySymbol);
 
-  let comboItems = [];
-  try {
-    comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []);
-  } catch {
-    comboItems = [];
-  }
+  const dishMap = new Map((dishes || []).map(d => [String(d.id), d]));
+  const comboMeta = resolveComboMeta(combo, dishMap);
+  const comboItems = comboMeta.comboItems;
 
   // Calculate prices and offers
   const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null && combo.regular_price !== '')
     ? Number(combo.regular_price)
     : Number(combo.price || 0);
-  const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) < regularPrice)
+  const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) >= 0 && Number(combo.offer_price) < regularPrice)
     ? Number(combo.offer_price)
     : regularPrice;
-  const originalTotal = comboItems.reduce((s, i) => s + ((Number(i.original_price) || 0) * (i.qty || 1)), 0);
+  const originalTotal = comboMeta.originalTotal;
   const savings = originalTotal > effectivePrice
     ? originalTotal - effectivePrice
     : (regularPrice > effectivePrice ? regularPrice - effectivePrice : 0);
@@ -65,9 +66,9 @@ export default function ComboModal({
     || ['pure_veg', 'veg', 'vegetarian', 'vegan', 'only_veg'].includes(cleanFood)
     || ['pure_veg', 'veg', 'vegetarian'].includes(cleanResto);
 
-  const textToCheck = `${combo.name || ''} ${combo.description || ''} ${comboItems.map(i => i.dish_name || '').join(' ')}`.toLowerCase();
-  const isNonVeg = textToCheck.includes('chicken') || textToCheck.includes('mutton') || textToCheck.includes('fish') || textToCheck.includes('egg');
-  const isVeg = isPureVegResto || !isNonVeg;
+  const isVeg = isPureVegResto || comboMeta.dietType === 'veg';
+  const isComboOrderable = comboMeta.isOrderable;
+  const comboTerms = getComboTerminology({ business_type: businessType, resto_type: restoType });
 
   return (
     <div style={{
@@ -267,7 +268,7 @@ export default function ComboModal({
               </div>
 
               <span style={{ fontSize: '0.72rem', color: 'var(--theme-price-color, var(--primary-emerald, #16A34A))', fontWeight: 800, display: 'block', marginTop: '3px' }}>
-                🍱 {lang === 'hi' ? 'विशेष थाली / क्यूरेटेड कॉम्बो' : 'Special Thali / Curated Combo'}
+                {comboTerms.icon} {lang === 'hi' ? comboTerms.tagHi : comboTerms.tagEn}
               </span>
             </div>
 
@@ -316,27 +317,36 @@ export default function ComboModal({
               gap: '5px'
             }}>
               <Utensils size={13} color="var(--gold-bright, #D4AF37)" />
-              {lang === 'hi' ? `थाली में क्या-क्या शामिल है (${comboItems.length} व्यंजन)` : `What's Included (${comboItems.length} Items)`}
+              {lang === 'hi' ? comboTerms.includedHi(comboItems.length) : comboTerms.includedEn(comboItems.length)}
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {comboItems.map((item, idx) => {
-                const matchedDish = dishes.find(d => String(d.id) === String(item.dish_id));
+                const matchedDish = dishMap.get(String(item.dish_id));
                 const itemImg = matchedDish?.image ? getDishImageUrl(matchedDish.image) : null;
                 const itemText = `${item.dish_name || ''} ${matchedDish?.name || ''} ${matchedDish?.category || ''}`.toLowerCase();
-                const itemIsNonVeg = itemText.includes('chicken') || itemText.includes('mutton') || itemText.includes('fish') || itemText.includes('egg') || matchedDish?.food_type === 'non_veg' || matchedDish?.is_non_veg;
+                const matchedType = String(matchedDish?.type || matchedDish?.food_type || '').toLowerCase();
+                const itemIsNonVeg = matchedType === 'nonveg' || matchedType === 'non_veg' || matchedType === 'egg' ||
+                  matchedDish?.is_non_veg || matchedDish?.is_veg === 0 || matchedDish?.is_veg === false ||
+                  itemText.includes('chicken') || itemText.includes('mutton') || itemText.includes('fish') || itemText.includes('egg');
                 const isItemVeg = isPureVegResto || !itemIsNonVeg;
+                const isItemUnavailable = Boolean(
+                  item.dish_id !== undefined && item.dish_id !== null && String(item.dish_id).trim() !== '' &&
+                  ((dishes.length > 0 && (!matchedDish || !isFlagEnabled(matchedDish.available, true))) ||
+                    (Array.isArray(combo.unavailable_item_names) && combo.unavailable_item_names.includes(item.dish_name)))
+                );
 
                 return (
                   <div key={idx} style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    background: 'var(--theme-card-bg, #FFFFFF)',
-                    border: '1px solid var(--theme-card-border, #E2E8F0)',
+                    background: isItemUnavailable ? '#FEF2F2' : 'var(--theme-card-bg, #FFFFFF)',
+                    border: isItemUnavailable ? '1px solid #FECACA' : '1px solid var(--theme-card-border, #E2E8F0)',
                     padding: '8px 10px',
                     borderRadius: '10px',
-                    gap: '10px'
+                    gap: '10px',
+                    opacity: isItemUnavailable ? 0.78 : 1
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                       {/* Dish Thumbnail or Icon */}
@@ -404,26 +414,40 @@ export default function ComboModal({
                           </span>
                         </div>
 
-                        {item.portion && (
-                          <span style={{
-                            display: 'inline-block',
-                            marginTop: '2px',
-                            fontSize: '0.64rem',
-                            fontWeight: 700,
-                            padding: '1px 5px',
-                            borderRadius: '4px',
-                            background: 'var(--theme-badge-bg, #EEF2FF)',
-                            color: 'var(--theme-text-primary, #4338CA)'
-                          }}>
-                            {item.portion === 'half' ? (lang === 'hi' ? 'हाफ' : 'Half') : item.portion}
-                          </span>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
+                          {item.portion && (
+                            <span style={{
+                              display: 'inline-block',
+                              fontSize: '0.64rem',
+                              fontWeight: 700,
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: 'var(--theme-badge-bg, #EEF2FF)',
+                              color: 'var(--theme-text-primary, #4338CA)'
+                            }}>
+                              {item.portion === 'half' ? (lang === 'hi' ? 'हाफ' : 'Half') : item.portion}
+                            </span>
+                          )}
+                          {isItemUnavailable && (
+                            <span style={{
+                              display: 'inline-block',
+                              fontSize: '0.62rem',
+                              fontWeight: 800,
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: '#FEE2E2',
+                              color: '#DC2626'
+                            }}>
+                              {lang === 'hi' ? 'उपलब्ध नहीं' : 'Sold Out'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {item.original_price && (
+                    {Number(item.original_price) > 0 && (
                       <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted, #64748B)', flexShrink: 0 }}>
-                        {symbol}{item.original_price * (item.qty || 1)}
+                        {symbol}{Number(item.original_price) * (Number(item.qty) || 1)}
                       </span>
                     )}
                   </div>
@@ -432,21 +456,25 @@ export default function ComboModal({
             </div>
           </div>
 
-          {/* Guarantee Badge */}
+          {/* Guarantee / Availability Banner */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            background: 'var(--theme-badge-bg, #F0FDF4)',
-            border: '1px solid var(--theme-card-border, #BBF7D0)',
+            background: !isComboOrderable ? '#FEF2F2' : 'var(--theme-badge-bg, #F0FDF4)',
+            border: !isComboOrderable ? '1px solid #FECACA' : '1px solid var(--theme-card-border, #BBF7D0)',
             padding: '8px 10px',
             borderRadius: '8px',
             fontSize: '0.72rem',
-            color: 'var(--theme-price-color, #166534)',
+            color: !isComboOrderable ? '#DC2626' : 'var(--theme-price-color, #166534)',
             fontWeight: 700
           }}>
-            <ShieldCheck size={15} style={{ color: 'var(--theme-price-color, #16A34A)', flexShrink: 0 }} />
-            <span>{lang === 'hi' ? '100% ताज़ा और शुद्ध भोजन थाली।' : '100% Freshly prepared meal thali.'}</span>
+            <ShieldCheck size={15} style={{ color: !isComboOrderable ? '#DC2626' : 'var(--theme-price-color, #16A34A)', flexShrink: 0 }} />
+            <span>
+              {!isComboOrderable
+                ? (lang === 'hi' ? comboTerms.unavailableHi : comboTerms.unavailableEn)
+                : (lang === 'hi' ? comboTerms.freshHi : comboTerms.freshEn)}
+            </span>
           </div>
         </div>
 
@@ -456,7 +484,25 @@ export default function ComboModal({
           borderTop: '1px solid var(--theme-divider, #E2E8F0)',
           background: 'var(--theme-modal-bg, #FFFFFF)'
         }}>
-          {canOrder ? (
+          {!isComboOrderable ? (
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                width: '100%',
+                padding: '11px',
+                borderRadius: '8px',
+                border: '1px solid #FECACA',
+                background: '#FEF2F2',
+                color: '#DC2626',
+                fontSize: '0.84rem',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              {lang === 'hi' ? 'वर्तमान में अनुपलब्ध • बंद करें' : 'Currently Unavailable • Close'}
+            </button>
+          ) : canOrder ? (
             cartQuantity > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{
@@ -593,8 +639,8 @@ export default function ComboModal({
                 }}
               >
                 <Plus size={16} /> {lang === 'hi' 
-                  ? `थाली कार्ट में जोड़ें (${symbol}${formatPriceNumber(effectivePrice)})` 
-                  : `ADD THALI TO CART (${symbol}${formatPriceNumber(effectivePrice)})`}
+                  ? `${comboTerms.addBtnHi} (${symbol}${formatPriceNumber(effectivePrice)})` 
+                  : `${comboTerms.addBtnEn} (${symbol}${formatPriceNumber(effectivePrice)})`}
               </button>
             )
           ) : (

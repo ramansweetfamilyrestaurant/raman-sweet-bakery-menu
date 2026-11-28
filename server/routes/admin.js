@@ -35,6 +35,12 @@ import {
 } from '../utils/analyticsHelper.js';
 import { normalizeVerificationMode } from '../utils/presenceVerification.js';
 import {
+  parseComboItems,
+  isFlagEnabled,
+  formatComboIncludesText,
+  inspectComboComponentAvailability
+} from '../utils/comboHelper.js';
+import {
   generateHmacQrToken,
   generateRestaurantQrSecret,
   normalizeSpaceType,
@@ -3123,9 +3129,29 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
     const cleanTable = isTakeaway ? 'Counter' : String(table_number).trim();
     const effectiveOrderType = isTakeaway ? 'takeaway' : 'dine_in';
 
-    // 2. Format & sanitize items and compute subtotal
+    // 2. Format & sanitize items, verify DB combo availability & kitchen includes, and compute subtotal
+    const hasAnyComboItem = items.some(it =>
+      it && (
+        String(it.dish_id || it.id || '').startsWith('combo_') ||
+        String(it.type || '').toLowerCase() === 'combo' ||
+        String(it.variant || '').toLowerCase() === 'combo'
+      )
+    );
+    let posComboMap = null;
+    let posDishMap = null;
+    if (hasAnyComboItem) {
+      const [dbCombos, dbDishes] = await Promise.all([
+        query('SELECT id, name, price, available, description, items FROM combos WHERE restaurant_id = $1', [targetId]).catch(() => []),
+        query('SELECT id, name, available FROM dishes WHERE restaurant_id = $1', [targetId]).catch(() => [])
+      ]);
+      posComboMap = new Map((dbCombos || []).map(c => [String(c.id), c]));
+      posDishMap = new Map((dbDishes || []).map(d => [String(d.id), d]));
+    }
+
     let subtotal = 0;
-    const formattedItems = items.map((it, idx) => {
+    const formattedItems = [];
+    for (let idx = 0; idx < items.length; idx++) {
+      const it = items[idx] || {};
       const qty = Math.max(1, parseInt(it.quantity || 1, 10));
       const price = Math.max(0, parseFloat(it.price || 0));
       const sanitizedModifiers = Array.isArray(it.modifiers)
@@ -3138,8 +3164,38 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
         : [];
       const itemName = String(it.name || 'Custom Item').trim();
       const alreadyHasPortionInName = /\((half|full)\)$/i.test(itemName);
+      const rawRefId = String(it.dish_id || it.id || '');
+      const isComboItem = rawRefId.startsWith('combo_') || String(it.type || '').toLowerCase() === 'combo' || String(it.variant || '').toLowerCase() === 'combo';
+      let comboIncludes = String(it.includes || '').trim();
+
+      if (isComboItem && posComboMap) {
+        const cleanComboId = rawRefId.replace(/^combo_/, '').trim();
+        const dbCombo = posComboMap.get(cleanComboId);
+        if (dbCombo) {
+          if (!isFlagEnabled(dbCombo.available, true)) {
+            return res.status(400).json({
+              error: 'dish_unavailable',
+              message: `"${dbCombo.name}" is currently sold out / unavailable.`
+            });
+          }
+          const compCheck = inspectComboComponentAvailability(dbCombo, posDishMap);
+          if (!compCheck.allAvailable) {
+            return res.status(400).json({
+              error: 'dish_unavailable',
+              message: `"${dbCombo.name}" is unavailable because ${compCheck.unavailableNames.join(', ')} is sold out or removed.`
+            });
+          }
+          const resolvedIncludes = formatComboIncludesText(parseComboItems(dbCombo.items), posDishMap);
+          if (resolvedIncludes) {
+            comboIncludes = resolvedIncludes;
+          } else if (!comboIncludes && dbCombo.description) {
+            comboIncludes = String(dbCombo.description).trim();
+          }
+        }
+      }
+
       subtotal += (price * qty);
-      return {
+      formattedItems.push({
         id: it.id || it.dish_id || idx + 1,
         dish_id: it.dish_id || it.id || null,
         name: itemName,
@@ -3149,9 +3205,10 @@ router.post('/pos-order', authenticateToken, requireActiveSubscription, async (r
         portion: it.portion || ((it.variant === 'half' && !alreadyHasPortionInName) ? 'Half' : ''),
         modifiers: sanitizedModifiers,
         round: 1,
-        notes: it.notes || ''
-      };
-    });
+        notes: it.notes || '',
+        ...(isComboItem ? { type: 'combo', ...(comboIncludes ? { includes: comboIncludes } : {}) } : {})
+      });
+    }
 
     const isEffectiveGst = Boolean(resto.gst_enabled === 1 || resto.gst_enabled === true || resto.gst_enabled === '1');
     const taxBreakdown = calculateOrderTax(subtotal, isEffectiveGst);
@@ -5393,9 +5450,9 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
       generatedAtIST = now.toISOString();
     }
 
-    // Fetch live orders, historical summaries, and dish catalog from a single consistent DB snapshot
+    // Fetch live orders, historical summaries, and dish + combo catalog from a single consistent DB snapshot
     let catalogQueryFailed = false;
-    const { orders, summaries, catalogDishes } = await withTransaction(async (txQuery) => {
+    const { orders, summaries, catalogDishes, catalogCombos } = await withTransaction(async (txQuery) => {
       const ordRows = await txQuery(
         "SELECT id, order_number, total_amount, status, payment_method, table_number, customer_name, customer_phone, items, created_at FROM orders WHERE restaurant_id = $1 AND status NOT IN ('rejected', 'cancelled') ORDER BY id ASC",
         [targetId]
@@ -5405,13 +5462,17 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
         [targetId]
       );
       let catRows = [];
+      let comboRows = [];
       try {
-        catRows = await txQuery('SELECT id, name FROM dishes WHERE restaurant_id = $1', [targetId]);
+        [catRows, comboRows] = await Promise.all([
+          txQuery('SELECT id, name FROM dishes WHERE restaurant_id = $1', [targetId]),
+          txQuery('SELECT id, name FROM combos WHERE restaurant_id = $1', [targetId]).catch(() => [])
+        ]);
       } catch (err) {
         catalogQueryFailed = true;
         console.warn('XLSX catalog dishes query error:', err.message);
       }
-      return { orders: ordRows, summaries: sumRows, catalogDishes: catRows };
+      return { orders: ordRows, summaries: sumRows, catalogDishes: catRows, catalogCombos: comboRows };
     }, { readOnlyRepeatable: true });
 
     // Partition orders & summaries by period first: parse full item lists only once for selected report rows,
@@ -5433,6 +5494,9 @@ router.get('/analytics/export/xlsx', authenticateToken, requireActiveSubscriptio
     };
     (catalogDishes || []).forEach(d => {
       if (d && typeof d === 'object') registerDishRef(d.id, d.name);
+    });
+    (catalogCombos || []).forEach(c => {
+      if (c && typeof c === 'object') registerDishRef(`combo:${c.id}`, c.name);
     });
 
     const selectedOrderEntries = [];
@@ -6456,8 +6520,11 @@ router.post('/combos', authenticateToken, requireActiveSubscription, async (req,
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const { name, description, price, image, items, badge, sort_order } = req.body;
-    if (!name || !price || !items) {
-      return res.status(400).json({ error: 'Name, price, and items are required' });
+    const cleanName = String(name || '').trim();
+    const numericPrice = (price === undefined || price === null || price === '' || typeof price === 'boolean') ? NaN : Number(price);
+    const parsedItems = parseComboItems(items);
+    if (!cleanName || isNaN(numericPrice) || numericPrice < 0 || !items || parsedItems.length === 0) {
+      return res.status(400).json({ error: 'Name, valid non-negative price, and items are required' });
     }
 
     const restoRows = await query('SELECT plan_tier, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
@@ -6494,11 +6561,12 @@ router.post('/combos', authenticateToken, requireActiveSubscription, async (req,
       });
     }
 
-    const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
+    const itemsStr = typeof items === 'string' ? items : JSON.stringify(parsedItems);
     const processedImage = await processExternalImageUrl(image, targetId, 'combos');
+    const numericSortOrder = Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0;
     const result = await query(
       'INSERT INTO combos (restaurant_id, name, description, price, image, items, badge, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-      [targetId, name, description || '', price, processedImage || null, itemsStr, badge || '', sort_order || 0]
+      [targetId, cleanName, description || '', numericPrice, processedImage || null, itemsStr, badge || '', numericSortOrder]
     );
 
     // Invalidate cache
@@ -6514,7 +6582,7 @@ router.post('/combos', authenticateToken, requireActiveSubscription, async (req,
       targetId,
       req.user?.role || 'tenant_admin',
       'TENANT_COMBO_CREATED',
-      `Created combo '${name}' (ID: ${newComboId}, Price: ₹${price})`
+      `Created combo '${cleanName}' (ID: ${newComboId}, Price: ₹${numericPrice})`
     );
 
     res.json({ id: newComboId, message: 'Combo created successfully' });
@@ -6532,16 +6600,32 @@ router.put('/combos/:id', authenticateToken, requireActiveSubscription, async (r
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const { name, description, price, image, items, badge, sort_order, available } = req.body;
-    const itemsStr = typeof items === 'string' ? items : JSON.stringify(items);
 
-    // Fetch old combo to verify tenant isolation and track old prices/images
-    const oldComboRows = await query('SELECT id, name, price, image FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
+    // Fetch old combo to verify tenant isolation and track old prices/images/availability
+    const oldComboRows = await query('SELECT id, name, description, price, image, items, badge, sort_order, available FROM combos WHERE id = $1 AND restaurant_id = $2', [req.params.id, targetId]);
     if (!oldComboRows || oldComboRows.length === 0) {
       return res.status(404).json({ error: 'Combo not found' });
     }
     const oldCombo = oldComboRows[0];
 
-    const processedImage = await processExternalImageUrl(image, targetId, 'combos');
+    const cleanName = name !== undefined ? String(name).trim() : oldCombo.name;
+    const numericPrice = (price !== undefined && price !== null && price !== '') ? Number(price) : Number(oldCombo.price);
+    if (!cleanName || isNaN(numericPrice) || numericPrice < 0) {
+      return res.status(400).json({ error: 'Valid combo name and non-negative price are required' });
+    }
+    const itemsStr = items !== undefined
+      ? (typeof items === 'string' ? items : JSON.stringify(items))
+      : (typeof oldCombo.items === 'string' ? oldCombo.items : JSON.stringify(oldCombo.items || []));
+    const preservedAvailable = available !== undefined && available !== null
+      ? isFlagEnabled(available, true)
+      : isFlagEnabled(oldCombo.available, true);
+    const nextSortOrder = (sort_order !== undefined && sort_order !== null && !isNaN(Number(sort_order)))
+      ? Number(sort_order)
+      : (Number(oldCombo.sort_order) || 0);
+
+    const processedImage = image !== undefined
+      ? await processExternalImageUrl(image, targetId, 'combos')
+      : oldCombo.image;
 
     // Fetch old combo image to clean up if replaced or removed
     try {
@@ -6555,7 +6639,7 @@ router.put('/combos/:id', authenticateToken, requireActiveSubscription, async (r
 
     await query(
       'UPDATE combos SET name = $1, description = $2, price = $3, image = $4, items = $5, badge = $6, sort_order = $7, available = $8 WHERE id = $9 AND restaurant_id = $10',
-      [name, description || '', price, processedImage, itemsStr, badge || '', sort_order || 0, available !== undefined ? available : 1, req.params.id, targetId]
+      [cleanName, description !== undefined ? (description || '') : (oldCombo.description || ''), numericPrice, processedImage, itemsStr, badge !== undefined ? (badge || '') : (oldCombo.badge || ''), nextSortOrder, preservedAvailable, req.params.id, targetId]
     );
 
     // Invalidate cache
@@ -6566,10 +6650,10 @@ router.put('/combos/:id', authenticateToken, requireActiveSubscription, async (r
       }
     } catch (_) { }
 
-    const priceChanged = price !== undefined && Number(price) !== Number(oldCombo.price);
+    const priceChanged = price !== undefined && price !== null && price !== '' && numericPrice !== Number(oldCombo.price);
     const comboDetail = priceChanged
-      ? `Updated combo '${name || oldCombo.name}' (ID: ${req.params.id}) - Price: ₹${oldCombo.price} -> ₹${price}`
-      : `Updated combo '${name || oldCombo.name}' (ID: ${req.params.id})`;
+      ? `Updated combo '${cleanName}' (ID: ${req.params.id}) - Price: ₹${oldCombo.price} -> ₹${numericPrice}`
+      : `Updated combo '${cleanName}' (ID: ${req.params.id})`;
     await logAudit(targetId, req.user?.role || 'tenant_admin', 'TENANT_COMBO_UPDATED', comboDetail);
 
     res.json({ message: 'Combo updated successfully' });

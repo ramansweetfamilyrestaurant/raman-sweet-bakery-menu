@@ -37,6 +37,8 @@ import {
 } from './utils/customerHelpers';
 import { formatOrderLabel, resolveBusinessOrderNumber } from './utils/orderNumberHelper';
 import { clearBrowserCachesSafe, tryReserveChunkReload } from './utils/chunkRecovery';
+import { resolveComboMeta } from './utils/comboHelper';
+import { getComboTerminology } from './utils/businessTaxonomy';
 
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
@@ -631,17 +633,25 @@ export default function App() {
     });
   }, []);
 
+  const dishMapById = useMemo(() => {
+    return new Map((dishes || []).map(d => [String(d.id), d]));
+  }, [dishes]);
+
+  const comboTerms = useMemo(() => getComboTerminology(info || {}), [info]);
+
   const handleAddComboToCart = (combo, sourceEl = null) => {
+    const comboMeta = resolveComboMeta(combo, dishMapById);
+    if (!comboMeta.isOrderable) {
+      return;
+    }
     triggerHaptic('success');
     if (sourceEl) {
       triggerFlyToCart({ sourceEl, imageSrc: getComboImageUrl(combo.image), fallbackSrc: '/images/default-combo.webp?v=3' });
     }
-    let comboItems = [];
-    try { comboItems = typeof combo.items === 'string' ? JSON.parse(combo.items) : (combo.items || []); } catch { comboItems = []; }
-    const includesText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}${i.portion === 'half' ? ' (H)' : ''}`).join(' + ');
+    const includesText = comboMeta.itemsSummaryText;
     const cartKey = `combo_${combo.id}`;
     const regularPrice = roundOfferCurrency(Number(combo.price) || 0);
-    const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) < Number(combo.price))
+    const effectivePrice = (combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) >= 0 && Number(combo.offer_price) < Number(combo.price))
       ? roundOfferCurrency(Number(combo.offer_price) || 0)
       : regularPrice;
     const discountAmount = Math.max(0, roundOfferCurrency(regularPrice - effectivePrice));
@@ -2815,6 +2825,15 @@ export default function App() {
     }
   };
 
+  const parsedCombosMetaMap = useMemo(() => {
+    const map = new Map();
+    for (const c of (combos || [])) {
+      if (!c) continue;
+      map.set(c.id, resolveComboMeta(c, dishMapById));
+    }
+    return map;
+  }, [combos, dishMapById]);
+
   // Filter combos matching search query or active filter
   const filteredCombos = useMemo(() => {
     let list = Array.isArray(combos) ? combos : [];
@@ -2823,7 +2842,7 @@ export default function App() {
     // Filter by quick filter
     if (activeQuickFilter) {
       if (activeQuickFilter === 'combo') {
-        // Show all available combos
+        // Show all combos
       } else if (activeQuickFilter === 'under100') {
         list = list.filter(c => {
           const hasOffer = c.offer_price !== undefined && c.offer_price !== null && c.offer_price !== '';
@@ -2841,19 +2860,20 @@ export default function App() {
       } else if (activeQuickFilter === 'veg') {
         list = list.filter(c => {
           if (isPureVegResto) return true;
-          const text = `${c.name || ''} ${c.description || ''}`.toLowerCase();
-          return !text.includes('chicken') && !text.includes('mutton') && !text.includes('fish') && !text.includes('egg');
+          const meta = parsedCombosMetaMap.get(c.id);
+          return (meta?.dietType || 'veg') === 'veg';
         });
       } else if (activeQuickFilter === 'nonveg') {
         list = list.filter(c => {
           if (isPureVegResto) return false;
-          const text = `${c.name || ''} ${c.description || ''}`.toLowerCase();
-          return text.includes('chicken') || text.includes('mutton') || text.includes('fish') || text.includes('egg');
+          const meta = parsedCombosMetaMap.get(c.id);
+          const dt = meta?.dietType || 'veg';
+          return dt === 'nonveg' || dt === 'egg';
         });
       } else if (activeQuickFilter === 'egg') {
         list = list.filter(c => {
-          const text = `${c.name || ''} ${c.description || ''}`.toLowerCase();
-          return text.includes('egg') || text.includes('अंडा');
+          const meta = parsedCombosMetaMap.get(c.id);
+          return meta?.dietType === 'egg';
         });
       }
     }
@@ -2863,18 +2883,15 @@ export default function App() {
     if (q) {
       const tokens = q.split(/\s+/).filter(Boolean);
       list = list.filter(c => {
-        let itemsStr = '';
-        try {
-          const parsed = typeof c.items === 'string' ? JSON.parse(c.items) : (c.items || []);
-          itemsStr = parsed.map(i => i.dish_name || '').join(' ');
-        } catch { }
-        const haystack = `${c.name || ''} ${c.description || ''} ${c.badge || ''} ${itemsStr} thali combo thalis combos कॉम्बो थाली स्पेशल`.toLowerCase();
+        const meta = parsedCombosMetaMap.get(c.id);
+        const itemsStr = meta?.itemsSummaryText || '';
+        const haystack = `${c.name || ''} ${c.description || ''} ${c.badge || ''} ${itemsStr} combo combos pack packs box boxes meal platter thali thalis कॉम्बो पैक थाली स्पेशल`.toLowerCase();
         return tokens.every(token => haystack.includes(token));
       });
     }
 
     return list;
-  }, [combos, activeQuickFilter, searchQuery, info, isPureVegResto]);
+  }, [combos, parsedCombosMetaMap, activeQuickFilter, searchQuery, isPureVegResto]);
 
   // Group dishes by category with in-memory multi-field tokenized search & quick filters
   const { groupedDishes, totalMatchingDishesCount } = useMemo(() => {
@@ -3023,25 +3040,14 @@ export default function App() {
       return d.offer_price !== undefined && d.offer_price !== null && d.offer_price !== '' && Number(d.offer_price) < basePrice;
     });
     const offerCombos = (combos || []).filter(c => {
+      const meta = parsedCombosMetaMap.get(c.id);
+      if (meta && !meta.isOrderable) return false;
       if (!isFlagEnabled(c.available, true)) return false;
       const basePrice = Number(c.regular_price ?? c.price ?? 0);
-      return c.offer_price !== undefined && c.offer_price !== null && c.offer_price !== '' && Number(c.offer_price) < basePrice;
+      return c.offer_price !== undefined && c.offer_price !== null && c.offer_price !== '' && Number(c.offer_price) >= 0 && Number(c.offer_price) < basePrice;
     });
     return [...offerDishes.map(d => ({ ...d, _type: 'dish' })), ...offerCombos.map(c => ({ ...c, _type: 'combo' }))];
-  }, [dishes, combos]);
-
-  const parsedCombosMetaMap = useMemo(() => {
-    const map = new Map();
-    for (const c of (combos || [])) {
-      if (!c) continue;
-      let comboItems = [];
-      try { comboItems = typeof c.items === 'string' ? JSON.parse(c.items) : (c.items || []); } catch { comboItems = []; }
-      const originalTotal = comboItems.reduce((s, i) => s + ((i.original_price || 0) * (i.qty || 1)), 0);
-      const itemsSummaryText = comboItems.map(i => `${i.qty > 1 ? i.qty + 'x ' : ''}${i.dish_name}`).join(' + ');
-      map.set(c.id, { comboItems, originalTotal, itemsSummaryText });
-    }
-    return map;
-  }, [combos]);
+  }, [dishes, combos, parsedCombosMetaMap]);
 
   const scrollToCategory = useCallback((catId) => {
     triggerHaptic('light');
@@ -4667,6 +4673,8 @@ export default function App() {
           setSelectedCategory(catId);
         }}
         hasCombos={combos.length > 0 && info?.filters_visibility?.combo !== false}
+        businessType={info?.business_type}
+        restoType={info?.resto_type}
       />
 
       {/* Toolbar: View Switcher */}
@@ -5230,9 +5238,9 @@ export default function App() {
                   marginBottom: '6px', paddingBottom: '2px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '1rem' }}>🍱</span>
+                    <span style={{ fontSize: '1rem' }}>{comboTerms.icon}</span>
                     <h2 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-dark)' }}>
-                      {lang === 'hi' ? 'कॉम्बो डील्स & थाली' : 'Combo Deals & Thalis'}
+                      {lang === 'hi' ? comboTerms.sectionHi : comboTerms.sectionEn}
                     </h2>
                     <span style={{
                       fontSize: '0.62rem', fontWeight: 800, color: '#B45309',
@@ -5260,19 +5268,18 @@ export default function App() {
                   msOverflowStyle: 'none'
                 }}>
                   {filteredCombos.map(combo => {
-                    const comboMeta = parsedCombosMetaMap.get(combo.id);
+                    const comboMeta = parsedCombosMetaMap.get(combo.id) || resolveComboMeta(combo, dishMapById);
                     const originalTotal = comboMeta ? comboMeta.originalTotal : 0;
                     const itemsSummaryText = comboMeta ? comboMeta.itemsSummaryText : '';
+                    const isComboOrderable = comboMeta ? comboMeta.isOrderable : isFlagEnabled(combo.available, true);
 
                     const regularPrice = (combo.regular_price !== undefined && combo.regular_price !== null && combo.regular_price !== '') ? Number(combo.regular_price) : Number(combo.price || 0);
-                    const hasValidOffer = combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) < regularPrice;
+                    const hasValidOffer = combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) >= 0 && Number(combo.offer_price) < regularPrice;
                     const effectivePrice = hasValidOffer ? Number(combo.offer_price) : regularPrice;
                     const hasDiscount = (originalTotal > effectivePrice) || (regularPrice > effectivePrice);
                     const comparePrice = originalTotal > effectivePrice ? originalTotal : regularPrice;
 
-                    const comboText = `${combo.name || ''} ${combo.description || ''} ${itemsSummaryText}`.toLowerCase();
-                    const isNonVeg = comboText.includes('chicken') || comboText.includes('mutton') || comboText.includes('fish') || comboText.includes('egg');
-                    const isVeg = isPureVegResto || !isNonVeg;
+                    const isVeg = isPureVegResto || (comboMeta?.dietType === 'veg');
 
                     {/* Combo Card Container */ }
                     return (
@@ -5293,7 +5300,8 @@ export default function App() {
                           alignItems: 'center',
                           gap: '8px',
                           cursor: 'pointer',
-                          justifyContent: 'space-between'
+                          justifyContent: 'space-between',
+                          opacity: isComboOrderable ? 1 : 0.68
                         }}
                       >
                         {/* Left: Compact Image + Info */}
@@ -5349,7 +5357,7 @@ export default function App() {
                               margin: '2px 0 4px', fontSize: '0.66rem', color: 'var(--text-muted)',
                               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                             }}>
-                              {itemsSummaryText || combo.description || (lang === 'hi' ? 'विशेष कॉम्बो थाली' : 'Special combo deal')}
+                              {itemsSummaryText || combo.description || (lang === 'hi' ? comboTerms.fallbackCardHi : comboTerms.fallbackCardEn)}
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginTop: '3px' }}>
                               <span style={{
@@ -5392,7 +5400,20 @@ export default function App() {
                         </div>
 
                         {/* Right: + ADD button or Stepper when ordering active */}
-                        {isDirectOrderingActive && (() => {
+                        {!isComboOrderable ? (
+                          <span style={{
+                            fontSize: '0.62rem',
+                            fontWeight: 800,
+                            color: '#DC2626',
+                            background: '#FEE2E2',
+                            border: '1px solid #FECACA',
+                            padding: '3px 7px',
+                            borderRadius: '6px',
+                            flexShrink: 0
+                          }}>
+                            {lang === 'hi' ? 'अनुपलब्ध' : 'Sold Out'}
+                          </span>
+                        ) : isDirectOrderingActive && (() => {
                           const inCartItem = cartItems.find(i => (i.key || i.dish?.id) === `combo_${combo.id}`);
                           const inCartQty = inCartItem ? inCartItem.quantity : 0;
 
@@ -7080,7 +7101,7 @@ export default function App() {
                     cursor: 'pointer'
                   }}
                 >
-                  <span>🍱 {lang === 'hi' ? 'कॉम्बो एवं थाली' : 'Combos & Thalis'}</span>
+                  <span>{comboTerms.icon} {lang === 'hi' ? comboTerms.navHi : comboTerms.navEn}</span>
                   <span style={{
                     fontSize: '0.74rem',
                     fontWeight: 800,
@@ -7188,6 +7209,7 @@ export default function App() {
           canOrder={isDirectOrderingActive}
           currencySymbol={getCurrencySymbol(info?.currency_symbol)}
           lang={lang}
+          businessType={info?.business_type}
           restoType={info?.resto_type}
           foodType={info?.food_type}
           isPureVeg={isPureVegResto}

@@ -2,8 +2,9 @@ import React, { useRef, useEffect } from 'react';
 import { Layers } from 'lucide-react';
 import CategoryImage from './CategoryImage';
 import { triggerHaptic } from '../utils/haptics';
+import { getComboTerminology } from '../utils/businessTaxonomy';
 
-const CategoryJumpRail = React.memo(function CategoryJumpRail({ categories, lang, selectedCategory, onSelectCategory, hasCombos = false }) {
+const CategoryJumpRail = React.memo(function CategoryJumpRail({ categories, lang, selectedCategory, onSelectCategory, hasCombos = false, businessType = '', restoType = '' }) {
   const pillRefs = useRef({});
 
   useEffect(() => {
@@ -50,6 +51,7 @@ const CategoryJumpRail = React.memo(function CategoryJumpRail({ categories, lang
     WebkitTapHighlightColor: 'transparent'
   });
 
+  const comboTerms = getComboTerminology({ business_type: businessType, resto_type: restoType });
   const pillItems = [
     {
       key: 'all',
@@ -58,8 +60,8 @@ const CategoryJumpRail = React.memo(function CategoryJumpRail({ categories, lang
     },
     ...(hasCombos ? [{
       key: 'combos-section',
-      label: lang === 'hi' ? 'कॉम्बो एवं थाली' : 'Combos & Thalis',
-      icon: <span style={{ fontSize: '0.84rem', lineHeight: 1 }}>🍱</span>
+      label: lang === 'hi' ? comboTerms.navHi : comboTerms.navEn,
+      icon: <span style={{ fontSize: '0.84rem', lineHeight: 1 }}>{comboTerms.icon}</span>
     }] : []),
     ...categories.map((cat) => ({
       key: String(cat.id),

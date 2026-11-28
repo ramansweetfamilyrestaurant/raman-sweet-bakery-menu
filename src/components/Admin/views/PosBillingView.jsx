@@ -29,6 +29,8 @@ import { resolveImageUrl, getDishImageUrl, getComboImageUrl } from '../../../uti
 import { formatPriceNumber, getCurrencySymbol } from '../../../utils/currencyHelper.js';
 import { isPosItemNonVeg } from '../../../utils/dietHelper.js';
 import { formatOrderLabel, resolveTakeawayToken } from '../../../utils/orderNumberHelper';
+import { resolveComboMeta } from '../../../utils/comboHelper.js';
+import { isFlagEnabled } from '../../../utils/customerHelpers.js';
 
 export default function PosBillingView({
   dishes = [],
@@ -146,6 +148,10 @@ export default function PosBillingView({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [addonModalData, successOrder, isMobileCartOpen, search]);
 
+  const posDishMap = useMemo(() => {
+    return new Map((Array.isArray(dishes) ? dishes : []).map(d => [String(d.id), d]));
+  }, [dishes]);
+
   // Filter dishes & combos
   const filteredDishes = useMemo(() => {
     const list = [];
@@ -169,39 +175,49 @@ export default function PosBillingView({
     if (selectedCategory === 'all' || selectedCategory === 'combos') {
       (Array.isArray(combos) ? combos : []).forEach(combo => {
         if (!combo) return;
-        const isNonVeg = isPosItemNonVeg(combo);
+        const comboMeta = resolveComboMeta(combo, posDishMap);
+        const enrichedCombo = {
+          ...combo,
+          items: comboMeta.comboItems,
+          diet_type: comboMeta.dietType
+        };
+        const isNonVeg = isPosItemNonVeg(enrichedCombo);
         if (dietFilter === 'veg' && isNonVeg) return;
         if (dietFilter === 'nonveg' && !isNonVeg) return;
         if (search.trim()) {
           const q = search.toLowerCase().trim();
           const nameMatch = (combo.name || '').toLowerCase().includes(q);
           const descMatch = (combo.description || '').toLowerCase().includes(q);
-          if (!nameMatch && !descMatch) return;
+          const itemsMatch = (comboMeta.itemsSummaryText || '').toLowerCase().includes(q);
+          if (!nameMatch && !descMatch && !itemsMatch) return;
         }
-        const effectiveComboPrice = (combo.offer_price !== undefined && combo.offer_price !== null && Number(combo.offer_price) > 0)
-          ? Number(combo.offer_price)
-          : (Number(combo.price) || 0);
+        const regularPrice = Number(combo.price) || 0;
+        const hasValidComboOffer = combo.offer_price !== undefined && combo.offer_price !== null && combo.offer_price !== '' && Number(combo.offer_price) >= 0 && Number(combo.offer_price) < regularPrice;
+        const effectiveComboPrice = hasValidComboOffer ? Number(combo.offer_price) : regularPrice;
 
         list.push({
-          ...combo,
+          ...enrichedCombo,
           id: `combo_${combo.id}`,
           isCombo: true,
-          price: effectiveComboPrice,
-          regular_price: Number(combo.price) || effectiveComboPrice
+          price: regularPrice,
+          offer_price: hasValidComboOffer ? effectiveComboPrice : undefined,
+          regular_price: regularPrice,
+          comboIncludes: comboMeta.itemsSummaryText,
+          has_unavailable_items: comboMeta.hasUnavailableItems
         });
       });
     }
     return list;
-  }, [dishes, combos, selectedCategory, dietFilter, search]);
+  }, [dishes, combos, posDishMap, selectedCategory, dietFilter, search]);
 
   // Cart operations
   const getDishBasePrice = (dish, variant = 'full') => {
-    const effectiveFullPrice = (dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) > 0 && Number(dish.offer_price) < Number(dish.price))
+    const effectiveFullPrice = (dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) >= 0 && Number(dish.offer_price) < Number(dish.price))
       ? Number(dish.offer_price)
       : (Number(dish.price) || 0);
     return variant === 'half' && dish.price_half
       ? (Number(dish.price_half) || 0)
-      : (dish.isCombo ? Number(dish.price || 0) : effectiveFullPrice);
+      : effectiveFullPrice;
   };
 
   const addToCart = (dish, variant = 'full', selectedModifiers = []) => {
@@ -239,6 +255,8 @@ export default function PosBillingView({
   };
 
   const handleDishAddClick = (dish, variant = 'full') => {
+    const isItemSoldOut = !isFlagEnabled(dish?.available, true) || !isFlagEnabled(dish?.is_available, true) || Boolean(dish?.has_unavailable_items);
+    if (isItemSoldOut) return;
     const availableModifiers = (modifiersEnabled !== false && !dish.isCombo)
       ? getValidDishModifiers(dish?.modifiers)
       : [];
@@ -391,7 +409,8 @@ export default function PosBillingView({
         quantity: it.quantity,
         variant: it.selectedVariant,
         portion: it.selectedVariant === 'half' ? formatHalfLabel(it.dish.portion_half_label) : '',
-        modifiers: Array.isArray(it.modifiers) ? it.modifiers : []
+        modifiers: Array.isArray(it.modifiers) ? it.modifiers : [],
+        ...(it.dish.isCombo ? { type: 'combo', includes: it.dish.comboIncludes || '' } : {})
       }));
 
       const payload = {
@@ -1212,12 +1231,12 @@ export default function PosBillingView({
                 const halfItemInCart = hasModifiers ? null : cart.find(it => String(it.dish.id) === String(dish.id) && it.selectedVariant === 'half');
                 const hasHalfPrice = Boolean(dish.price_half && Number(dish.price_half) > 0);
                 const isNonVeg = isPosItemNonVeg(dish);
-                const isSoldOut = dish.is_available === false || dish.is_available === 0 || dish.available === false || dish.available === 0;
+                const isSoldOut = !isFlagEnabled(dish.is_available, true) || !isFlagEnabled(dish.available, true) || Boolean(dish.has_unavailable_items);
 
-                const effectiveFullPrice = (dish.offer_price !== undefined && dish.offer_price !== null && Number(dish.offer_price) > 0 && Number(dish.offer_price) < Number(dish.price))
+                const effectiveFullPrice = (dish.offer_price !== undefined && dish.offer_price !== null && dish.offer_price !== '' && Number(dish.offer_price) >= 0 && Number(dish.offer_price) < Number(dish.price))
                   ? Number(dish.offer_price)
                   : (Number(dish.price) || 0);
-                const hasFullOffer = !dish.isCombo && effectiveFullPrice < Number(dish.price);
+                const hasFullOffer = effectiveFullPrice < Number(dish.price);
 
                 return (
                   <div
@@ -1287,13 +1306,13 @@ export default function PosBillingView({
 
                         {/* Low stock / Sold out / Combo / Special Badge (Floating Top-Right on Image) */}
                         <div style={{ position: 'absolute', top: '6px', right: '6px', zIndex: 2 }}>
-                          {dish.isCombo ? (
-                            <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
-                              🎁 COMBO
-                            </span>
-                          ) : isSoldOut ? (
+                          {isSoldOut ? (
                             <span style={{ fontSize: '0.62rem', background: '#FEE2E2', color: '#B91C1C', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
                               🔴 Sold Out
+                            </span>
+                          ) : dish.isCombo ? (
+                            <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                              🎁 COMBO
                             </span>
                           ) : hasFullOffer ? (
                             <span style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#D97706', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
@@ -1436,15 +1455,16 @@ export default function PosBillingView({
                           ) : (
                             <button
                               onClick={() => handleDishAddClick(dish, 'full')}
+                              disabled={isSoldOut}
                               style={{
                                 padding: '5px 11px',
                                 borderRadius: '8px',
                                 border: 'none',
-                                background: '#059669',
-                                color: '#FFFFFF',
+                                background: isSoldOut ? '#CBD5E1' : '#059669',
+                                color: isSoldOut ? '#475569' : '#FFFFFF',
                                 fontSize: '0.75rem',
                                 fontWeight: 800,
-                                cursor: 'pointer',
+                                cursor: isSoldOut ? 'not-allowed' : 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -1454,8 +1474,8 @@ export default function PosBillingView({
                                 transition: 'all 0.15s ease'
                               }}
                             >
-                              <Plus size={12} strokeWidth={2.5} />
-                              <span>{hasModifiers && fullCartCount > 0 ? `Add (${fullCartCount})` : 'Add'}</span>
+                              {!isSoldOut && <Plus size={12} strokeWidth={2.5} />}
+                              <span>{isSoldOut ? 'Sold Out' : (hasModifiers && fullCartCount > 0 ? `Add (${fullCartCount})` : 'Add')}</span>
                             </button>
                           )}
                         </div>
@@ -1701,6 +1721,11 @@ export default function PosBillingView({
                         {currencySymbol}{formatPriceNumber(item.price)} each
                       </span>
                     </div>
+                    {item.dish.isCombo && item.dish.comboIncludes && (
+                      <div style={{ fontSize: '0.64rem', color: '#047857', marginTop: '2px', lineHeight: 1.25, overflowWrap: 'anywhere', fontStyle: 'italic' }}>
+                        📦 {item.dish.comboIncludes}
+                      </div>
+                    )}
                     {Array.isArray(item.modifiers) && item.modifiers.length > 0 && (
                       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '3px' }}>
                         {item.modifiers.map((m, mIdx) => (

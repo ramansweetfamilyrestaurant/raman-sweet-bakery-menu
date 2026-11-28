@@ -240,6 +240,11 @@ const suites = [
     name: 'Cashier Day-End Closing & Shift Report Specifications',
     file: 'server/tests/day_closing.test.js',
     requiresDb: false
+  },
+  {
+    name: 'Combo / Thali Audit Fixes & Integrity Suite',
+    file: 'server/tests/combo_audit_fixes.test.js',
+    requiresDb: false
   }
 ];
 
