@@ -87,9 +87,12 @@ export default function PresenceVerificationModal({
         handleRequestStaff();
       } else {
         const hasConfiguredGps = Boolean(
-          restaurantInfo?.location_initialized &&
-          restaurantInfo?.latitude &&
-          restaurantInfo?.longitude
+          (restaurantInfo?.location_initialized === true || restaurantInfo?.location_initialized === 1 || restaurantInfo?.location_initialized === 'true') &&
+          (
+            (restaurantInfo?.latitude != null && restaurantInfo?.longitude != null && Number(restaurantInfo.latitude) !== 0 && Number(restaurantInfo.longitude) !== 0) ||
+            restaurantInfo?.latitude === undefined ||
+            restaurantInfo?.longitude === undefined
+          )
         );
 
         if (!hasConfiguredGps) {
@@ -156,9 +159,12 @@ export default function PresenceVerificationModal({
     }
 
     const hasConfiguredGps = Boolean(
-      restaurantInfo?.location_initialized &&
-      restaurantInfo?.latitude &&
-      restaurantInfo?.longitude
+      (restaurantInfo?.location_initialized === true || restaurantInfo?.location_initialized === 1 || restaurantInfo?.location_initialized === 'true') &&
+      (
+        (restaurantInfo?.latitude != null && restaurantInfo?.longitude != null && Number(restaurantInfo.latitude) !== 0 && Number(restaurantInfo.longitude) !== 0) ||
+        restaurantInfo?.latitude === undefined ||
+        restaurantInfo?.longitude === undefined
+      )
     );
 
     // If restaurant has not configured GPS, verify immediately via authoritative QR presence token

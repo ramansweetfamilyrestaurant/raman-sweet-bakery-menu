@@ -1715,7 +1715,11 @@ export default function App() {
         idempotency_key: attemptIdempKey,
         ...(trimmedNotes ? { notes: trimmedNotes } : {})
       };
-      const hasConfiguredGps = Boolean(info?.location_initialized && info?.latitude && info?.longitude);
+      const isLocInit = isFlagEnabled(info?.location_initialized, false);
+      const hasCoords = info?.latitude != null && info?.longitude != null &&
+        !Number.isNaN(Number(info.latitude)) && !Number.isNaN(Number(info.longitude)) &&
+        Number(info.latitude) !== 0 && Number(info.longitude) !== 0;
+      const hasConfiguredGps = Boolean(isLocInit && (hasCoords || info?.latitude === undefined || info?.longitude === undefined));
       setPresencePolicy({
         mode: hasConfiguredGps ? 'GPS_WITH_STAFF_FALLBACK' : 'QR_ONLY',
         allowed_methods: hasConfiguredGps ? ['GPS', 'STAFF'] : ['QR', 'STAFF', 'GPS'],
