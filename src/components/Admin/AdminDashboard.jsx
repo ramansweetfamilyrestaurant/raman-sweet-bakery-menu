@@ -3241,7 +3241,6 @@ export default function AdminDashboard({
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          ...dish,
           badge: newBadge,
           must_try: newMustTry
         })
@@ -4065,11 +4064,20 @@ export default function AdminDashboard({
   };
   const handleQuickPriceSave = async (dishId, newPrice, newPriceHalf) => {
     try {
-      const pFull = Number(newPrice !== undefined ? newPrice : quickPriceVal.price);
+      const rawFull = newPrice !== undefined ? newPrice : quickPriceVal.price;
+      const pFull = Number(rawFull);
+      if (rawFull === '' || rawFull === null || !Number.isFinite(pFull) || pFull < 0) {
+        alert('Please enter a valid non-negative price.');
+        return;
+      }
       const rawHalf = newPriceHalf !== undefined ? newPriceHalf : quickPriceVal.price_half;
       const pHalf = (rawHalf !== undefined && rawHalf !== null && rawHalf !== '') ? Number(rawHalf) : null;
+      if (pHalf !== null && (!Number.isFinite(pHalf) || pHalf < 0 || pHalf > pFull)) {
+        alert('Half price must be non-negative and cannot exceed the full price.');
+        return;
+      }
       await updateDishPrice(dishId, pFull, pHalf, token);
-      setDishes(dishes.map(d => d.id === dishId ? { ...d, price: pFull, price_half: pHalf } : d));
+      setDishes(prev => prev.map(d => String(d.id) === String(dishId) ? { ...d, price: pFull, price_half: pHalf } : d));
       setEditingPriceId(null);
     } catch (err) {
       alert('Failed to update price: ' + (err.message || ''));

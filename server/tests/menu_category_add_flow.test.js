@@ -279,8 +279,8 @@ async function runTests() {
 
       // Finding 2: Half price retention & portion offering independent of modifiersEnabled
       assert.ok(dishFormCode.includes('price_half: (hasHalf'), 'DishFormModal must serialize price_half independently of modifiersEnabled');
-      assert.ok(custDishModalCode.includes("dish.price_half !== null && dish.price_half !== undefined && Number(dish.price_half) > 0") && custDishModalCode.includes("setSelectedPortion('half')"), 'Customer DishModal must offer half portion independently of modifiersEnabled');
-      assert.ok(dishCardCode.includes("handleAddAction(e, 'half')") && menuCardCode.includes("setPortionMode('half')"), 'DishCard and MenuCardItem must expose half portion independently of modifiersEnabled');
+      assert.ok(/dish\??\.price_half !== null && dish\??\.price_half !== undefined[\s\S]{0,60}Number\(dish\.price_half\) > 0/.test(custDishModalCode) && custDishModalCode.includes("setSelectedPortion('half')"), 'Customer DishModal must offer half portion independently of modifiersEnabled');
+      assert.ok((dishCardCode.includes("handleAddAction(e, 'half')") || dishCardCode.includes("renderCartAction('half'")) && menuCardCode.includes("setPortionMode('half')"), 'DishCard and MenuCardItem must expose half portion independently of modifiersEnabled');
 
       // Finding 3: Native button for stock availability with accessible name, aria-pressed, and focus indicator
       const hasSingleAvailabilityButton = (source) => {
@@ -309,6 +309,111 @@ async function runTests() {
       const catFormCode = fs.readFileSync(path.join(rootDir, 'src/components/Admin/CategoryFormModal.jsx'), 'utf8');
       assert.ok(!/type="file"[^>]*display:\s*'none'/.test(catFormCode), 'CategoryFormModal file input must not use display: none');
       assert.ok(catFormCode.includes('fileInputRef.current?.click()') && catFormCode.includes('.cat-modal-focus-btn:focus-visible'), 'CategoryFormModal must provide keyboard-accessible image upload button with focus ring');
+    });
+
+    await testAsync('8. PUT/PATCH/reorder/delete/Pure-Veg guards preserve omitted fields and block invalid catalog writes', async () => {
+      // Raise dish quota so we can test updates & pure-veg isolation
+      await query("UPDATE saas_plans SET max_dishes = 20, max_categories = 20 WHERE LOWER(key) = 'basic'");
+
+      const createCat = await fetch(`${baseUrl}/api/admin/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: 'Delete Check Cat', sort_order: 5 })
+      }).then(r => r.json());
+      const tempCatId = createCat.id;
+
+      // Blank category update must fail 400
+      const blankCatPut = await fetch(`${baseUrl}/api/admin/categories/${tempCatId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: '   ' })
+      });
+      assert.strictEqual(blankCatPut.status, 400);
+
+      // Reorder rejects empty or malformed input and applies atomic sort_order update
+      const badReorder = await fetch(`${baseUrl}/api/admin/categories/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orders: [] })
+      });
+      assert.strictEqual(badReorder.status, 400);
+
+      const goodReorder = await fetch(`${baseUrl}/api/admin/categories/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orders: [{ id: createdCategoryId, sort_order: 2 }, { id: tempCatId, sort_order: 1 }] })
+      });
+      assert.strictEqual(goodReorder.status, 200);
+
+      // Create Sold Out dish inside tempCatId
+      const createdDish = await fetch(`${baseUrl}/api/admin/dishes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: 'Cascade Dish',
+          category_id: tempCatId,
+          price: 180,
+          price_half: 100,
+          available: false
+        })
+      }).then(r => r.json());
+      const tempDishId = createdDish.id;
+
+      // Partial PUT without available / category_id / price preserves Sold Out & category_id & prices
+      const partialPutRes = await fetch(`${baseUrl}/api/admin/dishes/${tempDishId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ badge: 'Special' })
+      });
+      assert.strictEqual(partialPutRes.status, 200);
+      const [afterPartialDish] = await query('SELECT * FROM dishes WHERE id = $1', [tempDishId]);
+      assert.strictEqual(afterPartialDish.available, 0);
+      assert.strictEqual(Number(afterPartialDish.category_id), Number(tempCatId));
+      assert.strictEqual(Number(afterPartialDish.price), 180);
+
+      // Invalid PUT & PATCH inputs must fail 400
+      const negPut = await fetch(`${baseUrl}/api/admin/dishes/${tempDishId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ price: -10 })
+      });
+      assert.strictEqual(negPut.status, 400);
+
+      const badHalfPatch = await fetch(`${baseUrl}/api/admin/dishes/${tempDishId}/price`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ price: 150, price_half: 200 })
+      });
+      assert.strictEqual(badHalfPatch.status, 400);
+
+      // Delete category reports deleted_dishes_count
+      const delCatRes = await fetch(`${baseUrl}/api/admin/categories/${tempCatId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.json());
+      assert.strictEqual(delCatRes.success, true);
+      assert.strictEqual(delCatRes.deleted_dishes_count, 1);
+
+      // Pure Veg tenant enforcement on POST & PUT dishes
+      await query(
+        `INSERT INTO restaurants (name, slug, plan_tier, subscription_type, mandate_status, plan_expires_at, active, food_type)
+         VALUES ($1, $2, 'basic', 'PAID', 'active', $3, 1, 'pure_veg')`,
+        ['Pure Veg Kitchen', 'pure-veg-audit-kitchen', futureExpiry]
+      );
+      const [pvResto] = await query("SELECT id FROM restaurants WHERE slug = 'pure-veg-audit-kitchen'");
+      const pvToken = jwt.sign({ id: 102, username: 'pvowner', role: 'restaurant_admin', restaurant_id: pvResto.id }, JWT_SECRET, { expiresIn: '1h' });
+      const pvCat = await fetch(`${baseUrl}/api/admin/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pvToken}` },
+        body: JSON.stringify({ name: 'Veg Mains' })
+      }).then(r => r.json());
+
+      const pvBlockedPost = await fetch(`${baseUrl}/api/admin/dishes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pvToken}` },
+        body: JSON.stringify({ name: 'Chicken Tikka', category_id: pvCat.id, price: 240, type: 'nonveg' })
+      });
+      assert.strictEqual(pvBlockedPost.status, 400);
     });
   } finally {
     server.close();

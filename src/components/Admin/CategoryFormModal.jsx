@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { X, Upload, Trash2, FolderOpen, ArrowUpDown, Globe, Sparkles } from 'lucide-react';
-import { uploadImage } from '../../api/client';
+import { uploadImage, deleteImageApi } from '../../api/client';
 import { resolveImageUrl, getCategoryImageUrl, hasCustomCategoryImage } from '../../utils/imageHelper';
 import { resolveBusinessProfile } from '../../utils/businessTaxonomy';
 
@@ -92,7 +92,19 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [tempUploadedImages, setTempUploadedImages] = useState([]);
   const fileInputRef = useRef(null);
+
+  const handleCancelClose = () => {
+    if (tempUploadedImages.length > 0) {
+      tempUploadedImages.forEach(img => {
+        if (img && img !== category?.image) {
+          deleteImageApi(img, token).catch(() => {});
+        }
+      });
+    }
+    onClose();
+  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -101,8 +113,13 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
     setUploading(true);
     setError('');
     try {
+      const oldTempImage = image;
       const res = await uploadImage(file, token, 'categories');
       setImage(res);
+      setTempUploadedImages(prev => [...prev, res]);
+      if (oldTempImage && oldTempImage !== category?.image) {
+        deleteImageApi(oldTempImage, token).catch(() => {});
+      }
     } catch (err) {
       setError(err.message || 'Image upload failed');
     } finally {
@@ -126,6 +143,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
         image,
         sort_order: Number(sortOrder)
       });
+      setTempUploadedImages([]);
     } catch (err) {
       setError(err.message || 'Failed to save category');
       setSaving(false);
@@ -144,7 +162,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
       justifyContent: 'center',
       padding: '12px',
       boxSizing: 'border-box'
-    }} onClick={onClose}>
+    }} onClick={handleCancelClose}>
       <div
         onClick={(e) => e.stopPropagation()}
         className="cat-modal-container"
@@ -235,7 +253,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
             </h3>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleCancelClose}
             type="button"
             style={{
               background: 'rgba(255, 255, 255, 0.14)',
@@ -487,7 +505,7 @@ export default function CategoryFormModal({ category, token, onSave, onClose, re
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #CBD5E1', paddingTop: '12px', marginTop: '14px' }}>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleCancelClose}
               style={{
                 padding: '0 14px',
                 height: '38px',

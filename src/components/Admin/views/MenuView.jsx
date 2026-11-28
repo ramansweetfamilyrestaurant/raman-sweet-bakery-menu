@@ -1,28 +1,28 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  Plus, 
-  Search, 
-  MoreVertical, 
-  Edit3, 
-  Trash2, 
-  Star, 
-  Sparkles, 
-  DollarSign, 
-  Filter, 
-  X, 
-  Utensils, 
-  Layers, 
-  Package, 
-  CheckCircle2, 
-  AlertCircle, 
-  ChevronRight, 
+import {
+  Plus,
+  Search,
+  MoreVertical,
+  Edit3,
+  Trash2,
+  Star,
+  Sparkles,
+  DollarSign,
+  Filter,
+  X,
+  Utensils,
+  Layers,
+  Package,
+  CheckCircle2,
+  AlertCircle,
+  ChevronRight,
   ChevronLeft,
-  ExternalLink, 
+  ExternalLink,
   ChevronDown,
-  ChevronUp, 
-  Copy, 
-  Store, 
-  Check, 
+  ChevronUp,
+  Copy,
+  Store,
+  Check,
   Tag,
   FolderPlus,
   LayoutGrid,
@@ -200,20 +200,20 @@ export default function MenuView({
   const filteredDishes = useMemo(() => {
     let list = safeDishes.filter(d => {
       const q = (search || '').toLowerCase().trim();
-      const matchesSearch = !q || 
-        (d.name || '').toLowerCase().includes(q) || 
-        (d.name_hi || '').toLowerCase().includes(q) || 
-        (d.description || '').toLowerCase().includes(q) || 
-        (d.description_hi || '').toLowerCase().includes(q) || 
+      const matchesSearch = !q ||
+        (d.name || '').toLowerCase().includes(q) ||
+        (d.name_hi || '').toLowerCase().includes(q) ||
+        (d.description || '').toLowerCase().includes(q) ||
+        (d.description_hi || '').toLowerCase().includes(q) ||
         (d.ingredients || '').toLowerCase().includes(q) ||
         (d.taste_profile || '').toLowerCase().includes(q) ||
         (d.badge || '').toLowerCase().includes(q);
-        
-      const matchesCat = selectedCatFilter === 'all' || 
+
+      const matchesCat = selectedCatFilter === 'all' ||
         String(d.category_id) === String(selectedCatFilter) ||
         (d.category_name && d.category_name.toLowerCase() === (activeCategoryObj?.name || '').toLowerCase()) ||
         (d.category && d.category.toLowerCase() === (activeCategoryObj?.name || '').toLowerCase());
-      
+
       let matchesDiet = true;
       if (dietFilter === 'veg') matchesDiet = d.type === 'veg';
       if (dietFilter === 'nonveg') matchesDiet = !isPureVegRestaurant && d.type === 'nonveg';
@@ -256,8 +256,8 @@ export default function MenuView({
   const filteredCategories = useMemo(() => {
     const q = (search || '').toLowerCase().trim();
     if (!q) return safeCategories;
-    return safeCategories.filter(c => 
-      (c.name || '').toLowerCase().includes(q) || 
+    return safeCategories.filter(c =>
+      (c.name || '').toLowerCase().includes(q) ||
       (c.name_hi || '').toLowerCase().includes(q)
     );
   }, [safeCategories, search]);
@@ -323,10 +323,25 @@ export default function MenuView({
 
   const handleQuickPriceSubmit = (e) => {
     e.preventDefault();
-    if (quickPriceDish && onUpdateQuickPrice) {
-      onUpdateQuickPrice(quickPriceDish.id, quickPriceVal.price, quickPriceVal.price_half);
-      setQuickPriceDish(null);
+    if (!quickPriceDish || !onUpdateQuickPrice) return;
+    const pFull = Number(quickPriceVal.price);
+    if (quickPriceVal.price === '' || quickPriceVal.price === null || !Number.isFinite(pFull) || pFull < 0) {
+      alert('Please enter a valid non-negative price.');
+      return;
     }
+    const rawHalf = quickPriceVal.price_half;
+    const hasHalf = rawHalf !== undefined && rawHalf !== null && rawHalf !== '';
+    const pHalf = hasHalf ? Number(rawHalf) : null;
+    if (hasHalf && (!Number.isFinite(pHalf) || pHalf < 0)) {
+      alert('Half price must be a valid non-negative number.');
+      return;
+    }
+    if (pHalf !== null && pHalf > pFull) {
+      alert('Half price cannot be greater than full price.');
+      return;
+    }
+    onUpdateQuickPrice(quickPriceDish.id, pFull, hasHalf ? pHalf : '');
+    setQuickPriceDish(null);
   };
 
   const handleMoveCategory = (index, direction) => {
@@ -1201,7 +1216,7 @@ export default function MenuView({
 
           {/* Dynamic Category Tiles */}
           {safeCategories.map(cat => {
-            const count = safeDishes.filter(d => 
+            const count = safeDishes.filter(d =>
               String(d.category_id) === String(cat.id) ||
               (d.category_name && d.category_name.toLowerCase() === (cat.name || '').toLowerCase()) ||
               (d.category && d.category.toLowerCase() === (cat.name || '').toLowerCase())
@@ -1468,7 +1483,7 @@ export default function MenuView({
          ======================================================== */}
       {activeSubTab === 'dishes' ? (
         <div className="master-workspace-layout">
-          
+
           {/* ========================================================
               COLUMN 1: PROMO / MOTIVATIONAL BANNER (LEFT)
              ======================================================== */}
@@ -1714,7 +1729,7 @@ export default function MenuView({
               COLUMN 2: DISHES CATALOG (CENTER)
              ======================================================== */}
           <div className="center-catalog-column" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-            
+
             {/* Catalog Controls Header */}
             <div className="catalog-header-bar" style={{
               display: 'flex',
@@ -2100,7 +2115,7 @@ export default function MenuView({
                                   <button
                                     onClick={() => {
                                       setQuickPriceDish(dish);
-                                      setQuickPriceVal({ price: dish.price || '', price_half: dish.price_half || '' });
+                                      setQuickPriceVal({ price: dish.price ?? '', price_half: dish.price_half ?? '' });
                                       setOpenDishMenuId(null);
                                     }}
                                     style={{ width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#0284C7', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -2115,7 +2130,7 @@ export default function MenuView({
                                     <CheckCircle2 size={12} color={isAvailable ? '#D97706' : '#16A34A'} />
                                     <span>{isAvailable ? 'Mark Sold Out' : 'Mark In Stock'}</span>
                                   </button>
-                                  
+
                                   <div style={{ height: '1px', background: '#F1F5F9', margin: '3px 0' }} />
 
                                   {/* Quick Badge Toggles */}
@@ -2287,9 +2302,9 @@ export default function MenuView({
                         const catObj = safeCategories.find(c => String(c.id) === String(dish.category_id));
 
                         return (
-                          <tr 
-                            key={dish.id} 
-                            style={{ 
+                          <tr
+                            key={dish.id}
+                            style={{
                               borderBottom: idx === paginatedDishes.length - 1 ? 'none' : '1px solid #F1F5F9',
                               background: selectedDishIds.includes(dish.id) ? '#F0FDF4' : 'transparent'
                             }}
@@ -2400,10 +2415,10 @@ export default function MenuView({
                                   </button>
                                 </div>
                               ) : (
-                                <div 
+                                <div
                                   onClick={() => {
                                     setInlinePriceDishId(dish.id);
-                                    setInlinePriceVal(dish.price || '');
+                                    setInlinePriceVal(dish.price ?? '');
                                   }}
                                   title="Click to edit price directly"
                                   style={{
@@ -2697,15 +2712,15 @@ export default function MenuView({
                   { label: 'Bulk Upload', icon: UploadCloud, color: '#0284C7', onClick: () => setShowBulkUploadModal(true) },
                   { label: 'Manage Categories', icon: FolderPlus, color: '#D97706', onClick: () => setActiveSubTab && setActiveSubTab('categories') },
                   { label: 'Create Combo', icon: Package, color: '#9333EA', onClick: onOpenAddCombo },
-                  { 
-                    label: 'View Menu', 
-                    icon: Eye, 
-                    color: '#475569', 
+                  {
+                    label: 'View Menu',
+                    icon: Eye,
+                    color: '#475569',
                     onClick: () => {
                       if (typeof onReturnToMenu === 'function') {
                         onReturnToMenu(restaurantInfo?.slug);
                       }
-                    } 
+                    }
                   }
                 ].map((act, idx) => {
                   const Icon = act.icon;
@@ -2877,7 +2892,8 @@ export default function MenuView({
 
           {/* Categories Grid */}
           <div className="category-grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
-            <style dangerouslySetInnerHTML={{__html: `
+            <style dangerouslySetInnerHTML={{
+              __html: `
               @media (max-width: 640px) {
                 .category-grid-responsive {
                   grid-template-columns: 1fr !important;
@@ -2889,7 +2905,7 @@ export default function MenuView({
               }
             `}} />
             {filteredCategories.map((cat, idx) => {
-              const dishCount = safeDishes.filter(d => 
+              const dishCount = safeDishes.filter(d =>
                 String(d.category_id) === String(cat.id) ||
                 (d.category_name && d.category_name.toLowerCase() === (cat.name || '').toLowerCase()) ||
                 (d.category && d.category.toLowerCase() === (cat.name || '').toLowerCase())
@@ -3627,6 +3643,8 @@ export default function MenuView({
                 </label>
                 <input
                   type="number"
+                  min="0"
+                  step="any"
                   required
                   value={quickPriceVal.price}
                   onChange={(e) => setQuickPriceVal({ ...quickPriceVal, price: e.target.value })}
@@ -3640,6 +3658,8 @@ export default function MenuView({
                 </label>
                 <input
                   type="number"
+                  min="0"
+                  step="any"
                   value={quickPriceVal.price_half}
                   onChange={(e) => setQuickPriceVal({ ...quickPriceVal, price_half: e.target.value })}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.84rem', boxSizing: 'border-box' }}
@@ -3688,24 +3708,32 @@ export default function MenuView({
         </div>
       )}
 
-      {deleteConfirmCategory && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '18px', padding: '24px', maxWidth: '340px', width: '100%', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 8px 0' }}>Delete Category</h3>
-            <p style={{ fontSize: '0.80rem', color: '#64748B', margin: '0 0 18px 0' }}>
-              Permanently delete category <strong>'{deleteConfirmCategory.name}'</strong>?
-            </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button onClick={() => setDeleteConfirmCategory(null)} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}>
-                Cancel
-              </button>
-              <button onClick={() => { onDeleteCategory(deleteConfirmCategory.id); setDeleteConfirmCategory(null); }} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}>
-                Delete
-              </button>
+      {deleteConfirmCategory && (() => {
+        const affectedItemsCount = safeDishes.filter(d => String(d.category_id) === String(deleteConfirmCategory.id)).length;
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+            <div style={{ background: '#FFFFFF', borderRadius: '18px', padding: '24px', maxWidth: '360px', width: '100%', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 8px 0' }}>Delete Category</h3>
+              <p style={{ fontSize: '0.80rem', color: '#64748B', margin: affectedItemsCount > 0 ? '0 0 10px 0' : '0 0 18px 0' }}>
+                Permanently delete category <strong>'{deleteConfirmCategory.name}'</strong>?
+              </p>
+              {affectedItemsCount > 0 && (
+                <div style={{ fontSize: '0.76rem', color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', padding: '8px 10px', fontWeight: 700, marginBottom: '16px' }}>
+                  ⚠️ Warning: This will also permanently delete {affectedItemsCount} {affectedItemsCount === 1 ? (terminology.dishSingular?.toLowerCase() || 'item') : (terminology.dishPlural?.toLowerCase() || 'items')} inside this category.
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button onClick={() => setDeleteConfirmCategory(null)} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontWeight: 700, cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button onClick={() => { onDeleteCategory(deleteConfirmCategory.id); setDeleteConfirmCategory(null); }} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer' }}>
+                  Delete{affectedItemsCount > 0 ? ` All (${affectedItemsCount})` : ''}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {deleteConfirmCombo && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
@@ -3812,7 +3840,7 @@ export default function MenuView({
 
             {/* Modal Body */}
             <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              
+
               {/* 1. Dietary Preference */}
               <div>
                 <label style={{ fontSize: '0.80rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '8px' }}>
@@ -4081,6 +4109,8 @@ export default function MenuView({
           existingDishCount={safeDishes.length}
           maxDishes={maxDishes}
           currencySymbol={curr}
+          isPureVeg={isPureVegRestaurant}
+          terminology={terminology}
           onSuccess={() => {
             if (onRefreshData) onRefreshData();
             setShowBulkUploadModal(false);
@@ -4091,7 +4121,7 @@ export default function MenuView({
 
       {/* 💡 WHY QUALITY IMAGES MATTER MODAL */}
       {showImageTipModal && (
-        <div 
+        <div
           style={{
             position: 'fixed',
             inset: 0,
@@ -4106,7 +4136,7 @@ export default function MenuView({
           }}
           onClick={() => setShowImageTipModal(false)}
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             style={{
               background: '#FFFFFF',
@@ -4128,8 +4158,8 @@ export default function MenuView({
                   Why quality images matter
                 </h3>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowImageTipModal(false)}
                 style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94A3B8', padding: '4px' }}
               >
@@ -4190,12 +4220,15 @@ function BulkDishUploadModal({
   existingDishCount = 0,
   maxDishes = 9999,
   currencySymbol = '₹',
+  isPureVeg = false,
+  terminology = {},
   onSuccess,
   onClose
 }) {
   const [csvFile, setCsvFile] = useState(null);
   const [parsedRows, setParsedRows] = useState([]);
   const [parsingError, setParsingError] = useState('');
+  const [parseNotice, setParseNotice] = useState('');
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [importResults, setImportResults] = useState(null);
@@ -4208,7 +4241,9 @@ function BulkDishUploadModal({
     const sampleRows = [
       ['Paneer Butter Masala', defaultCat, '240', '140', 'veg', 'Cottage cheese cubes simmered in rich creamy tomato gravy', 'Must Try', 'Paneer, Butter, Cream, Spices', 'Full'],
       ['Crispy Veg Burger', defaultCat, '120', '', 'veg', 'Crunchy vegetable patty with house sauce and fresh lettuce', 'Bestseller', 'Bun, Veg Patty, Lettuce, Sauce', 'Single'],
-      ['Chicken Biryani', defaultCat, '280', '170', 'nonveg', 'Aromatic basmati rice cooked with tender spiced chicken pieces', 'Special', 'Basmati Rice, Chicken, Saffron, Spices', 'Full']
+      isPureVeg
+        ? ['Special Veg Thali', defaultCat, '260', '', 'veg', 'Seasonal veg curries, dal, breads, rice, salad and sweet', 'Special', 'Paneer, Dal, Rice, Roti', 'Full']
+        : ['Chicken Biryani', defaultCat, '280', '170', 'nonveg', 'Aromatic basmati rice cooked with tender spiced chicken pieces', 'Special', 'Basmati Rice, Chicken, Saffron, Spices', 'Full']
     ];
     const csvContent = '\uFEFF' + [
       headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','),
@@ -4256,7 +4291,14 @@ function BulkDishUploadModal({
     if (!file) return;
     setCsvFile(file);
     setParsingError('');
+    setParseNotice('');
     setImportResults(null);
+
+    if (!Array.isArray(categories) || categories.length === 0) {
+      setParsingError('Please create at least 1 category first before importing items from CSV.');
+      setParsedRows([]);
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -4271,7 +4313,7 @@ function BulkDishUploadModal({
 
         // Header mapping
         const headerCols = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
-        const nameIdx = headerCols.findIndex(h => h.includes('name') || h.includes('dish'));
+        const nameIdx = headerCols.findIndex(h => h.includes('name') || h.includes('dish') || h.includes('item'));
         const catIdx = headerCols.findIndex(h => h.includes('cat'));
         const priceIdx = headerCols.findIndex(h => h.includes('price') && !h.includes('half'));
         const halfPriceIdx = headerCols.findIndex(h => h.includes('half'));
@@ -4282,6 +4324,8 @@ function BulkDishUploadModal({
         const portionIdx = headerCols.findIndex(h => h.includes('portion'));
 
         const rows = [];
+        let fallbackCatCount = 0;
+        let pureVegAdjustedCount = 0;
         for (let i = 1; i < lines.length; i++) {
           const cols = parseCSVLine(lines[i]);
           if (cols.length === 0 || !cols.some(c => c.length > 0)) continue;
@@ -4296,28 +4340,34 @@ function BulkDishUploadModal({
           const rawIng = ingIdx !== -1 ? cols[ingIdx] : '';
           const rawPortion = portionIdx !== -1 ? cols[portionIdx] : '';
 
-          if (!rawName || !rawPrice) continue;
+          if (!rawName || rawPrice === undefined || rawPrice === null || rawPrice === '') continue;
 
           // Find category ID
           let matchedCat = categories.find(c => (c.name || '').toLowerCase() === rawCat.toLowerCase().trim());
           if (!matchedCat && categories.length > 0) {
             matchedCat = categories[0];
+            fallbackCatCount++;
           }
 
-          const parsedPrice = parseFloat(rawPrice.replace(/[^0-9.]/g, ''));
-          const parsedHalf = rawHalf ? parseFloat(rawHalf.replace(/[^0-9.]/g, '')) : null;
+          const parsedPrice = parseFloat(String(rawPrice).replace(/[^0-9.-]/g, ''));
+          const parsedHalf = rawHalf ? parseFloat(String(rawHalf).replace(/[^0-9.-]/g, '')) : null;
           let normType = (rawType || '').toLowerCase().trim();
           if (!['veg', 'nonveg', 'egg'].includes(normType)) {
             normType = normType.includes('non') ? 'nonveg' : (normType.includes('egg') ? 'egg' : 'veg');
           }
+          if (isPureVeg && normType !== 'veg') {
+            normType = 'veg';
+            pureVegAdjustedCount++;
+          }
 
           if (!isNaN(parsedPrice) && parsedPrice >= 0 && matchedCat) {
+            const cleanHalf = !isNaN(parsedHalf) && parsedHalf >= 0 && parsedHalf <= parsedPrice && parsedHalf > 0 ? parsedHalf : null;
             rows.push({
               name: rawName.trim(),
               category_id: matchedCat.id,
               category_name: matchedCat.name,
               price: parsedPrice,
-              price_half: !isNaN(parsedHalf) && parsedHalf > 0 ? parsedHalf : null,
+              price_half: cleanHalf,
               type: normType,
               description: rawDesc.trim(),
               badge: rawBadge.trim(),
@@ -4328,10 +4378,21 @@ function BulkDishUploadModal({
           }
         }
 
+        const notices = [];
+        if (fallbackCatCount > 0) {
+          notices.push(`${fallbackCatCount} row(s) had an unrecognized category and will be added under "${categories[0].name}".`);
+        }
+        if (pureVegAdjustedCount > 0) {
+          notices.push(`${pureVegAdjustedCount} row(s) were converted to Veg for Pure Veg compliance.`);
+        }
+        if (notices.length > 0) {
+          setParseNotice(notices.join(' '));
+        }
+
         if (rows.length === 0) {
-          setParsingError('No valid dishes could be extracted from this CSV. Please verify required columns (Dish Name, Category, Price).');
+          setParsingError('No valid items could be extracted from this CSV. Please verify required columns (Name, Category, Price).');
         } else if (existingDishCount + rows.length > maxDishes) {
-          setParsingError(`Importing ${rows.length} dishes exceeds your current plan quota (${maxDishes} max dishes). Please reduce file size or upgrade plan.`);
+          setParsingError(`Importing ${rows.length} items exceeds your current plan quota (${maxDishes} max). Please reduce file size or upgrade plan.`);
         }
         setParsedRows(rows);
       } catch (err) {
@@ -4396,7 +4457,7 @@ function BulkDishUploadModal({
       padding: '12px',
       boxSizing: 'border-box'
     }} onClick={onClose}>
-      <div 
+      <div
         onClick={(e) => e.stopPropagation()}
         style={{
           background: '#FFFFFF',
@@ -4440,8 +4501,8 @@ function BulkDishUploadModal({
               </p>
             </div>
           </div>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={onClose}
             style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94A3B8', padding: '4px' }}
           >
@@ -4534,6 +4595,25 @@ function BulkDishUploadModal({
               </div>
             </div>
           </div>
+
+          {/* Warning Notice for Category Fallback / Pure Veg Mapping */}
+          {parseNotice && !parsingError && (
+            <div style={{
+              background: '#FFFBEB',
+              border: '1px solid #FDE68A',
+              borderRadius: '10px',
+              padding: '10px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#B45309',
+              fontSize: '0.73rem',
+              fontWeight: 700
+            }}>
+              <AlertCircle size={14} style={{ flexShrink: 0 }} />
+              <span>{parseNotice}</span>
+            </div>
+          )}
 
           {/* Parsing Errors Banner */}
           {parsingError && (

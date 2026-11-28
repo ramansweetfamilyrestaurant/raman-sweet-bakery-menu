@@ -1110,14 +1110,25 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
     const { id } = req.params;
     const { name, name_hi, image, sort_order } = req.body;
 
-    // Fetch old category to verify tenant isolation and get previous name/image
-    const oldCatRows = await query('SELECT id, name, image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+    // Fetch old category to verify tenant isolation and preserve omitted fields
+    const oldCatRows = await query('SELECT id, name, name_hi, image, sort_order FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
     if (!oldCatRows || oldCatRows.length === 0) {
       return res.status(404).json({ error: 'Category not found' });
     }
     const oldCategory = oldCatRows[0];
 
-    const processedImage = await processExternalImageUrl(image, targetId, 'categories');
+    const resolvedName = name !== undefined ? (typeof name === 'string' ? name.trim() : '') : oldCategory.name;
+    if (!resolvedName) {
+      return res.status(400).json({ error: 'Category name is required' });
+    }
+    const resolvedNameHi = name_hi !== undefined ? (typeof name_hi === 'string' ? name_hi.trim() : '') : (oldCategory.name_hi || '');
+    const resolvedSortOrder = (sort_order !== undefined && sort_order !== null && sort_order !== '' && Number.isFinite(Number(sort_order)))
+      ? Number(sort_order)
+      : (Number(oldCategory.sort_order) || 0);
+
+    const processedImage = image !== undefined
+      ? await processExternalImageUrl(image, targetId, 'categories')
+      : oldCategory.image;
 
     // Clean up replaced or removed category image
     try {
@@ -1131,7 +1142,7 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
 
     await query(
       'UPDATE categories SET name = $1, name_hi = $2, image = $3, sort_order = $4 WHERE id = $5 AND restaurant_id = $6',
-      [name, name_hi || '', processedImage, sort_order || 0, id, targetId]
+      [resolvedName, resolvedNameHi, processedImage, resolvedSortOrder, id, targetId]
     );
 
     // Invalidate cache
@@ -1142,8 +1153,8 @@ router.put('/categories/:id', authenticateToken, requireActiveSubscription, asyn
       }
     } catch (_) { }
 
-    const catDetail = (name && name !== oldCategory.name)
-      ? `Updated category '${oldCategory.name}' to '${name}' (ID: ${id})`
+    const catDetail = (resolvedName !== oldCategory.name)
+      ? `Updated category '${oldCategory.name}' to '${resolvedName}' (ID: ${id})`
       : `Updated category '${oldCategory.name}' (ID: ${id})`;
     await logAudit(targetId, req.user?.role || 'tenant_admin', 'TENANT_CATEGORY_UPDATED', catDetail);
 
@@ -1162,17 +1173,24 @@ router.delete('/categories/:id', authenticateToken, requireActiveSubscription, a
     }
     const { id } = req.params;
 
-    // Fetch category to verify tenant isolation before deleting
+    // Fetch category + child dishes before deletion so cascade-deleted dish images are also cleaned up
     const catRows = await query('SELECT id, name, image FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
     if (!catRows || catRows.length === 0) {
       return res.status(404).json({ error: 'Category not found' });
     }
     const deletedCategory = catRows[0];
-    if (deletedCategory.image) {
-      await cleanupImage(deletedCategory.image);
-    }
+    const childDishes = await query('SELECT id, image FROM dishes WHERE category_id = $1 AND restaurant_id = $2', [id, targetId]).catch(() => []);
 
     await query('DELETE FROM categories WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+
+    if (deletedCategory.image) {
+      await cleanupImage(deletedCategory.image).catch(() => {});
+    }
+    for (const childDish of childDishes || []) {
+      if (childDish.image) {
+        await cleanupImage(childDish.image).catch(() => {});
+      }
+    }
 
     // Invalidate cache
     try {
@@ -1182,14 +1200,15 @@ router.delete('/categories/:id', authenticateToken, requireActiveSubscription, a
       }
     } catch (_) { }
 
+    const childCount = Array.isArray(childDishes) ? childDishes.length : 0;
     await logAudit(
       targetId,
       req.user?.role || 'tenant_admin',
       'TENANT_CATEGORY_DELETED',
-      `Deleted category '${deletedCategory.name}' (ID: ${id})`
+      `Deleted category '${deletedCategory.name}' (ID: ${id})${childCount > 0 ? ` along with ${childCount} item(s)` : ''}`
     );
 
-    res.json({ success: true });
+    res.json({ success: true, deleted_dishes_count: childCount });
   } catch (err) {
     console.error('Delete category error:', err);
     res.status(500).json({ error: 'Failed to delete category' });
@@ -1244,16 +1263,28 @@ router.post('/categories/reorder', authenticateToken, requireActiveSubscription,
       return res.status(401).json({ error: 'Restaurant identity is missing from authentication context' });
     }
     const { orders } = req.body;
-    if (!Array.isArray(orders)) {
+    if (!Array.isArray(orders) || orders.length === 0) {
       return res.status(400).json({ error: 'Orders array is required' });
     }
 
+    const sanitizedOrders = [];
     for (const item of orders) {
-      await query(
-        'UPDATE categories SET sort_order = $1 WHERE id = $2 AND restaurant_id = $3',
-        [item.sort_order, item.id, targetId]
-      );
+      const catId = Number(item?.id);
+      const sortOrderVal = Number(item?.sort_order);
+      if (!Number.isInteger(catId) || catId <= 0 || !Number.isFinite(sortOrderVal) || !Number.isInteger(sortOrderVal)) {
+        return res.status(400).json({ error: 'Each reorder entry requires a valid integer id and sort_order' });
+      }
+      sanitizedOrders.push({ id: catId, sort_order: sortOrderVal });
     }
+
+    await withTransaction(async (txQuery) => {
+      for (const item of sanitizedOrders) {
+        await txQuery(
+          'UPDATE categories SET sort_order = $1 WHERE id = $2 AND restaurant_id = $3',
+          [item.sort_order, item.id, targetId]
+        );
+      }
+    });
 
     // Invalidate cache
     try {
@@ -1304,15 +1335,33 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
     } = req.body;
     const trimmedName = typeof name === 'string' ? name.trim() : '';
     const numPrice = Number(price);
-    const hasValidPrice = price !== undefined && price !== null && price !== '' && Number.isFinite(numPrice) && numPrice >= 0;
+    const hasValidPrice = price !== undefined && price !== null && price !== '' && typeof price !== 'boolean' && Number.isFinite(numPrice) && numPrice >= 0;
 
     if (!trimmedName || !hasValidPrice || !category_id) {
-      return res.status(400).json({ error: 'Category, name, and valid price are required' });
+      return res.status(400).json({ error: 'Category, name, and valid non-negative price are required' });
     }
 
-    // Authoritative SaaS Plan Quota Check (Dishes)
-    const restoRows = await query('SELECT plan_tier, subscription_type, mandate_status FROM restaurants WHERE id = $1', [targetId]);
+    const hasHalfInput = price_half !== undefined && price_half !== null && price_half !== '';
+    const numPriceHalf = hasHalfInput ? Number(price_half) : null;
+    if (hasHalfInput && (typeof price_half === 'boolean' || !Number.isFinite(numPriceHalf) || numPriceHalf < 0)) {
+      return res.status(400).json({ error: 'Half price must be a valid non-negative number' });
+    }
+    if (numPriceHalf !== null && numPriceHalf > numPrice) {
+      return res.status(400).json({ error: 'Half price cannot be greater than full price' });
+    }
+
+    // Authoritative SaaS Plan Quota Check (Dishes) & Business Dietary Policy
+    const restoRows = await query(
+      'SELECT plan_tier, subscription_type, mandate_status, resto_type, business_type, food_type, service_model FROM restaurants WHERE id = $1',
+      [targetId]
+    );
     const currentResto = restoRows[0] || {};
+    const businessProfile = resolveBusinessProfile(currentResto);
+    const cleanType = String(type || 'veg').trim().toLowerCase() || 'veg';
+    if (businessProfile.is_pure_veg && cleanType !== 'veg') {
+      return res.status(400).json({ error: 'Pure Veg businesses can only list vegetarian items.' });
+    }
+
     const isComplimentary = isAuthoritativeComplimentaryTenant(currentResto);
     const planTier = (currentResto.plan_tier || 'pro').toLowerCase();
     const planRows = await query('SELECT max_dishes FROM saas_plans WHERE LOWER(key) = $1', [planTier]);
@@ -1350,8 +1399,8 @@ router.post('/dishes', authenticateToken, requireActiveSubscription, async (req,
         portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available, modifiers
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`,
       [
-        targetId, category_id, trimmedName, typeof name_hi === 'string' ? name_hi.trim() : '', description || '', description_hi || '', processedImage || '', numPrice, price_half || null,
-        portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', type || 'veg', availBool, modifiersVal
+        targetId, category_id, trimmedName, typeof name_hi === 'string' ? name_hi.trim() : '', description || '', description_hi || '', processedImage || '', numPrice, numPriceHalf,
+        portion || '', portion_half_label || '', portion_full_label || '', badge || '', ingredients || '', taste_profile || '', cleanType, availBool, modifiersVal
       ]
     );
 
@@ -1390,23 +1439,65 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       portion, portion_half_label, portion_full_label, badge, ingredients, taste_profile, type, available, modifiers
     } = req.body;
 
-    // Fetch old dish to verify tenant isolation and track old prices/images
-    const oldDishRows = await query('SELECT id, name, price, price_half, image FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
+    // Fetch old dish to verify tenant isolation and preserve omitted fields
+    const oldDishRows = await query('SELECT * FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
     if (!oldDishRows || oldDishRows.length === 0) {
       return res.status(404).json({ error: 'Dish not found' });
     }
     const oldDish = oldDishRows[0];
 
+    const resolvedName = name !== undefined ? (typeof name === 'string' ? name.trim() : '') : oldDish.name;
+    if (!resolvedName) {
+      return res.status(400).json({ error: 'Item name is required' });
+    }
+
+    const numPrice = price !== undefined ? Number(price) : Number(oldDish.price);
+    if (price !== undefined && (price === null || price === '' || typeof price === 'boolean' || !Number.isFinite(numPrice) || numPrice < 0)) {
+      return res.status(400).json({ error: 'Valid non-negative price is required' });
+    }
+
+    let numPriceHalf = oldDish.price_half !== undefined && oldDish.price_half !== null && oldDish.price_half !== '' ? Number(oldDish.price_half) : null;
+    if (price_half !== undefined) {
+      if (price_half === null || price_half === '') {
+        numPriceHalf = null;
+      } else {
+        numPriceHalf = Number(price_half);
+        if (typeof price_half === 'boolean' || !Number.isFinite(numPriceHalf) || numPriceHalf < 0) {
+          return res.status(400).json({ error: 'Half price must be a valid non-negative number' });
+        }
+      }
+    }
+    if (numPriceHalf !== null && numPriceHalf > numPrice) {
+      return res.status(400).json({ error: 'Half price cannot be greater than full price' });
+    }
+
+    const restoMetaRows = await query(
+      'SELECT resto_type, business_type, food_type, service_model FROM restaurants WHERE id = $1',
+      [targetId]
+    ).catch(() => []);
+    const businessProfile = resolveBusinessProfile(restoMetaRows[0] || {});
+    const resolvedType = type !== undefined ? (String(type || 'veg').trim().toLowerCase() || 'veg') : (oldDish.type || 'veg');
+    if (businessProfile.is_pure_veg && resolvedType !== 'veg') {
+      return res.status(400).json({ error: 'Pure Veg businesses can only list vegetarian items.' });
+    }
+
     // Verify category belongs strictly to this tenant restaurant
-    if (category_id) {
-      const catCheck = await query('SELECT id FROM categories WHERE id = $1 AND restaurant_id = $2', [category_id, targetId]);
+    const resolvedCategoryId = (category_id !== undefined && category_id !== null && category_id !== '')
+      ? category_id
+      : oldDish.category_id;
+    if (resolvedCategoryId) {
+      const catCheck = await query('SELECT id FROM categories WHERE id = $1 AND restaurant_id = $2', [resolvedCategoryId, targetId]);
       if (!catCheck || catCheck.length === 0) {
         return res.status(400).json({ error: 'Invalid category. The specified category does not belong to your restaurant.' });
       }
     }
 
-    const processedImage = await processExternalImageUrl(image, targetId, 'dishes');
-    const modifiersVal = Array.isArray(modifiers) ? JSON.stringify(modifiers) : (typeof modifiers === 'string' ? modifiers : '[]');
+    const processedImage = image !== undefined
+      ? await processExternalImageUrl(image, targetId, 'dishes')
+      : oldDish.image;
+    const modifiersVal = modifiers !== undefined
+      ? (Array.isArray(modifiers) ? JSON.stringify(modifiers) : (typeof modifiers === 'string' ? modifiers : '[]'))
+      : (oldDish.modifiers || '[]');
 
     // Clean up replaced or removed dish image
     try {
@@ -1418,7 +1509,9 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       console.warn('Notice cleaning up replaced dish image:', cleanErr.message);
     }
 
-    const availBool = available !== false && available !== 0 && available !== 'false' && available !== '0';
+    const availBool = available === undefined
+      ? isFlagEnabled(oldDish.available, true)
+      : (available !== false && available !== 0 && available !== 'false' && available !== '0');
     await query(
       `UPDATE dishes 
        SET category_id = $1, name = $2, name_hi = $3, description = $4, description_hi = $5, image = $6, price = $7, price_half = $8,
@@ -1426,9 +1519,25 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
            ingredients = $13, taste_profile = $14, type = $15, available = $16, modifiers = $17, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $18 AND restaurant_id = $19`,
       [
-        category_id, name, name_hi || '', description || '', description_hi || '', processedImage, price, price_half || null,
-        portion || '', portion_half_label || '', portion_full_label || '', badge || '',
-        ingredients || '', taste_profile || '', type || 'veg', availBool, modifiersVal, id, targetId
+        resolvedCategoryId,
+        resolvedName,
+        name_hi !== undefined ? (typeof name_hi === 'string' ? name_hi.trim() : '') : (oldDish.name_hi || ''),
+        description !== undefined ? (description || '') : (oldDish.description || ''),
+        description_hi !== undefined ? (description_hi || '') : (oldDish.description_hi || ''),
+        processedImage,
+        numPrice,
+        numPriceHalf,
+        portion !== undefined ? (portion || '') : (oldDish.portion || ''),
+        portion_half_label !== undefined ? (portion_half_label || '') : (oldDish.portion_half_label || ''),
+        portion_full_label !== undefined ? (portion_full_label || '') : (oldDish.portion_full_label || ''),
+        badge !== undefined ? (badge || '') : (oldDish.badge || ''),
+        ingredients !== undefined ? (ingredients || '') : (oldDish.ingredients || ''),
+        taste_profile !== undefined ? (taste_profile || '') : (oldDish.taste_profile || ''),
+        resolvedType,
+        availBool,
+        modifiersVal,
+        id,
+        targetId
       ]
     );
 
@@ -1440,17 +1549,17 @@ router.put('/dishes/:id', authenticateToken, requireActiveSubscription, async (r
       }
     } catch (_) { }
 
-    const priceChanged = price !== undefined && Number(price) !== Number(oldDish.price);
+    const priceChanged = numPrice !== Number(oldDish.price);
     const dishDetail = priceChanged
-      ? `Updated dish '${name || oldDish.name}' (ID: ${id}) - Price: ₹${oldDish.price} -> ₹${price}`
-      : `Updated dish '${name || oldDish.name}' (ID: ${id})`;
+      ? `Updated dish '${resolvedName}' (ID: ${id}) - Price: ₹${oldDish.price} -> ₹${numPrice}`
+      : `Updated dish '${resolvedName}' (ID: ${id})`;
     await logAudit(targetId, req.user?.role || 'tenant_admin', 'TENANT_DISH_UPDATED', dishDetail);
     if (priceChanged) {
       await logAudit(
         targetId,
         req.user?.role || 'tenant_admin',
         'TENANT_DISH_PRICE_CHANGED',
-        `Price changed for dish '${name || oldDish.name}' (ID: ${id}) from ₹${oldDish.price} to ₹${price}`
+        `Price changed for dish '${resolvedName}' (ID: ${id}) from ₹${oldDish.price} to ₹${numPrice}`
       );
     }
 
@@ -1511,7 +1620,17 @@ router.patch('/dishes/:id/price', authenticateToken, requireActiveSubscription, 
     const { id } = req.params;
     const { price, price_half } = req.body;
     const numPrice = Number(price);
-    const numPriceHalf = (price_half !== undefined && price_half !== null && price_half !== '') ? Number(price_half) : null;
+    if (price === undefined || price === null || price === '' || typeof price === 'boolean' || !Number.isFinite(numPrice) || numPrice < 0) {
+      return res.status(400).json({ error: 'Valid non-negative price is required' });
+    }
+    const hasHalfVal = price_half !== undefined && price_half !== null && price_half !== '';
+    const numPriceHalf = hasHalfVal ? Number(price_half) : null;
+    if (hasHalfVal && (typeof price_half === 'boolean' || !Number.isFinite(numPriceHalf) || numPriceHalf < 0)) {
+      return res.status(400).json({ error: 'Half price must be a valid non-negative number' });
+    }
+    if (numPriceHalf !== null && numPriceHalf > numPrice) {
+      return res.status(400).json({ error: 'Half price cannot be greater than full price' });
+    }
 
     // Verify dish belongs strictly to this tenant and get previous prices
     const dishRows = await query('SELECT id, name, price, price_half FROM dishes WHERE id = $1 AND restaurant_id = $2', [id, targetId]);
