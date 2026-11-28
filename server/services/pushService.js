@@ -35,7 +35,10 @@ const ALLOWED_PUSH_HOST_SUFFIXES = [
   '.push.services.mozilla.com',
   'web.push.apple.com',
   '.push.apple.com',
-  '.notify.windows.com'
+  'notify.windows.com',
+  '.notify.windows.com',
+  '.wns.windows.com',
+  '.push.samsungosp.com'
 ];
 
 function isPrivateOrReservedIp(ip) {
@@ -78,21 +81,31 @@ export async function validatePushEndpoint(rawEndpoint) {
   try {
     parsed = new URL(String(rawEndpoint || '').trim());
   } catch {
-    throw new Error('Invalid push endpoint URL');
+    const err = new Error('Invalid push endpoint URL');
+    err.httpStatus = 400;
+    throw err;
   }
   if (parsed.protocol !== 'https:') {
-    throw new Error('Push endpoint must use HTTPS');
+    const err = new Error('Push endpoint must use HTTPS');
+    err.httpStatus = 400;
+    throw err;
   }
   if (!isAllowedPushHostname(parsed.hostname)) {
-    throw new Error('Unsupported push provider endpoint');
+    const err = new Error(`Unsupported push provider endpoint: ${parsed.hostname}`);
+    err.httpStatus = 400;
+    throw err;
   }
-  const resolved = await dns.lookup(parsed.hostname, { all: true });
+  const resolved = await dns.lookup(parsed.hostname, { all: true }).catch(() => null);
   if (!Array.isArray(resolved) || resolved.length === 0) {
-    throw new Error('Unable to resolve push endpoint host');
+    const err = new Error('Unable to resolve push endpoint host');
+    err.httpStatus = 400;
+    throw err;
   }
   for (const entry of resolved) {
     if (isPrivateOrReservedIp(entry?.address)) {
-      throw new Error('Push endpoint resolves to a disallowed private or loopback address');
+      const err = new Error('Push endpoint resolves to a disallowed private or loopback address');
+      err.httpStatus = 400;
+      throw err;
     }
   }
   return parsed.toString();

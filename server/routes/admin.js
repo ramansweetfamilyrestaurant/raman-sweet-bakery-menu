@@ -7544,7 +7544,8 @@ router.post('/push/subscribe', authenticateToken, async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('Push subscribe error:', err.message);
-    res.status(500).json({ error: 'Failed to save push subscription' });
+    const status = Number(err?.httpStatus) === 400 ? 400 : 500;
+    res.status(status).json({ error: status === 400 ? err.message : 'Failed to save push subscription', detail: err.message });
   }
 });
 

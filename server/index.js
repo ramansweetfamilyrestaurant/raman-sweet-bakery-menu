@@ -258,6 +258,12 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
 
   // 2. Secondary Source of Truth: Fetch from stored_images table in Neon Database
   try {
+    if (!isDbReady && dbInitPromise) {
+      await dbInitPromise.catch(() => {});
+    } else if (!isDbReady) {
+      dbInitPromise = initDb().then(() => { isDbReady = true; }).catch((e) => { dbInitPromise = null; });
+      await dbInitPromise;
+    }
     const dbRecord = await getImageRecordFromDb(key) || await getImageRecordFromDb(filename);
     const dbImg = dbRecord || await getImageFromDb(filename) || await getImageFromDb(key);
     if (dbImg) {
@@ -272,32 +278,34 @@ app.get(['/api/r2-proxy/*', '/r2-proxy/*'], async (req, res) => {
     console.warn('R2 proxy DB notice:', dbErr.message);
   }
 
+  const sendFileSafe = (filePath, contentType) => {
+    try {
+      if (!fs.existsSync(filePath)) return false;
+      if (contentType) res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      res.sendFile(filePath, (err) => {
+        if (err && !res.headersSent) {
+          res.status(404).send('Image not found');
+        }
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   // 3. Fallback: Check local r2-cache disk
-  if (fs.existsSync(localCachePath)) {
-    res.setHeader('Content-Type', getContentType(filename));
-    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-    return res.sendFile(localCachePath);
-  }
+  if (sendFileSafe(localCachePath, getContentType(filename))) return;
 
   // 4. Fallback: Check local uploads directory
-  if (fs.existsSync(localUploadPath)) {
-    res.setHeader('Content-Type', getContentType(filename));
-    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-    return res.sendFile(localUploadPath);
-  }
+  if (sendFileSafe(localUploadPath, getContentType(filename))) return;
 
   // 5. Fallback to default logo SVG on disk if present
   const defaultLogoSvg = path.resolve('public/images/default-logo.svg');
-  if (fs.existsSync(defaultLogoSvg)) {
-    res.setHeader('Content-Type', 'image/svg+xml');
-    return res.sendFile(defaultLogoSvg);
-  }
+  if (sendFileSafe(defaultLogoSvg, 'image/svg+xml')) return;
 
   const defaultLogoPath = path.resolve('public/uploads/logo.jpg');
-  if (fs.existsSync(defaultLogoPath)) {
-    res.setHeader('Content-Type', 'image/jpeg');
-    return res.sendFile(defaultLogoPath);
-  }
+  if (sendFileSafe(defaultLogoPath, 'image/jpeg')) return;
 
   return res.status(404).send('Image not found');
 });
