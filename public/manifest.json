@@ -1,0 +1,19 @@
+{
+  "name": "TouchQR - Smart Ordering & Kitchen Admin",
+  "short_name": "TouchQR",
+  "description": "Smart QR Ordering, Live Kitchen Display & Instant Order Alerts",
+  "start_url": "/admin",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#064E3B",
+  "background_color": "#0F172A",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

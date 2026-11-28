@@ -28,6 +28,9 @@ class NotificationSoundService {
       if (!AudioCtx) return null;
       if (!this.audioCtx || this.audioCtx.state === 'closed') {
         this.audioCtx = new AudioCtx();
+        this.audioCtx.onstatechange = () => {
+          this._notifyListeners();
+        };
         console.log('[SOUND_DEBUG] audio_context_state', this.audioCtx.state);
       }
       return this.audioCtx;
@@ -89,7 +92,12 @@ class NotificationSoundService {
         return true;
       };
 
-      if (ctx.state === 'suspended') {
+      if (ctx.state === 'running') {
+        console.log('[SOUND_DEBUG] unlock_success (already running)');
+        primeAudio();
+        return Promise.resolve(true);
+      }
+      if (ctx.state !== 'closed') {
         return ctx.resume().then(() => {
           console.log('[SOUND_DEBUG] unlock_success', ctx.state);
           return primeAudio();
@@ -97,10 +105,6 @@ class NotificationSoundService {
           console.warn('[SOUND_DEBUG] unlock_failed', err?.message || err);
           return false;
         });
-      } else if (ctx.state === 'running') {
-        console.log('[SOUND_DEBUG] unlock_success (already running)');
-        primeAudio();
-        return Promise.resolve(true);
       }
       return Promise.resolve(false);
     } catch (e) {
@@ -112,7 +116,7 @@ class NotificationSoundService {
   async _ensureContextRunning() {
     const ctx = this.getAudioContext();
     if (!ctx) return null;
-    if (ctx.state === 'suspended') {
+    if (ctx.state !== 'running' && ctx.state !== 'closed') {
       try {
         await ctx.resume();
         this._notifyListeners();

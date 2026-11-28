@@ -14,6 +14,7 @@ import { adminLoginRateLimiter, supportTicketCreateRateLimiter, supportTicketRep
 import { generateTicketReference, validateTicketInput, validateReplyInput, VALID_CATEGORIES, VALID_PRIORITIES, VALID_STATUSES } from '../services/supportTicketService.js';
 import { clearRestoResolveCache, clearMenuBundleCache, calculateOrderTax } from './api.js';
 import { publishOrderLiveEvent, subscribeRestaurantOrders } from '../utils/orderLiveBus.js';
+import { getVapidPublicKey, savePushSubscription, deletePushSubscription, sendRestaurantPushNotification } from '../services/pushService.js';
 import {
   parseSafeDate,
   getFormattedLocalDate,
@@ -3506,6 +3507,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
     // 7. Atomic Transaction: Validate & Update Against Target Row
     let alreadySettled = false;
     let updatedOrderRecord = null;
+    let txPrevPrepared = 0;
 
     await withTransaction(async (txQuery) => {
       let groupLocked = false;
@@ -3576,6 +3578,7 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       }
 
       const txCurrentStatus = String(txRow.status || 'pending').toLowerCase();
+      txPrevPrepared = Number(txRow.kitchen_prepared || 0) === 1 ? 1 : 0;
       const isTxCurrentTerminal = TERMINAL_STATUSES.includes(txCurrentStatus);
       const isTxTargetTerminal = normalizedNewStatus ? TERMINAL_STATUSES.includes(normalizedNewStatus) : isTxCurrentTerminal;
       const isTxCounterOrder = String(txRow.table_number || '').trim().toLowerCase() === 'counter';
@@ -3908,6 +3911,17 @@ router.patch('/orders/:id/status', authenticateToken, requireActiveSubscription,
       sent_to_kds: finalKds,
       is_settled: finalSettled
     });
+
+    if (finalPrep === 1 && txPrevPrepared !== 1) {
+      sendRestaurantPushNotification(targetId, {
+        title: '🍳 Food Prepared in Kitchen!',
+        body: `Order #${orderId} (${targetOrder.table_number || 'Table'}) is ready to serve.`,
+        tag: `food-prepared-${orderId}`,
+        type: 'food_prepared',
+        orderId,
+        url: '/admin'
+      }).catch(() => {});
+    }
 
     res.json({
       success: true,
@@ -7501,6 +7515,51 @@ router.post('/support/tickets/:id/reply', authenticateToken, supportTicketReplyR
     }
     console.error('Post tenant reply error:', err.message);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to post reply message.' });
+  }
+});
+
+// =========================================================================
+// WEB PUSH NOTIFICATION SUBSCRIPTION ROUTES (Background / Closed Tab Alerts)
+// =========================================================================
+router.get('/push/vapid-public-key', authenticateToken, async (req, res) => {
+  try {
+    const publicKey = await getVapidPublicKey();
+    res.json({ publicKey });
+  } catch (err) {
+    console.error('Get VAPID public key error:', err.message);
+    res.status(500).json({ error: 'Failed to load push public key' });
+  }
+});
+
+router.post('/push/subscribe', authenticateToken, async (req, res) => {
+  try {
+    const restaurantId = req.user?.restaurant_id || req.user?.restaurantId;
+    const adminId = req.user?.id || null;
+    const { subscription } = req.body || {};
+    if (!restaurantId || !subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+      return res.status(400).json({ error: 'Valid push subscription is required' });
+    }
+    const ua = req.headers['user-agent'] || '';
+    await savePushSubscription(restaurantId, adminId, subscription, ua);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Push subscribe error:', err.message);
+    res.status(500).json({ error: 'Failed to save push subscription' });
+  }
+});
+
+router.post('/push/unsubscribe', authenticateToken, async (req, res) => {
+  try {
+    const restaurantId = req.user?.restaurant_id || req.user?.restaurantId;
+    const { endpoint } = req.body || {};
+    if (!restaurantId || !endpoint) {
+      return res.status(400).json({ error: 'Endpoint is required' });
+    }
+    await deletePushSubscription(restaurantId, endpoint);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Push unsubscribe error:', err.message);
+    res.status(500).json({ error: 'Failed to remove push subscription' });
   }
 });
 

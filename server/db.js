@@ -1050,7 +1050,20 @@ async function createTables(options = {}) {
       `CREATE INDEX IF NOT EXISTS idx_support_tickets_priority ON support_tickets(priority);`,
       `CREATE INDEX IF NOT EXISTS idx_support_tickets_ref ON support_tickets(ticket_ref);`,
       `CREATE INDEX IF NOT EXISTS idx_support_tickets_assigned ON support_tickets(assigned_to_admin_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_support_ticket_msgs_ticket ON support_ticket_messages(ticket_id, created_at ASC);`
+      `CREATE INDEX IF NOT EXISTS idx_support_ticket_msgs_ticket ON support_ticket_messages(ticket_id, created_at ASC);`,
+      `CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        restaurant_id INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+        admin_id INT,
+        endpoint TEXT NOT NULL,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        user_agent TEXT DEFAULT '',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT uq_push_sub_resto_endpoint UNIQUE (restaurant_id, endpoint)
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_push_subs_resto ON push_subscriptions(restaurant_id);`
     ];
 
     for (const alt of pgAlters) {
@@ -1903,6 +1916,22 @@ async function createTables(options = {}) {
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_presence_expires ON table_location_verifications(expires_at)");
 
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_restaurants_active_expires ON restaurants(active, plan_expires_at)");
+
+      sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+          admin_id INTEGER,
+          endpoint TEXT NOT NULL,
+          p256dh TEXT NOT NULL,
+          auth TEXT NOT NULL,
+          user_agent TEXT DEFAULT '',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(restaurant_id, endpoint)
+        );
+      `);
+      sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_push_subs_resto ON push_subscriptions(restaurant_id)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_restaurant ON subscriptions(restaurant_id)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status)");
       sqliteDb.exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at)");

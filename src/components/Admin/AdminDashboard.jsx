@@ -5,7 +5,8 @@ import { getPlanDetails } from '../../config/plans';
 import { normalizeSpaceType, normalizeSpaceNumber } from '../../utils/qrSecurity';
 import { getSpaceConfig } from '../../utils/businessTaxonomy';
 import { resolveTenantCapabilities } from '../../utils/planCapabilities';
-import { soundManager, unlockNotificationSound, playKitchenSiren, stopKitchenSiren, playPresenceAlert, playWaiterAlert, subscribeAudioState, isNotificationSoundReady } from '../../utils/soundManager';
+import { soundManager, unlockNotificationSound, playKitchenSiren, stopKitchenSiren, playPresenceAlert, stopPresenceAlert, playWaiterAlert, stopWaiterAlert, subscribeAudioState, isNotificationSoundReady } from '../../utils/soundManager';
+import { ensureAdminPushSubscription, registerTouchQrServiceWorker, removeAdminPushSubscription, requestScreenWakeLock } from '../../utils/pushNotifications';
 import { getCurrencySymbol, formatPriceNumber } from '../../utils/currencyHelper';
 import { resolveTheme } from '../../constants/themes';
 import DishFormModal from './DishFormModal';
@@ -116,7 +117,14 @@ export default function AdminDashboard({
   const isImpersonating = propIsImpersonating || localStorage.getItem('touchqr_superadmin_impersonating') === 'true';
   const impersonatedRestoName = propImpersonatedRestoName || localStorage.getItem('touchqr_impersonated_resto_name') || '';
 
+  const handleDashboardLogout = (expectedToken = null) => {
+    const tok = (typeof expectedToken === 'string' && expectedToken) ? expectedToken : token;
+    if (tok) void removeAdminPushSubscription(tok);
+    if (onLogout) onLogout(expectedToken);
+  };
+
   const handleExitImpersonation = () => {
+    if (token) void removeAdminPushSubscription(token);
     if (onExitImpersonation) {
       onExitImpersonation();
     } else {
@@ -530,13 +538,24 @@ export default function AdminDashboard({
   const isExpired = (daysLeft !== null && daysLeft <= 0) || (restaurantInfo?.active === false || restaurantInfo?.active === 0);
 
   useEffect(() => {
-    // 🔔 1. Inspect Browser Push Notification Permission (Do NOT auto-request on mount or background effect)
+    // 🔔 1. Inspect Browser Push Notification Permission & register Service Worker
+    void registerTouchQrServiceWorker();
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'granted') {
         setPermissionsGranted(true);
+        if (token) void ensureAdminPushSubscription(token);
       } else {
         setPermissionsGranted(false);
       }
+    }
+
+    const handleSwMessage = (event) => {
+      if (event?.data?.type === 'TOUCHQR_PUSH_CLICKED' && isMountedRef.current) {
+        void loadOrders();
+      }
+    };
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker?.addEventListener) {
+      navigator.serviceWorker.addEventListener('message', handleSwMessage);
     }
 
     // 🔊 2. Subscribe to central audio service readiness state
@@ -547,8 +566,9 @@ export default function AdminDashboard({
     // 🔊 3. Attempt silent audio unlock on mount (succeeds if browser has autoplay permission)
     unlockNotificationSound().catch(() => { });
 
-    // 🔊 4. Unlock notification audio on first user gesture
+    // 🔊 4. Unlock notification audio on first user gesture (skip if already running)
     const handleUserGestureUnlock = () => {
+      if (isNotificationSoundReady()) return;
       unlockNotificationSound().then((success) => {
         if (success) {
           setIsAudioReady(true);
@@ -566,8 +586,54 @@ export default function AdminDashboard({
     return () => {
       unsubscribeAudio();
       gestureEvents.forEach(evt => window.removeEventListener(evt, handleUserGestureUnlock));
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker?.removeEventListener) {
+        navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+      }
     };
   }, [token]);
+
+  // 🔆 Keep Kitchen/Admin screen awake while live audio alerts are active (graceful no-op if unsupported)
+  useEffect(() => {
+    if (!token || !isAudioReady || typeof document === 'undefined') return undefined;
+    let wakeSentinel = null;
+    let pendingRequest = null;
+    let disposed = false;
+
+    const acquire = async () => {
+      if (disposed || document.visibilityState !== 'visible') return;
+      if ((wakeSentinel && !wakeSentinel.released) || pendingRequest) return;
+      pendingRequest = requestScreenWakeLock();
+      try {
+        const sentinel = await pendingRequest;
+        if (disposed) {
+          if (sentinel && typeof sentinel.release === 'function') {
+            sentinel.release().catch(() => {});
+          }
+          return;
+        }
+        wakeSentinel = sentinel;
+      } finally {
+        pendingRequest = null;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void acquire();
+      }
+    };
+
+    void acquire();
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      disposed = true;
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (wakeSentinel && typeof wakeSentinel.release === 'function') {
+        wakeSentinel.release().catch(() => {});
+      }
+    };
+  }, [token, isAudioReady]);
 
   const handleEnableSound = () => {
     unlockNotificationSound().then((success) => {
@@ -637,6 +703,7 @@ export default function AdminDashboard({
       if (typeof window !== 'undefined' && 'Notification' in window) {
         if (Notification.permission === 'granted') {
           setPermissionsGranted(true);
+          if (token) void ensureAdminPushSubscription(token);
           setToastMessage('🔔 Push Notifications are already granted.');
           setTimeout(() => setToastMessage(''), 3000);
           return 'granted';
@@ -650,7 +717,8 @@ export default function AdminDashboard({
         const res = await Notification.requestPermission();
         if (res === 'granted') {
           setPermissionsGranted(true);
-          setToastMessage('🔔 Push Notifications Granted! You will receive live order popups.');
+          if (token) void ensureAdminPushSubscription(token);
+          setToastMessage('🔔 Push Notifications Granted! You will receive live order popups even in background.');
         } else {
           setPermissionsGranted(false);
           setToastMessage('⚠️ Notifications Blocked. Please allow notifications in browser permissions.');
@@ -690,6 +758,30 @@ export default function AdminDashboard({
       stopPendingAlarm();
     };
   }, [hasPendingOrders]);
+
+  const triggerWaiterCallNotification = (tableLabel, requestType, requestId) => {
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const notif = new Notification(`🛎️ ${tableLabel}: STAFF CALL!`, {
+          body: `Customer requested "${requestType || 'Staff Assistance'}". Click to view.`,
+          icon: '/favicon.svg',
+          badge: '/favicon.svg',
+          tag: `waiter-call-${requestId}`,
+          requireInteraction: true,
+          vibrate: [300, 100, 300]
+        });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+        };
+      }
+      if ('vibrate' in navigator) {
+        navigator.vibrate([300, 100, 300]);
+      }
+    } catch (e) {
+      console.warn('[NOTIFICATION_SOUND] Waiter notification error:', e);
+    }
+  };
 
   const triggerPresenceVerificationNotification = (tableLabel, requestId) => {
     try {
@@ -766,6 +858,7 @@ export default function AdminDashboard({
   const prevServiceReqIdsRef = useRef(new Set());
   const isInitialServiceReqFetchRef = useRef(true);
   const prevPendingCountRef = useRef(0);
+  const seenActiveOrderIdsRef = useRef(null);
   const serviceRequestsTenantKeyRef = useRef('');
 
   const ordersRequestSeqRef = useRef(0);
@@ -785,6 +878,9 @@ export default function AdminDashboard({
   useEffect(() => {
     return () => {
       activeTokenRef.current = '';
+      stopKitchenSiren();
+      stopWaiterAlert();
+      stopPresenceAlert();
       if (lifetimeRetryTimerRef.current) {
         clearTimeout(lifetimeRetryTimerRef.current);
         lifetimeRetryTimerRef.current = null;
@@ -805,7 +901,7 @@ export default function AdminDashboard({
 
     const data = await fetchAdminOrders(reqToken).catch((err) => {
       if (err && (err.isUnauthorized || err.status === 401 || err.message?.includes('401'))) {
-        if (onLogout && isMountedRef.current && activeTokenRef.current === reqToken) onLogout(reqToken);
+        if (onLogout && isMountedRef.current && activeTokenRef.current === reqToken) handleDashboardLogout(reqToken);
       }
       return FETCH_FAILED;
     });
@@ -820,13 +916,19 @@ export default function AdminDashboard({
     const safeData = (Array.isArray(data) ? data : []).filter(o => o.status !== 'rejected' && o.status !== 'cancelled');
 
     // Total active live orders (pending + kitchen + accepted, strictly excluding already-settled orders)
-    const activeOrderCount = safeData.filter(o => {
+    const activeLiveOrders = safeData.filter(o => {
       const isSettled = Boolean(o.is_settled === 1 || o.is_settled === '1' || o.is_settled === true);
       return !isSettled && ['pending', 'kitchen', 'accepted', 'preparing'].includes(o.status);
-    }).length;
-    if (activeOrderCount > prevPendingCountRef.current) {
+    });
+    const activeOrderCount = activeLiveOrders.length;
+    const nextActiveIds = new Set(activeLiveOrders.map(o => String(o.id)));
+    const hasNewIncomingOrder = seenActiveOrderIdsRef.current === null
+      ? activeOrderCount > 0
+      : activeLiveOrders.some(o => !seenActiveOrderIdsRef.current.has(String(o.id)));
+    if (hasNewIncomingOrder) {
       triggerBackgroundNotification(activeOrderCount);
     }
+    seenActiveOrderIdsRef.current = nextActiveIds;
     prevPendingCountRef.current = activeOrderCount;
     setPrevPendingCount(activeOrderCount);
 
@@ -859,14 +961,12 @@ export default function AdminDashboard({
         const labels = newlyPreparedList.map(o => formatOrderLocation(o, restaurantInfo || settingsForm) || `Order ${o.id}`);
         const combinedLabel = labels.join(', ');
         triggerFoodPreparedNotification(combinedLabel);
-        setToastMessage(
+        showToast(
           newlyPreparedList.length === 1
             ? `🛎️ ${labels[0]} Food is PREPARED in Kitchen! Ready to Serve.`
-            : `🛎️ ${newlyPreparedList.length} Orders PREPARED in Kitchen (${combinedLabel})! Ready to Serve.`
+            : `🛎️ ${newlyPreparedList.length} Orders PREPARED in Kitchen (${combinedLabel})! Ready to Serve.`,
+          7000
         );
-        setTimeout(() => {
-          if (isMountedRef.current) setToastMessage('');
-        }, 7000);
       }
     }
     lastAcceptedOrdersRef.current = safeData;
@@ -899,7 +999,7 @@ export default function AdminDashboard({
 
     const reqsData = await fetchServiceRequests(reqToken).catch((err) => {
       if (err && (err.isUnauthorized || err.status === 401 || err.message?.includes('401'))) {
-        if (onLogout && isMountedRef.current && activeTokenRef.current === reqToken) onLogout(reqToken);
+        if (onLogout && isMountedRef.current && activeTokenRef.current === reqToken) handleDashboardLogout(reqToken);
       }
       return FETCH_FAILED;
     });
@@ -933,7 +1033,7 @@ export default function AdminDashboard({
         console.log('[SOUND_DEBUG] presence_request_detected', { id: latestCall.id, table: formattedTbl });
         playPresenceAlert();
         triggerPresenceVerificationNotification(formattedTbl, latestCall.id);
-        setToastMessage(`🛡️ ${formattedTbl}: Presence Verification Requested!`);
+        showToast(`🛡️ ${formattedTbl}: Presence Verification Requested!`, 7000);
       } else if (waiterCalls.length > 0) {
         const latestCall = waiterCalls[0];
         const rawTbl = String(latestCall.table_number || '1');
@@ -941,12 +1041,11 @@ export default function AdminDashboard({
           ? rawTbl
           : `Table ${rawTbl}`;
         console.log('[SOUND_DEBUG] waiter_request_detected', { id: latestCall.id, type: latestCall.request_type, table: formattedTbl });
+        const notifLocation = formatOrderLocation(latestCall, restaurantInfo || settingsForm) || formattedTbl;
         playWaiterAlert();
-        setToastMessage(`🛎️ ${formattedTbl} Calling Staff: "${latestCall.request_type}"!`);
+        triggerWaiterCallNotification(notifLocation, latestCall.request_type, latestCall.id);
+        showToast(`🛎️ ${formattedTbl} Calling Staff: "${latestCall.request_type}"!`, 7000);
       }
-      setTimeout(() => {
-        if (isMountedRef.current) setToastMessage('');
-      }, 7000);
     }
     isInitialServiceReqFetchRef.current = false;
     prevServiceReqIdsRef.current = new Set(safeReqs.map(r => String(r.id)));
@@ -1288,8 +1387,7 @@ export default function AdminDashboard({
         }
         const targetOrder = orders.find(o => String(o.id) === key);
         const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || `Order ${orderId}`;
-        setToastMessage(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`);
-        setTimeout(() => setToastMessage(''), 5000);
+        showToast(`🛎️ ${tblNum} Food is PREPARED in Kitchen! Ready to Serve.`, 5000);
       } else if (newStatus === 'served' || newStatus === 'completed') {
         if (!extraParams.silent) {
           try {
@@ -1301,8 +1399,7 @@ export default function AdminDashboard({
         const targetOrder = orders.find(o => String(o.id) === key);
         const tblNum = formatOrderLocation(targetOrder, restaurantInfo || settingsForm) || `Order ${orderId}`;
         const msg = newStatus === 'served' ? `✓ ${tblNum} Marked Ready / Served!` : `💳 ${tblNum} Served & Bill Completed!`;
-        setToastMessage(msg);
-        setTimeout(() => setToastMessage(''), 4000);
+        showToast(msg, 4000);
       }
       return true;
     } catch (err) {
@@ -2416,16 +2513,17 @@ export default function AdminDashboard({
         playKitchenChime();
       }, 2600);
     }
-  }, [settingsForm?.order_alarm_enabled, hasPendingOrders]);
+  }, [settingsForm?.order_alarm_enabled]);
   const [settingsSavedMsg, setSettingsSavedMsg] = useState(false);
   const toastTimeoutRef = useRef(null);
 
   const showToast = (msg, duration = 2500) => {
+    if (!isMountedRef.current) return;
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToastMessage(msg);
     if (duration > 0) {
       toastTimeoutRef.current = setTimeout(() => {
-        setToastMessage('');
+        if (isMountedRef.current) setToastMessage('');
       }, duration);
     }
   };
@@ -2858,6 +2956,7 @@ export default function AdminDashboard({
       isInitialServiceReqFetchRef.current = true;
       serviceRequestsTenantKeyRef.current = currentTenantKey;
       prevPendingCountRef.current = 0;
+      seenActiveOrderIdsRef.current = null;
       setPrevPendingCount(0);
       ordersRequestSeqRef.current += 1;
       serviceReqSeqRef.current += 1;
@@ -4121,7 +4220,7 @@ export default function AdminDashboard({
               </a>
 
               <button
-                onClick={onLogout}
+                onClick={handleDashboardLogout}
                 style={{
                   width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.2)',
                   background: 'rgba(255,255,255,0.05)', color: '#9CA3AF', fontWeight: 700, fontSize: '0.84rem', cursor: 'pointer'
@@ -4201,7 +4300,7 @@ export default function AdminDashboard({
             restaurantInfo={restaurantInfo}
             username={username}
             pendingOrdersCount={orders.filter(o => o.status === 'pending' || o.status === 'ordered').length}
-            onLogout={onLogout}
+            onLogout={handleDashboardLogout}
             onOpenHelp={() => setActiveTab('support')}
             onReturnToMenu={onReturnToMenu}
             capabilities={tenantCaps}
@@ -4543,7 +4642,7 @@ export default function AdminDashboard({
           <AdminHeader
             restaurantInfo={restaurantInfo}
             username={username}
-            onLogout={onLogout}
+            onLogout={handleDashboardLogout}
             onReturnToMenu={onReturnToMenu}
             onOpenHelp={() => setActiveTab('support')}
             onOpenDayClosing={() => setShowDayClosingModal(true)}

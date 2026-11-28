@@ -24,6 +24,7 @@ export { calculateOfferPrice };
 import { checkExpiredSubscriptions } from '../subscriptionCron.js';
 import { verifyQrToken, normalizeSpaceType, normalizeSpaceNumber, validateSpaceCapacity, generateRestaurantQrSecret } from '../utils/qrSecurity.js';
 import { publishOrderLiveEvent, subscribeRestaurantOrders } from '../utils/orderLiveBus.js';
+import { sendRestaurantPushNotification } from '../services/pushService.js';
 import { 
   resolveEffectiveVerificationPolicy, 
   generatePresenceToken, 
@@ -2084,6 +2085,14 @@ router.post('/orders/presence/request-staff', locationVerifyRateLimiter, async (
       console.warn('Notice creating service_request for presence verification:', srErr.message);
     }
 
+    sendRestaurantPushNotification(resto.id, {
+      title: `🛡️ Table ${cleanTable}: Presence Verification!`,
+      body: 'Customer requested table presence verification to place order. Tap to approve.',
+      tag: `presence-${verificationToken}`,
+      type: 'presence_verification',
+      url: '/admin'
+    }).catch(() => {});
+
     return res.json({
       success: true,
       verification_token: verificationToken,
@@ -2667,6 +2676,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
               ? signSessionObserverToken(resto, ex.session_id || `sess_${targetId}_${cleanTable}_${ex.parent_order_id || ex.id}`, cleanTable)
               : '';
             return {
+              _isNewOrder: false,
               success: true,
               order_id: ex.id,
               primary_order_id: ex.parent_order_id || ex.id,
@@ -2705,6 +2715,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
                 ? signSessionObserverToken(resto, prev.session_id || `sess_${targetId}_${cleanTable}_${prev.parent_order_id || prev.id}`, cleanTable)
                 : '';
               return {
+                _isNewOrder: false,
                 success: true,
                 order_id: prev.id,
                 primary_order_id: prev.parent_order_id || prev.id,
@@ -2976,6 +2987,7 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
           : signSessionObserverToken(resto, sessionId, cleanTable);
 
         return {
+          _isNewOrder: true,
           success: true,
           order_id: orderId,
           primary_order_id: parentOrderId || orderId,
@@ -3008,22 +3020,37 @@ router.post('/orders', orderCreationRateLimiter, async (req, res) => {
         };
       });
 
-      orderIdempotencyCache.set(idempKey, { timestamp: Date.now(), customerBinding, itemsSig, response: responsePayload });
-      executionResolve(responsePayload);
+      const isNewlyInsertedOrder = Boolean(responsePayload?._isNewOrder);
+      const { _isNewOrder, ...publicResponsePayload } = responsePayload;
+
+      orderIdempotencyCache.set(idempKey, { timestamp: Date.now(), customerBinding, itemsSig, response: publicResponsePayload });
+      executionResolve(publicResponsePayload);
       orderInFlightMutex.delete(idempKey);
 
       publishOrderLiveEvent(targetId, {
-        orderId: responsePayload.order_id,
-        primaryOrderId: responsePayload.primary_order_id,
-        sessionId: responsePayload.session_id,
-        tableNumber: responsePayload.table_number,
-        status: responsePayload.status,
+        orderId: publicResponsePayload.order_id,
+        primaryOrderId: publicResponsePayload.primary_order_id,
+        sessionId: publicResponsePayload.session_id,
+        tableNumber: publicResponsePayload.table_number,
+        status: publicResponsePayload.status,
         kitchen_prepared: 0,
         sent_to_kds: 0,
         is_settled: 0
       });
 
-      res.json(responsePayload);
+      if (isNewlyInsertedOrder) {
+        const pushCurrency = String(resto?.currency_symbol || '₹').trim() || '₹';
+        sendRestaurantPushNotification(targetId, {
+          title: `🛎️ New Order #${publicResponsePayload.order_id}!`,
+          body: `${publicResponsePayload.token_display || publicResponsePayload.table_number || 'Table'} • ${items.length} item(s) • ${pushCurrency}${Math.round(Number(publicResponsePayload.grand_total_amount || publicResponsePayload.total_amount || 0))}`,
+          tag: `order-${publicResponsePayload.order_id}`,
+          type: 'new_order',
+          orderId: publicResponsePayload.order_id,
+          url: '/admin'
+        }).catch(() => {});
+      }
+
+      res.json(publicResponsePayload);
     } catch (innerErr) {
       orderInFlightMutex.delete(idempKey);
       executionReject(innerErr);
@@ -3846,6 +3873,14 @@ router.post('/service-requests', serviceRequestRateLimiter, async (req, res) => 
 
     const isHotel = resolvedSpaceType === 'room' || (resto.service_model === 'hotel') || (resto.business_type === 'hotel_resort');
     const isCinema = resolvedSpaceType === 'cinema_seat' || resolvedSpaceType === 'cinema' || (resto.service_model === 'cinema') || (resto.business_type === 'cinema_theatre');
+
+    sendRestaurantPushNotification(resto.id, {
+      title: `🛎️ ${resolvedSpaceType === 'room' ? 'Room' : resolvedSpaceType === 'cinema_seat' ? 'Seat' : 'Table'} ${resolvedSpaceNum}: Staff Call!`,
+      body: `Customer requested "${cleanType}". Tap to attend.`,
+      tag: `waiter-call-${requestId}`,
+      type: 'waiter_call',
+      url: '/admin'
+    }).catch(() => {});
 
     let successMsg = `🛎️ Staff notified for Table ${resolvedSpaceNum}! A waiter will attend shortly.`;
     if (isHotel) {

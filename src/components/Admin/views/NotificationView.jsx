@@ -31,6 +31,7 @@ import { resolveTenantCapabilities } from '../../../utils/planCapabilities';
 import { getBusinessTerminology } from '../../../utils/businessTaxonomy';
 import { formatOrderLocation, safeParseItems } from '../../../utils/billingHelper';
 import { getCurrencySymbol } from '../../../utils/currencyHelper';
+import { ensureAdminPushSubscription } from '../../../utils/pushNotifications';
 
 export default function NotificationView({
   orders = [],
@@ -56,11 +57,34 @@ export default function NotificationView({
   const [successToast, setSuccessToast] = useState('');
 
   // Notification Preferences State (Persisted in localStorage)
-  const [prefOrderAlerts, setPrefOrderAlerts] = useState(true);
-  const [prefPaymentAlerts, setPrefPaymentAlerts] = useState(true);
-  const [prefSecurityAlerts, setPrefSecurityAlerts] = useState(true);
-  const [prefSystemAlerts, setPrefSystemAlerts] = useState(true);
-  const [prefReviewAlerts, setPrefReviewAlerts] = useState(true);
+  const readNotifPref = (key, fallback = true) => {
+    if (typeof window === 'undefined') return fallback;
+    try {
+      const raw = localStorage.getItem('touchqr_notif_prefs_v1');
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      return typeof parsed[key] === 'boolean' ? parsed[key] : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+  const [prefOrderAlerts, setPrefOrderAlerts] = useState(() => readNotifPref('orderAlerts', true));
+  const [prefPaymentAlerts, setPrefPaymentAlerts] = useState(() => readNotifPref('paymentAlerts', true));
+  const [prefSecurityAlerts, setPrefSecurityAlerts] = useState(() => readNotifPref('securityAlerts', true));
+  const [prefSystemAlerts, setPrefSystemAlerts] = useState(() => readNotifPref('systemAlerts', true));
+  const [prefReviewAlerts, setPrefReviewAlerts] = useState(() => readNotifPref('reviewAlerts', true));
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('touchqr_notif_prefs_v1', JSON.stringify({
+        orderAlerts: prefOrderAlerts,
+        paymentAlerts: prefPaymentAlerts,
+        securityAlerts: prefSecurityAlerts,
+        systemAlerts: prefSystemAlerts,
+        reviewAlerts: prefReviewAlerts
+      }));
+    } catch { }
+  }, [prefOrderAlerts, prefPaymentAlerts, prefSecurityAlerts, prefSystemAlerts, prefReviewAlerts]);
   const [prefPushEnabled, setPrefPushEnabled] = useState(() => {
     return typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted';
   });
@@ -250,6 +274,7 @@ export default function NotificationView({
     if ('Notification' in window) {
       if (Notification.permission === 'granted') {
         setPrefPushEnabled(true);
+        if (token) void ensureAdminPushSubscription(token);
         setSuccessToast('🔔 Browser push notifications are already enabled!');
         return;
       }
@@ -262,6 +287,7 @@ export default function NotificationView({
         const perm = await Notification.requestPermission();
         if (perm === 'granted') {
           setPrefPushEnabled(true);
+          if (token) void ensureAdminPushSubscription(token);
           setSuccessToast('🔔 Browser push notifications enabled!');
         } else {
           setPrefPushEnabled(false);
