@@ -35,6 +35,7 @@ import {
   isCustomerSpaceValid,
   buildScopedStorageKey
 } from './utils/customerHelpers';
+import { clearBrowserCachesSafe, tryReserveChunkReload } from './utils/chunkRecovery';
 
 // Robust Lazy Loading with automatic retry on new production deploys
 const lazyWithRetry = (componentImport) =>
@@ -47,21 +48,13 @@ const lazyWithRetry = (componentImport) =>
       return mod;
     } catch (error) {
       console.warn('Chunk loading failed, reloading for updated deploy...', error);
-      try {
-        if (typeof window !== 'undefined') {
-          if ('caches' in window && window.caches?.keys) {
-            const names = await window.caches.keys();
-            await Promise.all(names.map((name) => window.caches.delete(name)));
-          }
-          const lastReload = parseInt(window.sessionStorage?.getItem('last-chunk-reload') || '0', 10);
-          const now = Date.now();
-          if (now - lastReload > 8000 && typeof window.location?.reload === 'function') {
-            window.sessionStorage?.setItem('last-chunk-reload', String(now));
-            window.location.reload();
-            return await new Promise((_, reject) => setTimeout(() => reject(error), 3500));
-          }
-        }
-      } catch { }
+      await clearBrowserCachesSafe();
+      if (tryReserveChunkReload() && typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
+        try {
+          window.location.reload();
+          return await new Promise((_, reject) => setTimeout(() => reject(error), 3500));
+        } catch { }
+      }
       throw error;
     }
   });

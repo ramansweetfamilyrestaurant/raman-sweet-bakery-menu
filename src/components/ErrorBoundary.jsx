@@ -1,4 +1,9 @@
 import React from 'react';
+import {
+  clearBrowserCachesSafe,
+  clearChunkReloadGuards,
+  tryReserveChunkReload
+} from '../utils/chunkRecovery';
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -21,15 +26,11 @@ export default class ErrorBoundary extends React.Component {
       errStr.includes("reading 'default'") ||
       errStr.includes('default export')
     ) {
-      const alreadyReloaded = sessionStorage.getItem('auto_chunk_reload');
-      if (!alreadyReloaded) {
-        sessionStorage.setItem('auto_chunk_reload', 'true');
-        if ('caches' in window) {
-          caches.keys().then((names) => {
-            names.forEach((name) => caches.delete(name));
-          });
-        }
-        window.location.reload();
+      if (tryReserveChunkReload() && typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
+        void clearBrowserCachesSafe();
+        try {
+          window.location.reload();
+        } catch { }
       }
     }
   }
@@ -61,15 +62,8 @@ export default class ErrorBoundary extends React.Component {
           )}
           <button
             onClick={async () => {
-              try {
-                sessionStorage.removeItem('auto_chunk_reload');
-                sessionStorage.removeItem('retry-chunk-refresh');
-                sessionStorage.removeItem('last-chunk-reload');
-                if ('caches' in window) {
-                  const names = await caches.keys();
-                  await Promise.all(names.map((name) => caches.delete(name)));
-                }
-              } catch {}
+              clearChunkReloadGuards();
+              await clearBrowserCachesSafe();
               window.location.href = window.location.pathname + (window.location.search ? window.location.search + '&' : '?') + 't=' + Date.now();
             }}
             style={{

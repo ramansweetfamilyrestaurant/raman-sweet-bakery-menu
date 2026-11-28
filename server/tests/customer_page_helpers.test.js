@@ -324,6 +324,48 @@ async function runTests() {
     assert.ok(modalSrc.includes('escapeHtml'), 'BillCompletedModal printable HTML receipt must escape dynamic strings');
   });
 
+  await test('chunkRecovery guards throwing sessionStorage getters and honors 8s cooldown across ErrorBoundary/main/App', async () => {
+    const chunkMod = await import('../../src/utils/chunkRecovery.js');
+    const errBoundarySrc = fs.readFileSync(path.join(ROOT_DIR, 'src/components/ErrorBoundary.jsx'), 'utf8');
+    const mainSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/main.jsx'), 'utf8');
+    const appSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/App.jsx'), 'utf8');
+
+    assert.ok(errBoundarySrc.includes('tryReserveChunkReload') && !errBoundarySrc.includes("sessionStorage.getItem('auto_chunk_reload')"), 'ErrorBoundary must use shared 8s tryReserveChunkReload cooldown');
+    assert.ok(mainSrc.includes('tryReserveChunkReload') && !mainSrc.includes('window.sessionStorage?.getItem'), 'main.jsx must use guarded tryReserveChunkReload instead of optional chaining on throwing storage getter');
+    assert.ok(appSrc.includes('tryReserveChunkReload') && !appSrc.includes('window.sessionStorage?.getItem'), 'App.jsx must use guarded tryReserveChunkReload');
+
+    const prevWindow = globalThis.window;
+    try {
+      // 1) Throwing sessionStorage getter refuses automatic reloads instead of throwing/looping
+      globalThis.window = Object.defineProperty({}, 'sessionStorage', {
+        get() { throw new Error('SecurityError: blocked'); }
+      });
+      assert.equal(chunkMod.tryReserveChunkReload(), false);
+      chunkMod.clearChunkReloadGuards();
+
+      // 2) Working sessionStorage enforces 8s interval and updates last-chunk-reload before allowing next reload
+      const backing = new Map();
+      const store = {
+        getItem: (k) => (backing.has(k) ? backing.get(k) : null),
+        setItem: (k, v) => backing.set(k, String(v)),
+        removeItem: (k) => backing.delete(k)
+      };
+      globalThis.window = { sessionStorage: store };
+      chunkMod.clearChunkReloadGuards();
+      assert.equal(chunkMod.tryReserveChunkReload(), true);
+      assert.ok(Number(backing.get(chunkMod.CHUNK_RELOAD_KEY)) > 0);
+      assert.equal(chunkMod.tryReserveChunkReload(), false);
+
+      // Simulate expired >8s interval
+      const oldTs = String(Date.now() - chunkMod.CHUNK_RELOAD_COOLDOWN_MS - 100);
+      backing.set(chunkMod.CHUNK_RELOAD_KEY, oldTs);
+      assert.equal(chunkMod.tryReserveChunkReload(), true);
+      assert.ok(Number(backing.get(chunkMod.CHUNK_RELOAD_KEY)) > Number(oldTs));
+    } finally {
+      globalThis.window = prevWindow;
+    }
+  });
+
   test('App.jsx forwards trimmed cooking notes to direct order, retry payload, and WhatsApp order', () => {
     const appSrc = fs.readFileSync(path.join(ROOT_DIR, 'src/App.jsx'), 'utf8');
     assert.ok(appSrc.includes("const [orderNotesInput, setOrderNotesInput] = useState('')"), 'App.jsx must maintain orderNotesInput state');
